@@ -1,0 +1,305 @@
+:root {
+    --manager-page-bg: #efefee;
+    --manager-panel-bg: rgba(255, 255, 255, 0.94);
+    --manager-panel-border: rgba(10, 51, 27, 0.08);
+    --manager-green-950: #042b1a;
+    --manager-green-900: #063320;
+    --manager-green-700: #1d6a37;
+    --manager-green-500: #61d05f;
+    --manager-text-main: #111111;
+    --manager-text-soft: #5f675f;
+    --manager-shadow-soft: 0 20px 45px rgba(10, 24, 15, 0.08);
+    --manager-shadow-hover: 0 24px 60px rgba(10, 24, 15, 0.14);
+}
+
+body {
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(97, 208, 95, 0.1),
+            transparent 18%
+        ),
+        linear-gradient(180deg, #f6f7f4 0%, var(--manager-page-bg) 100%);
+    color: var(--manager-text-main);
+}
+
+.manager-main {
+    flex: 1;
+    padding-bottom: 500px;
+}
+
+.manager-shell {
+    min-height: 100vh;
+    display: flex;
+}
+
+.manager-sidebar {
+    width: 220px;
+    min-height: 100vh;
+    padding: 28px 20px;
+    background: linear-gradient(
+        180deg,
+        #022713 0%,
+        var(--manager-green-950) 100%
+    );
+    color: #fff;
+    position: sticky;
+    top: 0;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-top {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 22px;
+}
+
+.sidebar-logo {
+    width: 74px;
+    height: 74px;
+    border-radius: 22px;
+    display: grid;
+    place-items: center;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #f3fff6;
+    background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.08),
+        rgba(97, 208, 95, 0.14)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 18px 35px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-divider {
+    height: 1px;
+    margin: 18px 8px 22px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.28),
+        transparent
+    );
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 14px;
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.88);
+    text-decoration: none;
+    font-size: 1.05rem;
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.sidebar-link:hover {
+    color: #fff;
+    transform: translateX(4px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-link.active {
+    color: #062c17;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--manager-green-500), #74e267);
+    box-shadow: 0 14px 28px rgba(97, 208, 95, 0.22);
+}
+
+.sidebar-icon {
+    width: 34px;
+    display: inline-flex;
+    justify-content: center;
+    font-size: 1.35rem;
+}
+
+.manager-main {
+    flex: 1;
+    padding: 28px 34px 34px;
+}
+
+.manager-profile {
+    width: 62px;
+    height: 62px;
+    border: 2px solid var(--manager-green-900);
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff, #f4f8f4);
+    color: var(--manager-green-900);
+    display: grid;
+    place-items: center;
+    box-shadow: var(--manager-shadow-soft);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.manager-profile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--manager-shadow-hover);
+}
+
+.manager-profile svg {
+    width: 34px;
+    height: 34px;
+}
+
+.profile-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(27, 35, 28, 0.38);
+    backdrop-filter: blur(6px);
+}
+
+.profile-modal-backdrop.show {
+    display: flex;
+}
+
+.profile-modal-card {
+    width: min(100%, 520px);
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 20px 28px 26px;
+    border-radius: 34px;
+    background: linear-gradient(180deg, #ffffff, #f7f7f7);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.18);
+}
+
+.profile-modal-header {
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.profile-modal-header h2 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.profile-header-line {
+    width: 100%;
+    height: 4px;
+    margin-top: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1d6a37, #2c8748);
+}
+
+.profile-form {
+    margin-top: 10px;
+}
+
+.profile-grid.two-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 18px;
+}
+
+.profile-field {
+    margin-bottom: 14px;
+}
+
+.profile-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #111;
+}
+
+.profile-field input {
+    width: 100%;
+    height: 42px;
+    padding: 10px 18px;
+    border: 1.5px solid rgba(28, 36, 29, 0.45);
+    border-radius: 999px;
+    background: #fff;
+    color: #111;
+    font: inherit;
+    outline: none;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.profile-btn {
+    min-width: 112px;
+    height: 46px;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font: inherit;
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+.cancel-btn {
+    background: #7b7b7b;
+}
+
+.logout-btn {
+    background: #c91c16;
+}
+
+@media (max-width: 992px) {
+    .manager-shell {
+        flex-direction: column;
+    }
+
+    .manager-sidebar {
+        width: 100%;
+        min-height: auto;
+        position: relative;
+    }
+
+    .sidebar-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .manager-main {
+        padding: 22px 16px 28px;
+    }
+
+    .sidebar-nav {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-modal-card {
+        padding: 20px 18px 22px;
+        border-radius: 24px;
+    }
+
+    .profile-grid.two-col {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-actions {
+        justify-content: center;
+    }
+}

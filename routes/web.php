@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'auth.login')->name('login');
 Route::view('/manager/dashboard', 'manager.dashboard')->name('manager.dashboard');
 Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
+Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
 
 Route::get('/api/manager/dashboard/monitoring-graphs', function () {
     return response()->json([
@@ -175,6 +176,7 @@ Route::get('/api/admin/dashboard/monitoring-graphs', function () {
 
 Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
 
+
 Route::get('/api/admin/workers', function () {
     return response()->json([
         [
@@ -218,3 +220,5 @@ Route::get('/api/admin/workers', function () {
         ],
     ]);
 });
+
+Route::view('/admin/houses', 'admin.houses')->name('admin.houses');

@@ -132,17 +132,6 @@
     cursor: pointer;
 }
 
-.btn-edit {
-    background: #91959a;
-    color: #ffffff;
-}
-
-.btn-file {
-    background: #c5892c;
-    color: #ffffff;
-    min-width: 42px;
-}
-
 .houses-top-grid {
     display: grid;
     grid-template-columns: 1.05fr 1.45fr;
@@ -399,7 +388,6 @@
 #houseStatus,
 #houseBatch,
 #housePen,
-.toolbar-btn,
 #houseTemperature,
 #houseAmmonia,
 .resource-item {
@@ -415,7 +403,6 @@
 #houseStatus,
 #houseBatch,
 #housePen,
-.toolbar-btn,
 #houseTemperature,
 #houseAmmonia,
 .resource-item {
@@ -455,7 +442,7 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.38);
     display: none;
     align-items: center;
     justify-content: center;
@@ -468,193 +455,294 @@
 }
 
 .modal-card {
+    position: relative;
     width: 100%;
-    max-width: 460px;
+    max-width: 500px;
     background: #ffffff;
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-    animation: modalPop 0.25s ease;
+    border-radius: 34px;
+    padding: 28px 42px 34px;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+    animation: modalPop 0.22s ease;
 }
 
 @keyframes modalPop {
     from {
         opacity: 0;
-        transform: scale(0.88) translateY(10px);
+        transform: scale(0.96);
     }
     to {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: scale(1);
     }
 }
 
 .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    position: relative;
+    display: block;
+    text-align: center;
     margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 4px solid #1f6b2d;
 }
 
 .modal-header h2 {
     margin: 0;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #1f1f1f;
+    font-size: 2.15rem;
+    font-weight: 800;
+    color: #000000;
+    line-height: 1.1;
 }
 
 .modal-close {
+    position: absolute;
+    top: -6px;
+    right: -8px;
     border: none;
     background: transparent;
-    font-size: 28px;
+    font-size: 32px;
     line-height: 1;
     cursor: pointer;
     color: #555;
+    padding: 0;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+#addHouseForm {
+    display: flex;
+    flex-direction: column;
+}
+
+#addHouseForm .modal-row {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
 }
 
 .modal-group {
-    margin-bottom: 14px;
+    flex: 1;
+    margin-bottom: 0;
 }
 
 .modal-group label {
     display: block;
-    margin-bottom: 6px;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #333;
+    margin-bottom: 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #000000;
 }
 
 .modal-group input,
 .modal-group select {
     width: 100%;
-    height: 44px;
-    border: 1px solid #d7d7d7;
-    border-radius: 10px;
-    padding: 0 12px;
-    font-size: 0.95rem;
+    height: 40px;
+    border: 1.8px solid #7a7a7a;
+    border-radius: 999px;
+    padding: 0 16px;
+    font-size: 0.98rem;
     outline: none;
-    background: #fff;
+    background: #ffffff;
+    box-sizing: border-box;
+    transition: 0.2s ease;
 }
 
 .modal-group input:focus,
 .modal-group select:focus {
-    border-color: #2f8f49;
-    box-shadow: 0 0 0 3px rgba(47, 143, 73, 0.12);
+    border-color: #1f6b2d;
+    box-shadow: 0 0 0 3px rgba(31, 107, 45, 0.12);
 }
 
 .modal-actions {
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 38px;
 }
 
 .cancel-btn,
 .save-btn {
     border: none;
-    border-radius: 10px;
-    padding: 10px 18px;
-    font-size: 0.92rem;
-    font-weight: 600;
+    border-radius: 999px;
+    padding: 10px 28px;
+    min-width: 110px;
+    font-size: 1.05rem;
+    font-weight: 800;
     cursor: pointer;
+    transition: 0.2s ease;
+    color: #ffffff;
 }
 
 .cancel-btn {
-    background: #d8d8d8;
-    color: #333;
-}
-
-.save-btn {
-    background: #00391f;
-    color: #fff;
+    background: #6f6f73;
 }
 
 .cancel-btn:hover {
-    background: #cfcfcf;
+    background: #5f5f63;
 }
 
 .save-btn {
-    background: #00391f;
-    color: #fff;
+    background: #1f6b2d;
+    color: #ffffff;
 }
 
-.modal-card-lg {
-    width: 100%;
-    max-width: 760px;
+.save-btn:hover {
+    background: #185423;
 }
 
-.records-content {
-    margin-top: 8px;
+.edit-data-modal {
+    max-width: 610px;
+    border-radius: 34px;
+    padding: 24px 44px 34px;
 }
 
-.records-house-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #1f1f1f;
+.edit-data-modal .modal-header {
     margin-bottom: 14px;
+    padding-bottom: 14px;
 }
 
-.records-table-wrapper {
+.edit-data-modal .modal-header h2 {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.edit-data-modal #editHouseForm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.edit-data-modal .modal-row {
+    display: flex;
+    gap: 36px;
+}
+
+.edit-data-modal .modal-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.edit-data-modal .modal-group-full {
     width: 100%;
-    overflow-x: auto;
-    border-radius: 14px;
-    border: 1px solid #e8e8e8;
-    background: #ffffff;
 }
 
-.records-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 560px;
-}
-
-.records-table thead th {
-    background: #f3f6f4;
-    color: #1f1f1f;
-    font-size: 0.94rem;
+.edit-data-modal .modal-group label {
+    font-size: 0.95rem;
     font-weight: 700;
-    text-align: left;
-    padding: 14px 16px;
-    border-bottom: 1px solid #e6e6e6;
+    margin-bottom: 8px;
 }
 
-.records-table tbody td {
-    font-size: 0.93rem;
-    color: #444;
-    padding: 13px 16px;
-    border-bottom: 1px solid #efefef;
-    background: #ffffff;
+.edit-data-modal .modal-group input,
+.edit-data-modal .modal-group select {
+    height: 38px;
+    border: 1.8px solid #7a7a7a;
+    border-radius: 999px;
+    padding: 0 16px;
+    font-size: 0.94rem;
 }
 
-.records-table tbody tr:last-child td {
-    border-bottom: none;
+.edit-data-modal .modal-actions {
+    margin-top: 14px;
+    justify-content: center;
+    gap: 14px;
 }
 
-.records-table tbody tr:hover td {
-    background: #f9fbfa;
+.edit-data-modal .cancel-btn,
+.edit-data-modal .save-btn {
+    min-width: 96px;
+    padding: 9px 24px;
+    font-size: 0.95rem;
+    border-radius: 999px;
 }
 
-.record-status {
+@media (max-width: 700px) {
+    .edit-data-modal {
+        max-width: 95%;
+        padding: 22px 22px 28px;
+    }
+
+    .edit-data-modal .modal-row {
+        flex-direction: column;
+        gap: 14px;
+    }
+}
+
+.toolbar-btn {
+    min-height: 34px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 30px;
-    padding: 0 12px;
-    border-radius: 999px;
-    font-size: 0.84rem;
-    font-weight: 700;
+    text-decoration: none;
+    line-height: 1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
-.record-status.active {
-    background: #dff4e5;
-    color: #1f7a35;
+.toolbar-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
 }
 
-.record-status.completed {
-    background: #e3ecff;
-    color: #3559b7;
+.toolbar-btn:active {
+    transform: scale(0.97);
 }
 
-.record-status.inactive {
-    background: #ececec;
-    color: #666;
+.btn-edit {
+    background: #91959a;
+    color: #ffffff;
+}
+
+.btn-edit:hover {
+    background: #7f848a;
+}
+
+.btn-file {
+    background: #c5892c;
+    color: #ffffff;
+    min-width: 42px;
+}
+
+.btn-file:hover {
+    background: #b57b23;
+}
+
+.house-tab,
+.add-house-btn,
+.toolbar-btn,
+.record-house-tab,
+.record-back-btn,
+.record-pill {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.house-tab:hover,
+.record-house-tab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.add-house-btn:hover,
+.record-back-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+}
+
+.record-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.house-tab:active,
+.record-house-tab:active,
+.add-house-btn:active,
+.toolbar-btn:active,
+.record-back-btn:active,
+.record-pill:active {
+    transform: scale(0.97);
 }

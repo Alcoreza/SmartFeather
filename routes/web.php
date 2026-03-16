@@ -6,6 +6,8 @@ Route::view('/', 'auth.login')->name('login');
 Route::view('/manager/dashboard', 'manager.dashboard')->name('manager.dashboard');
 Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
 Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
+Route::view('/manager/houses/records', 'manager.record-house')
+    ->name('manager.houses.record-house');
 
 Route::get('/api/manager/dashboard/monitoring-graphs', function () {
     return response()->json([
@@ -222,3 +224,5 @@ Route::get('/api/admin/workers', function () {
 });
 
 Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
+Route::view('/admin/houses/records', 'admin.record-house')
+    ->name('admin.houses.record-house');

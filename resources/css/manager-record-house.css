@@ -1,0 +1,335 @@
+.record-house-page {
+    background: #f1f2ef;
+    border-radius: 24px;
+    padding: 20px 26px 28px;
+    min-height: calc(100vh - 120px);
+    animation: recordPageFadeIn 0.55s ease;
+}
+
+.record-page-header {
+    text-align: center;
+    margin-bottom: 18px;
+    opacity: 0;
+    animation: recordItemRise 0.55s ease forwards;
+    animation-delay: 0.08s;
+}
+
+.record-page-header h1 {
+    margin: 0;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #222222;
+    line-height: 1.1;
+}
+
+.record-house-tabs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: recordItemRise 0.55s ease forwards;
+    animation-delay: 0.16s;
+}
+
+.record-house-tab {
+    min-width: 148px;
+    height: 40px;
+    border: 1.6px solid #a8aaa7;
+    border-radius: 999px;
+    background: #f8f8f6;
+    color: #2a2a2a;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.record-house-tab:hover {
+    background: #efefec;
+}
+
+.record-house-tab.active {
+    background: #62cb58;
+    border-color: #62cb58;
+    color: #123316;
+    font-weight: 700;
+}
+
+.record-page-divider {
+    height: 2px;
+    background: #cfcfcf;
+    margin-bottom: 18px;
+    opacity: 0;
+    animation: recordItemRise 0.55s ease forwards;
+    animation-delay: 0.24s;
+}
+
+.record-topbar {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 42px;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: recordItemRise 0.55s ease forwards;
+    animation-delay: 0.32s;
+}
+
+.record-back-btn {
+    position: absolute;
+    left: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #00361f;
+    color: #ffffff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.record-pill {
+    min-width: 130px;
+    height: 38px;
+    padding: 0 24px;
+    border-radius: 999px;
+    background: #c68b39;
+    color: #ffffff;
+    font-size: 0.98rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.record-table-card {
+    background: #ffffff;
+    border-radius: 30px;
+    padding: 18px 18px 22px;
+    min-height: 310px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    opacity: 0;
+    animation: recordItemRise 0.55s ease forwards;
+    animation-delay: 0.4s;
+}
+
+.record-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.record-table-wrap::-webkit-scrollbar {
+    display: none;
+}
+
+.record-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+}
+
+.record-table thead th,
+.record-table tbody td {
+    text-align: left;
+    padding: 12px 16px;
+    vertical-align: top;
+}
+
+.record-table thead th {
+    font-size: 0.94rem;
+    font-weight: 800;
+    color: #111111;
+    line-height: 1.15;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.record-table tbody td {
+    font-size: 0.95rem;
+    color: #171717;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+.record-table th:nth-child(1),
+.record-table td:nth-child(1) {
+    width: 140px;
+    min-width: 140px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.record-table th:nth-child(2),
+.record-table td:nth-child(2),
+.record-table th:nth-child(3),
+.record-table td:nth-child(3),
+.record-table th:nth-child(4),
+.record-table td:nth-child(4) {
+    width: 120px;
+    min-width: 120px;
+}
+
+.record-table th:nth-child(5),
+.record-table td:nth-child(5) {
+    width: 80px;
+    min-width: 80px;
+}
+
+.record-table th:nth-child(6),
+.record-table td:nth-child(6),
+.record-table th:nth-child(7),
+.record-table td:nth-child(7) {
+    width: 140px;
+    min-width: 140px;
+}
+
+.record-table th:nth-child(8),
+.record-table td:nth-child(8),
+.record-table th:nth-child(9),
+.record-table td:nth-child(9) {
+    width: 120px;
+    min-width: 120px;
+}
+
+.record-empty {
+    text-align: center;
+    color: #666;
+    padding: 24px 10px;
+}
+
+.record-table tbody tr {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: recordRowFade 0.45s ease forwards;
+}
+
+.record-table tbody tr:nth-child(1) {
+    animation-delay: 0.48s;
+}
+
+.record-table tbody tr:nth-child(2) {
+    animation-delay: 0.56s;
+}
+
+.record-table tbody tr:nth-child(3) {
+    animation-delay: 0.64s;
+}
+
+.record-table tbody tr:nth-child(4) {
+    animation-delay: 0.72s;
+}
+
+.record-table tbody tr:nth-child(5) {
+    animation-delay: 0.8s;
+}
+
+@keyframes recordPageFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes recordItemRise {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes recordRowFade {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 900px) {
+    .record-page-header h1 {
+        font-size: 2.3rem;
+    }
+
+    .record-house-tabs {
+        gap: 12px;
+    }
+
+    .record-house-tab {
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 768px) {
+    .record-house-page {
+        padding: 18px 16px 22px;
+    }
+
+    .record-page-header h1 {
+        font-size: 2rem;
+    }
+
+    .record-back-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 1.2rem;
+    }
+
+    .record-pill {
+        min-width: 110px;
+        height: 34px;
+        font-size: 0.9rem;
+    }
+
+    .record-table-card {
+        border-radius: 22px;
+        padding: 14px;
+    }
+
+    .record-table {
+        min-width: 1100px;
+    }
+}
+
+.record-house-tab,
+.record-back-btn {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.record-house-tab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.record-back-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+}
+
+.record-house-tab:active,
+.record-back-btn:active {
+    transform: scale(0.97);
+}

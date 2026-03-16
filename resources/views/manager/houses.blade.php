@@ -214,7 +214,6 @@
         <main class="manager-main">
             @include('includes.manager-add-house-modal')
             @include('includes.manager-edit-house-modal')
-            @include('includes.manager-record-house-modal')
 
             <section class="houses-page">
                 <div class="houses-header">
@@ -251,7 +250,9 @@
 
                     <div class="toolbar-right">
                         <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">✎ Edit</button>
-                        <button type="button" class="toolbar-btn btn-file" id="openRecordsModal" title="Flock Batch Records">📓</button>
+                        <a href="{{ route('manager.houses.record-house') }}" class="toolbar-btn btn-file" title="Records">
+                            Rec
+                        </a>
                     </div>
                 </div>
 

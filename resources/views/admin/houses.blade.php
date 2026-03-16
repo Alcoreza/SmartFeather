@@ -215,7 +215,6 @@
             @include('includes.admin-profile-modal')
             @include('includes.admin-add-house-modal')
             @include('includes.admin-edit-house-modal')
-            @include('includes.admin-record-house-modal')
 
             <section class="houses-page">
                 <div class="houses-header">
@@ -258,7 +257,11 @@
 
                     <div class="toolbar-right">
                         <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">✎ Edit</button>
-                        <button type="button" class="toolbar-btn btn-file" id="openRecordsModal" title="Flock Batch Records">📓</button>
+                        <a href="{{ route('admin.houses.record-house') }}"
+                        class="toolbar-btn btn-file"
+                        title="Flock Batch Records">
+                        Rec
+                        </a>
                     </div>
                 </div>
 

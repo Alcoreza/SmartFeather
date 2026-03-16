@@ -25,12 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelEditHouseModal = document.getElementById('cancelEditHouseModal');
     const editHouseForm = document.getElementById('editHouseForm');
 
-    const openRecordsModal = document.getElementById('openRecordsModal');
-    const recordsModal = document.getElementById('recordsModal');
-    const closeRecordsModal = document.getElementById('closeRecordsModal');
-    const recordsHouseTitle = document.getElementById('recordsHouseTitle');
-    const recordsTableBody = document.getElementById('recordsTableBody');
-
     let activeHouseIndex = 0;
     let activePenIndex = 0;
 
@@ -75,54 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function buildRecordsRows(records) {
-        if (!records || records.length === 0) {
-            return `
-                <tr>
-                    <td colspan="4">No flock batch records found.</td>
-                </tr>
-            `;
-        }
-
-        return records.map((record) => {
-            const statusClass = String(record.condition).toLowerCase();
-
-            return `
-                <tr>
-                    <td>${record.batch}</td>
-                    <td>${record.date}</td>
-                    <td>${record.population}</td>
-                    <td>
-                        <span class="record-status ${statusClass}">
-                            ${record.condition}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    function openRecordsPopup() {
-        const currentHouse = houses[activeHouseIndex];
-        if (!currentHouse || !recordsModal) return;
-
-        if (recordsHouseTitle) {
-            recordsHouseTitle.textContent = `${currentHouse.name} - Flock Batch Records`;
-        }
-
-        if (recordsTableBody) {
-            recordsTableBody.innerHTML = buildRecordsRows(currentHouse.records || []);
-        }
-
-        recordsModal.classList.add('show');
-    }
-
-    function closeRecordsPopup() {
-        if (recordsModal) {
-            recordsModal.classList.remove('show');
-        }
-    }
-
     function buildInfoCards(cards) {
         return cards.map((card) => `
             <article class="info-card card-animate">
@@ -160,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function animateStats() {
         const animatedElements = document.querySelectorAll(
-            '.env-card, .resource-section, #houseStatus, #houseBatch, #housePen, .toolbar-btn, #houseTemperature, #houseAmmonia, .info-card, .resource-item'
+            '.env-card, .resource-section, #houseStatus, #houseBatch, #housePen, #houseTemperature, #houseAmmonia, .info-card, .resource-item'
         );
 
         animatedElements.forEach((element, index) => {
@@ -421,22 +367,6 @@ document.addEventListener('DOMContentLoaded', () => {
             rebuildHouseTabs();
             renderHouse(activeHouseIndex);
             closeEditModal();
-        });
-    }
-
-    if (openRecordsModal) {
-        openRecordsModal.addEventListener('click', openRecordsPopup);
-    }
-
-    if (closeRecordsModal) {
-        closeRecordsModal.addEventListener('click', closeRecordsPopup);
-    }
-
-    if (recordsModal) {
-        recordsModal.addEventListener('click', (event) => {
-            if (event.target === recordsModal) {
-                closeRecordsPopup();
-            }
         });
     }
 

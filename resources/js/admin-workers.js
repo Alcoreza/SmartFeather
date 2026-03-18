@@ -1,17 +1,22 @@
 const BASE_URL = '/api/admin/workers';
+let deleteId = null;
+
+// ================= MODAL HELPERS =================
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 // ================= LOAD EMPLOYEES =================
 async function loadEmployees() {
+    const table = document.getElementById('workersTableBody');
+    table.innerHTML = '';
     try {
-        const res = await fetch(BASE_URL);
+        const res = await fetch(BASE_URL, {
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        });
         const data = await res.json();
-
-        const table = document.getElementById('workersTableBody');
-        table.innerHTML = '';
 
         data.forEach(user => {
             const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
-
             table.innerHTML += `
                 <tr data-id="${user.EmployeeId}">
                     <td>${fullName}</td>
@@ -25,116 +30,65 @@ async function loadEmployees() {
                 </tr>
             `;
         });
-    } catch (err) {
-        console.error(err);
-        alert('Failed to load employees');
-    }
+    } catch (err) { console.error(err); alert('Failed to load employees'); }
 }
 
-// ================= MODAL HELPERS =================
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'block';
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
-}
-
-// ================= ADD EMPLOYEE =================
+// ================= OPEN ADD/EDIT =================
 document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
-    openModal('addModal');
+    document.getElementById('workerModalTitle').innerText = 'Add Employee';
+    document.getElementById('workerForm').reset();
+    document.getElementById('EmployeeId').value = '';
+    openModal('workerModal');
 });
 
-document.getElementById('addEmployeeForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-
-    const data = {
-        FirstName: document.getElementById('first_name').value,
-        MiddleName: document.getElementById('middle_name').value || null,
-        LastName: document.getElementById('last_name').value,
-        Suffix: document.getElementById('suffix').value || null,
-        Role: document.getElementById('role').value,
-        PhoneNumber: document.getElementById('phone_number').value || null,
-        Birthday: document.getElementById('birthday').value || null,
-        Gender: document.getElementById('gender').value || null,
-        Address: document.getElementById('address').value || null,
-        Password: document.getElementById('password').value
-    };
-
-    try {
-        const res = await fetch(BASE_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            alert('Error: ' + JSON.stringify(err.errors ?? err));
-            return;
-        }
-
-        closeModal('addModal');
-        document.getElementById('addEmployeeForm').reset();
-        loadEmployees();
-    } catch (err) {
-        console.error(err);
-        alert('Network error');
-    }
-});
-
-// ================= EDIT EMPLOYEE =================
 async function openEditModal(id) {
     try {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
 
-        document.getElementById('edit_id').value = user.EmployeeId;
-        document.getElementById('edit_first_name').value = user.FirstName;
-        document.getElementById('edit_middle_name').value = user.MiddleName ?? '';
-        document.getElementById('edit_last_name').value = user.LastName;
-        document.getElementById('edit_suffix').value = user.Suffix ?? '';
-        document.getElementById('edit_role').value = user.Role;
-        document.getElementById('edit_phone_number').value = user.PhoneNumber ?? '';
-        document.getElementById('edit_birthday').value = user.Birthday ?? '';
-        document.getElementById('edit_gender').value = user.Gender ?? '';
-        document.getElementById('edit_address').value = user.Address ?? '';
-        document.getElementById('edit_password').value = '';
+        document.getElementById('workerModalTitle').innerText = 'Edit Employee';
+        document.getElementById('EmployeeId').value = user.EmployeeId;
+        document.getElementById('FirstName').value = user.FirstName;
+        document.getElementById('MiddleName').value = user.MiddleName ?? '';
+        document.getElementById('LastName').value = user.LastName;
+        document.getElementById('Suffix').value = user.Suffix ?? '';
+        document.getElementById('Role').value = user.Role;
+        document.getElementById('PhoneNumber').value = user.PhoneNumber ?? '';
+        document.getElementById('Birthday').value = user.Birthday ?? '';
+        document.getElementById('Gender').value = user.Gender ?? '';
+        document.getElementById('Address').value = user.Address ?? '';
+        document.getElementById('Password').value = '';
 
-        openModal('editModal');
-    } catch (err) {
-        console.error(err);
-        alert('Failed to fetch employee data');
-    }
+        openModal('workerModal');
+    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
 }
 
-document.getElementById('editEmployeeForm')?.addEventListener('submit', async e => {
+// ================= SAVE EMPLOYEE (ADD/EDIT) =================
+document.getElementById('workerForm')?.addEventListener('submit', async e => {
     e.preventDefault();
 
-    const id = document.getElementById('edit_id').value;
+    const id = document.getElementById('EmployeeId').value;
     const data = {
-        FirstName: document.getElementById('edit_first_name').value,
-        MiddleName: document.getElementById('edit_middle_name').value || null,
-        LastName: document.getElementById('edit_last_name').value,
-        Suffix: document.getElementById('edit_suffix').value || null,
-        Role: document.getElementById('edit_role').value,
-        PhoneNumber: document.getElementById('edit_phone_number').value || null,
-        Birthday: document.getElementById('edit_birthday').value || null,
-        Gender: document.getElementById('edit_gender').value || null,
-        Address: document.getElementById('edit_address').value || null,
-        Password: document.getElementById('edit_password').value
+        FirstName: document.getElementById('FirstName').value,
+        MiddleName: document.getElementById('MiddleName').value || null,
+        LastName: document.getElementById('LastName').value,
+        Suffix: document.getElementById('Suffix').value || null,
+        Role: document.getElementById('Role').value,
+        PhoneNumber: document.getElementById('PhoneNumber').value || null,
+        Birthday: document.getElementById('Birthday').value || null,
+        Gender: document.getElementById('Gender').value || null,
+        Address: document.getElementById('Address').value || null,
+        Password: document.getElementById('Password').value || null
     };
 
-    if (data.Password === '') delete data.Password;
+    if (!data.Password) delete data.Password;
 
     try {
-        const res = await fetch(`${BASE_URL}/${id}`, {
-            method: 'PUT',
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${BASE_URL}/${id}` : BASE_URL;
+
+        const res = await fetch(url, {
+            method,
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -142,56 +96,41 @@ document.getElementById('editEmployeeForm')?.addEventListener('submit', async e 
             body: JSON.stringify(data)
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            alert('Error: ' + JSON.stringify(err.errors ?? err));
-            return;
-        }
+        if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
 
-        closeModal('editModal');
+        closeModal('workerModal');
         loadEmployees();
-    } catch (err) {
-        console.error(err);
-        alert('Network error');
-    }
+    } catch (err) { console.error(err); alert('Network error'); }
 });
 
 // ================= DELETE EMPLOYEE =================
-let deleteId = null;
 function openDeleteModal(id) {
     deleteId = id;
-    if (confirm("Are you sure you want to delete this employee?")) {
-        deleteEmployee();
-    }
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    const name = row ? row.children[0].innerText : '';
+    document.getElementById('deleteWorkerName').innerText = name;
+    openModal('deleteWorkerModal');
 }
 
-async function deleteEmployee() {
+document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', async () => {
     try {
         const res = await fetch(`${BASE_URL}/${deleteId}`, {
             method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
         });
 
-        if (!res.ok) {
-            alert('Error deleting employee');
-            return;
-        }
+        if (!res.ok) { alert('Error deleting employee'); return; }
 
+        closeModal('deleteWorkerModal');
         loadEmployees();
-    } catch (err) {
-        console.error(err);
-        alert('Network error');
-    }
-}
+    } catch (err) { console.error(err); alert('Network error'); }
+});
 
 // ================= VIEW EMPLOYEE =================
 async function openViewModal(id) {
     try {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
-
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
         document.getElementById('view_name').innerText = fullName;
@@ -202,14 +141,10 @@ async function openViewModal(id) {
         document.getElementById('view_address').innerText = user.Address ?? '';
 
         openModal('viewModal');
-    } catch (err) {
-        console.error(err);
-        alert('Failed to fetch employee data');
-    }
+    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
 }
 
-
-// ================= EVENT DELEGATION FOR TABLE BUTTONS =================
+// ================= EVENT DELEGATION =================
 document.addEventListener('click', e => {
     const tr = e.target.closest('tr');
     if (!tr) return;
@@ -220,24 +155,10 @@ document.addEventListener('click', e => {
     if (e.target.classList.contains('delete-btn')) openDeleteModal(id);
 });
 
-// ================= ROLE FILTER =================
-document.getElementById('roleFilter')?.addEventListener('change', e => {
-    const selected = e.target.value;
-    document.querySelectorAll('#workersTableBody tr').forEach(row => {
-        const role = row.children[2].innerText;
-        row.style.display = (selected === 'All' || role === selected) ? '' : 'none';
-    });
-});
-
 // ================= CLOSE MODALS =================
 document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const modalId = btn.getAttribute('data-close-admin-modal');
-        closeModal(modalId);
-    });
+    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-admin-modal')));
 });
 
 // ================= INITIAL LOAD =================
-document.addEventListener('DOMContentLoaded', () => {
-    loadEmployees();
-});
+document.addEventListener('DOMContentLoaded', () => loadEmployees());

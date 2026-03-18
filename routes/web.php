@@ -1,13 +1,34 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EmployeeController;
+
+/*
+|--------------------------------------------------------------------------
+| WEB VIEWS
+|--------------------------------------------------------------------------
+*/
 
 Route::view('/', 'auth.login')->name('login');
+
 Route::view('/manager/dashboard', 'manager.dashboard')->name('manager.dashboard');
 Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
 Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
 Route::view('/manager/houses/records', 'manager.record-house')
     ->name('manager.houses.record-house');
+
+Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
+Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
+Route::view('/admin/houses/records', 'admin.record-house')
+    ->name('admin.houses.record-house');
+
+
+/*
+|--------------------------------------------------------------------------
+| MANAGER API (MOCK DATA - KEEP)
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/api/manager/dashboard/monitoring-graphs', function () {
     return response()->json([
@@ -31,7 +52,6 @@ Route::get('/api/manager/dashboard/monitoring-graphs', function () {
         ],
     ]);
 });
-
 
 Route::get('/api/manager/dashboard/realtime', function () {
     return response()->json([
@@ -114,7 +134,12 @@ Route::get('/api/manager/workers', function () {
     ]);
 });
 
-Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN API (REAL CRUD)
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/api/admin/dashboard/realtime', function () {
     return response()->json([
@@ -176,59 +201,12 @@ Route::get('/api/admin/dashboard/monitoring-graphs', function () {
     ]);
 });
 
-Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
 
-
-Route::get('/api/admin/workers', function () {
-    return response()->json([
-        [
-            'id' => 1,
-            'first_name' => 'Juan',
-            'middle_name' => 'Fransis',
-            'last_name' => 'Dela Cruz',
-            'suffix' => '',
-            'name' => 'Juan Dela Cruz',
-            'role' => 'Manager',
-            'phone' => '09218729021',
-            'birthday' => '07/24/1993',
-            'gender' => 'Male',
-            'address' => 'Sitio Burol Lucban, Quezon',
-        ],
-        [
-            'id' => 2,
-            'first_name' => 'John',
-            'middle_name' => '',
-            'last_name' => 'Doe',
-            'suffix' => '',
-            'name' => 'John Doe',
-            'role' => 'Admin',
-            'phone' => '09171234567',
-            'birthday' => '03/14/1998',
-            'gender' => 'Male',
-            'address' => 'Lucena City, Quezon',
-        ],
-        [
-            'id' => 3,
-            'first_name' => 'Bob',
-            'middle_name' => '',
-            'last_name' => 'Dela Cruz',
-            'suffix' => '',
-            'name' => 'Bob Dela Cruz',
-            'role' => 'Flockman',
-            'phone' => '09991234567',
-            'birthday' => '11/21/1995',
-            'gender' => 'Male',
-            'address' => 'Sariaya, Quezon',
-        ],
-    ]);
-});
-
-Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
-Route::view('/admin/houses/records', 'admin.record-house')
-    ->name('admin.houses.record-house');
-
-
-use App\Http\Controllers\EmployeeController;
+/*
+|--------------------------------------------------------------------------
+| ADMIN WORKERS CRUD (IMPORTANT - LAST)
+|--------------------------------------------------------------------------
+*/
 
 Route::prefix('api/admin/workers')->group(function () {
     Route::get('/', [EmployeeController::class, 'index']);

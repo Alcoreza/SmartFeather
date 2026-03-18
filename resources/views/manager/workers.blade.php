@@ -58,20 +58,6 @@
                             </tr>
                         </thead>
                         <tbody id="workersTableBody">
-                            <tr>
-                                <td>Juan Dela Cruz</td>
-                                <td>1</td>
-                                <td>Manager</td>
-                                <td class="text-center">
-                                    <button class="view-worker-btn icon-btn" type="button" aria-label="View employee">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
-                                            <circle cx="12" cy="12" r="3"></circle>
-                                        </svg>
-                                    </button>
-                                </td>
-
-                            </tr>
                         </tbody>
                     </table>
                 </div>

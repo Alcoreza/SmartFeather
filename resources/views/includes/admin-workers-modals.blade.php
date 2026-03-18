@@ -48,6 +48,48 @@
     </div>
 </div>
 
+<!-- VIEW MODAL -->
+<div class="admin-worker-modal-backdrop" id="viewModal" style="display: none;">
+    <div class="admin-worker-modal-card">
+        <div class="admin-worker-modal-header">
+            <h2>Employee Details</h2>
+            <div class="admin-worker-header-line"></div>
+        </div>
+
+        <div class="admin-worker-modal-body" id="viewEmployeeBody">
+            <!-- Filled dynamically via JS -->
+            <div class="admin-worker-field">
+                <label>Name:</label>
+                <p id="view_name"></p>
+            </div>
+            <div class="admin-worker-field">
+                <label>Role:</label>
+                <p id="view_role"></p>
+            </div>
+            <div class="admin-worker-field">
+                <label>Phone Number:</label>
+                <p id="view_phone_number"></p>
+            </div>
+            <div class="admin-worker-field">
+                <label>Birthday:</label>
+                <p id="view_birthday"></p>
+            </div>
+            <div class="admin-worker-field">
+                <label>Gender:</label>
+                <p id="view_gender"></p>
+            </div>
+            <div class="admin-worker-field">
+                <label>Address:</label>
+                <p id="view_address"></p>
+            </div>
+        </div>
+
+        <div class="admin-worker-modal-actions">
+            <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="viewModal">Close</button>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Confirmation Modal -->
 <div class="modal" id="deleteWorkerModal" style="display:none;">
     <div class="modal-content">

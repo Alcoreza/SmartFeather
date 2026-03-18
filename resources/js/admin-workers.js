@@ -192,14 +192,22 @@ async function openViewModal(id) {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
 
-        // Fill a view modal (you can reuse edit modal structure or create a new one)
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
-        alert(`Name: ${fullName}\nRole: ${user.Role}\nPhone: ${user.PhoneNumber ?? ''}\nBirthday: ${user.Birthday ?? ''}\nGender: ${user.Gender ?? ''}\nAddress: ${user.Address ?? ''}`);
+
+        document.getElementById('view_name').innerText = fullName;
+        document.getElementById('view_role').innerText = user.Role;
+        document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
+        document.getElementById('view_birthday').innerText = user.Birthday ?? '';
+        document.getElementById('view_gender').innerText = user.Gender ?? '';
+        document.getElementById('view_address').innerText = user.Address ?? '';
+
+        openModal('viewModal');
     } catch (err) {
         console.error(err);
         alert('Failed to fetch employee data');
     }
 }
+
 
 // ================= EVENT DELEGATION FOR TABLE BUTTONS =================
 document.addEventListener('click', e => {

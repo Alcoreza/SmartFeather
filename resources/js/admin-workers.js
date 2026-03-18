@@ -6,31 +6,66 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 // ================= LOAD EMPLOYEES =================
+// ================= LOAD EMPLOYEES =================
 async function loadEmployees() {
     const table = document.getElementById('workersTableBody');
     table.innerHTML = '';
+
     try {
         const res = await fetch(BASE_URL, {
-        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
         });
+
         const data = await res.json();
 
         data.forEach(user => {
             const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
             table.innerHTML += `
                 <tr data-id="${user.EmployeeId}">
                     <td>${fullName}</td>
                     <td>${user.EmployeeId}</td>
                     <td>${user.Role}</td>
                     <td class="text-center">
-                        <button class="view-btn">View</button>
-                        <button class="edit-btn">Edit</button>
-                        <button class="delete-btn">Delete</button>
+                        <div class="admin-worker-action-group">
+                            
+                            <!-- VIEW -->
+                            <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+
+                            <!-- EDIT -->
+                            <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </button>
+
+                            <!-- DELETE -->
+                            <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M8 6V4h8v2"></path>
+                                    <path d="M10 11v6"></path>
+                                    <path d="M14 11v6"></path>
+                                    <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"></path>
+                                </svg>
+                            </button>
+
+                        </div>
                     </td>
                 </tr>
             `;
         });
-    } catch (err) { console.error(err); alert('Failed to load employees'); }
+
+    } catch (err) {
+        console.error(err);
+        alert('Failed to load employees');
+    }
 }
 
 // ================= OPEN ADD/EDIT =================

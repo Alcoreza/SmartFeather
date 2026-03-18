@@ -226,3 +226,14 @@ Route::get('/api/admin/workers', function () {
 Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
 Route::view('/admin/houses/records', 'admin.record-house')
     ->name('admin.houses.record-house');
+
+
+use App\Http\Controllers\EmployeeController;
+
+Route::prefix('api/admin/workers')->group(function () {
+    Route::get('/', [EmployeeController::class, 'index']);
+    Route::post('/', [EmployeeController::class, 'store']);
+    Route::get('/{id}', [EmployeeController::class, 'show']);
+    Route::put('/{id}', [EmployeeController::class, 'update']);
+    Route::delete('/{id}', [EmployeeController::class, 'destroy']);
+});

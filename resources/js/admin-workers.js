@@ -1,10 +1,11 @@
 const BASE_URL = '/api/admin/workers';
 
-// ================= LOAD =================
+// ================= LOAD EMPLOYEES =================
 async function loadEmployees() {
     try {
         const res = await fetch(BASE_URL);
         const data = await res.json();
+
         const table = document.getElementById('workersTableBody');
         table.innerHTML = '';
 
@@ -12,14 +13,14 @@ async function loadEmployees() {
             const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
             table.innerHTML += `
-                <tr>
+                <tr data-id="${user.EmployeeId}">
                     <td>${fullName}</td>
                     <td>${user.EmployeeId}</td>
                     <td>${user.Role}</td>
                     <td class="text-center">
-                        <button onclick="openViewModal(${user.EmployeeId})">View</button>
-                        <button onclick="openEditModal(${user.EmployeeId})">Edit</button>
-                        <button onclick="openDeleteModal(${user.EmployeeId})">Delete</button>
+                        <button class="view-btn">View</button>
+                        <button class="edit-btn">Edit</button>
+                        <button class="delete-btn">Delete</button>
                     </td>
                 </tr>
             `;
@@ -30,13 +31,25 @@ async function loadEmployees() {
     }
 }
 
-// ================= ADD =================
+// ================= MODAL HELPERS =================
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'block';
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+}
+
+// ================= ADD EMPLOYEE =================
 document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
-    document.getElementById('addModal').style.display = 'block';
+    openModal('addModal');
 });
 
 document.getElementById('addEmployeeForm')?.addEventListener('submit', async e => {
     e.preventDefault();
+
     const data = {
         FirstName: document.getElementById('first_name').value,
         MiddleName: document.getElementById('middle_name').value || null,
@@ -59,13 +72,14 @@ document.getElementById('addEmployeeForm')?.addEventListener('submit', async e =
             },
             body: JSON.stringify(data)
         });
+
         if (!res.ok) {
             const err = await res.json();
             alert('Error: ' + JSON.stringify(err.errors ?? err));
             return;
         }
 
-        document.getElementById('addModal').style.display = 'none';
+        closeModal('addModal');
         document.getElementById('addEmployeeForm').reset();
         loadEmployees();
     } catch (err) {
@@ -74,7 +88,7 @@ document.getElementById('addEmployeeForm')?.addEventListener('submit', async e =
     }
 });
 
-// ================= EDIT =================
+// ================= EDIT EMPLOYEE =================
 async function openEditModal(id) {
     try {
         const res = await fetch(`${BASE_URL}/${id}`);
@@ -92,7 +106,7 @@ async function openEditModal(id) {
         document.getElementById('edit_address').value = user.Address ?? '';
         document.getElementById('edit_password').value = '';
 
-        document.getElementById('editModal').style.display = 'block';
+        openModal('editModal');
     } catch (err) {
         console.error(err);
         alert('Failed to fetch employee data');
@@ -101,6 +115,7 @@ async function openEditModal(id) {
 
 document.getElementById('editEmployeeForm')?.addEventListener('submit', async e => {
     e.preventDefault();
+
     const id = document.getElementById('edit_id').value;
     const data = {
         FirstName: document.getElementById('edit_first_name').value,
@@ -114,6 +129,7 @@ document.getElementById('editEmployeeForm')?.addEventListener('submit', async e 
         Address: document.getElementById('edit_address').value || null,
         Password: document.getElementById('edit_password').value
     };
+
     if (data.Password === '') delete data.Password;
 
     try {
@@ -125,13 +141,14 @@ document.getElementById('editEmployeeForm')?.addEventListener('submit', async e 
             },
             body: JSON.stringify(data)
         });
+
         if (!res.ok) {
             const err = await res.json();
             alert('Error: ' + JSON.stringify(err.errors ?? err));
             return;
         }
 
-        document.getElementById('editModal').style.display = 'none';
+        closeModal('editModal');
         loadEmployees();
     } catch (err) {
         console.error(err);
@@ -139,7 +156,7 @@ document.getElementById('editEmployeeForm')?.addEventListener('submit', async e 
     }
 });
 
-// ================= DELETE =================
+// ================= DELETE EMPLOYEE =================
 let deleteId = null;
 function openDeleteModal(id) {
     deleteId = id;
@@ -147,6 +164,7 @@ function openDeleteModal(id) {
         deleteEmployee();
     }
 }
+
 async function deleteEmployee() {
     try {
         const res = await fetch(`${BASE_URL}/${deleteId}`, {
@@ -155,10 +173,12 @@ async function deleteEmployee() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
         });
+
         if (!res.ok) {
             alert('Error deleting employee');
             return;
         }
+
         loadEmployees();
     } catch (err) {
         console.error(err);
@@ -166,38 +186,50 @@ async function deleteEmployee() {
     }
 }
 
-// ================= VIEW =================
-function openViewModal(id) {
-    fetch(`${BASE_URL}/${id}`)
-        .then(res => res.json())
-        .then(user => {
-            const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`;
-            alert(`Name: ${fullName}\nRole: ${user.Role}\nPhone: ${user.PhoneNumber ?? ''}\nBirthday: ${user.Birthday ?? ''}\nGender: ${user.Gender ?? ''}\nAddress: ${user.Address ?? ''}`);
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Failed to fetch employee data');
-        });
+// ================= VIEW EMPLOYEE =================
+async function openViewModal(id) {
+    try {
+        const res = await fetch(`${BASE_URL}/${id}`);
+        const user = await res.json();
+
+        // Fill a view modal (you can reuse edit modal structure or create a new one)
+        const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+        alert(`Name: ${fullName}\nRole: ${user.Role}\nPhone: ${user.PhoneNumber ?? ''}\nBirthday: ${user.Birthday ?? ''}\nGender: ${user.Gender ?? ''}\nAddress: ${user.Address ?? ''}`);
+    } catch (err) {
+        console.error(err);
+        alert('Failed to fetch employee data');
+    }
 }
 
-// ================= INITIALIZE =================
+// ================= EVENT DELEGATION FOR TABLE BUTTONS =================
+document.addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    const id = tr.getAttribute('data-id');
+
+    if (e.target.classList.contains('edit-btn')) openEditModal(id);
+    if (e.target.classList.contains('view-btn')) openViewModal(id);
+    if (e.target.classList.contains('delete-btn')) openDeleteModal(id);
+});
+
+// ================= ROLE FILTER =================
+document.getElementById('roleFilter')?.addEventListener('change', e => {
+    const selected = e.target.value;
+    document.querySelectorAll('#workersTableBody tr').forEach(row => {
+        const role = row.children[2].innerText;
+        row.style.display = (selected === 'All' || role === selected) ? '' : 'none';
+    });
+});
+
+// ================= CLOSE MODALS =================
+document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const modalId = btn.getAttribute('data-close-admin-modal');
+        closeModal(modalId);
+    });
+});
+
+// ================= INITIAL LOAD =================
 document.addEventListener('DOMContentLoaded', () => {
     loadEmployees();
-
-    // Close modals
-    document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const modalId = btn.getAttribute('data-close-admin-modal');
-            document.getElementById(modalId).style.display = 'none';
-        });
-    });
-
-    // Role filter
-    document.getElementById('roleFilter')?.addEventListener('change', e => {
-        const selected = e.target.value;
-        document.querySelectorAll('#workersTableBody tr').forEach(row => {
-            const role = row.children[2].innerText;
-            row.style.display = (selected === 'All' || role === selected) ? '' : 'none';
-        });
-    });
 });

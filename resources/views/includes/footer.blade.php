@@ -1,4 +1,4 @@
-{{-- - --}}<footer class="site-footer">
+<footer class="site-footer">
     <div class="site-footer-glow site-footer-glow-left"></div>
     <div class="site-footer-glow site-footer-glow-right"></div>
 

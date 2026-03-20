@@ -1,318 +1,199 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    await renderAdminWorkers();
-    setupAdminWorkersFilter();
-    setupAdminWorkerActionButtons();
-    setupAdminWorkerModals();
-    setupAdminDeleteWorkerModal();
-    setupAdminProfileModal();
+const BASE_URL = '/api/admin/workers';
+let deleteId = null;
+
+// ================= MODAL HELPERS =================
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ================= LOAD EMPLOYEES =================
+// ================= LOAD EMPLOYEES =================
+async function loadEmployees() {
+    const table = document.getElementById('workersTableBody');
+    table.innerHTML = '';
+
+    try {
+        const res = await fetch(BASE_URL, {
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        });
+
+        const data = await res.json();
+
+        data.forEach(user => {
+            const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+            table.innerHTML += `
+                <tr data-id="${user.EmployeeId}">
+                    <td>${fullName}</td>
+                    <td>${user.EmployeeId}</td>
+                    <td>${user.Role}</td>
+                    <td class="text-center">
+                        <div class="admin-worker-action-group">
+                            
+                            <!-- VIEW -->
+                            <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+
+                            <!-- EDIT -->
+                            <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </button>
+
+                            <!-- DELETE -->
+                            <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M8 6V4h8v2"></path>
+                                    <path d="M10 11v6"></path>
+                                    <path d="M14 11v6"></path>
+                                    <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"></path>
+                                </svg>
+                            </button>
+
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+    } catch (err) {
+        console.error(err);
+        alert('Failed to load employees');
+    }
+}
+
+// ================= OPEN ADD/EDIT =================
+document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
+    document.getElementById('workerModalTitle').innerText = 'Add Employee';
+    document.getElementById('workerForm').reset();
+    document.getElementById('EmployeeId').value = '';
+    openModal('workerModal');
 });
 
-let adminWorkersCache = [];
-let adminWorkerPendingDelete = null;
+async function openEditModal(id) {
+    try {
+        const res = await fetch(`${BASE_URL}/${id}`);
+        const user = await res.json();
 
-async function renderAdminWorkers(role = "All") {
-    const tbody = document.getElementById("workersTableBody");
-    if (!tbody) return;
+        document.getElementById('workerModalTitle').innerText = 'Edit Employee';
+        document.getElementById('EmployeeId').value = user.EmployeeId;
+        document.getElementById('FirstName').value = user.FirstName;
+        document.getElementById('MiddleName').value = user.MiddleName ?? '';
+        document.getElementById('LastName').value = user.LastName;
+        document.getElementById('Suffix').value = user.Suffix ?? '';
+        document.getElementById('Role').value = user.Role;
+        document.getElementById('PhoneNumber').value = user.PhoneNumber ?? '';
+        document.getElementById('Birthday').value = user.Birthday ?? '';
+        document.getElementById('Gender').value = user.Gender ?? '';
+        document.getElementById('Address').value = user.Address ?? '';
+        document.getElementById('Password').value = '';
+
+        openModal('workerModal');
+    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+}
+
+// ================= SAVE EMPLOYEE (ADD/EDIT) =================
+document.getElementById('workerForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const id = document.getElementById('EmployeeId').value;
+    const data = {
+        FirstName: document.getElementById('FirstName').value,
+        MiddleName: document.getElementById('MiddleName').value || null,
+        LastName: document.getElementById('LastName').value,
+        Suffix: document.getElementById('Suffix').value || null,
+        Role: document.getElementById('Role').value,
+        PhoneNumber: document.getElementById('PhoneNumber').value || null,
+        Birthday: document.getElementById('Birthday').value || null,
+        Gender: document.getElementById('Gender').value || null,
+        Address: document.getElementById('Address').value || null,
+        Password: document.getElementById('Password').value || null
+    };
+
+    if (!data.Password) delete data.Password;
 
     try {
-        const response = await fetch("/api/admin/workers");
-        const workers = await response.json();
-        adminWorkersCache = Array.isArray(workers) ? workers : [];
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${BASE_URL}/${id}` : BASE_URL;
 
-        const filteredWorkers =
-            role === "All"
-                ? adminWorkersCache
-                : adminWorkersCache.filter((worker) => worker.role === role);
-
-        tbody.innerHTML = filteredWorkers
-            .map(
-                (worker) => `
-            <tr>
-                <td>${worker.name}</td>
-                <td>${worker.id}</td>
-                <td>${worker.role}</td>
-                <td class="text-center">
-                    <div class="admin-worker-action-group">
-                        <button
-                            class="admin-worker-icon-btn admin-view-btn"
-                            type="button"
-                            aria-label="View employee"
-                            data-action="view"
-                            data-worker='${escapeAdminWorker(worker)}'
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-
-                        <button
-                            class="admin-worker-icon-btn admin-edit-btn"
-                            type="button"
-                            aria-label="Edit employee"
-                            data-action="edit"
-                            data-worker='${escapeAdminWorker(worker)}'
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
-                                <path d="M13 7l4 4"></path>
-                            </svg>
-                        </button>
-
-                        <button
-                            class="admin-worker-icon-btn admin-delete-btn"
-                            type="button"
-                            aria-label="Delete employee"
-                            data-action="delete"
-                            data-worker='${escapeAdminWorker(worker)}'
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M8 6V4h8v2"></path>
-                                <path d="M6 6l1 14h10l1-14"></path>
-                                <path d="M10 10v7"></path>
-                                <path d="M14 10v7"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `,
-            )
-            .join("");
-
-        bindAdminWorkerRowButtons();
-    } catch (error) {
-        console.error("Failed to load admin workers.", error);
-    }
-}
-
-function escapeAdminWorker(worker) {
-    return JSON.stringify(worker)
-        .replace(/&/g, "&amp;")
-        .replace(/'/g, "&#39;")
-        .replace(/"/g, "&quot;");
-}
-
-function setupAdminWorkersFilter() {
-    const filter = document.getElementById("roleFilter");
-    if (!filter) return;
-
-    filter.addEventListener("change", () => {
-        renderAdminWorkers(filter.value);
-    });
-}
-
-function setupAdminWorkerActionButtons() {
-    const addButton = document.getElementById("openAddWorkerModal");
-
-    if (addButton) {
-        addButton.addEventListener("click", () => {
-            resetAdminAddModal();
-            openAdminModal("adminAddWorkerModal");
+        const res = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify(data)
         });
-    }
+
+        if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
+
+        closeModal('workerModal');
+        loadEmployees();
+    } catch (err) { console.error(err); alert('Network error'); }
+});
+
+// ================= DELETE EMPLOYEE =================
+function openDeleteModal(id) {
+    deleteId = id;
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    const name = row ? row.children[0].innerText : '';
+    document.getElementById('deleteWorkerName').innerText = name;
+    openModal('deleteWorkerModal');
 }
 
-function bindAdminWorkerRowButtons() {
-    const buttons = document.querySelectorAll("[data-action]");
-
-    buttons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const worker = parseAdminWorker(button.dataset.worker);
-            const action = button.dataset.action;
-
-            if (!worker) return;
-
-            if (action === "view") {
-                fillAdminViewModal(worker);
-                openAdminModal("adminViewWorkerModal");
-            }
-
-            if (action === "edit") {
-                fillAdminEditModal(worker);
-                openAdminModal("adminEditWorkerModal");
-            }
-
-            if (action === "delete") {
-                adminWorkerPendingDelete = worker;
-
-                const deleteText = document.getElementById(
-                    "adminDeleteWorkerText",
-                );
-                if (deleteText) {
-                    deleteText.textContent = `Do you want to delete ${worker.name}?`;
-                }
-
-                openAdminModal("adminDeleteWorkerModal");
-            }
-        });
-    });
-}
-
-function parseAdminWorker(workerString) {
-    if (!workerString) return null;
-
+document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', async () => {
     try {
-        return JSON.parse(
-            workerString
-                .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'")
-                .replace(/&amp;/g, "&"),
-        );
-    } catch (error) {
-        console.error("Failed to parse worker payload.", error);
-        return null;
-    }
-}
-
-function fillAdminViewModal(worker) {
-    setAdminValue("adminViewFirstName", worker.first_name);
-    setAdminValue("adminViewMiddleName", worker.middle_name);
-    setAdminValue("adminViewLastName", worker.last_name);
-    setAdminValue("adminViewSuffix", worker.suffix);
-    setAdminValue("adminViewRole", worker.role);
-    setAdminValue("adminViewPhone", worker.phone);
-    setAdminValue("adminViewId", worker.id);
-    setAdminValue("adminViewBirthday", worker.birthday);
-    setAdminValue("adminViewGender", worker.gender);
-    setAdminValue("adminViewAddress", worker.address);
-}
-
-function fillAdminEditModal(worker) {
-    setAdminValue("adminEditFirstName", worker.first_name);
-    setAdminValue("adminEditMiddleName", worker.middle_name);
-    setAdminValue("adminEditLastName", worker.last_name);
-    setAdminValue("adminEditSuffix", worker.suffix);
-    setAdminValue("adminEditRole", worker.role);
-    setAdminValue("adminEditPhone", worker.phone);
-    setAdminValue("adminEditId", worker.id);
-    setAdminValue("adminEditBirthday", worker.birthday);
-    setAdminValue("adminEditGender", worker.gender);
-    setAdminValue("adminEditAddress", worker.address);
-    setAdminValue("adminEditPassword", "");
-}
-
-function resetAdminAddModal() {
-    [
-        "adminAddFirstName",
-        "adminAddMiddleName",
-        "adminAddLastName",
-        "adminAddSuffix",
-        "adminAddRole",
-        "adminAddPhone",
-        "adminAddId",
-        "adminAddBirthday",
-        "adminAddGender",
-        "adminAddAddress",
-        "adminAddPassword",
-    ].forEach((id) => setAdminValue(id, ""));
-}
-
-function setAdminValue(id, value) {
-    const input = document.getElementById(id);
-    if (input) {
-        input.value = value ?? "";
-    }
-}
-
-function setupAdminWorkerModals() {
-    document.querySelectorAll("[data-close-admin-modal]").forEach((button) => {
-        button.addEventListener("click", () => {
-            closeAdminModal(button.dataset.closeAdminModal);
-        });
-    });
-
-    document
-        .querySelectorAll(".admin-worker-modal-backdrop")
-        .forEach((modal) => {
-            modal.addEventListener("click", (event) => {
-                if (event.target === modal) {
-                    closeAdminModal(modal.id);
-                }
-            });
+        const res = await fetch(`${BASE_URL}/${deleteId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
         });
 
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            document
-                .querySelectorAll(".admin-worker-modal-backdrop.show")
-                .forEach((modal) => {
-                    closeAdminModal(modal.id);
-                });
-        }
-    });
+        if (!res.ok) { alert('Error deleting employee'); return; }
+
+        closeModal('deleteWorkerModal');
+        loadEmployees();
+    } catch (err) { console.error(err); alert('Network error'); }
+});
+
+// ================= VIEW EMPLOYEE =================
+async function openViewModal(id) {
+    try {
+        const res = await fetch(`${BASE_URL}/${id}`);
+        const user = await res.json();
+        const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+        document.getElementById('view_name').innerText = fullName;
+        document.getElementById('view_role').innerText = user.Role;
+        document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
+        document.getElementById('view_birthday').innerText = user.Birthday ?? '';
+        document.getElementById('view_gender').innerText = user.Gender ?? '';
+        document.getElementById('view_address').innerText = user.Address ?? '';
+
+        openModal('viewModal');
+    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
 }
 
-function setupAdminDeleteWorkerModal() {
-    const confirmButton = document.getElementById("confirmAdminDeleteWorker");
+// ================= EVENT DELEGATION =================
+document.addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    const id = tr.getAttribute('data-id');
 
-    if (!confirmButton) {
-        return;
-    }
+    if (e.target.classList.contains('edit-btn')) openEditModal(id);
+    if (e.target.classList.contains('view-btn')) openViewModal(id);
+    if (e.target.classList.contains('delete-btn')) openDeleteModal(id);
+});
 
-    confirmButton.addEventListener("click", () => {
-        if (adminWorkerPendingDelete) {
-            console.log("Delete worker", adminWorkerPendingDelete);
-        }
+// ================= CLOSE MODALS =================
+document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-admin-modal')));
+});
 
-        adminWorkerPendingDelete = null;
-        closeAdminModal("adminDeleteWorkerModal");
-    });
-}
-
-function openAdminModal(id) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-
-    modal.classList.add("show");
-    document.body.style.overflow = "hidden";
-}
-
-function closeAdminModal(id) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-
-    modal.classList.remove("show");
-
-    const hasOpenModal = document.querySelector(
-        ".admin-worker-modal-backdrop.show, .admin-profile-modal-backdrop.show",
-    );
-    document.body.style.overflow = hasOpenModal ? "hidden" : "";
-}
-
-function setupAdminProfileModal() {
-    const modal = document.getElementById("adminProfileModal");
-    const openButton = document.getElementById("openAdminProfileModal");
-    const closeButton = document.getElementById("closeAdminProfileModal");
-
-    if (openButton && modal) {
-        openButton.addEventListener("click", () => {
-            modal.classList.add("show");
-            document.body.style.overflow = "hidden";
-        });
-    }
-
-    if (closeButton && modal) {
-        closeButton.addEventListener("click", () => {
-            modal.classList.remove("show");
-            document.body.style.overflow = "";
-        });
-    }
-
-    if (modal) {
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                modal.classList.remove("show");
-                document.body.style.overflow = "";
-            }
-        });
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                modal.classList.remove("show");
-                document.body.style.overflow = "";
-            }
-        });
-    }
-}
+// ================= INITIAL LOAD =================
+document.addEventListener('DOMContentLoaded', () => loadEmployees());

@@ -9,60 +9,59 @@
             <div class="admin-profile-grid">
                 <div class="admin-profile-field">
                     <label>First Name</label>
-                    <input type="text" value="Juan" readonly>
+                    <input type="text" id="profileFirstName" readonly>
                 </div>
 
                 <div class="admin-profile-field">
                     <label>Middle Name</label>
-                    <input type="text" value="Fransis" readonly>
+                    <input type="text" id="profileMiddleName" readonly>
                 </div>
 
                 <div class="admin-profile-field">
                     <label>Last Name</label>
-                    <input type="text" value="Dela Cruz" readonly>
+                    <input type="text" id="profileLastName" readonly>
                 </div>
 
                 <div class="admin-profile-field">
                     <label>Suffix</label>
-                    <input type="text" value="" readonly>
+                    <input type="text" id="profileSuffix" readonly>
                 </div>
             </div>
 
             <div class="admin-profile-field">
                 <label>Role</label>
-                <input type="text" value="Admin" readonly>
+                <input type="text" id="profileRole" readonly>
             </div>
 
             <div class="admin-profile-grid">
                 <div class="admin-profile-field">
                     <label>Phone Number</label>
-                    <input type="text" value="09218729021" readonly>
+                    <input type="text" id="profilePhone" readonly>
                 </div>
 
                 <div class="admin-profile-field">
                     <label>ID</label>
-                    <input type="text" value="1" readonly>
+                    <input type="text" id="profileId" readonly>
                 </div>
 
                 <div class="admin-profile-field">
                     <label>Birthday</label>
-                    <input type="text" value="07/24/1993" readonly>
+                    <input type="text" id="profileBirthday" readonly>
                 </div>
 
                 <div class="admin-profile-field">
                     <label>Gender</label>
-                    <input type="text" value="Male" readonly>
+                    <input type="text" id="profileGender" readonly>
                 </div>
             </div>
 
             <div class="admin-profile-field">
                 <label>Address</label>
-                <input type="text" value="Sitio Burol Lucban, Quezon" readonly>
+                <input type="text" id="profileAddress" readonly>
             </div>
 
             <div class="admin-profile-actions">
-                <button type="button" class="admin-profile-btn-action cancel"
-                    id="closeAdminProfileModal">Cancel</button>
+                <button type="button" class="admin-profile-btn-action cancel" id="closeAdminProfileModal">Cancel</button>
                 <button type="button" class="admin-profile-btn-action logout">Logout</button>
             </div>
         </form>

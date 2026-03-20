@@ -13,7 +13,8 @@
                 <span>Dashboard</span>
             </a>
 
-            <a href="#" class="admin-sidebar-link">
+            <a href="{{ route('admin.houses') }}"
+                class="admin-sidebar-link {{ request()->routeIs('admin.houses') ? 'active' : '' }}">
                 <span class="admin-sidebar-icon">⌂</span>
                 <span>Houses</span>
             </a>

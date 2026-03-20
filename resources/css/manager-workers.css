@@ -2,6 +2,7 @@
     padding: 24px 34px 34px;
 }
 
+/* Top Bar */
 .workers-topbar {
     display: flex;
     align-items: center;
@@ -29,6 +30,7 @@
     );
 }
 
+/* Toolbar */
 .workers-toolbar {
     display: flex;
     justify-content: space-between;
@@ -38,6 +40,7 @@
 
 .workers-filter {
     min-width: 180px;
+    width: auto;
     height: 48px;
     padding: 0 18px;
     border: 2px solid var(--manager-green-700);
@@ -50,6 +53,7 @@
     box-shadow: var(--manager-shadow-soft);
 }
 
+/* Card */
 .workers-card {
     min-height: 500px;
     padding: 18px 18px 28px;
@@ -60,6 +64,7 @@
     backdrop-filter: blur(8px);
 }
 
+/* Table */
 .workers-table-wrap {
     overflow-x: auto;
 }
@@ -94,6 +99,7 @@
     border-bottom-right-radius: 16px;
 }
 
+/* View Button */
 .view-worker-btn {
     width: 44px;
     height: 44px;
@@ -120,6 +126,7 @@
     height: 20px;
 }
 
+/* Modal */
 .worker-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -132,10 +139,12 @@
     backdrop-filter: blur(6px);
 }
 
-.worker-modal-backdrop.show {
+.worker-modal-backdrop.show,
+.worker-modal-backdrop.active {
     display: flex;
 }
 
+/* Modal Card */
 .worker-view-card {
     width: min(100%, 520px);
     padding: 22px 28px 24px;
@@ -167,6 +176,7 @@
     margin-top: 8px;
 }
 
+/* Form */
 .worker-form-grid.two-col {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -197,6 +207,7 @@
     outline: none;
 }
 
+/* Actions */
 .worker-view-actions {
     display: flex;
     justify-content: flex-end;
@@ -215,6 +226,7 @@
     font-weight: 600;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
     .workers-topbar {
         align-items: flex-start;

@@ -1,182 +1,106 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    await renderWorkers();
-    setupWorkersFilter();
-    setupWorkersModal();
-    setupProfileModal();
+const BASE_URL = '/api/admin/workers';
+
+// ================= LOAD EMPLOYEES =================
+async function loadEmployees() {
+    try {
+        const res = await fetch(BASE_URL);
+        if (!res.ok) throw new Error('Failed to fetch');
+
+        const data = await res.json();
+        const table = document.getElementById('workersTableBody');
+        table.innerHTML = '';
+
+        data.forEach(user => {
+            const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+            table.innerHTML += `
+                <tr data-id="${user.EmployeeId}">
+                    <td>${fullName}</td>
+                    <td>${user.EmployeeId}</td>
+                    <td>${user.Role}</td>
+                    <td class="text-center">
+                        <button class="view-worker-btn icon-btn" type="button" data-id="${user.EmployeeId}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+    } catch (err) {
+        console.error(err);
+        alert('Failed to load employees');
+    }
+}
+
+// ================= VIEW MODAL =================
+async function openViewModal(id) {
+    try {
+        const res = await fetch(`${BASE_URL}/${id}`);
+        const user = await res.json();
+
+        document.getElementById('workerFirstName').value = user.FirstName;
+        document.getElementById('workerMiddleName').value = user.MiddleName ?? '';
+        document.getElementById('workerLastName').value = user.LastName;
+        document.getElementById('workerSuffix').value = user.Suffix ?? '';
+        document.getElementById('workerRole').value = user.Role;
+        document.getElementById('workerPhone').value = user.PhoneNumber ?? '';
+        document.getElementById('workerId').value = user.EmployeeId;
+        document.getElementById('workerBirthday').value = user.Birthday ?? '';
+        document.getElementById('workerGender').value = user.Gender ?? '';
+        document.getElementById('workerAddress').value = user.Address ?? '';
+
+        // ✅ FIXED: use class instead of display
+        document.getElementById('workerModal').classList.add('active');
+
+    } catch (err) {
+        console.error(err);
+        alert('Failed to load employee');
+    }
+}
+
+// ================= EVENT LISTENER =================
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.view-worker-btn');
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id');
+    openViewModal(id);
 });
 
-let workersCache = [];
+// ================= CLOSE MODAL =================
+document.getElementById('closeWorkerModal')?.addEventListener('click', () => {
+    document.getElementById('workerModal').classList.remove('active');
+});
 
-async function renderWorkers(role = "All") {
-    const tbody = document.getElementById("workersTableBody");
-
-    if (!tbody) {
-        return;
+// ================= CLICK OUTSIDE TO CLOSE =================
+document.getElementById('workerModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'workerModal') {
+        e.currentTarget.classList.remove('active');
     }
+});
 
-    try {
-        const response = await fetch("/api/manager/workers");
-        const workers = await response.json();
-        workersCache = Array.isArray(workers) ? workers : [];
-
-        const filteredWorkers =
-            role === "All"
-                ? workersCache
-                : workersCache.filter((worker) => worker.role === role);
-
-        tbody.innerHTML = filteredWorkers
-            .map(
-                (worker) => `
-            <tr>
-                <td>${worker.name}</td>
-                <td>${worker.id}</td>
-                <td>${worker.role}</td>
-                <td class="text-center">
-                    <button
-                        class="view-worker-btn icon-btn"
-                        type="button"
-                        aria-label="View employee"
-                        data-id="${worker.id || ""}"
-                        data-first-name="${worker.first_name || ""}"
-                        data-middle-name="${worker.middle_name || ""}"
-                        data-last-name="${worker.last_name || ""}"
-                        data-suffix="${worker.suffix || ""}"
-                        data-role="${worker.role || ""}"
-                        data-phone="${worker.phone || ""}"
-                        data-birthday="${worker.birthday || ""}"
-                        data-gender="${worker.gender || ""}"
-                        data-address="${worker.address || ""}"
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                </td>
-            </tr>
-        `,
-            )
-            .join("");
-
-        bindViewButtons();
-    } catch (error) {
-        console.error("Failed to load workers.", error);
+// ================= ESC KEY CLOSE =================
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.getElementById('workerModal')?.classList.remove('active');
     }
-}
+});
 
-function setupWorkersFilter() {
-    const filter = document.getElementById("roleFilter");
+// ================= ROLE FILTER =================
+document.getElementById('roleFilter')?.addEventListener('change', e => {
+    const selected = e.target.value;
 
-    if (!filter) {
-        return;
-    }
-
-    filter.addEventListener("change", () => {
-        renderWorkers(filter.value);
+    document.querySelectorAll('#workersTableBody tr').forEach(row => {
+        const role = row.children[2].innerText;
+        row.style.display = (selected === 'All' || role === selected) ? '' : 'none';
     });
-}
+});
 
-function setupWorkersModal() {
-    const modal = document.getElementById("workerModal");
-    const closeBtn = document.getElementById("closeWorkerModal");
-
-    if (!modal) {
-        return;
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener("click", closeWorkerModal);
-    }
-
-    modal.addEventListener("click", (event) => {
-        if (event.target === modal) {
-            closeWorkerModal();
-        }
-    });
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            closeWorkerModal();
-        }
-    });
-}
-
-function bindViewButtons() {
-    const buttons = document.querySelectorAll(".view-worker-btn");
-
-    buttons.forEach((button) => {
-        button.addEventListener("click", () => {
-            setInputValue("workerFirstName", button.dataset.firstName);
-            setInputValue("workerMiddleName", button.dataset.middleName);
-            setInputValue("workerLastName", button.dataset.lastName);
-            setInputValue("workerSuffix", button.dataset.suffix);
-            setInputValue("workerRole", button.dataset.role);
-            setInputValue("workerPhone", button.dataset.phone);
-            setInputValue("workerId", button.dataset.id);
-            setInputValue("workerBirthday", button.dataset.birthday);
-            setInputValue("workerGender", button.dataset.gender);
-            setInputValue("workerAddress", button.dataset.address);
-
-            openWorkerModal();
-        });
-    });
-}
-
-function setInputValue(id, value) {
-    const element = document.getElementById(id);
-
-    if (element) {
-        element.value = value || "";
-    }
-}
-
-function openWorkerModal() {
-    const modal = document.getElementById("workerModal");
-
-    if (!modal) {
-        return;
-    }
-
-    modal.classList.add("show");
-    document.body.style.overflow = "hidden";
-}
-
-function closeWorkerModal() {
-    const modal = document.getElementById("workerModal");
-
-    if (!modal) {
-        return;
-    }
-
-    modal.classList.remove("show");
-    document.body.style.overflow = "";
-}
-
-function setupProfileModal() {
-    const profileModal = document.getElementById("profileModal");
-    const openProfileModalBtn = document.getElementById("openProfileModal");
-    const closeProfileModalBtn = document.getElementById("closeProfileModal");
-
-    if (openProfileModalBtn && profileModal) {
-        openProfileModalBtn.addEventListener("click", () => {
-            profileModal.classList.add("show");
-            document.body.style.overflow = "hidden";
-        });
-    }
-
-    if (closeProfileModalBtn && profileModal) {
-        closeProfileModalBtn.addEventListener("click", () => {
-            profileModal.classList.remove("show");
-            document.body.style.overflow = "";
-        });
-    }
-
-    if (profileModal) {
-        profileModal.addEventListener("click", (event) => {
-            if (event.target === profileModal) {
-                profileModal.classList.remove("show");
-                document.body.style.overflow = "";
-            }
-        });
-    }
-}
+// ================= INITIAL LOAD =================
+document.addEventListener('DOMContentLoaded', () => {
+    loadEmployees();
+});

@@ -218,3 +218,94 @@ Route::prefix('api/admin/workers')->group(function () {
     Route::put('/{id}', [EmployeeController::class, 'update']);
     Route::delete('/{id}', [EmployeeController::class, 'destroy']);
 });
+
+Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
+
+Route::get('/api/manager/tasks', function () {
+    return response()->json([
+        'pending' => [
+            [
+                'name' => 'Juan Dela Cruz',
+                'task_assigned' => 'Inspection',
+                'house_number' => '2',
+                'pen_number' => '2',
+                'detailed_task' => 'Inspect the arrangement of the lights and current roofing condition',
+                'priority' => 'High',
+                'time_assigned' => '1-27-2026 9:37 PM',
+                'finish_by' => '1-28-2026 10:00 AM',
+            ],
+        ],
+        'for_approval' => [
+            [
+                'id' => 1,
+                'name' => 'Juan Dela Cruz',
+                'task_assigned' => 'Inspection',
+                'house_number' => '2',
+                'pen_number' => '2',
+                'detailed_task' => 'Inspect the arrangement of the lights and current roofing condition',
+                'photo_name' => 'proof.jpg',
+                'photo_url' => 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=1200&q=80',
+                'priority' => 'High',
+                'time_assigned' => '1-27-2026 9:37 PM',
+                'finish_by' => '1-28-2026 10:00 AM',
+            ],
+        ],
+        'completed' => [
+            [
+                'id' => 2,
+                'name' => 'Juan Dela Cruz',
+                'task_assigned' => 'Inspection',
+                'house_number' => '2',
+                'pen_number' => '2',
+                'detailed_task' => 'Inspect the arrangement of the lights and current roofing condition',
+                'photo_name' => 'proof.jpg',
+                'photo_url' => 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=1200&q=80',
+                'priority' => 'High',
+                'notes' => 'The lights and roofing condition is still intact',
+                'time_assigned' => '1-27-2026 9:37 PM',
+                'finish_by' => '1-28-2026 10:00 AM',
+                'time_completed' => '1-27-2026 5:25 PM',
+            ],
+        ],
+    ]);
+});
+
+Route::get('/api/manager/tasks/form-options', function () {
+    return response()->json([
+        'workers' => [
+            ['id' => 1, 'name' => 'Juan Dela Cruz'],
+            ['id' => 2, 'name' => 'John Doe'],
+            ['id' => 3, 'name' => 'Bob Dela Cruz'],
+        ],
+        'houses' => [
+            ['id' => 1, 'number' => '1'],
+            ['id' => 2, 'number' => '2'],
+            ['id' => 3, 'number' => '3'],
+        ],
+        'pens' => [
+            ['id' => 1, 'number' => '1'],
+            ['id' => 2, 'number' => '2'],
+            ['id' => 3, 'number' => '3'],
+            ['id' => 4, 'number' => '4'],
+        ],
+        'task_categories' => [
+            'Inspection',
+            'Maintenance',
+            'Feeds Refill',
+            'Vitamins Refill',
+            'Flock Population',
+            'Weight Sampling',
+            'New Bird Batch',
+            'Disinfection',
+            'Personnel Logs',
+            'Visitor',
+        ],
+        'priority_levels' => [
+            'Low',
+            'Medium',
+            'High',
+        ],
+    ]);
+});
+
+

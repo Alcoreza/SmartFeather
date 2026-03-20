@@ -43,4 +43,5 @@ class User extends Authenticatable
             'Password' => 'hashed',
         ];
     }
+    public $timestamps = false;
 }

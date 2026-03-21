@@ -1,0 +1,239 @@
+.record-inventory-main {
+    padding-bottom: 60px;
+}
+
+.record-inventory-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.record-inventory-title {
+    margin: 0;
+    flex: 1;
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #111111;
+}
+
+.record-inventory-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.record-inventory-divider {
+    height: 3px;
+    margin: 18px 0 12px;
+    border-radius: 999px;
+    background: rgba(17, 17, 17, 0.18);
+}
+
+.record-inventory-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.record-back-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #042f1c;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 1.2rem;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(4, 47, 28, 0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.record-back-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(4, 47, 28, 0.28);
+}
+
+.record-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.record-tab {
+    min-width: 92px;
+    height: 36px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid #9d9d9d;
+    background: #ffffff;
+    color: #222222;
+    font-size: 1rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.record-tab.active.feed-active {
+    background: #9b6420;
+    color: #ffffff;
+    border-color: #9b6420;
+}
+
+.record-tab.active.vitamins-active {
+    background: #5b9999;
+    color: #ffffff;
+    border-color: #5b9999;
+}
+
+.record-filter-wrap {
+    margin-left: auto;
+}
+
+.record-filter-wrap.hidden {
+    display: none;
+}
+
+.record-filter-select {
+    min-width: 150px;
+    height: 36px;
+    padding: 0 38px 0 16px;
+    border-radius: 999px;
+    border: 1.5px solid #5b8f59;
+    background: #f8f8f8;
+    color: #111111;
+    font-size: 0.96rem;
+    font-weight: 500;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #333 50%),
+        linear-gradient(135deg, #333 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 14px,
+        calc(100% - 12px) 14px;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+}
+
+.record-table-card {
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 28px;
+    padding: 12px 18px 22px;
+    min-height: 420px;
+    box-shadow: 0 12px 26px rgba(10, 24, 15, 0.06);
+}
+
+.record-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.record-table th,
+.record-table td {
+    text-align: left;
+    padding: 14px 10px;
+    font-size: 0.98rem;
+    color: #111111;
+}
+
+.record-table th {
+    font-weight: 800;
+}
+
+.record-table td {
+    font-weight: 500;
+}
+
+.record-inventory-topbar,
+.record-inventory-controls,
+.record-table-card {
+    animation: recordFadeUp 0.6s ease both;
+}
+
+.record-inventory-controls {
+    animation-delay: 0.08s;
+}
+
+.record-table-card {
+    animation-delay: 0.16s;
+}
+
+.record-table tbody tr {
+    opacity: 0;
+    animation: recordRowFade 0.5s ease forwards;
+}
+
+.record-table tbody tr:nth-child(1) {
+    animation-delay: 0.18s;
+}
+
+.record-table tbody tr:nth-child(2) {
+    animation-delay: 0.26s;
+}
+
+.record-table tbody tr:nth-child(3) {
+    animation-delay: 0.34s;
+}
+
+.record-table tbody tr:nth-child(4) {
+    animation-delay: 0.42s;
+}
+
+.record-table tbody tr:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+@keyframes recordFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes recordRowFade {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .record-inventory-title {
+        text-align: left;
+        font-size: 1.8rem;
+    }
+
+    .record-inventory-controls {
+        flex-wrap: wrap;
+    }
+
+    .record-filter-wrap {
+        margin-left: 0;
+    }
+
+    .record-table-card {
+        overflow-x: auto;
+    }
+
+    .record-table {
+        min-width: 860px;
+    }
+}

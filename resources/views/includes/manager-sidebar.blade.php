@@ -31,7 +31,8 @@
                 <span>Tasks</span>
             </a>
 
-            <a href="#" class="sidebar-link">
+            <a href="{{ route('manager.inventory') }}"
+                class="sidebar-link {{ request()->routeIs('manager.inventory') ? 'active' : '' }}">
                 <span class="sidebar-icon">▣</span>
                 <span>Inventory</span>
             </a>

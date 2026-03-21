@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InventoryController;
 
 Route::post('/api/login', [AuthController::class, 'login']);
 
@@ -19,6 +20,13 @@ Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
 Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
 Route::view('/manager/houses/records', 'manager.record-house')
     ->name('manager.houses.record-house');
+Route::get('/manager/inventory', [InventoryController::class, 'managerIndex'])->name('manager.inventory');
+Route::view('/manager/inventory/records', 'manager.record-inventory')
+    ->name('manager.inventory.records');
+Route::view('/manager/inventory/records/feed', 'manager.record-inventory-feed')
+    ->name('manager.inventory.records.feed');
+Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
+    ->name('manager.inventory.records.vitamins');
 
 Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
 Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
@@ -309,3 +317,39 @@ Route::get('/api/manager/tasks/form-options', function () {
 });
 
 
+Route::get('/api/manager/inventory', function () {
+    return response()->json([
+        'feed' => [
+            [
+                'item_name' => 'Feed Stock',
+                'initial_stock' => 50,
+                'remaining_stock' => 42,
+                'unit' => 'kg',
+                'purchase_date' => '1-25-26',
+            ],
+        ],
+        'vitamins' => [
+            [
+                'item_name' => 'Vitamin E',
+                'initial_stock' => 5000,
+                'remaining_stock' => 2500,
+                'unit' => 'mL',
+                'purchase_date' => '1-25-26',
+            ],
+            [
+                'item_name' => 'Vitamin D3',
+                'initial_stock' => 5000,
+                'remaining_stock' => 150,
+                'unit' => 'mL',
+                'purchase_date' => '1-25-26',
+            ],
+            [
+                'item_name' => 'Vitamin B-Complex',
+                'initial_stock' => 5000,
+                'remaining_stock' => 3700,
+                'unit' => 'mL',
+                'purchase_date' => '1-25-26',
+            ],
+        ],
+    ]);
+});

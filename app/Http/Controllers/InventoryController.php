@@ -3,72 +3,105 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
+    // GET ALL (for manager page)
     public function managerIndex()
     {
-        $inventoryItems = [
-            [
-                'id' => 1,
-                'category' => 'feed',
-                'item_name' => 'Feed Stock',
-                'initial_stock' => 50,
-                'remaining_stock' => 42,
-                'unit' => 'kg',
-                'purchase_date' => '2026-01-25',
-            ],
-            [
-                'id' => 2,
-                'category' => 'vitamin',
-                'item_name' => 'Vitamin E',
-                'initial_stock' => 5000,
-                'remaining_stock' => 2500,
-                'unit' => 'mL',
-                'purchase_date' => '2026-01-25',
-            ],
-            [
-                'id' => 3,
-                'category' => 'vitamin',
-                'item_name' => 'Vitamin D3',
-                'initial_stock' => 5000,
-                'remaining_stock' => 150,
-                'unit' => 'mL',
-                'purchase_date' => '2026-01-25',
-            ],
-            [
-                'id' => 4,
-                'category' => 'vitamin',
-                'item_name' => 'Vitamin B-Complex',
-                'initial_stock' => 5000,
-                'remaining_stock' => 3700,
-                'unit' => 'mL',
-                'purchase_date' => '2026-01-25',
-            ],
-        ];
+        $items = DB::table('inventories')->get();
 
-        foreach ($inventoryItems as &$item) {
-            $item['percentage'] = $item['initial_stock'] > 0
-                ? round(($item['remaining_stock'] / $item['initial_stock']) * 100)
-                : 0;
+        $feedItems = $items->where('type', 'feed')
+            ->map(fn($item) => $this->formatItem($item));
 
-            if ($item['percentage'] >= 70) {
-                $item['status'] = 'High';
-                $item['status_class'] = 'high';
-            } elseif ($item['percentage'] >= 30) {
-                $item['status'] = 'Moderate';
-                $item['status_class'] = 'moderate';
-            } else {
-                $item['status'] = 'Critical';
-                $item['status_class'] = 'critical';
-            }
-        }
-
-        unset($item);
-
-        $feedItems = array_values(array_filter($inventoryItems, fn ($item) => $item['category'] === 'feed'));
-        $vitaminItems = array_values(array_filter($inventoryItems, fn ($item) => $item['category'] === 'vitamin'));
+        $vitaminItems = $items->where('type', 'vitamin')
+            ->map(fn($item) => $this->formatItem($item));
 
         return view('manager.inventory', compact('feedItems', 'vitaminItems'));
+    }
+
+    // STORE
+    public function store(Request $request)
+    {
+        $id = DB::table('inventories')->insertGetId([
+            'item_name' => $request->item_name,
+            'type' => $request->type,
+            'unit' => $request->unit,
+            'initial_stock' => $request->initial_stock,
+            'remaining_stock' => $request->remaining_stock,
+            'purchase_date' => $request->purchase_date,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // create record log
+        DB::table('inventory_records')->insert([
+            'inventory_id' => $id,
+            'initial_stock' => $request->initial_stock,
+            'remaining_stock' => $request->remaining_stock,
+            'monitoring_date' => now(),
+        ]);
+
+        // ✅ IMPORTANT FIX: return inserted ID
+        return response()->json([
+            'success' => true,
+            'id' => $id
+        ]);
+    }
+
+    // UPDATE
+    public function update(Request $request, $id)
+    {
+        DB::table('inventories')->where('id', $id)->update([
+            'item_name' => $request->item_name,
+            'initial_stock' => $request->initial_stock,
+            'remaining_stock' => $request->remaining_stock,
+            'purchase_date' => $request->purchase_date,
+            'updated_at' => now(),
+        ]);
+
+        // log change
+        DB::table('inventory_records')->insert([
+            'inventory_id' => $id,
+            'initial_stock' => $request->initial_stock,
+            'remaining_stock' => $request->remaining_stock,
+            'monitoring_date' => now(),
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    // DELETE
+    public function destroy($id)
+    {
+        DB::table('inventories')->where('id', $id)->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    private function formatItem($item)
+    {
+        $percentage = $item->initial_stock > 0
+            ? round(($item->remaining_stock / $item->initial_stock) * 100)
+            : 0;
+
+        $status = match (true) {
+            $percentage >= 70 => ['High', 'high'],
+            $percentage >= 30 => ['Moderate', 'moderate'],
+            default => ['Critical', 'critical'],
+        };
+
+        return [
+            'id' => $item->id,
+            'item_name' => $item->item_name,
+            'initial_stock' => $item->initial_stock,
+            'remaining_stock' => $item->remaining_stock,
+            'purchase_date' => $item->purchase_date,
+            'unit' => $item->unit,
+            'percentage' => $percentage,
+            'status' => $status[0],
+            'status_class' => $status[1],
+        ];
     }
 }

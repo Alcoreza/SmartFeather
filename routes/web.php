@@ -20,7 +20,9 @@ Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
 Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
 Route::view('/manager/houses/records', 'manager.record-house')
     ->name('manager.houses.record-house');
+
 Route::get('/manager/inventory', [InventoryController::class, 'managerIndex'])->name('manager.inventory');
+
 Route::view('/manager/inventory/records', 'manager.record-inventory')
     ->name('manager.inventory.records');
 Route::view('/manager/inventory/records/feed', 'manager.record-inventory-feed')
@@ -215,7 +217,7 @@ Route::get('/api/admin/dashboard/monitoring-graphs', function () {
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN WORKERS CRUD (IMPORTANT - LAST)
+| ADMIN WORKERS CRUD
 |--------------------------------------------------------------------------
 */
 
@@ -226,6 +228,20 @@ Route::prefix('api/admin/workers')->group(function () {
     Route::put('/{id}', [EmployeeController::class, 'update']);
     Route::delete('/{id}', [EmployeeController::class, 'destroy']);
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| ✅ NEW: MANAGER INVENTORY CRUD (ADDED)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('api/manager/inventory')->group(function () {
+    Route::post('/', [InventoryController::class, 'store']);
+    Route::put('/{id}', [InventoryController::class, 'update']);
+    Route::delete('/{id}', [InventoryController::class, 'destroy']);
+});
+
 
 Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
 
@@ -312,44 +328,6 @@ Route::get('/api/manager/tasks/form-options', function () {
             'Low',
             'Medium',
             'High',
-        ],
-    ]);
-});
-
-
-Route::get('/api/manager/inventory', function () {
-    return response()->json([
-        'feed' => [
-            [
-                'item_name' => 'Feed Stock',
-                'initial_stock' => 50,
-                'remaining_stock' => 42,
-                'unit' => 'kg',
-                'purchase_date' => '1-25-26',
-            ],
-        ],
-        'vitamins' => [
-            [
-                'item_name' => 'Vitamin E',
-                'initial_stock' => 5000,
-                'remaining_stock' => 2500,
-                'unit' => 'mL',
-                'purchase_date' => '1-25-26',
-            ],
-            [
-                'item_name' => 'Vitamin D3',
-                'initial_stock' => 5000,
-                'remaining_stock' => 150,
-                'unit' => 'mL',
-                'purchase_date' => '1-25-26',
-            ],
-            [
-                'item_name' => 'Vitamin B-Complex',
-                'initial_stock' => 5000,
-                'remaining_stock' => 3700,
-                'unit' => 'mL',
-                'purchase_date' => '1-25-26',
-            ],
         ],
     ]);
 });

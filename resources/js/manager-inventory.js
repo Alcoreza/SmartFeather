@@ -1,3 +1,16 @@
+async function apiRequest(url, method, data = null) {
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: data ? JSON.stringify(data) : null
+    });
+
+    return res.json();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     setupInventoryModals();
     setupProfileModal();
@@ -99,13 +112,16 @@ function setupInventoryModals() {
         });
     }
 
-    function createInventoryEntry({ type, itemName, initialStock, remainingStock, purchaseDate, unit }) {
+    function createInventoryEntry({ type, itemName, initialStock, remainingStock, purchaseDate, unit, id = null }) {
         const percentage = getInventoryPercentage(remainingStock, initialStock);
         const status = getInventoryStatus(percentage);
+
+        const idAttr = id ? `data-id="${id}"` : "";
 
         if (type === "feed") {
             return `
                 <div class="inventory-entry inventory-feed-entry"
+                    ${idAttr}
                     data-item-name="${itemName}"
                     data-initial-stock="${initialStock}"
                     data-remaining-stock="${remainingStock}"
@@ -138,6 +154,7 @@ function setupInventoryModals() {
 
         return `
             <div class="inventory-entry inventory-vitamin-entry"
+                ${idAttr}
                 data-item-name="${itemName}"
                 data-initial-stock="${initialStock}"
                 data-remaining-stock="${remainingStock}"
@@ -172,177 +189,169 @@ function setupInventoryModals() {
 
     bindSelection();
 
-    if (openFeedAddBtn && feedAddModal) {
-        openFeedAddBtn.addEventListener("click", () => {
-            feedAddForm?.reset();
-            feedAddModal.classList.add("show");
-        });
-    }
+    // OPEN ADD MODALS
+    openFeedAddBtn?.addEventListener("click", () => {
+        feedAddForm?.reset();
+        feedAddModal.classList.add("show");
+    });
 
-    if (openVitaminAddBtn && vitaminAddModal) {
-        openVitaminAddBtn.addEventListener("click", () => {
-            vitaminAddForm?.reset();
-            vitaminAddModal.classList.add("show");
-        });
-    }
+    openVitaminAddBtn?.addEventListener("click", () => {
+        vitaminAddForm?.reset();
+        vitaminAddModal.classList.add("show");
+    });
 
-    if (closeFeedAddBtn && feedAddModal) {
-        closeFeedAddBtn.addEventListener("click", () => {
-            feedAddModal.classList.remove("show");
-        });
-    }
+    // CLOSE ADD MODALS
+    closeFeedAddBtn?.addEventListener("click", () => feedAddModal.classList.remove("show"));
+    closeVitaminAddBtn?.addEventListener("click", () => vitaminAddModal.classList.remove("show"));
 
-    if (closeVitaminAddBtn && vitaminAddModal) {
-        closeVitaminAddBtn.addEventListener("click", () => {
-            vitaminAddModal.classList.remove("show");
-        });
-    }
+    // ✅ ADD FEED (API)
+    feedAddForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
-    if (feedAddForm && feedAddModal) {
-        feedAddForm.addEventListener("submit", (event) => {
-            event.preventDefault();
+        const payload = {
+            item_name: addFeedName.value,
+            type: "feed",
+            unit: addFeedUnit.value,
+            initial_stock: Number(addFeedInitialStock.value),
+            remaining_stock: Number(addFeedRemainingStock.value),
+            purchase_date: addFeedPurchaseDate.value
+        };
 
-            const itemName = addFeedName.value || "Feed Stock";
-            const unit = addFeedUnit.value || "kg";
-            const initialStock = Number(addFeedInitialStock.value) || 0;
-            const remainingStock = Number(addFeedRemainingStock.value) || 0;
-            const purchaseDate = addFeedPurchaseDate.value || "";
+        const res = await apiRequest("/api/manager/inventory", "POST", payload);
 
+        if (res.success) {
             const newEntry = createInventoryEntry({
                 type: "feed",
-                itemName,
-                initialStock,
-                remainingStock,
-                purchaseDate,
-                unit
+                itemName: payload.item_name,
+                initialStock: payload.initial_stock,
+                remainingStock: payload.remaining_stock,
+                purchaseDate: payload.purchase_date,
+                unit: payload.unit,
+                id: res.data?.id
             });
 
-            if (feedList) {
-                feedList.insertAdjacentHTML("beforeend", newEntry);
-                bindSelection();
-            }
-
+            feedList.insertAdjacentHTML("beforeend", newEntry);
+            bindSelection();
             feedAddModal.classList.remove("show");
-        });
-    }
+        }
+    });
 
-    if (vitaminAddForm && vitaminAddModal) {
-        vitaminAddForm.addEventListener("submit", (event) => {
-            event.preventDefault();
+    // ✅ ADD VITAMIN (API)
+    vitaminAddForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
-            const itemName = addVitaminName.value || "Vitamin Stock";
-            const unit = addVitaminUnit.value || "mL";
-            const initialStock = Number(addVitaminInitialStock.value) || 0;
-            const remainingStock = Number(addVitaminRemainingStock.value) || 0;
-            const purchaseDate = addVitaminPurchaseDate.value || "";
+        const payload = {
+            item_name: addVitaminName.value,
+            type: "vitamin",
+            unit: addVitaminUnit.value,
+            initial_stock: Number(addVitaminInitialStock.value),
+            remaining_stock: Number(addVitaminRemainingStock.value),
+            purchase_date: addVitaminPurchaseDate.value
+        };
 
+        const res = await apiRequest("/api/manager/inventory", "POST", payload);
+
+        if (res.success) {
             const newEntry = createInventoryEntry({
                 type: "vitamin",
-                itemName,
-                initialStock,
-                remainingStock,
-                purchaseDate,
-                unit
+                itemName: payload.item_name,
+                initialStock: payload.initial_stock,
+                remainingStock: payload.remaining_stock,
+                purchaseDate: payload.purchase_date,
+                unit: payload.unit,
+                id: res.data?.id
             });
 
-            if (vitaminList) {
-                vitaminList.insertAdjacentHTML("beforeend", newEntry);
-                bindSelection();
-            }
-
+            vitaminList.insertAdjacentHTML("beforeend", newEntry);
+            bindSelection();
             vitaminAddModal.classList.remove("show");
-        });
-    }
+        }
+    });
 
-    if (openFeedBtn && feedModal) {
-        openFeedBtn.addEventListener("click", () => {
-            if (!selectedFeedEntry) return;
+    // OPEN EDIT MODALS
+    openFeedBtn?.addEventListener("click", () => {
+        if (!selectedFeedEntry) return;
 
-            feedInitialStock.value = selectedFeedEntry.dataset.initialStock || "";
-            feedRemainingStock.value = selectedFeedEntry.dataset.remainingStock || "";
-            feedPurchaseDate.value = selectedFeedEntry.dataset.purchaseDate || "";
+        feedInitialStock.value = selectedFeedEntry.dataset.initialStock;
+        feedRemainingStock.value = selectedFeedEntry.dataset.remainingStock;
+        feedPurchaseDate.value = selectedFeedEntry.dataset.purchaseDate;
 
-            feedModal.classList.add("show");
-        });
-    }
+        feedModal.classList.add("show");
+    });
 
-    if (openVitaminBtn && vitaminModal) {
-        openVitaminBtn.addEventListener("click", () => {
-            if (!selectedVitaminEntry) return;
+    openVitaminBtn?.addEventListener("click", () => {
+        if (!selectedVitaminEntry) return;
 
-            vitaminInitialStock.value = selectedVitaminEntry.dataset.initialStock || "";
-            vitaminRemainingStock.value = selectedVitaminEntry.dataset.remainingStock || "";
-            vitaminType.value = selectedVitaminEntry.dataset.itemName || "";
-            vitaminPurchaseDate.value = selectedVitaminEntry.dataset.purchaseDate || "";
+        vitaminInitialStock.value = selectedVitaminEntry.dataset.initialStock;
+        vitaminRemainingStock.value = selectedVitaminEntry.dataset.remainingStock;
+        vitaminType.value = selectedVitaminEntry.dataset.itemName;
+        vitaminPurchaseDate.value = selectedVitaminEntry.dataset.purchaseDate;
 
-            vitaminModal.classList.add("show");
-        });
-    }
+        vitaminModal.classList.add("show");
+    });
 
-    if (closeFeedBtn && feedModal) {
-        closeFeedBtn.addEventListener("click", () => {
-            feedModal.classList.remove("show");
-        });
-    }
+    // CLOSE EDIT MODALS
+    closeFeedBtn?.addEventListener("click", () => feedModal.classList.remove("show"));
+    closeVitaminBtn?.addEventListener("click", () => vitaminModal.classList.remove("show"));
 
-    if (closeVitaminBtn && vitaminModal) {
-        closeVitaminBtn.addEventListener("click", () => {
-            vitaminModal.classList.remove("show");
-        });
-    }
-
+    // CLICK OUTSIDE CLOSE
     [feedModal, vitaminModal, feedAddModal, vitaminAddModal].forEach((modal) => {
-        if (!modal) return;
-
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                modal.classList.remove("show");
-            }
+        modal?.addEventListener("click", (e) => {
+            if (e.target === modal) modal.classList.remove("show");
         });
     });
 
-    if (feedForm && feedModal) {
-        feedForm.addEventListener("submit", (event) => {
-            event.preventDefault();
-            if (!selectedFeedEntry) return;
+    // ✅ UPDATE FEED (API)
+    feedForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!selectedFeedEntry) return;
 
-            const initial = Number(feedInitialStock.value) || 0;
-            const remaining = Number(feedRemainingStock.value) || 0;
-            const purchaseDate = feedPurchaseDate.value || "";
+        const id = selectedFeedEntry.dataset.id;
 
+        const payload = {
+            item_name: selectedFeedEntry.dataset.itemName,
+            initial_stock: Number(feedInitialStock.value),
+            remaining_stock: Number(feedRemainingStock.value),
+            purchase_date: feedPurchaseDate.value
+        };
+
+        const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
+
+        if (res.success) {
             updateInventoryEntry(selectedFeedEntry, {
-                itemName: selectedFeedEntry.dataset.itemName || "Feed Stock",
-                initialStock: initial,
-                remainingStock: remaining,
-                purchaseDate: purchaseDate,
-                unit: selectedFeedEntry.dataset.unit || "",
+                ...payload,
+                unit: selectedFeedEntry.dataset.unit
             });
 
             feedModal.classList.remove("show");
-        });
-    }
+        }
+    });
 
-    if (vitaminForm && vitaminModal) {
-        vitaminForm.addEventListener("submit", (event) => {
-            event.preventDefault();
-            if (!selectedVitaminEntry) return;
+    // ✅ UPDATE VITAMIN (API)
+    vitaminForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!selectedVitaminEntry) return;
 
-            const initial = Number(vitaminInitialStock.value) || 0;
-            const remaining = Number(vitaminRemainingStock.value) || 0;
-            const itemName = vitaminType.value || "";
-            const purchaseDate = vitaminPurchaseDate.value || "";
+        const id = selectedVitaminEntry.dataset.id;
 
+        const payload = {
+            item_name: vitaminType.value,
+            initial_stock: Number(vitaminInitialStock.value),
+            remaining_stock: Number(vitaminRemainingStock.value),
+            purchase_date: vitaminPurchaseDate.value
+        };
+
+        const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
+
+        if (res.success) {
             updateInventoryEntry(selectedVitaminEntry, {
-                itemName: itemName,
-                initialStock: initial,
-                remainingStock: remaining,
-                purchaseDate: purchaseDate,
-                unit: selectedVitaminEntry.dataset.unit || "",
+                ...payload,
+                unit: selectedVitaminEntry.dataset.unit
             });
 
             vitaminModal.classList.remove("show");
-        });
-    }
+        }
+    });
 }
 
 function updateInventoryEntry(entry, data) {
@@ -357,35 +366,25 @@ function updateInventoryEntry(entry, data) {
     entry.dataset.unit = unit;
 
     const itemNameEl = entry.querySelector(".inventory-item-name");
-    if (itemNameEl) {
-        itemNameEl.textContent = data.itemName;
-    }
+    if (itemNameEl) itemNameEl.textContent = data.itemName;
 
     const paragraphs = entry.querySelectorAll(".inventory-stock-details p");
-    if (paragraphs[0]) {
-        paragraphs[0].innerHTML = `<strong>Initial Stock:</strong> ${data.initialStock} ${unit}`;
-    }
-    if (paragraphs[1]) {
-        paragraphs[1].innerHTML = `<strong>Remaining:</strong> ${data.remainingStock} ${unit}`;
-    }
+    if (paragraphs[0]) paragraphs[0].innerHTML = `<strong>Initial Stock:</strong> ${data.initialStock} ${unit}`;
+    if (paragraphs[1]) paragraphs[1].innerHTML = `<strong>Remaining:</strong> ${data.remainingStock} ${unit}`;
 
     const purchaseDateEl = entry.querySelector(".inventory-date-card p");
-    if (purchaseDateEl) {
-        purchaseDateEl.innerHTML = `<strong>Purchase Date:</strong> ${data.purchaseDate}`;
-    }
+    if (purchaseDateEl) purchaseDateEl.innerHTML = `<strong>Purchase Date:</strong> ${data.purchaseDate}`;
 
     const badge = entry.querySelector(".inventory-status-badge");
     if (badge) {
         badge.textContent = status.label;
-        badge.classList.remove("high", "moderate", "critical");
-        badge.classList.add(status.className);
+        badge.className = `inventory-status-badge ${status.className}`;
     }
 
     const ring = entry.querySelector(".inventory-ring");
     if (ring) {
         ring.style.setProperty("--percent", percentage);
-        ring.classList.remove("high", "moderate", "critical");
-        ring.classList.add(status.className);
+        ring.className = `inventory-ring ${status.className}`;
     }
 }
 
@@ -395,14 +394,8 @@ function getInventoryPercentage(remaining, initial) {
 }
 
 function getInventoryStatus(percentage) {
-    if (percentage >= 70) {
-        return { label: "High", className: "high" };
-    }
-
-    if (percentage >= 30) {
-        return { label: "Moderate", className: "moderate" };
-    }
-
+    if (percentage >= 70) return { label: "High", className: "high" };
+    if (percentage >= 30) return { label: "Moderate", className: "moderate" };
     return { label: "Critical", className: "critical" };
 }
 
@@ -411,23 +404,12 @@ function setupProfileModal() {
     const openProfileModalBtn = document.getElementById("openProfileModal");
     const closeProfileModalBtn = document.getElementById("closeProfileModal");
 
-    if (openProfileModalBtn && profileModal) {
-        openProfileModalBtn.addEventListener("click", () => {
-            profileModal.classList.add("show");
-        });
-    }
+    openProfileModalBtn?.addEventListener("click", () => profileModal.classList.add("show"));
+    closeProfileModalBtn?.addEventListener("click", () => profileModal.classList.remove("show"));
 
-    if (closeProfileModalBtn && profileModal) {
-        closeProfileModalBtn.addEventListener("click", () => {
+    profileModal?.addEventListener("click", (event) => {
+        if (event.target === profileModal) {
             profileModal.classList.remove("show");
-        });
-    }
-
-    if (profileModal) {
-        profileModal.addEventListener("click", (event) => {
-            if (event.target === profileModal) {
-                profileModal.classList.remove("show");
-            }
-        });
-    }
+        }
+    });
 }

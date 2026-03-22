@@ -50,6 +50,7 @@
                 <div class="inventory-list" id="feedInventoryList">
                     @foreach ($feedItems as $item)
                         <div class="inventory-entry inventory-feed-entry"
+                            data-id="{{ $item['id'] }}"
                             data-item-name="{{ $item['item_name'] }}"
                             data-initial-stock="{{ $item['initial_stock'] }}"
                             data-remaining-stock="{{ $item['remaining_stock'] }}"
@@ -94,6 +95,7 @@
                 <div class="inventory-list vitamins-list" id="vitaminInventoryList">
                     @foreach ($vitaminItems as $item)
                         <div class="inventory-entry inventory-vitamin-entry"
+                            data-id="{{ $item['id'] }}"
                             data-item-name="{{ $item['item_name'] }}"
                             data-initial-stock="{{ $item['initial_stock'] }}"
                             data-remaining-stock="{{ $item['remaining_stock'] }}"

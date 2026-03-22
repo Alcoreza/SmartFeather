@@ -33,7 +33,7 @@
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="addFeedPurchaseDate">Purchase Date</label>
-                    <input type="text" id="addFeedPurchaseDate" name="purchase_date" placeholder="2026-01-25">
+                    <input type="date" id="addFeedPurchaseDate" name="purchase_date" max="<?= date('Y-m-d') ?>">
                 </div>
             </div>
 
@@ -80,7 +80,7 @@
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="addVitaminPurchaseDate">Purchase Date</label>
-                    <input type="text" id="addVitaminPurchaseDate" name="purchase_date" placeholder="2026-01-25">
+                    <input type="date" id="addVitaminPurchaseDate" name="purchase_date" max="<?= date('Y-m-d') ?>">
                 </div>
             </div>
 

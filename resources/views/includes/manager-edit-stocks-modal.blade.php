@@ -9,19 +9,19 @@
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="feedInitialStock">Initial Stock</label>
-                    <input type="text" id="feedInitialStock" name="initial_stock">
+                    <input type="number" id="feedInitialStock" name="initial_stock">
                 </div>
 
                 <div class="inventory-form-group">
                     <label for="feedRemainingStock">Remaining</label>
-                    <input type="text" id="feedRemainingStock" name="remaining_stock">
+                    <input type="number" id="feedRemainingStock" name="remaining_stock">
                 </div>
             </div>
 
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="feedPurchaseDate">Purchase Date</label>
-                    <input type="text" id="feedPurchaseDate" name="purchase_date">
+                    <input type="date" id="feedPurchaseDate" name="purchase_date" max="<?= date('Y-m-d') ?>">
                 </div>
             </div>
 
@@ -54,12 +54,12 @@
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="vitaminInitialStock">Initial Stock</label>
-                    <input type="text" id="vitaminInitialStock" name="initial_stock">
+                    <input type="number" id="vitaminInitialStock" name="initial_stock">
                 </div>
 
                 <div class="inventory-form-group">
                     <label for="vitaminRemainingStock">Remaining</label>
-                    <input type="text" id="vitaminRemainingStock" name="remaining_stock">
+                    <input type="number" id="vitaminRemainingStock" name="remaining_stock">
                 </div>
             </div>
 
@@ -67,7 +67,7 @@
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="vitaminPurchaseDate">Purchase Date</label>
-                    <input type="text" id="vitaminPurchaseDate" name="purchase_date">
+                    <input type="date" id="vitaminPurchaseDate" name="purchase_date" max="<?= date('Y-m-d') ?>">
                 </div>
             </div>
 

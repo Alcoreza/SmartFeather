@@ -112,21 +112,25 @@ function setupInventoryModals() {
         });
     }
 
-    function createInventoryEntry({ type, itemName, initialStock, remainingStock, purchaseDate, unit, id = null }) {
+    // ✅ UPDATED createInventoryEntry
+    function createInventoryEntry({ type, id, itemName, initialStock, remainingStock, purchaseDate, unit }) {
         const percentage = getInventoryPercentage(remainingStock, initialStock);
         const status = getInventoryStatus(percentage);
 
-        const idAttr = id ? `data-id="${id}"` : "";
+        const commonAttributes = `
+            data-id="${id}"
+            data-item-name="${itemName}"
+            data-initial-stock="${initialStock}"
+            data-remaining-stock="${remainingStock}"
+            data-purchase-date="${purchaseDate}"
+            data-unit="${unit}"
+        `;
 
         if (type === "feed") {
             return `
-                <div class="inventory-entry inventory-feed-entry"
-                    ${idAttr}
-                    data-item-name="${itemName}"
-                    data-initial-stock="${initialStock}"
-                    data-remaining-stock="${remainingStock}"
-                    data-purchase-date="${purchaseDate}"
-                    data-unit="${unit}">
+                <div class="inventory-entry inventory-feed-entry" ${commonAttributes}>
+                    <h3 class="inventory-item-name">${itemName}</h3>
+
                     <div class="inventory-item-block">
                         <div class="inventory-card inventory-stock-card">
                             <div class="inventory-ring ${status.className}" style="--percent: ${percentage};">
@@ -153,13 +157,7 @@ function setupInventoryModals() {
         }
 
         return `
-            <div class="inventory-entry inventory-vitamin-entry"
-                ${idAttr}
-                data-item-name="${itemName}"
-                data-initial-stock="${initialStock}"
-                data-remaining-stock="${remainingStock}"
-                data-purchase-date="${purchaseDate}"
-                data-unit="${unit}">
+            <div class="inventory-entry inventory-vitamin-entry" ${commonAttributes}>
                 <h3 class="inventory-item-name">${itemName}</h3>
 
                 <div class="inventory-item-block">
@@ -189,7 +187,6 @@ function setupInventoryModals() {
 
     bindSelection();
 
-    // OPEN ADD MODALS
     openFeedAddBtn?.addEventListener("click", () => {
         feedAddForm?.reset();
         feedAddModal.classList.add("show");
@@ -200,11 +197,10 @@ function setupInventoryModals() {
         vitaminAddModal.classList.add("show");
     });
 
-    // CLOSE ADD MODALS
     closeFeedAddBtn?.addEventListener("click", () => feedAddModal.classList.remove("show"));
     closeVitaminAddBtn?.addEventListener("click", () => vitaminAddModal.classList.remove("show"));
 
-    // ✅ ADD FEED (API)
+    // ADD FEED
     feedAddForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -222,12 +218,12 @@ function setupInventoryModals() {
         if (res.success) {
             const newEntry = createInventoryEntry({
                 type: "feed",
+                id: res.data?.id,
                 itemName: payload.item_name,
                 initialStock: payload.initial_stock,
                 remainingStock: payload.remaining_stock,
                 purchaseDate: payload.purchase_date,
-                unit: payload.unit,
-                id: res.data?.id
+                unit: payload.unit
             });
 
             feedList.insertAdjacentHTML("beforeend", newEntry);
@@ -236,7 +232,7 @@ function setupInventoryModals() {
         }
     });
 
-    // ✅ ADD VITAMIN (API)
+    // ADD VITAMIN
     vitaminAddForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -254,12 +250,12 @@ function setupInventoryModals() {
         if (res.success) {
             const newEntry = createInventoryEntry({
                 type: "vitamin",
+                id: res.data?.id,
                 itemName: payload.item_name,
                 initialStock: payload.initial_stock,
                 remainingStock: payload.remaining_stock,
                 purchaseDate: payload.purchase_date,
-                unit: payload.unit,
-                id: res.data?.id
+                unit: payload.unit
             });
 
             vitaminList.insertAdjacentHTML("beforeend", newEntry);
@@ -268,7 +264,7 @@ function setupInventoryModals() {
         }
     });
 
-    // OPEN EDIT MODALS
+    // OPEN EDIT
     openFeedBtn?.addEventListener("click", () => {
         if (!selectedFeedEntry) return;
 
@@ -290,18 +286,16 @@ function setupInventoryModals() {
         vitaminModal.classList.add("show");
     });
 
-    // CLOSE EDIT MODALS
     closeFeedBtn?.addEventListener("click", () => feedModal.classList.remove("show"));
     closeVitaminBtn?.addEventListener("click", () => vitaminModal.classList.remove("show"));
 
-    // CLICK OUTSIDE CLOSE
     [feedModal, vitaminModal, feedAddModal, vitaminAddModal].forEach((modal) => {
         modal?.addEventListener("click", (e) => {
             if (e.target === modal) modal.classList.remove("show");
         });
     });
 
-    // ✅ UPDATE FEED (API)
+    // ✅ UPDATED FEED UPDATE
     feedForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!selectedFeedEntry) return;
@@ -319,7 +313,10 @@ function setupInventoryModals() {
 
         if (res.success) {
             updateInventoryEntry(selectedFeedEntry, {
-                ...payload,
+                itemName: payload.item_name,
+                initialStock: payload.initial_stock,
+                remainingStock: payload.remaining_stock,
+                purchaseDate: payload.purchase_date,
                 unit: selectedFeedEntry.dataset.unit
             });
 
@@ -327,7 +324,7 @@ function setupInventoryModals() {
         }
     });
 
-    // ✅ UPDATE VITAMIN (API)
+    // ✅ UPDATED VITAMIN UPDATE
     vitaminForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!selectedVitaminEntry) return;
@@ -345,7 +342,10 @@ function setupInventoryModals() {
 
         if (res.success) {
             updateInventoryEntry(selectedVitaminEntry, {
-                ...payload,
+                itemName: payload.item_name,
+                initialStock: payload.initial_stock,
+                remainingStock: payload.remaining_stock,
+                purchaseDate: payload.purchase_date,
                 unit: selectedVitaminEntry.dataset.unit
             });
 
@@ -354,8 +354,10 @@ function setupInventoryModals() {
     });
 }
 
+// ✅ FIXED updateInventoryEntry
 function updateInventoryEntry(entry, data) {
     const unit = data.unit || "";
+
     const percentage = getInventoryPercentage(data.remainingStock, data.initialStock);
     const status = getInventoryStatus(percentage);
 
@@ -369,11 +371,17 @@ function updateInventoryEntry(entry, data) {
     if (itemNameEl) itemNameEl.textContent = data.itemName;
 
     const paragraphs = entry.querySelectorAll(".inventory-stock-details p");
-    if (paragraphs[0]) paragraphs[0].innerHTML = `<strong>Initial Stock:</strong> ${data.initialStock} ${unit}`;
-    if (paragraphs[1]) paragraphs[1].innerHTML = `<strong>Remaining:</strong> ${data.remainingStock} ${unit}`;
+    if (paragraphs[0]) {
+        paragraphs[0].innerHTML = `<strong>Initial Stock:</strong> ${data.initialStock} ${unit}`;
+    }
+    if (paragraphs[1]) {
+        paragraphs[1].innerHTML = `<strong>Remaining:</strong> ${data.remainingStock} ${unit}`;
+    }
 
     const purchaseDateEl = entry.querySelector(".inventory-date-card p");
-    if (purchaseDateEl) purchaseDateEl.innerHTML = `<strong>Purchase Date:</strong> ${data.purchaseDate}`;
+    if (purchaseDateEl) {
+        purchaseDateEl.innerHTML = `<strong>Purchase Date:</strong> ${data.purchaseDate}`;
+    }
 
     const badge = entry.querySelector(".inventory-status-badge");
     if (badge) {

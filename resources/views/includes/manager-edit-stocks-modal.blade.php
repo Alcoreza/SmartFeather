@@ -8,6 +8,13 @@
         <form class="inventory-modal-form" id="feedEditForm">
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
+                    <label for="feedName">Feed Name</label>
+                    <input type="text" id="feedName" name="item_name">
+                </div>
+            </div>
+
+            <div class="inventory-form-row">
+                <div class="inventory-form-group">
                     <label for="feedInitialStock">Initial Stock</label>
                     <input type="text" id="feedInitialStock" name="initial_stock">
                 </div>
@@ -43,6 +50,13 @@
         <form class="inventory-modal-form" id="vitaminEditForm">
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
+                    <label for="vitaminType">Type of Vitamin</label>
+                    <input type="text" id="vitaminType" name="item_name">
+                </div>
+            </div>
+
+            <div class="inventory-form-row">
+                <div class="inventory-form-group">
                     <label for="vitaminInitialStock">Initial Stock</label>
                     <input type="text" id="vitaminInitialStock" name="initial_stock">
                 </div>
@@ -53,12 +67,7 @@
                 </div>
             </div>
 
-            <div class="inventory-form-row">
-                <div class="inventory-form-group">
-                    <label for="vitaminType">Type of Vitamin</label>
-                    <input type="text" id="vitaminType" name="item_name">
-                </div>
-
+            <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="vitaminPurchaseDate">Purchase Date</label>
                     <input type="text" id="vitaminPurchaseDate" name="purchase_date">

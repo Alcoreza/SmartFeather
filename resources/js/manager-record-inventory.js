@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupInventoryRecordTabs();
 });
 
+/* ================= PROFILE MODAL ================= */
 function setupProfileModal() {
     const profileModal = document.getElementById("profileModal");
     const openProfileModalBtn = document.getElementById("openProfileModal");
@@ -29,116 +30,139 @@ function setupProfileModal() {
     }
 }
 
+/* ================= INVENTORY RECORDS ================= */
 function setupInventoryRecordTabs() {
     const feedTab = document.getElementById("feedTab");
     const vitaminsTab = document.getElementById("vitaminsTab");
-    const vitaminFilterWrap = document.getElementById("vitaminFilterWrap");
-    const vitaminRecordFilter = document.getElementById("vitaminRecordFilter");
+    const filterWrap = document.getElementById("filterWrap");
+    const recordFilter = document.getElementById("recordFilter");
     const tableHead = document.getElementById("recordTableHead");
     const tableBody = document.getElementById("recordTableBody");
 
-    if (!feedTab || !vitaminsTab || !tableHead || !tableBody) return;
+    let currentType = "feed";
 
-    const feedRecords = [
-        ["2025-07", "07-5-25", "5000", "4295"],
-        ["2025-07", "07-4-25", "5000", "4400"],
-        ["2025-07", "07-3-25", "5000", "4625"],
-    ];
+    /* ===== FETCH ITEMS (for dropdown) ===== */
+    async function fetchItems(type) {
+        try {
+            const res = await fetch(`/api/inventory-items?type=${type}`);
+            return await res.json();
+        } catch (e) {
+            console.error("Fetch items error:", e);
+            return [];
+        }
+    }
 
-    const vitaminRecords = {
-        "Vitamin E": [
-            ["2025-07", "07-5-25", "Vitamin E", "1000", "792"],
-            ["2025-07", "07-4-25", "Vitamin E", "1000", "924"],
-            ["2025-07", "07-3-25", "Vitamin E", "1000", "985"],
-        ],
-        "Vitamin D3": [
-            ["2025-07", "07-5-25", "Vitamin D3", "1000", "610"],
-            ["2025-07", "07-4-25", "Vitamin D3", "1000", "740"],
-            ["2025-07", "07-3-25", "Vitamin D3", "1000", "860"],
-        ],
-        "Vitamin B-Complex": [
-            ["2025-07", "07-5-25", "Vitamin B-Complex", "1000", "850"],
-            ["2025-07", "07-4-25", "Vitamin B-Complex", "1000", "910"],
-            ["2025-07", "07-3-25", "Vitamin B-Complex", "1000", "970"],
-        ]
-    };
+    /* ===== POPULATE DROPDOWN ===== */
+    async function populateFilter(type) {
+        if (!filterWrap || !recordFilter) return;
 
-    function renderFeedTable() {
+        const items = await fetchItems(type);
+
+        recordFilter.innerHTML = `
+            <option value="">All ${type}</option>
+        ` + items.map(item => `
+            <option value="${item}">${item}</option>
+        `).join("");
+
+        filterWrap.classList.remove("hidden");
+    }
+
+    /* ===== FETCH RECORDS ===== */
+    async function fetchRecords(type, itemName = null) {
+        let url = `/api/inventory-records?type=${type}`;
+
+        if (itemName) {
+            url += `&item_name=${encodeURIComponent(itemName)}`;
+        }
+
+        try {
+            const response = await fetch(url);
+            return await response.json();
+        } catch (error) {
+            console.error("Fetch error:", error);
+            return [];
+        }
+    }
+
+    /* ===== RENDER TABLE ===== */
+    async function renderTable() {
+        const selectedItem = recordFilter.value;
+
+        tableBody.innerHTML = `<tr><td colspan="4">Loading...</td></tr>`;
+
+        const data = await fetchRecords(currentType, selectedItem);
+
+        if (!data.length) {
+            tableBody.innerHTML = `<tr><td colspan="4">No records found</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = data.map(row => `
+            <tr>
+                <td>${row.item_name}</td>
+                <td>${formatDate(row.monitoring_date)}</td>
+                <td>${row.initial_stock}</td>
+                <td>${row.remaining_stock}</td>
+            </tr>
+        `).join("");
+    }
+
+    /* ===== FEED TAB ===== */
+    async function renderFeed() {
+        currentType = "feed";
+
+        // UPDATED CLASSES
         feedTab.classList.add("active", "feed-active");
         feedTab.classList.remove("vitamins-active");
 
         vitaminsTab.classList.remove("active", "vitamins-active", "feed-active");
 
-        if (vitaminFilterWrap) {
-            vitaminFilterWrap.classList.add("hidden");
-        }
-
         tableHead.innerHTML = `
             <tr>
-                <th>Purchase Date</th>
-                <th>Date of Monitoring</th>
-                <th>Initial Stock (kg)</th>
-                <th>Remaining Stock (kg)</th>
+                <th>Item</th>
+                <th>Date</th>
+                <th>Initial (kg)</th>
+                <th>Remaining (kg)</th>
             </tr>
         `;
 
-        tableBody.innerHTML = feedRecords.map((row) => `
-            <tr>
-                <td>${row[0]}</td>
-                <td>${row[1]}</td>
-                <td>${row[2]}</td>
-                <td>${row[3]}</td>
-            </tr>
-        `).join("");
+        await populateFilter("feed");
+        await renderTable();
     }
 
-    function renderVitaminTable() {
+    /* ===== VITAMIN TAB ===== */
+    async function renderVitamins() {
+        currentType = "vitamin";
+
+        // UPDATED CLASSES
         vitaminsTab.classList.add("active", "vitamins-active");
         vitaminsTab.classList.remove("feed-active");
 
         feedTab.classList.remove("active", "feed-active", "vitamins-active");
 
-        if (vitaminFilterWrap) {
-            vitaminFilterWrap.classList.remove("hidden");
-        }
-
-        const selectedVitamin = vitaminRecordFilter ? vitaminRecordFilter.value : "Vitamin E";
-        const rows = vitaminRecords[selectedVitamin] || [];
-
         tableHead.innerHTML = `
             <tr>
-                <th>Purchase Date</th>
-                <th>Date of Monitoring</th>
-                <th>Type</th>
-                <th>Initial Stock (mL)</th>
-                <th>Remaining Stock (mL)</th>
+                <th>Item</th>
+                <th>Date</th>
+                <th>Initial (mL)</th>
+                <th>Remaining (mL)</th>
             </tr>
         `;
 
-        tableBody.innerHTML = rows.map((row) => `
-            <tr>
-                <td>${row[0]}</td>
-                <td>${row[1]}</td>
-                <td>${row[2]}</td>
-                <td>${row[3]}</td>
-                <td>${row[4]}</td>
-            </tr>
-        `).join("");
-
-        tableBody.querySelectorAll("tr").forEach((row, index) => {
-        row.style.animation = "none";
-        row.offsetHeight;
-        row.style.animation = `recordRowFade 0.5s ease forwards`;
-        row.style.animationDelay = `${0.18 + index * 0.08}s`;
-});
+        await populateFilter("vitamin");
+        await renderTable();
     }
 
-    feedTab.addEventListener("click", renderFeedTable);
-    vitaminsTab.addEventListener("click", renderVitaminTable);
+    /* ===== EVENTS ===== */
+    if (feedTab) feedTab.addEventListener("click", renderFeed);
+    if (vitaminsTab) vitaminsTab.addEventListener("click", renderVitamins);
+    if (recordFilter) recordFilter.addEventListener("change", renderTable);
 
-    if (vitaminRecordFilter) {
-        vitaminRecordFilter.addEventListener("change", renderVitaminTable);
+    /* ===== DEFAULT LOAD ===== */
+    renderFeed();
+
+    /* ===== HELPERS ===== */
+    function formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString();
     }
-
-    renderFeedTable();
 }

@@ -44,12 +44,9 @@
                     <button type="button" class="record-tab" id="vitaminsTab">Vitamins</button>
                 </div>
 
-                <div class="record-filter-wrap hidden" id="vitaminFilterWrap">
-                    <select class="record-filter-select" id="vitaminRecordFilter">
-                        <option value="Vitamin E">Vitamin E</option>
-                        <option value="Vitamin D3">Vitamin D3</option>
-                        <option value="Vitamin B-Complex">Vitamin B-Complex</option>
-                    </select>
+                {{-- ✅ UPDATED: unified filter dropdown --}}
+                <div class="record-filter-wrap hidden" id="filterWrap">
+                    <select class="record-filter-select" id="recordFilter"></select>
                 </div>
             </div>
 

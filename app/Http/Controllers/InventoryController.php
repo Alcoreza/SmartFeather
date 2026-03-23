@@ -43,7 +43,6 @@ class InventoryController extends Controller
             'monitoring_date' => now(),
         ]);
 
-        // ✅ IMPORTANT FIX: return inserted ID
         return response()->json([
             'success' => true,
             'id' => $id
@@ -80,6 +79,36 @@ class InventoryController extends Controller
         return response()->json(['success' => true]);
     }
 
+    // ✅ NEW: GET INVENTORY RECORDS (history / logs)
+    public function records(Request $request)
+    {
+        $type = $request->type; // feed or vitamin
+        $itemName = $request->item_name;
+
+        $query = DB::table('inventory_records as r')
+            ->join('inventories as i', 'r.inventory_id', '=', 'i.id')
+            ->select(
+                'r.id',
+                'i.item_name',
+                'i.type',
+                'r.initial_stock',
+                'r.remaining_stock',
+                'r.monitoring_date'
+            )
+            ->orderBy('r.monitoring_date', 'desc');
+
+        if ($type) {
+            $query->where('i.type', $type);
+        }
+
+        if ($itemName) {
+            $query->where('i.item_name', $itemName);
+        }
+
+        return response()->json($query->get());
+    }
+
+    // FORMAT ITEM (for UI display)
     private function formatItem($item)
     {
         $percentage = $item->initial_stock > 0
@@ -103,5 +132,15 @@ class InventoryController extends Controller
             'status' => $status[0],
             'status_class' => $status[1],
         ];
+    }
+    public function items(Request $request)
+    {
+        $type = $request->type;
+
+        $items = DB::table('inventories')
+            ->when($type, fn($q) => $q->where('type', $type))
+            ->pluck('item_name');
+
+        return response()->json($items);
     }
 }

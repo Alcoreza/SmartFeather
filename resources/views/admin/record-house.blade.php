@@ -14,103 +14,6 @@
 @endpush
 
 @section('content')
-    @php
-        $houses = [
-            [
-                'name' => 'House 1',
-                'records' => [
-                    [
-                        'batch_id' => 'Batch-2025-07',
-                        'start_date' => '07-5-25',
-                        'end_date' => '08-11-25',
-                        'reporting_date' => '07-8-25',
-                        'pen_no' => '2',
-                        'initial_population' => '10000',
-                        'running_population' => '9980',
-                        'mortalities' => '5',
-                        'eggs_hatched' => '325',
-                    ],
-                    [
-                        'batch_id' => 'Batch-2025-07',
-                        'start_date' => '07-5-25',
-                        'end_date' => '08-11-25',
-                        'reporting_date' => '07-7-25',
-                        'pen_no' => '1',
-                        'initial_population' => '10000',
-                        'running_population' => '9985',
-                        'mortalities' => '15',
-                        'eggs_hatched' => '325',
-                    ],
-                    [
-                        'batch_id' => 'Batch-2025-07',
-                        'start_date' => '07-5-25',
-                        'end_date' => '08-11-25',
-                        'reporting_date' => '07-6-25',
-                        'pen_no' => '4',
-                        'initial_population' => '10000',
-                        'running_population' => '10000',
-                        'mortalities' => '250',
-                        'eggs_hatched' => '325',
-                    ],
-                ],
-            ],
-            [
-                'name' => 'House 2',
-                'records' => [
-                    [
-                        'batch_id' => 'Batch-2026-08',
-                        'start_date' => '08-1-25',
-                        'end_date' => '09-5-25',
-                        'reporting_date' => '08-4-25',
-                        'pen_no' => '2',
-                        'initial_population' => '9500',
-                        'running_population' => '9440',
-                        'mortalities' => '18',
-                        'eggs_hatched' => '310',
-                    ],
-                    [
-                        'batch_id' => 'Batch-2026-08',
-                        'start_date' => '08-1-25',
-                        'end_date' => '09-5-25',
-                        'reporting_date' => '08-6-25',
-                        'pen_no' => '3',
-                        'initial_population' => '9500',
-                        'running_population' => '9412',
-                        'mortalities' => '27',
-                        'eggs_hatched' => '318',
-                    ],
-                ],
-            ],
-            [
-                'name' => 'House 3',
-                'records' => [
-                    [
-                        'batch_id' => 'Batch-2026-09',
-                        'start_date' => '09-2-25',
-                        'end_date' => '10-7-25',
-                        'reporting_date' => '09-4-25',
-                        'pen_no' => '1',
-                        'initial_population' => '10200',
-                        'running_population' => '10160',
-                        'mortalities' => '12',
-                        'eggs_hatched' => '340',
-                    ],
-                    [
-                        'batch_id' => 'Batch-2026-09',
-                        'start_date' => '09-2-25',
-                        'end_date' => '10-7-25',
-                        'reporting_date' => '09-6-25',
-                        'pen_no' => '2',
-                        'initial_population' => '10200',
-                        'running_population' => '10105',
-                        'mortalities' => '31',
-                        'eggs_hatched' => '336',
-                    ],
-                ],
-            ],
-        ];
-    @endphp
-
     <div class="admin-shell">
         @include('includes.admin-sidebar')
 
@@ -120,16 +23,8 @@
                     <h1>House Data</h1>
                 </div>
 
-                <div class="record-house-tabs">
-                    @foreach ($houses as $index => $house)
-                        <button
-                            type="button"
-                            class="record-house-tab {{ $index === 0 ? 'active' : '' }}"
-                            data-house-index="{{ $index }}"
-                        >
-                            {{ $house['name'] }}
-                        </button>
-                    @endforeach
+                <div class="record-house-tabs" id="recordHouseTabs">
+                    <!-- Tabs are populated by JavaScript from API -->
                 </div>
 
                 <div class="record-page-divider"></div>
@@ -147,31 +42,19 @@
                         <table class="record-table">
                             <thead>
                                 <tr>
-                                    <th>Batch ID</th>
-                                    <th>Start Date</th>
-                                    <th>End Date</th>
-                                    <th>Reporting Date</th>
-                                    <th>Pen No.</th>
-                                    <th>Initial Population</th>
-                                    <th>Running Population</th>
-                                    <th>Mortalities</th>
+                                    <th>House</th>
+                                    <th>Pen Name</th>
+                                    <th>Capacity</th>
+                                    <th>Population</th>
                                     <th>Eggs Hatched</th>
+                                    <th>Mortality</th>
+                                    <th>Last Recorded</th>
                                 </tr>
                             </thead>
                             <tbody id="recordTableBody">
-                                @foreach ($houses[0]['records'] as $record)
-                                    <tr>
-                                        <td>{{ $record['batch_id'] }}</td>
-                                        <td>{{ $record['start_date'] }}</td>
-                                        <td>{{ $record['end_date'] }}</td>
-                                        <td>{{ $record['reporting_date'] }}</td>
-                                        <td>{{ $record['pen_no'] }}</td>
-                                        <td>{{ $record['initial_population'] }}</td>
-                                        <td>{{ $record['running_population'] }}</td>
-                                        <td>{{ $record['mortalities'] }}</td>
-                                        <td>{{ $record['eggs_hatched'] }}</td>
-                                    </tr>
-                                @endforeach
+                                <tr>
+                                    <td colspan="7" class="record-empty">Loading records...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -179,8 +62,4 @@
             </section>
         </main>
     </div>
-
-    <script>
-        window.houseRecordData = @json($houses);
-    </script>
 @endsection

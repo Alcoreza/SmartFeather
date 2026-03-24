@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\HouseController;
 
 Route::post('/api/login', [AuthController::class, 'login']);
 
@@ -178,6 +179,27 @@ Route::prefix('api/manager/inventory')->group(function () {
 
 Route::get('/api/inventory-items', [InventoryController::class, 'items']);
 Route::get('/api/inventory-records', [InventoryController::class, 'records']);
+
+/*
+|--------------------------------------------------------------------------
+| ✅ HOUSE MANAGEMENT CRUD
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('api/houses')->group(function () {
+    Route::get('/', [HouseController::class, 'index']);              // Get all houses
+    Route::get('/records/pens', [HouseController::class, 'getPenRecords']); // Get pen records for all houses
+    Route::post('/', [HouseController::class, 'store']);             // Create new house
+    Route::get('/{id}', [HouseController::class, 'show']);           // Get specific house
+    Route::put('/{id}', [HouseController::class, 'update']);         // Update house
+    Route::delete('/{id}', [HouseController::class, 'destroy']);     // Delete house
+});
+
+// Pen data routes
+Route::prefix('api/pens')->group(function () {
+    Route::put('/{penId}', [HouseController::class, 'updatePen']);              // Update pen capacity/population
+    Route::put('/{penId}/production', [HouseController::class, 'updatePenProduction']); // Update pen production data
+});
 
 /*
 |--------------------------------------------------------------------------

@@ -336,7 +336,5 @@
         </main>
     </div>
 
-    <script>
-        window.houseData = @json($houses);
-    </script>
+    {{-- House data is now fetched from /api/houses endpoint --}}
 @endsection

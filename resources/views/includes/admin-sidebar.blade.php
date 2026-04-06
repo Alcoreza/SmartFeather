@@ -25,8 +25,9 @@
                 <span>Workers</span>
             </a>
 
-            <a href="#" class="admin-sidebar-link">
-                <span class="admin-sidebar-icon">⌁</span>
+            <a href="{{ route('admin.sensors') }}"
+                class="admin-sidebar-link {{ request()->routeIs('admin.sensors') || request()->routeIs('admin.sensor-maintenance') ? 'active' : '' }}">
+                <span class="sidebar-icon">⌁</span>
                 <span>Sensors</span>
             </a>
         </nav>

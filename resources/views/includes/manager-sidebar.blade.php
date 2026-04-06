@@ -37,7 +37,8 @@
                 <span>Inventory</span>
             </a>
 
-            <a href="#" class="sidebar-link">
+            <a href="{{ route('manager.sensors') }}"
+                class="sidebar-link {{ request()->routeIs('manager.sensors') ? 'active' : '' }}">
                 <span class="sidebar-icon">⌁</span>
                 <span>Sensors</span>
             </a>

@@ -88,12 +88,12 @@ Route::get('/api/manager/dashboard/monitoring-graphs', function () {
 Route::get('/api/manager/dashboard/realtime', function () {
     return response()->json([
         'environment' => [
-            ['label' => 'Temperature','value' => 24,'unit' => 'deg','min' => 0,'max' => 35,'status' => 'safe'],
-            ['label' => 'Ammonia','value' => 7,'unit' => 'ppm','min' => 0,'max' => 30,'status' => 'warning'],
+            ['label' => 'Temperature', 'value' => 24, 'unit' => 'deg', 'min' => 0, 'max' => 35, 'status' => 'safe'],
+            ['label' => 'Ammonia', 'value' => 7, 'unit' => 'ppm', 'min' => 0, 'max' => 30, 'status' => 'warning'],
         ],
         'resources' => [
-            ['label' => 'Feed','value' => 60,'unit' => '%','type' => 'feed'],
-            ['label' => 'Water','value' => 30,'unit' => '%','type' => 'water'],
+            ['label' => 'Feed', 'value' => 60, 'unit' => '%', 'type' => 'feed'],
+            ['label' => 'Water', 'value' => 30, 'unit' => '%', 'type' => 'water'],
         ],
     ]);
 });
@@ -124,12 +124,12 @@ Route::get('/api/manager/workers', function () {
 Route::get('/api/admin/dashboard/realtime', function () {
     return response()->json([
         'environment' => [
-            ['label' => 'Temperature','value' => 24,'unit' => 'deg','min' => 0,'max' => 50,'status' => 'safe'],
-            ['label' => 'Ammonia','value' => 15,'unit' => 'ppm','min' => 0,'max' => 50,'status' => 'warning'],
+            ['label' => 'Temperature', 'value' => 24, 'unit' => 'deg', 'min' => 0, 'max' => 50, 'status' => 'safe'],
+            ['label' => 'Ammonia', 'value' => 15, 'unit' => 'ppm', 'min' => 0, 'max' => 50, 'status' => 'warning'],
         ],
         'resources' => [
-            ['label' => 'Feed','value' => 60,'unit' => '%','type' => 'feed'],
-            ['label' => 'Water','value' => 30,'unit' => '%','type' => 'water'],
+            ['label' => 'Feed', 'value' => 60, 'unit' => '%', 'type' => 'feed'],
+            ['label' => 'Water', 'value' => 30, 'unit' => '%', 'type' => 'water'],
         ],
     ]);
 });
@@ -222,5 +222,427 @@ Route::get('/api/manager/tasks/form-options', function () {
         'pens' => [],
         'task_categories' => [],
         'priority_levels' => [],
+    ]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| SENSOR PLACEHOLDERS
+|--------------------------------------------------------------------------
+*/
+
+Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
+
+Route::get('/api/manager/sensors', function () {
+    return response()->json([
+        'filters' => [
+            'names' => ['All Names', 'TMP-1', 'TMP-2', 'AMN-1', 'FDS-1', 'WTR-1'],
+            'houses' => ['All Houses', '1', '2', '3'],
+            'pens' => ['All Pens', '1', '2', '3', '4'],
+        ],
+        'sections' => [
+            [
+                'id' => 'temperature',
+                'title' => 'Temperature Sensor',
+                'items' => [
+                    ['name' => 'TMP-1', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'TMP-2', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'TMP-3', 'house_number' => '1', 'pen_number' => '1'],
+                    ['name' => 'TMP-4', 'house_number' => '1', 'pen_number' => '1'],
+                ],
+            ],
+            [
+                'id' => 'ammonia',
+                'title' => 'Ammonia Sensor',
+                'items' => [
+                    ['name' => 'AMN-1', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'AMN-2', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'AMN-3', 'house_number' => '1', 'pen_number' => '1'],
+                    ['name' => 'AMN-4', 'house_number' => '1', 'pen_number' => '1'],
+                ],
+            ],
+            [
+                'id' => 'feeds',
+                'title' => 'Feeds Sensor',
+                'items' => [
+                    ['name' => 'FDS-1', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'FDS-2', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'FDS-3', 'house_number' => '1', 'pen_number' => '1'],
+                    ['name' => 'FDS-4', 'house_number' => '1', 'pen_number' => '1'],
+                ],
+            ],
+            [
+                'id' => 'water',
+                'title' => 'Water Sensor',
+                'items' => [
+                    ['name' => 'WTR-1', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'WTR-2', 'house_number' => '1', 'pen_number' => '2'],
+                    ['name' => 'WTR-3', 'house_number' => '1', 'pen_number' => '1'],
+                    ['name' => 'WTR-4', 'house_number' => '1', 'pen_number' => '1'],
+                ],
+            ],
+        ],
+    ]);
+});
+
+Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
+Route::view('/manager/sensors/maintenance-records', 'manager.sensor-maintenance')->name('manager.sensor-maintenance');
+
+Route::get('/api/manager/sensors', function () {
+    return response()->json([
+        'sections' => [
+            [
+                'id' => 'temperature',
+                'title' => 'Temperature Sensor',
+                'sensor_type' => 'Temperature Sensor',
+                'items' => [
+                    [
+                        'name' => 'TMP-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                    [
+                        'name' => 'TMP-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                    [
+                        'name' => 'TMP-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                    [
+                        'name' => 'TMP-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'ammonia',
+                'title' => 'Ammonia Sensor',
+                'sensor_type' => 'Ammonia Sensor',
+                'items' => [
+                    [
+                        'name' => 'AMN-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                    [
+                        'name' => 'AMN-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                    [
+                        'name' => 'AMN-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                    [
+                        'name' => 'AMN-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'feeds',
+                'title' => 'Feeds Sensor',
+                'sensor_type' => 'Feeds Sensor',
+                'items' => [
+                    [
+                        'name' => 'FDS-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                    [
+                        'name' => 'FDS-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                    [
+                        'name' => 'FDS-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                    [
+                        'name' => 'FDS-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'water',
+                'title' => 'Water Sensor',
+                'sensor_type' => 'Water Sensor',
+                'items' => [
+                    [
+                        'name' => 'WTR-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                    [
+                        'name' => 'WTR-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                    [
+                        'name' => 'WTR-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                    [
+                        'name' => 'WTR-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+});
+
+Route::get('/api/manager/sensors/maintenance-records', function () {
+    return response()->json([
+        'records' => [
+            [
+                'sensor_type' => 'Temperature',
+                'name' => 'Sensor 1',
+                'house_number' => '1',
+                'start_date' => '08-11-25',
+                'end_date' => '08-13-25',
+                'status' => 'Maintenance',
+            ],
+            [
+                'sensor_type' => 'Ammonia',
+                'name' => 'Sensor 5',
+                'house_number' => '2',
+                'start_date' => '07-24-25',
+                'end_date' => '07-27-25',
+                'status' => 'Maintenance',
+            ],
+        ],
+    ]);
+});
+
+Route::view('/admin/sensors', 'admin.sensors')->name('admin.sensors');
+Route::view('/admin/sensors/maintenance-records', 'admin.sensor-maintenance')->name('admin.sensor-maintenance');
+
+Route::get('/api/admin/sensors', function () {
+    return response()->json([
+        'sections' => [
+            [
+                'id' => 'temperature',
+                'title' => 'Temperature Sensor',
+                'sensor_type' => 'Temperature Sensor',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'name' => 'TMP-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                    [
+                        'id' => 2,
+                        'name' => 'TMP-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                    [
+                        'id' => 3,
+                        'name' => 'TMP-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                    [
+                        'id' => 4,
+                        'name' => 'TMP-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '18',
+                        'highest_threshold' => '25',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'ammonia',
+                'title' => 'Ammonia Sensor',
+                'sensor_type' => 'Ammonia Sensor',
+                'items' => [
+                    [
+                        'id' => 5,
+                        'name' => 'AMN-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                    [
+                        'id' => 6,
+                        'name' => 'AMN-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                    [
+                        'id' => 7,
+                        'name' => 'AMN-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                    [
+                        'id' => 8,
+                        'name' => 'AMN-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '10',
+                        'highest_threshold' => '20',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'feeds',
+                'title' => 'Feeds Sensor',
+                'sensor_type' => 'Feeds Sensor',
+                'items' => [
+                    [
+                        'id' => 9,
+                        'name' => 'FDS-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                    [
+                        'id' => 10,
+                        'name' => 'FDS-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                    [
+                        'id' => 11,
+                        'name' => 'FDS-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                    [
+                        'id' => 12,
+                        'name' => 'FDS-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '30',
+                        'highest_threshold' => '90',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'water',
+                'title' => 'Water Sensor',
+                'sensor_type' => 'Water Sensor',
+                'items' => [
+                    [
+                        'id' => 13,
+                        'name' => 'WTR-1',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                    [
+                        'id' => 14,
+                        'name' => 'WTR-2',
+                        'house_number' => '1',
+                        'pen_number' => '2',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                    [
+                        'id' => 15,
+                        'name' => 'WTR-3',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                    [
+                        'id' => 16,
+                        'name' => 'WTR-4',
+                        'house_number' => '1',
+                        'pen_number' => '1',
+                        'lowest_threshold' => '20',
+                        'highest_threshold' => '85',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+});
+
+Route::get('/api/admin/sensors/maintenance-records', function () {
+    return response()->json([
+        'records' => [
+            [
+                'sensor_type' => 'Temperature',
+                'name' => 'Sensor 1',
+                'house_number' => '1',
+                'start_date' => '08-11-25',
+                'end_date' => '08-13-25',
+                'status' => 'Maintenance',
+            ],
+            [
+                'sensor_type' => 'Ammonia',
+                'name' => 'Sensor 5',
+                'house_number' => '2',
+                'start_date' => '07-24-25',
+                'end_date' => '07-27-25',
+                'status' => 'Maintenance',
+            ],
+        ],
     ]);
 });

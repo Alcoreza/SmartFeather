@@ -1,0 +1,813 @@
+:root {
+    --admin-page-bg: #efefee;
+    --admin-panel-bg: rgba(255, 255, 255, 0.94);
+    --admin-panel-border: rgba(10, 51, 27, 0.08);
+    --admin-green-950: #042b1a;
+    --admin-green-900: #063320;
+    --admin-green-700: #1d6a37;
+    --admin-green-500: #61d05f;
+    --admin-text-main: #111111;
+    --admin-text-soft: #5f675f;
+    --admin-shadow-soft: 0 20px 45px rgba(10, 24, 15, 0.08);
+    --admin-shadow-hover: 0 24px 60px rgba(10, 24, 15, 0.14);
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: "Poppins", sans-serif;
+}
+
+body {
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(97, 208, 95, 0.1),
+            transparent 18%
+        ),
+        linear-gradient(180deg, #f6f7f4 0%, var(--admin-page-bg) 100%);
+    color: var(--admin-text-main);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.admin-shell {
+    min-height: 100vh;
+    display: flex;
+}
+
+.admin-sidebar {
+    width: 220px;
+    min-height: 100vh;
+    padding: 28px 20px;
+    background: linear-gradient(
+        180deg,
+        #022713 0%,
+        var(--admin-green-950) 100%
+    );
+    color: #fff;
+    position: sticky;
+    top: 0;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.admin-main {
+    flex: 1;
+    padding: 28px 34px 34px;
+}
+
+.admin-profile {
+    width: 62px;
+    height: 62px;
+    border: 2px solid var(--admin-green-900);
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff, #f4f8f4);
+    color: var(--admin-green-900);
+    display: grid;
+    place-items: center;
+    box-shadow: var(--admin-shadow-soft);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.admin-profile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--admin-shadow-hover);
+}
+
+.admin-profile svg {
+    width: 34px;
+    height: 34px;
+}
+
+.admin-sensors-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+}
+
+.admin-sensors-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.admin-sensors-title {
+    margin: 0;
+    flex: 1;
+    text-align: center;
+    font-size: clamp(2.2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.admin-sensors-divider {
+    height: 2px;
+    margin: 12px 18px 20px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(90, 96, 90, 0.45),
+        transparent
+    );
+}
+
+.admin-sensors-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin: 0 0 16px;
+}
+
+.admin-sensors-sections {
+    display: grid;
+    gap: 22px;
+}
+
+.admin-sensor-section {
+    padding: 18px 18px 16px;
+    border-radius: 30px;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.95),
+        rgba(248, 249, 247, 0.98)
+    );
+    box-shadow: var(--admin-shadow-soft);
+    border: 1px solid rgba(10, 51, 27, 0.06);
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+        transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.42s ease,
+        background 0.42s ease;
+    will-change: transform, box-shadow;
+}
+
+.admin-sensor-section:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 28px 52px rgba(10, 24, 15, 0.11),
+        0 8px 18px rgba(97, 208, 95, 0.05);
+    border-color: rgba(29, 106, 55, 0.12);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.98),
+        rgba(249, 251, 248, 1)
+    );
+}
+
+.admin-sensor-section-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.admin-sensor-section-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-sensor-section-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--admin-text-main);
+}
+
+.admin-sensor-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    justify-self: end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-sensor-sort {
+    min-width: 180px;
+    padding: 10px 40px 10px 14px;
+    border: 1.5px solid rgba(10, 51, 27, 0.16);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #f8faf8);
+    color: var(--admin-green-900);
+    appearance: none;
+    outline: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+        calc(100% - 21px) calc(50% - 3px),
+        calc(100% - 13px) calc(50% - 3px);
+    background-size:
+        8px 8px,
+        8px 8px;
+    background-repeat: no-repeat;
+}
+
+.admin-sensor-add-btn,
+.admin-sensor-maintenance-btn,
+.admin-sensor-threshold-btn,
+.admin-sensor-view-btn,
+.admin-sensor-edit-btn,
+.admin-sensor-delete-btn {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.admin-sensor-add-btn {
+    background: linear-gradient(180deg, #0f5c2b, #063320);
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(6, 51, 32, 0.22);
+}
+
+.admin-sensor-maintenance-btn {
+    background: linear-gradient(180deg, #ffb366, #f18b28);
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(241, 139, 40, 0.24);
+    text-decoration: none;
+}
+
+.admin-sensor-threshold-btn,
+.admin-sensor-view-btn,
+.admin-sensor-edit-btn {
+    background: rgba(10, 51, 27, 0.08);
+    color: var(--admin-green-900);
+}
+
+.admin-sensor-delete-btn {
+    background: rgba(201, 28, 22, 0.12);
+    color: #c91c16;
+}
+
+.admin-sensor-add-btn svg,
+.admin-sensor-maintenance-btn svg,
+.admin-sensor-threshold-btn svg,
+.admin-sensor-view-btn svg,
+.admin-sensor-edit-btn svg,
+.admin-sensor-delete-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.admin-sensor-sort,
+.admin-sensor-add-btn,
+.admin-sensor-maintenance-btn,
+.admin-sensor-threshold-btn,
+.admin-sensor-view-btn,
+.admin-sensor-edit-btn,
+.admin-sensor-delete-btn {
+    transition:
+        transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.34s ease,
+        border-color 0.34s ease,
+        color 0.34s ease,
+        filter 0.34s ease;
+    will-change: transform, box-shadow;
+}
+
+.admin-sensor-sort:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 12px 24px rgba(10, 24, 15, 0.08),
+        0 0 0 5px rgba(97, 208, 95, 0.05);
+    border-color: rgba(29, 106, 55, 0.22);
+}
+
+.admin-sensor-add-btn:hover,
+.admin-sensor-threshold-btn:hover,
+.admin-sensor-view-btn:hover,
+.admin-sensor-edit-btn:hover,
+.admin-sensor-delete-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow:
+        0 12px 22px rgba(10, 24, 15, 0.1),
+        0 0 0 5px rgba(29, 106, 55, 0.06);
+}
+
+.admin-sensor-maintenance-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow:
+        0 14px 26px rgba(241, 139, 40, 0.24),
+        0 0 0 5px rgba(241, 139, 40, 0.09);
+}
+
+.admin-sensor-table-wrap {
+    overflow-x: auto;
+    border-radius: 22px;
+}
+
+.admin-sensor-table {
+    width: 100%;
+    min-width: 780px;
+    border-collapse: separate;
+    border-spacing: 0 12px;
+}
+
+.admin-sensor-table th {
+    padding: 0 14px 10px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--admin-green-700);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.admin-sensor-table td {
+    padding: 14px;
+    background: linear-gradient(180deg, #ffffff, #f7f9f7);
+    color: var(--admin-text-main);
+    font-size: 0.95rem;
+    box-shadow: none;
+    transition:
+        background 0.46s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.46s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.46s cubic-bezier(0.16, 1, 0.3, 1),
+        color 0.3s ease;
+    will-change: transform, background;
+}
+
+.admin-sensor-table td:first-child {
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+}
+
+.admin-sensor-table td:last-child {
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
+
+.admin-sensor-table tbody tr {
+    transition:
+        transform 0.46s cubic-bezier(0.16, 1, 0.3, 1),
+        filter 0.46s cubic-bezier(0.16, 1, 0.3, 1);
+    filter: drop-shadow(0 0 0 rgba(10, 24, 15, 0));
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.admin-sensor-table tbody tr:hover {
+    transform: translateY(-2px);
+    filter: drop-shadow(0 16px 26px rgba(10, 24, 15, 0.08));
+}
+
+.admin-sensor-table tbody tr:hover td {
+    background: linear-gradient(180deg, #ffffff, #fcfdfb);
+    box-shadow:
+        0 14px 24px rgba(10, 24, 15, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.admin-sensor-empty {
+    padding: 22px;
+    text-align: center;
+    border-radius: 22px;
+    background: rgba(10, 51, 27, 0.04);
+    color: var(--admin-text-soft);
+}
+
+.admin-sensor-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 3200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(22, 26, 22, 0.4);
+    backdrop-filter: blur(6px);
+}
+
+.admin-sensor-modal-backdrop.show {
+    display: flex;
+    animation: adminSensorFade 0.2s ease;
+}
+
+.admin-sensor-modal-card {
+    width: min(100%, 460px);
+    border-radius: 28px;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8);
+    box-shadow:
+        0 28px 60px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+    animation: adminSensorPop 0.24s ease;
+}
+
+.admin-sensor-delete-card {
+    width: min(100%, 420px);
+}
+
+.admin-sensor-modal-header.center {
+    text-align: center;
+    padding: 20px 22px 0;
+}
+
+.admin-sensor-modal-header h2 {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+}
+
+.admin-sensor-header-line {
+    width: 100%;
+    height: 4px;
+    margin-top: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1d6a37, #2c8748);
+}
+
+.admin-sensor-modal-body {
+    padding: 18px 22px 24px;
+}
+
+.admin-sensor-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+}
+
+.admin-sensor-modal-field {
+    margin-bottom: 16px;
+}
+
+.admin-sensor-modal-field.full {
+    grid-column: 1 / -1;
+}
+
+.admin-sensor-modal-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: #111;
+}
+
+.admin-sensor-modal-field input {
+    width: 100%;
+    height: 42px;
+    padding: 10px 16px;
+    border: 1.5px solid rgba(28, 36, 29, 0.26);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #fbfbfb);
+    color: #111;
+    font: inherit;
+    outline: none;
+}
+
+.admin-sensor-delete-text {
+    margin: 0;
+    text-align: center;
+    color: var(--admin-text-soft);
+    line-height: 1.6;
+}
+
+.admin-sensor-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.admin-sensor-btn {
+    min-width: 110px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.admin-sensor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    min-width: 150px;
+}
+
+.admin-sensor-btn.close {
+    background: linear-gradient(180deg, #8a8a8a, #767676);
+}
+
+.admin-sensor-btn.save {
+    background: linear-gradient(180deg, #2d9a47, #1f7e36);
+}
+
+.admin-sensor-btn.delete {
+    background: linear-gradient(180deg, #db433c, #c91c16);
+}
+
+.admin-sensor-form-modal {
+    width: min(100%, 560px);
+    padding: 24px;
+    border-radius: 32px;
+}
+
+.admin-sensor-form-body {
+    margin-top: 18px;
+}
+
+.admin-sensor-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 18px;
+}
+
+.admin-sensor-form-field {
+    margin-bottom: 16px;
+}
+
+.admin-sensor-form-field.full {
+    grid-column: 1 / -1;
+}
+
+.admin-sensor-form-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #111;
+}
+
+.admin-sensor-form-field input,
+.admin-sensor-form-field select {
+    width: 100%;
+    height: 44px;
+    padding: 10px 16px;
+    border: 1.5px solid rgba(28, 36, 29, 0.45);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #fbfbfb);
+    color: #111;
+    font: inherit;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.admin-sensor-form-field input:focus,
+.admin-sensor-form-field select:focus {
+    border-color: #2c8748;
+    box-shadow: 0 0 0 4px rgba(44, 135, 72, 0.1);
+    transform: translateY(-1px);
+}
+
+.admin-sensor-form-field select {
+    appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
+    background-position:
+        calc(100% - 22px) calc(50% - 3px),
+        calc(100% - 10px) calc(50% - 3px);
+    background-size:
+        12px 12px,
+        12px 12px;
+    background-repeat: no-repeat;
+    padding-right: 44px;
+}
+
+.admin-sensor-form-field select.admin-sensor-select-placeholder {
+    color: #8f8f8f;
+}
+
+.admin-sensor-form-field select.admin-sensor-select-placeholder.has-value {
+    color: #111111;
+}
+
+.admin-sensor-form-field select.admin-sensor-select-placeholder option {
+    color: #111111;
+}
+
+.admin-sensor-form-field
+    select.admin-sensor-select-placeholder
+    option[value=""] {
+    color: #8f8f8f;
+}
+
+.profile-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(27, 35, 28, 0.42);
+    backdrop-filter: blur(8px);
+}
+
+.profile-modal-backdrop.show {
+    display: flex;
+}
+
+.profile-modal-card {
+    width: min(100%, 520px);
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 20px 28px 26px;
+    border-radius: 34px;
+    background: linear-gradient(180deg, #ffffff, #f7f7f7);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.18);
+}
+
+.profile-modal-header {
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.profile-modal-header h2 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.profile-header-line {
+    width: 100%;
+    height: 4px;
+    margin-top: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1d6a37, #2c8748);
+}
+
+.profile-form {
+    margin-top: 10px;
+}
+
+.profile-grid.two-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 18px;
+}
+
+.profile-field {
+    margin-bottom: 14px;
+}
+
+.profile-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #111;
+}
+
+.profile-field input {
+    width: 100%;
+    height: 42px;
+    padding: 10px 18px;
+    border: 1.5px solid rgba(28, 36, 29, 0.45);
+    border-radius: 999px;
+    background: #fff;
+    color: #111;
+    font: inherit;
+    outline: none;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.profile-btn {
+    min-width: 112px;
+    height: 46px;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font: inherit;
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+.cancel-btn {
+    background: #7b7b7b;
+}
+
+.logout-btn {
+    background: #c91c16;
+}
+
+@keyframes adminSensorFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes adminSensorPop {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 992px) {
+    .admin-shell {
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        min-height: auto;
+        position: relative;
+    }
+
+    .admin-sensor-section-head {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sensor-tools {
+        justify-self: start;
+    }
+    .admin-sensor-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sensor-form-modal {
+        padding: 20px 18px 22px;
+        border-radius: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-main {
+        padding: 22px 16px 28px;
+    }
+
+    .admin-sensors-title {
+        text-align: left;
+        font-size: 2.15rem;
+    }
+
+    .admin-sensor-section {
+        padding: 16px;
+        border-radius: 24px;
+    }
+
+    .admin-sensor-sort {
+        width: 100%;
+    }
+
+    .admin-sensor-modal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sensor-modal-card {
+        border-radius: 24px;
+    }
+    .admin-sensor-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sensor-form-modal {
+        padding: 20px 18px 22px;
+        border-radius: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-modal-card {
+        padding: 20px 18px 22px;
+        border-radius: 24px;
+    }
+
+    .profile-grid.two-col {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-actions {
+        justify-content: center;
+    }
+}

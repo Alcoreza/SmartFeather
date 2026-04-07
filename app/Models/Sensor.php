@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Sensor extends Model
+{
+    protected $table = 'sensors';
+    protected $primaryKey = 'sensorid';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'sensorname',
+        'sensortype',
+        'house_houseid',
+        'pen_penid',
+    ];
+
+    public function house()
+    {
+        return $this->belongsTo(House::class, 'house_houseid', 'id');
+    }
+
+    public function pen()
+    {
+        return $this->belongsTo(Pen::class, 'pen_penid', 'id');
+    }
+
+    public function configuration()
+    {
+        return $this->hasOne(SensorConfiguration::class, 'sensors_sensorid', 'sensorid');
+    }
+
+    public function maintenances()
+    {
+        return $this->hasMany(SensorMaintenance::class, 'sensors_sensorid', 'sensorid');
+    }
+}

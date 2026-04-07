@@ -1,6 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
+use Illuminate\Http\Request;
+use App\Models\Task;
+use App\Models\Employee;
+use App\Models\House;
+use App\Models\Pen;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
@@ -208,21 +215,166 @@ Route::prefix('api/pens')->group(function () {
 */
 
 Route::get('/api/manager/tasks', function () {
+    $tasks = Task::with(['employee', 'house', 'pen'])
+        ->orderBy('timeassigned', 'desc')
+        ->get()
+        ->map(function (Task $task) {
+            $employee = $task->employee;
+            $house = $task->house;
+            $pen = $task->pen;
+            $fullName = trim(sprintf(
+                '%s %s %s %s',
+                $employee->FirstName ?? '',
+                $employee->MiddleName ?? '',
+                $employee->LastName ?? '',
+                $employee->Suffix ?? '',
+            ));
+
+            $formatDate = function ($value) {
+                return $value ? Carbon::parse($value)->format('Y-m-d H:i') : '';
+            };
+
+            $status = strtolower(trim($task->status ?? 'pending'));
+            if ($status === 'for approval' || $status === 'submitted') {
+                $status = 'for_approval';
+            }
+
+            return [
+                'id' => $task->taskid,
+                'name' => $fullName ?: 'Unknown',
+                'task_assigned' => $task->tasktype,
+                'house_number' => $house?->house_number ?? null,
+                'pen_number' => $pen?->pen_name ?? 'Unknown Pen',
+                'detailed_task' => $task->detailedtask ?? '',
+                'priority' => $task->prioritylevel,
+                'time_assigned' => $formatDate($task->timeassigned),
+                'finish_by' => $formatDate($task->finishby),
+                'photo_name' => $task->photourl ? basename($task->photourl) : '',
+                'photo_url' => $task->photourl ?? '',
+                'notes' => $task->notes ?? '',
+                'time_completed' => $formatDate($task->time_completed),
+                'status' => $status,
+            ];
+        });
+
     return response()->json([
-        'pending' => [],
-        'for_approval' => [],
-        'completed' => [],
+        'pending' => $tasks->where('status', 'pending')->values(),
+        'for_approval' => $tasks->where('status', 'for_approval')->values(),
+        'completed' => $tasks->where('status', 'completed')->values(),
     ]);
 });
 
+Route::post('/api/manager/tasks', function (Request $request) {
+    try {
+        $validated = $request->validate([
+            'user_employeeid' => 'required|integer|exists:user,EmployeeId',
+            'tasktype' => 'required|string|max:255',
+            'prioritylevel' => 'required|string|max:255',
+            'house_houseid' => 'required|integer|exists:house,id',
+            'pennumber' => 'required|integer',
+            'timeassigned' => 'required|date_format:Y-m-d\TH:i:s',
+            'finishby' => 'nullable',
+            'detailedtask' => 'nullable|string',
+            'status' => 'required|string|in:Pending,For Approval,Completed',
+        ]);
+
+        $task = Task::create($validated);
+
+        return response()->json($task, 201);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Task validation error:', $e->errors());
+        return response()->json(['errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        \Log::error('Task creation error:', ['message' => $e->getMessage()]);
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+Route::put('/api/manager/tasks/{taskId}', function ($taskId, Request $request) {
+    try {
+        $validated = $request->validate([
+            'status' => 'required|string|in:Pending,For Approval,Completed',
+        ]);
+
+        $task = Task::findOrFail($taskId);
+        $task->update($validated);
+
+        return response()->json($task, 200);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Task update validation error:', $e->errors());
+        return response()->json(['errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        \Log::error('Task update error:', ['message' => $e->getMessage()]);
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 Route::get('/api/manager/tasks/form-options', function () {
+    $workers = Employee::where('Role', 'Flockman')
+        ->get()
+        ->map(function (Employee $employee) {
+            $fullName = trim(sprintf(
+                '%s %s %s %s',
+                $employee->FirstName ?? '',
+                $employee->MiddleName ?? '',
+                $employee->LastName ?? '',
+                $employee->Suffix ?? '',
+            ));
+
+            return [
+                'id' => $employee->EmployeeId,
+                'name' => $fullName ?: 'Unknown',
+            ];
+        });
+
+    $houses = House::all()->map(function (House $house) {
+        return [
+            'id' => $house->id,
+            'number' => $house->house_number,
+        ];
+    });
+
     return response()->json([
-        'workers' => [],
-        'houses' => [],
+        'workers' => $workers,
+        'houses' => $houses,
         'pens' => [],
-        'task_categories' => [],
-        'priority_levels' => [],
+        'task_categories' => ['Cleaning', 'Inspection', 'Maintenance', 'Feeding', 'Other'],
+        'priority_levels' => ['Low', 'Medium', 'High', 'Urgent'],
     ]);
+});
+
+Route::get('/api/manager/tasks/houses/{houseId}/pens', function ($houseId) {
+    $pens = Pen::where('house_id', $houseId)
+        ->get(['id', 'pen_name'])
+        ->map(function (Pen $pen) {
+            return [
+                'number' => $pen->id,
+                'label' => $pen->pen_name,
+            ];
+        });
+
+    return response()->json([
+        'pens' => $pens,
+    ]);
+});
+
+Route::put('/api/manager/tasks/{taskId}', function ($taskId, Request $request) {
+    try {
+        $validated = $request->validate([
+            'status' => 'required|string|in:Pending,For Approval,Completed',
+        ]);
+
+        $task = Task::findOrFail($taskId);
+        $task->update($validated);
+
+        return response()->json($task, 200);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Task update validation error:', $e->errors());
+        return response()->json(['errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        \Log::error('Task update error:', ['message' => $e->getMessage()]);
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
 });
 
 /*

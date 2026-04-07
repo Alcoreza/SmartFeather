@@ -32,26 +32,39 @@ async function loadTaskFormOptions() {
         fillSelect(
             document.getElementById("taskWorkerName"),
             data.workers || [],
-            "name",
+            "id",
             "name",
             "Select worker",
         );
 
+        const houseSelect = document.getElementById("taskHouseNumber");
+        const penSelect = document.getElementById("taskPenNumber");
+
         fillSelect(
-            document.getElementById("taskHouseNumber"),
+            houseSelect,
             data.houses || [],
-            "number",
+            "id",
             "number",
             "Select house",
         );
 
         fillSelect(
-            document.getElementById("taskPenNumber"),
-            data.pens || [],
+            penSelect,
+            [],
             "number",
-            "number",
+            "label",
             "Select pen",
         );
+
+        if (houseSelect) {
+            houseSelect.addEventListener("change", async (event) => {
+                await loadPensForHouse(event.target.value);
+            });
+
+            if (houseSelect.value) {
+                await loadPensForHouse(houseSelect.value);
+            }
+        }
 
         fillSimpleSelect(
             document.getElementById("taskCategory"),
@@ -253,9 +266,9 @@ function setupManagerTaskModals() {
 
     const confirmButton = document.getElementById("confirmTaskVerify");
     if (confirmButton) {
-        confirmButton.addEventListener("click", () => {
+        confirmButton.addEventListener("click", async () => {
             if (taskPendingVerify) {
-                console.log("Verified task:", taskPendingVerify);
+                await updateTaskStatus(taskPendingVerify.id, "Completed");
             }
 
             taskPendingVerify = null;
@@ -285,15 +298,73 @@ function setupAddTaskModal() {
     }
 
     if (form) {
-        form.addEventListener("submit", (event) => {
+        form.addEventListener("submit", async (event) => {
             event.preventDefault();
 
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
+            
+            console.log("=== FORM DEBUG ===");
+            console.log("All form fields:", payload);
+            console.log("detailed_task value:", payload.detailed_task);
+            console.log("detailed_task type:", typeof payload.detailed_task);
+            console.log("detailed_task length:", payload.detailed_task?.length);
+            
+            const textareaElement = document.getElementById("taskDetailedDescription");
+            console.log("Textarea element:", textareaElement);
+            console.log("Textarea value:", textareaElement?.value);
+            console.log("=== END DEBUG ===");
 
-            console.log("New task payload:", payload);
-            closeTaskModal("addTaskModal");
-            form.reset();
+            const date = payload.date_assigned || "";
+            const time = payload.time_assigned || "";
+            const timeAssigned = date && time ? `${date}T${time}:00` : null;
+
+            // Use textarea element value directly if FormData didn't capture it
+            const detailedTaskValue = payload.detailed_task || textareaElement?.value || "";
+
+            const body = {
+                user_employeeid: payload.worker_name,
+                tasktype: payload.task_category,
+                prioritylevel: payload.priority_level,
+                house_houseid: payload.house_number,
+                pennumber: payload.pen_number,
+                timeassigned: timeAssigned,
+                finishby: null,
+                detailedtask: detailedTaskValue,
+                status: "Pending",
+            };
+
+            console.log("Request body:", body);
+
+            try {
+                const token = document.querySelector('meta[name="csrf-token"]')?.content;
+                console.log("Sending task payload:", body);
+                
+                const response = await fetch("/api/manager/tasks", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": token || "",
+                    },
+                    body: JSON.stringify(body),
+                });
+
+                console.log("Response status:", response.status);
+                const responseText = await response.text();
+                console.log("Response:", responseText);
+
+                if (!response.ok) {
+                    throw new Error(responseText || `Failed to save task (${response.status}).`);
+                }
+
+                await renderManagerTasks();
+                closeTaskModal("addTaskModal");
+                form.reset();
+                setupTaskSelectPlaceholderState();
+            } catch (error) {
+                console.error("Failed to save new task:", error);
+                alert("Error saving task: " + error.message);
+            }
         });
     }
 }
@@ -403,6 +474,53 @@ function setupTaskSelectPlaceholderState() {
         select.addEventListener("change", select._taskPlaceholderHandler);
     });
 }
+async function loadPensForHouse(houseId) {
+    const penSelect = document.getElementById("taskPenNumber");
+    if (!penSelect) return;
+
+    if (!houseId) {
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/manager/tasks/houses/${houseId}/pens`);
+        const data = await response.json();
+        fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error("Failed to load pens for selected house.", error);
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    }
+}
+
+async function updateTaskStatus(taskId, newStatus) {
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${taskId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": token || "",
+            },
+            body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to update task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+        alert(`Task marked as ${newStatus}!`);
+    } catch (error) {
+        console.error("Failed to update task status:", error);
+        alert("Error updating task: " + error.message);
+    }
+}
+
 function fillSelect(select, items, valueKey, labelKey, placeholder) {
     if (!select) return;
 

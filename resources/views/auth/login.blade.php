@@ -18,7 +18,7 @@
 
             <div class="container position-relative z-1">
                 <div class="row justify-content-center">
-                    <div class="col-12 col-md-10 col-lg-7 col-xl-6">
+                    <div class="col-12 col-md-8 col-lg-5 col-xl-4">
                         <div class="login-card p-4 p-md-5">
                             <div class="text-center mb-5">
                                 <p class="login-eyebrow text-uppercase mb-2">Welcome Back</p>

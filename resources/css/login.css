@@ -66,8 +66,11 @@
 .login-card {
     position: relative;
     z-index: 1;
+    max-width: 470px;
+    margin: 0 auto;
+    padding: 1.75rem 1.8rem !important;
     border: 1px solid var(--login-card-border);
-    border-radius: 40px;
+    border-radius: 32px;
     background: var(--login-card-bg);
     box-shadow: var(--login-shadow-card);
     backdrop-filter: blur(14px);
@@ -84,7 +87,7 @@
 
 .login-title {
     color: var(--login-text);
-    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    font-size: clamp(2rem, 4vw, 2.7rem);
     line-height: 1.1;
 }
 
@@ -100,7 +103,7 @@
 }
 
 .custom-input {
-    padding: 14px 20px;
+    padding: 12px 18px;
     border: 1px solid var(--login-input-border);
     border-radius: 999px;
     background: var(--login-input-bg);
@@ -156,5 +159,17 @@
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .login-card {
+        width: min(100%, 460px);
+        padding: 1.75rem 1.35rem !important;
+        border-radius: 26px;
+    }
+
+    .login-title {
+        font-size: 2.2rem;
     }
 }

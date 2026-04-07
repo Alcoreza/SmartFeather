@@ -25,10 +25,12 @@ async function renderAdminSensorSections() {
             .join("");
 
         bindAdminSensorSorts();
+        bindAdminSensorFilters();
         bindAdminViewButtons();
         bindAdminEditButtons();
         bindAdminThresholdButtons();
         bindAdminDeleteButtons();
+        bindAdminDeleteConfirmButton();
         animateAdminSensorSections();
         animateAdminSensorRows();
     } catch (error) {
@@ -59,6 +61,13 @@ function createAdminSectionMarkup(section) {
                 </div>
 
                 <div class="admin-sensor-tools">
+                    <input
+                        type="search"
+                        class="admin-sensor-filter"
+                        placeholder=""
+                        aria-label="Filter sensors"
+                    >
+
                     <select class="admin-sensor-sort" data-sort-kind>
                         <option value="name">Name</option>
                         <option value="house_number">House Number</option>
@@ -102,6 +111,8 @@ function createAdminSectionMarkup(section) {
                                         data-name="${escapeHtml(item.name)}"
                                         data-house-number="${escapeHtml(item.house_number)}"
                                         data-pen-number="${escapeHtml(item.pen_number)}"
+                                        data-house-id="${escapeHtml(item.house_id ?? '')}"
+                                        data-pen-id="${escapeHtml(item.pen_id ?? '')}"
                                         data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
                                         data-lowest-threshold="${escapeHtml(item.lowest_threshold || "")}"
                                         data-highest-threshold="${escapeHtml(item.highest_threshold || "")}"
@@ -156,54 +167,126 @@ function createAdminSectionMarkup(section) {
 }
 
 async function loadAdminSensorFormOptions() {
-    const sensorTypes = ["Temperature", "Ammonia", "Water", "Feeds"];
-    const houses = ["1", "2", "3"];
-    const pens = ["1", "2", "3", "4"];
+    try {
+        const response = await fetch('/api/admin/sensors/form-options');
+        const data = await response.json();
 
-    fillAdminSimpleSelect(
-        document.getElementById("adminSensorAddType"),
-        sensorTypes,
-        "Select sensor type",
-    );
+        fillAdminSimpleSelect(
+            document.getElementById('adminSensorAddType'),
+            data.sensor_types || [],
+            'Select sensor type',
+        );
 
-    fillAdminSimpleSelect(
-        document.getElementById("adminSensorAddHouse"),
-        houses,
-        "Select house",
-    );
+        const addHouseSelect = document.getElementById('adminSensorAddHouse');
+        const addPenSelect = document.getElementById('adminSensorAddPen');
 
-    fillAdminSimpleSelect(
-        document.getElementById("adminSensorAddPen"),
-        pens,
-        "Select pen",
-    );
+        fillAdminSimpleSelect(
+            addHouseSelect,
+            data.houses || [],
+            'Select house',
+        );
 
-    fillAdminSimpleSelect(
-        document.getElementById("adminSensorEditType"),
-        sensorTypes,
-        "Select sensor type",
-    );
+        fillAdminSimpleSelect(addPenSelect, [], 'Select pen');
 
-    fillAdminSimpleSelect(
-        document.getElementById("adminSensorEditHouse"),
-        houses,
-        "Select house",
-    );
+        const editHouseSelect = document.getElementById('adminSensorEditHouse');
+        const editPenSelect = document.getElementById('adminSensorEditPen');
 
-    fillAdminSimpleSelect(
-        document.getElementById("adminSensorEditPen"),
-        pens,
-        "Select pen",
-    );
+        fillAdminSimpleSelect(
+            document.getElementById('adminSensorEditType'),
+            data.sensor_types || [],
+            'Select sensor type',
+        );
+
+        fillAdminSimpleSelect(
+            editHouseSelect,
+            data.houses || [],
+            'Select house',
+        );
+
+        fillAdminSimpleSelect(editPenSelect, [], 'Select pen');
+
+        // Add event listeners for house selection
+        if (addHouseSelect) {
+            addHouseSelect.addEventListener('change', async (event) => {
+                await loadAdminPensForHouse(event.target.value, addPenSelect);
+            });
+        }
+
+        if (editHouseSelect) {
+            editHouseSelect.addEventListener('change', async (event) => {
+                await loadAdminPensForHouse(event.target.value, editPenSelect);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load admin sensor form options.', error);
+    }
+}
+
+async function loadAdminPensForHouse(houseId, penSelect) {
+    if (!penSelect) return;
+
+    if (!houseId) {
+        fillAdminSimpleSelect(penSelect, [], 'Select pen');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/sensors/houses/${houseId}/pens`);
+        const data = await response.json();
+        fillAdminSimpleSelect(penSelect, data.pens || [], 'Select pen');
+    } catch (error) {
+        console.error('Failed to load pens for selected house.', error);
+        fillAdminSimpleSelect(penSelect, [], 'Select pen');
+    }
 }
 
 function fillAdminSimpleSelect(select, items, placeholder) {
     if (!select) return;
 
     select.innerHTML = `
-        <option value="">${placeholder}</option>
-        ${items.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}
+        <option value="">${escapeHtml(placeholder)}</option>
+        ${items
+            .map((item) => {
+                if (item && typeof item === 'object') {
+                    return `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`;
+                }
+
+                return `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`;
+            })
+            .join('')}
     `;
+}
+
+function getCsrfToken() {
+    const tokenElement = document.querySelector('meta[name="csrf-token"]');
+    return tokenElement?.getAttribute('content') || '';
+}
+
+async function apiRequest(url, method = 'GET', data = null) {
+    const options = {
+        method,
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    };
+
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+        options.headers['X-CSRF-TOKEN'] = getCsrfToken();
+    }
+
+    if (data) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`API request failed: ${response.status} ${body}`);
+    }
+
+    return response.json();
 }
 
 function setupAdminSensorSelectPlaceholderState() {
@@ -241,7 +324,9 @@ function bindAdminSensorSorts() {
         if (!sortSelect || !tbody) return;
 
         const sortRows = () => {
-            const rows = Array.from(tbody.querySelectorAll("tr[data-id]"));
+            const rows = Array.from(tbody.querySelectorAll("tr[data-id]")).filter(
+                (row) => !row.hidden,
+            );
             const kind = sortSelect.value;
 
             rows.sort((a, b) => {
@@ -270,6 +355,57 @@ function bindAdminSensorSorts() {
 
         sortSelect.addEventListener("change", sortRows);
         sortRows();
+    });
+}
+
+function bindAdminSensorFilters() {
+    document.querySelectorAll(".admin-sensor-section").forEach((section) => {
+        const filterInput = section.querySelector(".admin-sensor-filter");
+        const tbody = section.querySelector("tbody");
+        if (!filterInput || !tbody) return;
+
+        const updateNoMatchRow = (visibleCount) => {
+            const existing = tbody.querySelector("tr.admin-sensor-filter-empty");
+            if (visibleCount === 0) {
+                if (!existing) {
+                    const noMatchRow = document.createElement("tr");
+                    noMatchRow.className = "admin-sensor-filter-empty";
+                    noMatchRow.innerHTML = `
+                        <td colspan="4">
+                            <div class="admin-sensor-empty">No sensors match the filter.</div>
+                        </td>
+                    `;
+                    tbody.appendChild(noMatchRow);
+                }
+            } else if (existing) {
+                existing.remove();
+            }
+        };
+
+        const filterRows = () => {
+            const query = filterInput.value.trim().toLowerCase();
+            const rows = Array.from(tbody.querySelectorAll("tr[data-id]"));
+
+            let visibleCount = 0;
+            rows.forEach((row) => {
+                const name = (row.dataset.name || "").toLowerCase();
+                const house = (row.dataset.houseNumber || "").toLowerCase();
+                const pen = (row.dataset.penNumber || "").toLowerCase();
+                const matches =
+                    !query ||
+                    name.includes(query) ||
+                    house.includes(query) ||
+                    pen.includes(query);
+
+                row.hidden = !matches;
+                if (matches) visibleCount += 1;
+            });
+
+            updateNoMatchRow(visibleCount);
+        };
+
+        filterInput.addEventListener("input", filterRows);
+        filterRows();
     });
 }
 
@@ -305,10 +441,18 @@ function bindAdminEditButtons() {
             const house = document.getElementById("adminSensorEditHouse");
             const pen = document.getElementById("adminSensorEditPen");
 
+            const id = document.getElementById('adminSensorEditId');
+
             if (type) type.value = row.dataset.sensorType || "";
             if (name) name.value = row.dataset.name || "";
-            if (house) house.value = row.dataset.houseNumber || "";
-            if (pen) pen.value = row.dataset.penNumber || "";
+            if (house) house.value = row.dataset.houseId || row.dataset.houseNumber || "";
+            if (pen) pen.value = row.dataset.penId || row.dataset.penNumber || "";
+            if (id) id.value = row.dataset.id || "";
+
+            // Load pens for the selected house
+            if (house && house.value) {
+                loadAdminPensForHouse(house.value, pen);
+            }
 
             setupAdminSensorSelectPlaceholderState();
             openAdminSensorModal("adminSensorEditModal");
@@ -323,23 +467,96 @@ function bindAdminThresholdButtons() {
             if (!section) return;
 
             const type = document.getElementById("adminSensorThresholdType");
+            const typeDisplay = document.getElementById("adminSensorThresholdTypeDisplay");
             const low = document.getElementById("adminSensorThresholdLow");
             const high = document.getElementById("adminSensorThresholdHigh");
 
             if (type) type.value = section.dataset.sensorType || "";
+            if (typeDisplay) typeDisplay.value = section.dataset.sensorType || "";
             if (low) low.value = section.dataset.lowestThreshold || "";
             if (high) high.value = section.dataset.highestThreshold || "";
 
             openAdminSensorModal("adminSensorThresholdModal");
         });
     });
+
+    // Add save button handler
+    const saveButton = document.getElementById('adminSensorThresholdSave');
+    if (saveButton) {
+        saveButton.addEventListener('click', async () => {
+            const type = document.getElementById('adminSensorThresholdType');
+            const low = document.getElementById('adminSensorThresholdLow');
+            const high = document.getElementById('adminSensorThresholdHigh');
+
+            if (!type || !type.value) {
+                alert('Sensor type is required');
+                return;
+            }
+
+            // Parse and validate threshold values
+            const lowestThreshold = low && low.value.trim() ? parseInt(low.value) : null;
+            const highestThreshold = high && high.value.trim() ? parseInt(high.value) : null;
+
+            if ((low && low.value.trim() && isNaN(lowestThreshold)) || 
+                (high && high.value.trim() && isNaN(highestThreshold))) {
+                alert('Threshold values must be valid numbers');
+                return;
+            }
+
+            try {
+                const payload = {
+                    sensor_type: type.value,
+                    lowest_threshold: lowestThreshold,
+                    highest_threshold: highestThreshold,
+                };
+
+                await apiRequest('/api/admin/sensors/thresholds', 'PUT', payload);
+                closeAdminSensorModal('adminSensorThresholdModal');
+                await renderAdminSensorSections();
+            } catch (error) {
+                alert(`Failed to save sensor thresholds: ${error.message}`);
+                console.error('Failed to save sensor thresholds.', error);
+            }
+        });
+    }
 }
 
 function bindAdminDeleteButtons() {
-    document.querySelectorAll("[data-open-delete]").forEach((button) => {
-        button.addEventListener("click", () => {
-            openAdminSensorModal("adminSensorDeleteModal");
+    document.querySelectorAll('[data-open-delete]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const row = button.closest('tr[data-id]');
+            const modal = document.getElementById('adminSensorDeleteModal');
+            const deleteIdInput = document.getElementById('adminSensorDeleteId');
+
+            if (row && modal && deleteIdInput) {
+                deleteIdInput.value = row.dataset.id || '';
+            }
+
+            openAdminSensorModal('adminSensorDeleteModal');
         });
+    });
+}
+
+function bindAdminDeleteConfirmButton() {
+    const deleteButton = document.querySelector('#adminSensorDeleteModal .admin-sensor-btn.delete');
+    if (!deleteButton) return;
+
+    deleteButton.addEventListener('click', async () => {
+        const deleteIdInput = document.getElementById('adminSensorDeleteId');
+        const sensorId = deleteIdInput?.value;
+
+        if (!sensorId) {
+            console.error('No sensor selected for deletion');
+            return;
+        }
+
+        try {
+            await apiRequest(`/api/admin/sensors/${sensorId}`, 'DELETE');
+            closeAdminSensorModal('adminSensorDeleteModal');
+            await renderAdminSensorSections();
+        } catch (error) {
+            console.error('Failed to delete sensor.', error);
+        }
     });
 }
 
@@ -357,36 +574,50 @@ function bindAdminAddButton() {
 }
 
 function setupAdminSensorAddModal() {
-    const form = document.getElementById("adminSensorAddForm");
+    const form = document.getElementById('adminSensorAddForm');
     if (!form) return;
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
 
-        console.log("New admin sensor payload:", payload);
-
-        closeAdminSensorModal("adminSensorAddModal");
-        form.reset();
-        setupAdminSensorSelectPlaceholderState();
+        try {
+            await apiRequest('/api/admin/sensors', 'POST', payload);
+            closeAdminSensorModal('adminSensorAddModal');
+            form.reset();
+            setupAdminSensorSelectPlaceholderState();
+            await renderAdminSensorSections();
+        } catch (error) {
+            console.error('Failed to create sensor.', error);
+        }
     });
 }
 
 function setupAdminSensorEditModal() {
-    const form = document.getElementById("adminSensorEditForm");
+    const form = document.getElementById('adminSensorEditForm');
     if (!form) return;
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
+        const sensorId = formData.get('sensor_id');
 
-        console.log("Edited admin sensor payload:", payload);
+        if (!sensorId) {
+            console.error('Missing sensor id for update');
+            return;
+        }
 
-        closeAdminSensorModal("adminSensorEditModal");
+        try {
+            await apiRequest(`/api/admin/sensors/${sensorId}`, 'PUT', payload);
+            closeAdminSensorModal('adminSensorEditModal');
+            await renderAdminSensorSections();
+        } catch (error) {
+            console.error('Failed to update sensor.', error);
+        }
     });
 }
 

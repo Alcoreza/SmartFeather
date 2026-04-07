@@ -19,6 +19,7 @@ async function renderManagerSensorSections() {
             .join("");
 
         bindSensorSorts();
+        bindManagerSensorFilters();
         bindSensorViewButtons();
         bindThresholdButtons();
         animateSensorSections();
@@ -51,6 +52,13 @@ function createSectionMarkup(section, index) {
                 </div>
 
                 <div class="manager-sensor-tools">
+                    <input
+                        type="search"
+                        class="manager-sensor-filter"
+                        placeholder=""
+                        aria-label="Filter sensors"
+                    >
+
                     <select class="manager-sensor-sort" data-sort-kind>
                         <option value="name">Name</option>
                         <option value="house_number">House Number</option>
@@ -146,7 +154,9 @@ function bindSensorSorts() {
         if (!sortSelect || !tbody) return;
 
         const sortRows = () => {
-            const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
+            const rows = Array.from(tbody.querySelectorAll("tr[data-name]")).filter(
+                (row) => !row.hidden,
+            );
             const kind = sortSelect.value;
 
             rows.sort((a, b) => {
@@ -175,6 +185,57 @@ function bindSensorSorts() {
 
         sortSelect.addEventListener("change", sortRows);
         sortRows();
+    });
+}
+
+function bindManagerSensorFilters() {
+    document.querySelectorAll(".manager-sensor-section").forEach((section) => {
+        const filterInput = section.querySelector(".manager-sensor-filter");
+        const tbody = section.querySelector("tbody");
+        if (!filterInput || !tbody) return;
+
+        const updateNoMatchRow = (visibleCount) => {
+            const existing = tbody.querySelector("tr.manager-sensor-filter-empty");
+            if (visibleCount === 0) {
+                if (!existing) {
+                    const noMatchRow = document.createElement("tr");
+                    noMatchRow.className = "manager-sensor-filter-empty";
+                    noMatchRow.innerHTML = `
+                        <td colspan="4">
+                            <div class="manager-sensor-empty">No sensors match the filter.</div>
+                        </td>
+                    `;
+                    tbody.appendChild(noMatchRow);
+                }
+            } else if (existing) {
+                existing.remove();
+            }
+        };
+
+        const filterRows = () => {
+            const query = filterInput.value.trim().toLowerCase();
+            const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
+
+            let visibleCount = 0;
+            rows.forEach((row) => {
+                const name = (row.dataset.name || "").toLowerCase();
+                const house = (row.dataset.houseNumber || "").toLowerCase();
+                const pen = (row.dataset.penNumber || "").toLowerCase();
+                const matches =
+                    !query ||
+                    name.includes(query) ||
+                    house.includes(query) ||
+                    pen.includes(query);
+
+                row.hidden = !matches;
+                if (matches) visibleCount += 1;
+            });
+
+            updateNoMatchRow(visibleCount);
+        };
+
+        filterInput.addEventListener("input", filterRows);
+        filterRows();
     });
 }
 

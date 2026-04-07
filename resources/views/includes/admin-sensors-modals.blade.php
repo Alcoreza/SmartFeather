@@ -57,16 +57,17 @@
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorEditHouse">House Number</label>
-                    <select id="adminSensorEditHouse" name="house_number"
+                    <select id="adminSensorEditHouse" name="house_houseid"
                         class="admin-sensor-select-placeholder"></select>
                 </div>
 
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorEditPen">Pen Number</label>
-                    <select id="adminSensorEditPen" name="pen_number" class="admin-sensor-select-placeholder"></select>
+                    <select id="adminSensorEditPen" name="pen_penid" class="admin-sensor-select-placeholder"></select>
                 </div>
             </div>
 
+            <input type="hidden" id="adminSensorEditId" name="sensor_id">
             <div class="admin-sensor-modal-actions">
                 <button type="button" class="admin-sensor-btn close"
                     data-close-admin-sensor-modal="adminSensorEditModal">Close</button>
@@ -97,13 +98,13 @@
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorAddHouse">House Number</label>
-                    <select id="adminSensorAddHouse" name="house_number"
+                    <select id="adminSensorAddHouse" name="house_houseid"
                         class="admin-sensor-select-placeholder"></select>
                 </div>
 
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorAddPen">Pen Number</label>
-                    <select id="adminSensorAddPen" name="pen_number" class="admin-sensor-select-placeholder"></select>
+                    <select id="adminSensorAddPen" name="pen_penid" class="admin-sensor-select-placeholder"></select>
                 </div>
             </div>
 
@@ -124,27 +125,28 @@
         </div>
 
         <div class="admin-sensor-modal-body">
+            <input type="hidden" id="adminSensorThresholdType" readonly>
             <div class="admin-sensor-modal-field full">
                 <label>Sensor Type</label>
-                <input type="text" id="adminSensorThresholdType" readonly>
+                <input type="text" id="adminSensorThresholdTypeDisplay" readonly>
             </div>
 
             <div class="admin-sensor-modal-grid">
                 <div class="admin-sensor-modal-field">
                     <label>Lowest Threshold</label>
-                    <input type="text" id="adminSensorThresholdLow">
+                    <input type="number" id="adminSensorThresholdLow" step="any">
                 </div>
 
                 <div class="admin-sensor-modal-field">
                     <label>Highest Threshold</label>
-                    <input type="text" id="adminSensorThresholdHigh">
+                    <input type="number" id="adminSensorThresholdHigh" step="any">
                 </div>
             </div>
 
             <div class="admin-sensor-modal-actions">
                 <button type="button" class="admin-sensor-btn close"
                     data-close-admin-sensor-modal="adminSensorThresholdModal">Close</button>
-                <button type="button" class="admin-sensor-btn save">Save</button>
+                <button type="button" class="admin-sensor-btn save" id="adminSensorThresholdSave">Save</button>
             </div>
         </div>
     </div>
@@ -160,6 +162,7 @@
         <div class="admin-sensor-modal-body">
             <p class="admin-sensor-delete-text">This placeholder will later connect to backend delete confirmation.</p>
 
+            <input type="hidden" id="adminSensorDeleteId">
             <div class="admin-sensor-modal-actions">
                 <button type="button" class="admin-sensor-btn close"
                     data-close-admin-sensor-modal="adminSensorDeleteModal">Close</button>

@@ -1,5 +1,5 @@
 <div class="modal-overlay" id="addHouseModal">
-    <div class="modal-card add-house-modal">
+    <div class="modal-card">
         <div class="modal-header">
             <h2>Add House</h2>
             <button type="button" class="modal-close" id="closeAddHouseModal">&times;</button>

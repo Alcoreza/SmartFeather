@@ -386,58 +386,6 @@ Route::put('/api/manager/tasks/{taskId}', function ($taskId, Request $request) {
 
 Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
 
-Route::get('/api/manager/sensors', function () {
-    return response()->json([
-        'filters' => [
-            'names' => ['All Names', 'TMP-1', 'TMP-2', 'AMN-1', 'FDS-1', 'WTR-1'],
-            'houses' => ['All Houses', '1', '2', '3'],
-            'pens' => ['All Pens', '1', '2', '3', '4'],
-        ],
-        'sections' => [
-            [
-                'id' => 'temperature',
-                'title' => 'Temperature Sensor',
-                'items' => [
-                    ['name' => 'TMP-1', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'TMP-2', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'TMP-3', 'house_number' => '1', 'pen_number' => '1'],
-                    ['name' => 'TMP-4', 'house_number' => '1', 'pen_number' => '1'],
-                ],
-            ],
-            [
-                'id' => 'ammonia',
-                'title' => 'Ammonia Sensor',
-                'items' => [
-                    ['name' => 'AMN-1', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'AMN-2', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'AMN-3', 'house_number' => '1', 'pen_number' => '1'],
-                    ['name' => 'AMN-4', 'house_number' => '1', 'pen_number' => '1'],
-                ],
-            ],
-            [
-                'id' => 'feeds',
-                'title' => 'Feeds Sensor',
-                'items' => [
-                    ['name' => 'FDS-1', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'FDS-2', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'FDS-3', 'house_number' => '1', 'pen_number' => '1'],
-                    ['name' => 'FDS-4', 'house_number' => '1', 'pen_number' => '1'],
-                ],
-            ],
-            [
-                'id' => 'water',
-                'title' => 'Water Sensor',
-                'items' => [
-                    ['name' => 'WTR-1', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'WTR-2', 'house_number' => '1', 'pen_number' => '2'],
-                    ['name' => 'WTR-3', 'house_number' => '1', 'pen_number' => '1'],
-                    ['name' => 'WTR-4', 'house_number' => '1', 'pen_number' => '1'],
-                ],
-            ],
-        ],
-    ]);
-});
-
 Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
 Route::view('/manager/sensors/maintenance-records', 'manager.sensor-maintenance')->name('manager.sensor-maintenance');
 
@@ -454,6 +402,7 @@ Route::prefix('api/admin/sensors')->group(function () {
     Route::get('/houses/{houseId}/pens', [SensorController::class, 'getPensForHouse']);
     Route::post('/', [SensorController::class, 'store']);
     Route::put('/thresholds', [SensorController::class, 'updateThresholds']);
+    Route::patch('/{sensorId}/status', [SensorController::class, 'updateStatus']);
     Route::put('/{sensorId}', [SensorController::class, 'update']);
     Route::delete('/{sensorId}', [SensorController::class, 'destroy']);
 });

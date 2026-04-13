@@ -171,3 +171,31 @@
         </div>
     </div>
 </div>
+
+<div class="admin-sensor-modal-backdrop" id="adminSensorStatusModal">
+    <div class="admin-sensor-modal-card admin-sensor-delete-card">
+        <div class="admin-sensor-modal-header center">
+            <h2>Update Sensor Status</h2>
+            <div class="admin-sensor-header-line"></div>
+        </div>
+
+        <div class="admin-sensor-modal-body">
+            <p class="admin-sensor-delete-text" id="adminSensorStatusText">
+                Are you sure you want to update this sensor status?
+            </p>
+
+            <input type="hidden" id="adminSensorStatusId">
+            <input type="hidden" id="adminSensorStatusValue">
+
+            <div class="admin-sensor-modal-actions">
+                <button type="button" class="admin-sensor-btn close"
+                    data-close-admin-sensor-modal="adminSensorStatusModal">
+                    Cancel
+                </button>
+                <button type="button" class="admin-sensor-btn save" id="adminSensorStatusConfirm">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

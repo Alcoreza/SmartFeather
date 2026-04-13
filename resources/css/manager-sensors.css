@@ -271,13 +271,6 @@
     filter: drop-shadow(0 16px 26px rgba(10, 24, 15, 0.08));
 }
 
-.manager-sensor-table tbody tr:hover td {
-    background: linear-gradient(180deg, #ffffff, #fcfdfb);
-    box-shadow:
-        0 14px 24px rgba(10, 24, 15, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.85);
-}
-
 .manager-sensor-empty {
     padding: 22px;
     text-align: center;
@@ -390,6 +383,80 @@
 
 .manager-sensor-btn.close {
     background: linear-gradient(180deg, #8a8a8a, #767676);
+}
+
+.manager-sensor-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 128px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.manager-sensor-status-pill.active {
+    background: rgba(44, 135, 72, 0.12);
+    color: #1f6f2b;
+}
+
+.manager-sensor-status-pill.maintenance {
+    background: rgba(198, 54, 54, 0.14);
+    color: #a12727;
+}
+
+.manager-sensor-row-maintenance td {
+    background: linear-gradient(180deg, #fff5f5, #fdecec);
+}
+
+.manager-sensor-status-filter {
+    min-width: 190px;
+    height: 44px;
+    padding: 10px 42px 10px 16px;
+    border: 1.5px solid rgba(10, 51, 27, 0.16);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #f8faf8);
+    color: var(--manager-green-900, #063320);
+    appearance: none;
+    outline: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+        calc(100% - 21px) calc(50% - 3px),
+        calc(100% - 13px) calc(50% - 3px);
+    background-size:
+        8px 8px,
+        8px 8px;
+    background-repeat: no-repeat;
+    transition:
+        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.28s ease;
+}
+
+.manager-sensor-status-filter:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 14px 28px rgba(10, 24, 15, 0.08),
+        0 0 0 6px rgba(97, 208, 95, 0.06);
+    border-color: rgba(29, 106, 55, 0.24);
+}
+
+.manager-sensor-table tbody tr:not(.manager-sensor-row-maintenance):hover td {
+    background: linear-gradient(180deg, #ffffff, #fcfdfb);
+    box-shadow:
+        0 14px 24px rgba(10, 24, 15, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.manager-sensor-row-maintenance:hover td {
+    background: linear-gradient(180deg, #fff1f1, #fbe3e3);
+    box-shadow:
+        0 14px 24px rgba(120, 40, 40, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 @keyframes managerSensorFade {

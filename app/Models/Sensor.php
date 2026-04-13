@@ -15,6 +15,7 @@ class Sensor extends Model
         'sensortype',
         'house_houseid',
         'pen_penid',
+        'status',
     ];
 
     public function house()

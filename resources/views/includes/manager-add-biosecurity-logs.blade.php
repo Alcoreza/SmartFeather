@@ -6,6 +6,7 @@
         </div>
 
         <form id="addBioForm" class="bio-modal-form">
+            @csrf
             <input type="hidden" id="addLogType" name="type">
 
             <div id="addBioModalFields"></div>

@@ -18,7 +18,6 @@ async function renderManagerSensorSections() {
             .map((section, index) => createSectionMarkup(section, index))
             .join("");
 
-        bindSensorSorts();
         bindManagerSensorFilters();
         bindSensorViewButtons();
         bindThresholdButtons();
@@ -52,17 +51,10 @@ function createSectionMarkup(section, index) {
                 </div>
 
                 <div class="manager-sensor-tools">
-                    <input
-                        type="search"
-                        class="manager-sensor-filter"
-                        placeholder=""
-                        aria-label="Filter sensors"
-                    >
-
-                    <select class="manager-sensor-sort" data-sort-kind>
-                        <option value="name">Name</option>
-                        <option value="house_number">House Number</option>
-                        <option value="pen_number">Pen Number</option>
+                        <select class="manager-sensor-filter" aria-label="Filter sensors by status">
+                        <option value="">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Under Maintenance">Under Maintenance</option>
                     </select>
 
                     <button
@@ -93,6 +85,7 @@ function createSectionMarkup(section, index) {
                             <th>Sensor Name</th>
                             <th>House Number</th>
                             <th>Pen Number</th>
+                            <th>Status</th>
                             <th>View</th>
                         </tr>
                     </thead>
@@ -106,11 +99,13 @@ function createSectionMarkup(section, index) {
                                 data-name="${escapeHtml(item.name)}"
                                 data-house-number="${escapeHtml(item.house_number)}"
                                 data-pen-number="${escapeHtml(item.pen_number)}"
+                                data-status="${escapeHtml(item.status)}"
                                 data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
                             >
                                 <td>${escapeHtml(item.name)}</td>
                                 <td>${escapeHtml(item.house_number)}</td>
                                 <td>${escapeHtml(item.pen_number)}</td>
+                                <td>${escapeHtml(item.status)}</td>
                                 <td>
                                     <button
     type="button"
@@ -134,7 +129,7 @@ function createSectionMarkup(section, index) {
                                       .join("")
                                 : `
                             <tr>
-                                <td colspan="4">
+                                <td colspan="5">
                                     <div class="manager-sensor-empty">No placeholder sensors available.</div>
                                 </td>
                             </tr>
@@ -147,52 +142,11 @@ function createSectionMarkup(section, index) {
     `;
 }
 
-function bindSensorSorts() {
-    document.querySelectorAll(".manager-sensor-section").forEach((section) => {
-        const sortSelect = section.querySelector("[data-sort-kind]");
-        const tbody = section.querySelector("tbody");
-        if (!sortSelect || !tbody) return;
-
-        const sortRows = () => {
-            const rows = Array.from(tbody.querySelectorAll("tr[data-name]")).filter(
-                (row) => !row.hidden,
-            );
-            const kind = sortSelect.value;
-
-            rows.sort((a, b) => {
-                if (kind === "name") {
-                    return (a.dataset.name || "").localeCompare(
-                        b.dataset.name || "",
-                    );
-                }
-
-                if (kind === "house_number") {
-                    return (
-                        Number(a.dataset.houseNumber || 0) -
-                        Number(b.dataset.houseNumber || 0)
-                    );
-                }
-
-                return (
-                    Number(a.dataset.penNumber || 0) -
-                    Number(b.dataset.penNumber || 0)
-                );
-            });
-
-            rows.forEach((row) => tbody.appendChild(row));
-            animateSensorRows(section);
-        };
-
-        sortSelect.addEventListener("change", sortRows);
-        sortRows();
-    });
-}
-
 function bindManagerSensorFilters() {
     document.querySelectorAll(".manager-sensor-section").forEach((section) => {
-        const filterInput = section.querySelector(".manager-sensor-filter");
+        const filterSelect = section.querySelector(".manager-sensor-filter");
         const tbody = section.querySelector("tbody");
-        if (!filterInput || !tbody) return;
+        if (!filterSelect || !tbody) return;
 
         const updateNoMatchRow = (visibleCount) => {
             const existing = tbody.querySelector("tr.manager-sensor-filter-empty");
@@ -213,19 +167,13 @@ function bindManagerSensorFilters() {
         };
 
         const filterRows = () => {
-            const query = filterInput.value.trim().toLowerCase();
+            const selectedStatus = filterSelect.value.trim().toLowerCase();
             const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
 
             let visibleCount = 0;
             rows.forEach((row) => {
-                const name = (row.dataset.name || "").toLowerCase();
-                const house = (row.dataset.houseNumber || "").toLowerCase();
-                const pen = (row.dataset.penNumber || "").toLowerCase();
-                const matches =
-                    !query ||
-                    name.includes(query) ||
-                    house.includes(query) ||
-                    pen.includes(query);
+                const status = (row.dataset.status || "").toLowerCase();
+                const matches = !selectedStatus || status === selectedStatus;
 
                 row.hidden = !matches;
                 if (matches) visibleCount += 1;
@@ -234,7 +182,7 @@ function bindManagerSensorFilters() {
             updateNoMatchRow(visibleCount);
         };
 
-        filterInput.addEventListener("input", filterRows);
+        filterSelect.addEventListener("change", filterRows);
         filterRows();
     });
 }

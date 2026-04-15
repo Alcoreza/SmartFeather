@@ -14,7 +14,7 @@ class SensorController extends Controller
 {
     public function index()
     {
-        $sensors = Sensor::with(['house', 'pen', 'configuration'])
+        $sensors = Sensor::with(['house', 'pen', 'configuration', 'maintenances'])
             ->orderBy('sensortype')
             ->orderBy('sensorname')
             ->get();
@@ -27,11 +27,22 @@ class SensorController extends Controller
                     'title' => $type ?: 'Unknown Sensor',
                     'sensor_type' => $type,
                     'items' => $group->map(function (Sensor $sensor) {
+                        $status = $sensor->status ?? null;
+                        if (!$status) {
+                            $latestMaintenance = $sensor->maintenances
+                                ->sortByDesc('startdate')
+                                ->first();
+                            $status = $latestMaintenance?->status;
+                        }
+
+                        $status = $this->normalizeSensorStatus($status);
+
                         return [
                             'id' => $sensor->sensorid,
                             'name' => $sensor->sensorname,
                             'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
                             'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
+                            'status' => $status,
                             'house_id' => $sensor->house?->id,
                             'pen_id' => $sensor->pen?->id,
                             'lowest_threshold' => $sensor->configuration?->lowestthreshold,
@@ -187,6 +198,25 @@ class SensorController extends Controller
             });
 
         return response()->json(['records' => $records]);
+    }
+
+    private function normalizeSensorStatus($status)
+    {
+        $status = trim(strtolower((string) $status));
+
+        if ($status === '' || $status === 'active') {
+            return 'Active';
+        }
+
+        if (str_contains($status, 'maintenance')) {
+            return 'Under Maintenance';
+        }
+
+        if ($status === 'maintenance') {
+            return 'Under Maintenance';
+        }
+
+        return 'Active';
     }
 
     private function formatHouseNumber($houseNumber)

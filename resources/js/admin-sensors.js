@@ -97,6 +97,7 @@ function createAdminSectionMarkup(section) {
                             <th>Sensor Name</th>
                             <th>House Number</th>
                             <th>Pen Number</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -111,6 +112,7 @@ function createAdminSectionMarkup(section) {
                                         data-name="${escapeHtml(item.name)}"
                                         data-house-number="${escapeHtml(item.house_number)}"
                                         data-pen-number="${escapeHtml(item.pen_number)}"
+                                        data-status="${escapeHtml(item.status)}"
                                         data-house-id="${escapeHtml(item.house_id ?? '')}"
                                         data-pen-id="${escapeHtml(item.pen_id ?? '')}"
                                         data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
@@ -120,6 +122,7 @@ function createAdminSectionMarkup(section) {
                                         <td>${escapeHtml(item.name)}</td>
                                         <td>${escapeHtml(item.house_number)}</td>
                                         <td>${escapeHtml(item.pen_number)}</td>
+                                        <td>${escapeHtml(item.status)}</td>
                                         <td>
                                             <div class="admin-sensor-actions">
                                                 <button type="button" class="admin-sensor-view-btn" data-open-view-row aria-label="View ${escapeHtml(item.name)}">
@@ -153,7 +156,7 @@ function createAdminSectionMarkup(section) {
                                       .join("")
                                 : `
                                     <tr>
-                                        <td colspan="4">
+                                        <td colspan="5">
                                             <div class="admin-sensor-empty">No placeholder sensors available.</div>
                                         </td>
                                     </tr>
@@ -391,11 +394,13 @@ function bindAdminSensorFilters() {
                 const name = (row.dataset.name || "").toLowerCase();
                 const house = (row.dataset.houseNumber || "").toLowerCase();
                 const pen = (row.dataset.penNumber || "").toLowerCase();
+                const status = (row.dataset.status || "").toLowerCase();
                 const matches =
                     !query ||
                     name.includes(query) ||
                     house.includes(query) ||
-                    pen.includes(query);
+                    pen.includes(query) ||
+                    status.includes(query);
 
                 row.hidden = !matches;
                 if (matches) visibleCount += 1;

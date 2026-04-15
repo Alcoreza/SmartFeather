@@ -43,12 +43,14 @@
                 <span>Sensors</span>
             </a>
 
-            <a href="#" class="sidebar-link">
+            <a href="{{ route('manager.biosecurity-logs') }}"
+                class="sidebar-link {{ request()->routeIs('manager.biosecurity-logs') ? 'active' : '' }}">
                 <span class="sidebar-icon">▤</span>
                 <span>Biosecurity Logs</span>
             </a>
 
-            <a href="#" class="sidebar-link">
+            <a href="{{ route('manager.reports') }}"
+                class="sidebar-link {{ request()->routeIs('manager.reports') ? 'active' : '' }}">
                 <span class="sidebar-icon">▥</span>
                 <span>Reports</span>
             </a>

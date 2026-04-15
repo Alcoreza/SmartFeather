@@ -186,4 +186,28 @@ class TaskController extends Controller
 
         return response()->json(['pens' => $pens]);
     }
+
+    /**
+     * Get all workers (employees) without role filtering
+     */
+    public function getAllWorkers()
+    {
+        $workers = Employee::all()
+            ->map(function (Employee $employee) {
+                $fullName = trim(sprintf(
+                    '%s %s %s %s',
+                    $employee->FirstName ?? '',
+                    $employee->MiddleName ?? '',
+                    $employee->LastName ?? '',
+                    $employee->Suffix ?? '',
+                ));
+
+                return [
+                    'id' => $employee->EmployeeId,
+                    'name' => $fullName ?: 'Unknown',
+                ];
+            });
+
+        return response()->json(['workers' => $workers]);
+    }
 }

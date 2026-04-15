@@ -33,20 +33,26 @@
 <div class="manager-task-modal-backdrop" id="addTaskModal">
     <div class="manager-task-form-modal">
         <div class="manager-task-modal-header center">
-            <h2>Add Task</h2>
+            <h2>Assign Task</h2>
             <div class="manager-task-header-line"></div>
         </div>
 
         <form class="manager-task-form-body" id="addTaskForm">
             <div class="manager-task-form-field full">
-                <label for="taskWorkerName">Name</label>
+                <label for="taskWorkerName">Assign Flockman</label>
                 <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>
             </div>
 
             <div class="manager-task-form-grid">
                 <div class="manager-task-form-field">
-                    <label for="taskCategory">Assign Task</label>
+                    <label for="taskCategory">Task</label>
                     <select id="taskCategory" name="task_category" class="task-select-placeholder"></select>
+                </div>
+
+                <div class="manager-task-form-field" id="newTaskCategoryField" style="display: none;">
+                    <label for="taskCategoryCustom">New task type</label>
+                    <input type="text" id="taskCategoryCustom" name="task_category_custom"
+                        placeholder="Enter new assign task" />
                 </div>
 
                 <div class="manager-task-form-field">

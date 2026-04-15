@@ -107,7 +107,7 @@
     flex-wrap: wrap;
 }
 
-.manager-sensor-sort {
+.manager-sensor-filter {
     min-width: 180px;
     padding: 10px 40px 10px 14px;
     border: 1.5px solid rgba(10, 51, 27, 0.16);
@@ -172,7 +172,7 @@
     height: 18px;
 }
 
-.manager-sensor-sort,
+.manager-sensor-filter,
 .manager-sensor-threshold-btn,
 .manager-sensor-maintenance-btn,
 .manager-sensor-view-btn {
@@ -186,7 +186,7 @@
     will-change: transform, box-shadow;
 }
 
-.manager-sensor-sort:hover {
+.manager-sensor-filter:hover {
     transform: translateY(-2px);
     box-shadow:
         0 12px 24px rgba(10, 24, 15, 0.08),
@@ -441,7 +441,7 @@
         border-radius: 24px;
     }
 
-    .manager-sensor-sort {
+    .manager-sensor-filter {
         width: 100%;
     }
 }

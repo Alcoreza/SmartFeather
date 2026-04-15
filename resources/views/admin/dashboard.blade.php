@@ -14,7 +14,7 @@
 @endpush
 
 @section('content')
-    @php
+    @php`
         $overviewCards = [
             ['icon' => '🐔', 'value' => '5462', 'label' => 'Total Birds', 'accent' => 'red'],
             ['icon' => '🥚', 'value' => '367', 'label' => 'Total Eggs', 'accent' => 'orange'],

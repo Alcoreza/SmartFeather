@@ -429,3 +429,86 @@ Route::get('/api/admin/sensors/maintenance-records', function () {
         ],
     ]);
 });
+
+Route::view('/manager/biosecurity-logs', 'manager.biosecurity-logs')
+    ->name('manager.biosecurity-logs');
+
+Route::get('/api/manager/biosecurity-logs', function () {
+    return response()->json([
+        'overview' => [
+            'violations' => 2,
+            'last_disinfection' => [
+                'date' => '1-21-26',
+                'time' => '11:58 AM',
+            ],
+            'visitors' => 1,
+            'mortalities' => 1,
+        ],
+
+        'categories' => [
+            'Cleaning',
+            'Personnel Biosecurity Logs',
+        ],
+
+        'logs' => [
+            'Cleaning' => [
+                [
+                    'id' => 1,
+                    'house' => 1,
+                    'pen' => 4,
+                    'activity' => 'Disinfect',
+                    'date' => '1-21-26',
+                    'time' => '4:43 PM',
+                    'disinfectant_used' => 'Vikron',
+                    'performed_by' => 'John Doe',
+                ],
+                [
+                    'id' => 2,
+                    'house' => 3,
+                    'pen' => 1,
+                    'activity' => 'Pest Control',
+                    'date' => '1-27-26',
+                    'time' => '10:27 AM',
+                    'disinfectant_used' => 'Permethrin',
+                    'performed_by' => 'Juan Cruz',
+                ],
+            ],
+
+            'Personnel Biosecurity Logs' => [
+                [
+                    'id' => 101,
+                    'name' => 'John Doe',
+                    'role' => 'Flockman',
+                    'house' => 1,
+                    'date' => '1-21-26',
+                    'time' => '4:43 PM',
+                    'foot_bath' => 'Yes',
+                    'boots_changed' => 'Yes',
+                    'protective_clothing' => 'Yes',
+                ],
+                [
+                    'id' => 102,
+                    'name' => 'Mark Dupe',
+                    'role' => 'Flockman',
+                    'house' => 2,
+                    'date' => '1-24-26',
+                    'time' => '2:27 PM',
+                    'foot_bath' => 'Yes',
+                    'boots_changed' => 'No',
+                    'protective_clothing' => 'Yes',
+                ],
+                [
+                    'id' => 103,
+                    'name' => 'John Doe',
+                    'role' => 'Flockman',
+                    'house' => 2,
+                    'date' => '1-25-26',
+                    'time' => '10:21 PM',
+                    'foot_bath' => 'No',
+                    'boots_changed' => 'Yes',
+                    'protective_clothing' => 'Yes',
+                ],
+            ],
+        ],
+    ]);
+});

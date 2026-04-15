@@ -1,6 +1,10 @@
 const state = {
     selectedCategory: 'Cleaning',
     logs: {},
+    houses: [],
+    workers: [],
+    pens: [],
+    allWorkers: [],
 };
 
 const TABLE_CONFIG = {
@@ -19,8 +23,8 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'house', label: 'House Number', type: 'text' },
-                    { key: 'pen', label: 'Pen Number', type: 'text' },
+                    { key: 'house', label: 'House Number', type: 'select', options: 'houses' },
+                    { key: 'pen', label: 'Pen Number', type: 'select', options: 'pens' },
                 ],
             },
             {
@@ -32,8 +36,8 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'date', label: 'Date', type: 'text' },
-                    { key: 'time', label: 'Time', type: 'text' },
+                    { key: 'date', label: 'Date', type: 'date' },
+                    { key: 'time', label: 'Time', type: 'time' },
                 ],
             },
             {
@@ -45,7 +49,7 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row',
                 fields: [
-                    { key: 'performed_by', label: 'Performed by:', type: 'text', full: true },
+                    { key: 'performed_by', label: 'Performed by:', type: 'select', options: 'workers' },
                 ],
             },
         ],
@@ -74,14 +78,14 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'house', label: 'House', type: 'text' },
-                    { key: 'date', label: 'Date', type: 'text' },
+                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
+                    { key: 'date', label: 'Date', type: 'date' },
                 ],
             },
             {
                 rowClass: 'bio-modal-row',
                 fields: [
-                    { key: 'time', label: 'Time', type: 'text', full: true },
+                    { key: 'time', label: 'Time', type: 'time', full: true },
                 ],
             },
             {
@@ -133,15 +137,15 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'date', label: 'Date', type: 'text' },
+                    { key: 'date', label: 'Date', type: 'date' },
                     { key: 'name', label: 'Name', type: 'text' },
                 ],
             },
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'time_in', label: 'Time In', type: 'text' },
-                    { key: 'time_out', label: 'Time Out', type: 'text' },
+                    { key: 'time_in', label: 'Time In', type: 'time' },
+                    { key: 'time_out', label: 'Time Out', type: 'time' },
                 ],
             },
             {
@@ -179,7 +183,8 @@ const TABLE_CONFIG = {
                     {
                         key: 'monitored_by',
                         label: 'Monitored By',
-                        type: 'text',
+                        type: 'select',
+                        options: 'allWorkers',
                     },
                 ],
             },
@@ -206,14 +211,14 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'house', label: 'House', type: 'text' },
-                    { key: 'date', label: 'Date', type: 'text' },
+                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
+                    { key: 'date', label: 'Date', type: 'date' },
                 ],
             },
             {
                 rowClass: 'bio-modal-row',
                 fields: [
-                    { key: 'time', label: 'Time', type: 'text', full: true },
+                    { key: 'time', label: 'Time', type: 'time', full: true },
                 ],
             },
         ],
@@ -237,15 +242,15 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'date', label: 'Date', type: 'text' },
-                    { key: 'time', label: 'Time', type: 'text' },
+                    { key: 'date', label: 'Date', type: 'date' },
+                    { key: 'time', label: 'Time', type: 'time' },
                 ],
             },
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'house', label: 'House', type: 'text' },
-                    { key: 'pen', label: 'Pen', type: 'text' },
+                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
+                    { key: 'pen', label: 'Pen', type: 'select', options: 'pens' },
                 ],
             },
             {
@@ -375,20 +380,42 @@ function createFieldHtml(prefix, field, value = '') {
     const wrapperClass = field.full ? 'bio-field full' : 'bio-field';
 
     if (field.type === 'select') {
-        const optionsHtml = (field.options || []).map((option) => `
-            <option value="${escapeHtml(option)}" ${String(value) === String(option) ? 'selected' : ''}>
-                ${escapeHtml(option)}
-            </option>
-        `).join('');
+        let options = field.options || [];
+        
+        // Handle dynamic options from state
+        if (field.options === 'houses' && state.houses) {
+            options = state.houses.map(h => ({ value: h.id, label: h.number }));
+        } else if (field.options === 'workers' && state.workers) {
+            options = state.workers.map(w => ({ value: w.id, label: w.name }));
+        } else if (field.options === 'allWorkers' && state.allWorkers) {
+            options = state.allWorkers.map(w => ({ value: w.id, label: w.name }));
+        } else if (field.options === 'pens' && state.pens) {
+            options = state.pens.map(p => ({ value: p.number, label: p.label }));
+        }
+
+        const optionsHtml = options.map((option) => {
+            const optValue = option.value ?? option;
+            const optLabel = option.label ?? option;
+            return `<option value="${escapeHtml(optValue)}" ${String(value) === String(optValue) ? 'selected' : ''}>
+                ${escapeHtml(optLabel)}
+            </option>`;
+        }).join('');
 
         return `
             <div class="${wrapperClass}">
                 <label for="${fieldId}">${field.label}</label>
-                <select id="${fieldId}" name="${field.key}">
+                <select id="${fieldId}" name="${field.key}" class="bio-select-placeholder">
+                    <option value="">- - -</option>
                     ${optionsHtml}
                 </select>
             </div>
         `;
+    }
+
+    // For date/time fields, set max to today
+    let extraAttrs = '';
+    if (field.type === 'date') {
+        extraAttrs = `max="${new Date().toISOString().split('T')[0]}"`;
     }
 
     return `
@@ -399,6 +426,7 @@ function createFieldHtml(prefix, field, value = '') {
                 id="${fieldId}"
                 name="${field.key}"
                 value="${escapeHtml(value)}"
+                ${extraAttrs}
             >
         </div>
     `;
@@ -438,12 +466,17 @@ function setupEditModal() {
 
     if (!modal || !closeBtn || !title || !fieldsWrap) return;
 
-    document.addEventListener('click', (event) => {
+    document.addEventListener('click', async (event) => {
         const btn = event.target.closest('.edit-btn');
         if (!btn) return;
 
         const type = btn.dataset.mode || 'Cleaning';
         const rowData = decodeRowData(btn.dataset.log);
+
+        // Load form options if not already loaded
+        if (!state.houses || !state.workers) {
+            await loadBioFormOptions();
+        }
 
         title.textContent = `Edit ${type}`;
         fieldsWrap.innerHTML = buildModalFields('edit', type, rowData);
@@ -451,8 +484,70 @@ function setupEditModal() {
         if (logIdInput) logIdInput.value = rowData.id ?? '';
         if (logTypeInput) logTypeInput.value = type;
 
+        // Set up house change event to load pens for edit modal
+        const houseSelect = document.getElementById('edit_house');
+        const penSelect = document.getElementById('edit_pen');
+        
+        if (houseSelect) {
+            houseSelect.addEventListener('change', async () => {
+                const houseId = houseSelect.value;
+                if (houseId && penSelect) {
+                    await loadBioPensForHouse(houseId, 'edit_pen');
+                }
+            });
+
+            // If there's a house value, load pens for it
+            if (rowData.house) {
+                await loadBioPensForHouse(rowData.house, 'edit_pen');
+            }
+        }
+
         modal.classList.add('show');
     });
+
+    // Handle form submission for edit
+    const form = document.getElementById('editBioForm');
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const logId = logIdInput?.value;
+
+            if (!logId) {
+                alert('Invalid log ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/manager/biosecurity-logs/${logId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-HTTP-Method-Override': 'PUT',
+                    },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Server error:', errorData);
+                    throw new Error(`Failed to update: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Log updated:', result);
+
+                modal.classList.remove('show');
+
+                // Reload logs to show the updated entry
+                loadBiosecurityLogs();
+            } catch (error) {
+                console.error('Error updating log:', error);
+                alert('Failed to update log. Please try again.');
+            }
+        });
+    }
 
     closeBtn.addEventListener('click', () => {
         modal.classList.remove('show');
@@ -475,16 +570,86 @@ function setupAddModal() {
 
     if (!modal || !openBtn || !closeBtn || !title || !fieldsWrap) return;
 
-    openBtn.addEventListener('click', () => {
+    openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
+
+        // Always reload form options for Cleaning, Personnel Biosecurity Logs, Visitors, Personnel Entry Logs, and Weight Sampling
+        if (type === 'Cleaning' || type === 'Personnel Biosecurity Logs' || type === 'Visitors' || type === 'Personnel Entry Logs' || type === 'Weight Sampling') {
+            await loadBioFormOptions();
+        }
+        
+        // Also load all workers for Visitors modal
+        if (type === 'Visitors' && (!state.allWorkers || state.allWorkers.length === 0)) {
+            await loadAllWorkers();
+        } else if (!state.houses || !state.workers) {
+            await loadBioFormOptions();
+        }
 
         title.textContent = `Add ${type}`;
         fieldsWrap.innerHTML = buildModalFields('add', type, {});
 
         if (logTypeInput) logTypeInput.value = type;
 
+        // Set up house change event to load pens (for Cleaning and Weight Sampling)
+        const houseSelect = document.getElementById('add_house');
+        const penSelect = document.getElementById('add_pen');
+        
+        if (houseSelect) {
+            houseSelect.addEventListener('change', async () => {
+                const houseId = houseSelect.value;
+                if (houseId && penSelect) {
+                    await loadBioPensForHouse(houseId, 'add_pen');
+                }
+            });
+            
+            // For Weight Sampling, also load pens on modal open if house is pre-selected
+            if (type === 'Weight Sampling') {
+                const initialHouseId = houseSelect.value;
+                if (initialHouseId) {
+                    await loadBioPensForHouse(initialHouseId, 'add_pen');
+                }
+            }
+        }
+
         modal.classList.add('show');
     });
+
+    // Handle form submission
+    const form = document.getElementById('addBioForm');
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/api/manager/biosecurity-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Server error:', errorData);
+                    throw new Error(`Failed to save: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Log saved:', result);
+
+                modal.classList.remove('show');
+
+                // Reload logs to show the new entry
+                loadBiosecurityLogs();
+            } catch (error) {
+                console.error('Error saving log:', error);
+                alert('Failed to save log. Please try again.');
+            }
+        });
+    }
 
     closeBtn.addEventListener('click', () => {
         modal.classList.remove('show');
@@ -577,6 +742,64 @@ function setupProfileModal() {
             document.body.style.overflow = '';
         }
     });
+}
+
+async function loadBioFormOptions() {
+    try {
+        const response = await fetch("/api/manager/tasks/form-options");
+        const data = await response.json();
+
+        // Store for reuse
+        state.houses = data.houses || [];
+        state.workers = data.workers || [];
+        state.pens = [];
+
+        return { houses: state.houses, workers: state.workers };
+    } catch (error) {
+        console.error("Failed to load form options:", error);
+        return { houses: [], workers: [], pens: [] };
+    }
+}
+
+async function loadAllWorkers() {
+    try {
+        const response = await fetch("/api/manager/tasks/all-workers");
+        const data = await response.json();
+
+        // Store all workers for Visitors modal
+        state.allWorkers = data.workers || [];
+
+        return state.allWorkers;
+    } catch (error) {
+        console.error("Failed to load all workers:", error);
+        return [];
+    }
+}
+
+async function loadBioPensForHouse(houseId, selectId) {
+    const penSelect = document.getElementById(selectId);
+    if (!penSelect) return;
+
+    if (!houseId) {
+        penSelect.innerHTML = '<option value="">- - -</option>';
+        penSelect.disabled = true;
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/manager/tasks/houses/${houseId}/pens`);
+        const data = await response.json();
+
+        state.pens = data.pens || [];
+
+        penSelect.innerHTML = '<option value="">- - -</option>' +
+            state.pens.map(p => `<option value="${p.number}">${p.label}</option>`).join('');
+        
+        penSelect.disabled = false;
+    } catch (error) {
+        console.error("Failed to load pens:", error);
+        penSelect.innerHTML = '<option value="">Error</option>';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

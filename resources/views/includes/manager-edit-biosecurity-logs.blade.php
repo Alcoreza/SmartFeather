@@ -6,6 +6,8 @@
         </div>
 
         <form id="editBioForm" class="bio-modal-form">
+            @csrf
+            <input type="hidden" name="_method" value="PUT">
             <input type="hidden" id="editLogId" name="id">
             <input type="hidden" id="editLogType" name="type">
 

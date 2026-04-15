@@ -57,20 +57,32 @@ async function loadTaskFormOptions() {
         );
 
         if (houseSelect) {
-            houseSelect.addEventListener("change", async (event) => {
+            houseSelect.onchange = async (event) => {
                 await loadPensForHouse(event.target.value);
-            });
+            };
 
             if (houseSelect.value) {
                 await loadPensForHouse(houseSelect.value);
             }
         }
 
+        const taskCategorySelect = document.getElementById("taskCategory");
         fillSimpleSelect(
-            document.getElementById("taskCategory"),
+            taskCategorySelect,
             data.task_categories || [],
             "Select task category",
         );
+
+        if (taskCategorySelect) {
+            const addNewOption = document.createElement("option");
+            addNewOption.value = "__new";
+            addNewOption.textContent = "Add new task type";
+            taskCategorySelect.appendChild(addNewOption);
+
+            taskCategorySelect.onchange = () => {
+                toggleNewTaskCategoryField(taskCategorySelect.value === "__new");
+            };
+        }
 
         fillSimpleSelect(
             document.getElementById("taskPriority"),
@@ -292,7 +304,9 @@ function setupAddTaskModal() {
     const form = document.getElementById("addTaskForm");
 
     if (openButton) {
-        openButton.addEventListener("click", () => {
+        openButton.addEventListener("click", async () => {
+            await loadTaskFormOptions();
+            resetNewTaskCategoryField();
             openTaskModal("addTaskModal");
         });
     }
@@ -304,42 +318,50 @@ function setupAddTaskModal() {
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
             
-            console.log("=== FORM DEBUG ===");
-            console.log("All form fields:", payload);
-            console.log("detailed_task value:", payload.detailed_task);
-            console.log("detailed_task type:", typeof payload.detailed_task);
-            console.log("detailed_task length:", payload.detailed_task?.length);
-            
             const textareaElement = document.getElementById("taskDetailedDescription");
-            console.log("Textarea element:", textareaElement);
-            console.log("Textarea value:", textareaElement?.value);
-            console.log("=== END DEBUG ===");
 
             const date = payload.date_assigned || "";
             const time = payload.time_assigned || "";
-            const timeAssigned = date && time ? `${date}T${time}:00` : null;
+
+            const toLocalDateTimeString = (dateObj) => {
+                const pad = (value) => String(value).padStart(2, "0");
+                return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}` +
+                    `T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+            };
+
+            const timeAssigned = toLocalDateTimeString(new Date());
+            const finishBy = date && time ? `${date}T${time}:00` : null;
 
             // Use textarea element value directly if FormData didn't capture it
             const detailedTaskValue = payload.detailed_task || textareaElement?.value || "";
 
+            let taskType = payload.task_category;
+            const customTaskType = document
+                .getElementById("taskCategoryCustom")
+                ?.value.trim();
+
+            if (taskType === "__new") {
+                if (!customTaskType) {
+                    alert("Please enter a new task type.");
+                    return;
+                }
+                taskType = customTaskType;
+            }
+
             const body = {
                 user_employeeid: payload.worker_name,
-                tasktype: payload.task_category,
+                tasktype: taskType,
                 prioritylevel: payload.priority_level,
                 house_houseid: payload.house_number,
                 pennumber: payload.pen_number,
                 timeassigned: timeAssigned,
-                finishby: null,
+                finishby: finishBy,
                 detailedtask: detailedTaskValue,
                 status: "Pending",
             };
 
-            console.log("Request body:", body);
-
             try {
                 const token = document.querySelector('meta[name="csrf-token"]')?.content;
-                console.log("Sending task payload:", body);
-                
                 const response = await fetch("/api/manager/tasks", {
                     method: "POST",
                     headers: {
@@ -349,9 +371,7 @@ function setupAddTaskModal() {
                     body: JSON.stringify(body),
                 });
 
-                console.log("Response status:", response.status);
                 const responseText = await response.text();
-                console.log("Response:", responseText);
 
                 if (!response.ok) {
                     throw new Error(responseText || `Failed to save task (${response.status}).`);
@@ -360,6 +380,7 @@ function setupAddTaskModal() {
                 await renderManagerTasks();
                 closeTaskModal("addTaskModal");
                 form.reset();
+                resetNewTaskCategoryField();
                 setupTaskSelectPlaceholderState();
             } catch (error) {
                 console.error("Failed to save new task:", error);
@@ -496,6 +517,27 @@ async function loadPensForHouse(houseId) {
     }
 }
 
+function toggleNewTaskCategoryField(show) {
+    const field = document.getElementById("newTaskCategoryField");
+    if (!field) return;
+
+    field.style.display = show ? "block" : "none";
+    if (!show) {
+        const input = document.getElementById("taskCategoryCustom");
+        if (input) {
+            input.value = "";
+        }
+    }
+}
+
+function resetNewTaskCategoryField() {
+    const select = document.getElementById("taskCategory");
+    if (select) {
+        select.value = "";
+    }
+    toggleNewTaskCategoryField(false);
+}
+
 async function updateTaskStatus(taskId, newStatus) {
     try {
         const token = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -526,6 +568,13 @@ function fillSelect(select, items, valueKey, labelKey, placeholder) {
 
     select.innerHTML = `
         <option value="">${placeholder}</option>
-        ${items.map((item) => `<option value="${item[valueKey]}">${item[labelKey]}</option>`).join("")}
+        ${items.map((item) => {
+            const value = item[valueKey];
+            const label = item.label ?? item[labelKey];
+            const disabled = item.disabled ? 'disabled' : '';
+            const note = item.disabled ? ' (pending task)' : '';
+            const style = item.disabled ? 'style="color:#999;"' : '';
+            return `<option value="${value}" ${disabled} ${style}>${label}${note}</option>`;
+        }).join("")}
     `;
 }

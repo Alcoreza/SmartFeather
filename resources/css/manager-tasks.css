@@ -426,6 +426,7 @@ body {
 
 .manager-task-form-modal {
     width: min(100%, 560px);
+    max-height: calc(100vh - 48px);
     border-radius: 32px;
     background: linear-gradient(180deg, #ffffff, #f8f8f8);
     box-shadow:
@@ -433,6 +434,7 @@ body {
         inset 0 1px 0 rgba(255, 255, 255, 0.8);
     padding: 24px;
     animation: managerTaskPop 0.24s ease;
+    overflow-y: auto;
 }
 
 .manager-task-form-body {

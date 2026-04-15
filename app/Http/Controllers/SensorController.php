@@ -47,6 +47,7 @@ class SensorController extends Controller
                             'pen_id' => $sensor->pen?->id,
                             'lowest_threshold' => $sensor->configuration?->lowestthreshold,
                             'highest_threshold' => $sensor->configuration?->highestthreshold,
+                            'status' => $sensor->status ?: 'Active',
                         ];
                     })->values(),
                 ];
@@ -55,6 +56,7 @@ class SensorController extends Controller
 
         return response()->json(['sections' => $sections]);
     }
+
 
     public function formOptions()
     {
@@ -109,7 +111,9 @@ class SensorController extends Controller
             'sensorname' => $validated['sensor_name'],
             'house_houseid' => $validated['house_houseid'],
             'pen_penid' => $validated['pen_penid'],
+            'status' => 'Active',
         ]);
+
 
         // If this sensor type already has thresholds configured, copy them to the new sensor.
         $existingThreshold = SensorConfiguration::whereIn(
@@ -150,6 +154,7 @@ class SensorController extends Controller
         return response()->json($sensor);
     }
 
+
     public function destroy($sensorId)
     {
         $sensor = Sensor::findOrFail($sensorId);
@@ -157,6 +162,24 @@ class SensorController extends Controller
 
         return response()->json(['message' => 'Sensor deleted']);
     }
+
+    public function updateStatus(Request $request, $sensorId)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:Active,Under Maintenance',
+        ]);
+
+        $sensor = Sensor::findOrFail($sensorId);
+        $sensor->update([
+            'status' => $validated['status'],
+        ]);
+
+        return response()->json([
+            'message' => 'Sensor status updated successfully.',
+            'sensor' => $sensor,
+        ]);
+    }
+
 
     public function updateThresholds(Request $request)
     {

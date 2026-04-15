@@ -24,8 +24,9 @@ async function renderAdminSensorSections() {
             .map((section) => createAdminSectionMarkup(section))
             .join("");
 
-        bindAdminSensorSorts();
-        bindAdminSensorFilters();
+        bindAdminStatusFilters();
+        bindAdminToggleStatusButtons();
+        bindAdminStatusConfirmButton();
         bindAdminViewButtons();
         bindAdminEditButtons();
         bindAdminThresholdButtons();
@@ -61,46 +62,41 @@ function createAdminSectionMarkup(section) {
                 </div>
 
                 <div class="admin-sensor-tools">
-                    <input
-                        type="search"
-                        class="admin-sensor-filter"
-                        placeholder=""
-                        aria-label="Filter sensors"
-                    >
+    <select class="admin-sensor-status-filter" data-status-filter>
+        <option value="all">All Sensors</option>
+        <option value="active">Active</option>
+        <option value="under maintenance">Under Maintenance</option>
+    </select>
 
-                    <select class="admin-sensor-sort" data-sort-kind>
-                        <option value="name">Name</option>
-                        <option value="house_number">House Number</option>
-                        <option value="pen_number">Pen Number</option>
-                    </select>
+    <button type="button" class="admin-sensor-threshold-btn" data-open-threshold aria-label="Threshold settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 21v-7"></path>
+            <path d="M4 10V3"></path>
+            <path d="M12 21v-9"></path>
+            <path d="M12 8V3"></path>
+            <path d="M20 21v-5"></path>
+            <path d="M20 12V3"></path>
+            <path d="M1 10h6"></path>
+            <path d="M9 8h6"></path>
+            <path d="M17 12h6"></path>
+        </svg>
+    </button>
+</div>
 
-                    <button type="button" class="admin-sensor-threshold-btn" data-open-threshold aria-label="Threshold settings">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 21v-7"></path>
-                            <path d="M4 10V3"></path>
-                            <path d="M12 21v-9"></path>
-                            <path d="M12 8V3"></path>
-                            <path d="M20 21v-5"></path>
-                            <path d="M20 12V3"></path>
-                            <path d="M1 10h6"></path>
-                            <path d="M9 8h6"></path>
-                            <path d="M17 12h6"></path>
-                        </svg>
-                    </button>
-                </div>
             </div>
 
             <div class="admin-sensor-table-wrap">
                 <table class="admin-sensor-table">
                     <thead>
-                        <tr>
-                            <th>Sensor Name</th>
-                            <th>House Number</th>
-                            <th>Pen Number</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
+    <tr>
+        <th>Sensor Name</th>
+        <th>House Number</th>
+        <th>Pen Number</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+</thead>
+
                     <tbody>
                         ${
                             rows.length
@@ -108,49 +104,81 @@ function createAdminSectionMarkup(section) {
                                       .map(
                                           (item) => `
                                     <tr
-                                        data-id="${escapeHtml(item.id)}"
-                                        data-name="${escapeHtml(item.name)}"
-                                        data-house-number="${escapeHtml(item.house_number)}"
-                                        data-pen-number="${escapeHtml(item.pen_number)}"
-                                        data-status="${escapeHtml(item.status)}"
-                                        data-house-id="${escapeHtml(item.house_id ?? '')}"
-                                        data-pen-id="${escapeHtml(item.pen_id ?? '')}"
-                                        data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
-                                        data-lowest-threshold="${escapeHtml(item.lowest_threshold || "")}"
-                                        data-highest-threshold="${escapeHtml(item.highest_threshold || "")}"
-                                    >
-                                        <td>${escapeHtml(item.name)}</td>
-                                        <td>${escapeHtml(item.house_number)}</td>
-                                        <td>${escapeHtml(item.pen_number)}</td>
-                                        <td>${escapeHtml(item.status)}</td>
-                                        <td>
-                                            <div class="admin-sensor-actions">
-                                                <button type="button" class="admin-sensor-view-btn" data-open-view-row aria-label="View ${escapeHtml(item.name)}">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
-                                                        <circle cx="12" cy="12" r="3"></circle>
-                                                    </svg>
-                                                </button>
+    class="${(item.status || "").toLowerCase() === "under maintenance" ? "admin-sensor-row-maintenance" : ""}"
+    data-id="${escapeHtml(item.id)}"
+    data-name="${escapeHtml(item.name)}"
+    data-house-number="${escapeHtml(item.house_number)}"
+    data-pen-number="${escapeHtml(item.pen_number)}"
+    data-house-id="${escapeHtml(item.house_id ?? "")}"
+    data-pen-id="${escapeHtml(item.pen_id ?? "")}"
+    data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+    data-lowest-threshold="${escapeHtml(item.lowest_threshold || "")}"
+    data-highest-threshold="${escapeHtml(item.highest_threshold || "")}"
+    data-status="${escapeHtml(item.status || "Active")}"
+>
+    <td>${escapeHtml(item.name)}</td>
+    <td>${escapeHtml(item.house_number)}</td>
+    <td>${escapeHtml(item.pen_number)}</td>
+    <td>
+        <span class="admin-sensor-status-pill ${(item.status || "Active").toLowerCase() === "under maintenance" ? "maintenance" : "active"}">
+            ${escapeHtml(item.status || "Active")}
+        </span>
+    </td>
+    <td>
+        <div class="admin-sensor-actions">
+            <button type="button" class="admin-sensor-view-btn" data-open-view-row aria-label="View ${escapeHtml(item.name)}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </button>
 
-                                                <button type="button" class="admin-sensor-edit-btn" data-open-edit-row aria-label="Edit ${escapeHtml(item.name)}">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M12 20h9"></path>
-                                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                                                    </svg>
-                                                </button>
+            <button type="button" class="admin-sensor-edit-btn" data-open-edit-row aria-label="Edit ${escapeHtml(item.name)}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                </svg>
+            </button>
 
-                                                <button type="button" class="admin-sensor-delete-btn" data-open-delete aria-label="Delete ${escapeHtml(item.name)}">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M3 6h18"></path>
-                                                        <path d="M8 6V4h8v2"></path>
-                                                        <path d="M19 6l-1 14H6L5 6"></path>
-                                                        <path d="M10 11v6"></path>
-                                                        <path d="M14 11v6"></path>
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+            <button
+    type="button"
+    class="admin-sensor-toggle-btn ${(item.status || "Active").toLowerCase() === "under maintenance" ? "activate" : "maintenance"}"
+    data-toggle-status
+    aria-label="${(item.status || "Active").toLowerCase() === "under maintenance" ? `Mark ${escapeHtml(item.name)} as active` : `Mark ${escapeHtml(item.name)} as under maintenance`}"
+>
+    ${
+        (item.status || "Active").toLowerCase() === "under maintenance"
+            ? `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M8 12.5l2.5 2.5L16 9.5"></path>
+                </svg>
+            `
+            : `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M9.5 9.5v5"></path>
+                    <path d="M14.5 9.5v5"></path>
+                </svg>
+            `
+    }
+</button>
+
+
+
+            <button type="button" class="admin-sensor-delete-btn" data-open-delete aria-label="Delete ${escapeHtml(item.name)}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                </svg>
+            </button>
+        </div>
+    </td>
+</tr>
+
                                 `,
                                       )
                                       .join("")
@@ -171,57 +199,57 @@ function createAdminSectionMarkup(section) {
 
 async function loadAdminSensorFormOptions() {
     try {
-        const response = await fetch('/api/admin/sensors/form-options');
+        const response = await fetch("/api/admin/sensors/form-options");
         const data = await response.json();
 
         fillAdminSimpleSelect(
-            document.getElementById('adminSensorAddType'),
+            document.getElementById("adminSensorAddType"),
             data.sensor_types || [],
-            'Select sensor type',
+            "Select sensor type",
         );
 
-        const addHouseSelect = document.getElementById('adminSensorAddHouse');
-        const addPenSelect = document.getElementById('adminSensorAddPen');
+        const addHouseSelect = document.getElementById("adminSensorAddHouse");
+        const addPenSelect = document.getElementById("adminSensorAddPen");
 
         fillAdminSimpleSelect(
             addHouseSelect,
             data.houses || [],
-            'Select house',
+            "Select house",
         );
 
-        fillAdminSimpleSelect(addPenSelect, [], 'Select pen');
+        fillAdminSimpleSelect(addPenSelect, [], "Select pen");
 
-        const editHouseSelect = document.getElementById('adminSensorEditHouse');
-        const editPenSelect = document.getElementById('adminSensorEditPen');
+        const editHouseSelect = document.getElementById("adminSensorEditHouse");
+        const editPenSelect = document.getElementById("adminSensorEditPen");
 
         fillAdminSimpleSelect(
-            document.getElementById('adminSensorEditType'),
+            document.getElementById("adminSensorEditType"),
             data.sensor_types || [],
-            'Select sensor type',
+            "Select sensor type",
         );
 
         fillAdminSimpleSelect(
             editHouseSelect,
             data.houses || [],
-            'Select house',
+            "Select house",
         );
 
-        fillAdminSimpleSelect(editPenSelect, [], 'Select pen');
+        fillAdminSimpleSelect(editPenSelect, [], "Select pen");
 
         // Add event listeners for house selection
         if (addHouseSelect) {
-            addHouseSelect.addEventListener('change', async (event) => {
+            addHouseSelect.addEventListener("change", async (event) => {
                 await loadAdminPensForHouse(event.target.value, addPenSelect);
             });
         }
 
         if (editHouseSelect) {
-            editHouseSelect.addEventListener('change', async (event) => {
+            editHouseSelect.addEventListener("change", async (event) => {
                 await loadAdminPensForHouse(event.target.value, editPenSelect);
             });
         }
     } catch (error) {
-        console.error('Failed to load admin sensor form options.', error);
+        console.error("Failed to load admin sensor form options.", error);
     }
 }
 
@@ -229,17 +257,19 @@ async function loadAdminPensForHouse(houseId, penSelect) {
     if (!penSelect) return;
 
     if (!houseId) {
-        fillAdminSimpleSelect(penSelect, [], 'Select pen');
+        fillAdminSimpleSelect(penSelect, [], "Select pen");
         return;
     }
 
     try {
-        const response = await fetch(`/api/admin/sensors/houses/${houseId}/pens`);
+        const response = await fetch(
+            `/api/admin/sensors/houses/${houseId}/pens`,
+        );
         const data = await response.json();
-        fillAdminSimpleSelect(penSelect, data.pens || [], 'Select pen');
+        fillAdminSimpleSelect(penSelect, data.pens || [], "Select pen");
     } catch (error) {
-        console.error('Failed to load pens for selected house.', error);
-        fillAdminSimpleSelect(penSelect, [], 'Select pen');
+        console.error("Failed to load pens for selected house.", error);
+        fillAdminSimpleSelect(penSelect, [], "Select pen");
     }
 }
 
@@ -250,36 +280,36 @@ function fillAdminSimpleSelect(select, items, placeholder) {
         <option value="">${escapeHtml(placeholder)}</option>
         ${items
             .map((item) => {
-                if (item && typeof item === 'object') {
+                if (item && typeof item === "object") {
                     return `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`;
                 }
 
                 return `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`;
             })
-            .join('')}
+            .join("")}
     `;
 }
 
 function getCsrfToken() {
     const tokenElement = document.querySelector('meta[name="csrf-token"]');
-    return tokenElement?.getAttribute('content') || '';
+    return tokenElement?.getAttribute("content") || "";
 }
 
-async function apiRequest(url, method = 'GET', data = null) {
+async function apiRequest(url, method = "GET", data = null) {
     const options = {
         method,
         headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
         },
     };
 
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
-        options.headers['X-CSRF-TOKEN'] = getCsrfToken();
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())) {
+        options.headers["X-CSRF-TOKEN"] = getCsrfToken();
     }
 
     if (data) {
-        options.headers['Content-Type'] = 'application/json';
+        options.headers["Content-Type"] = "application/json";
         options.body = JSON.stringify(data);
     }
 
@@ -327,9 +357,9 @@ function bindAdminSensorSorts() {
         if (!sortSelect || !tbody) return;
 
         const sortRows = () => {
-            const rows = Array.from(tbody.querySelectorAll("tr[data-id]")).filter(
-                (row) => !row.hidden,
-            );
+            const rows = Array.from(
+                tbody.querySelectorAll("tr[data-id]"),
+            ).filter((row) => !row.hidden);
             const kind = sortSelect.value;
 
             rows.sort((a, b) => {
@@ -368,7 +398,9 @@ function bindAdminSensorFilters() {
         if (!filterInput || !tbody) return;
 
         const updateNoMatchRow = (visibleCount) => {
-            const existing = tbody.querySelector("tr.admin-sensor-filter-empty");
+            const existing = tbody.querySelector(
+                "tr.admin-sensor-filter-empty",
+            );
             if (visibleCount === 0) {
                 if (!existing) {
                     const noMatchRow = document.createElement("tr");
@@ -446,12 +478,15 @@ function bindAdminEditButtons() {
             const house = document.getElementById("adminSensorEditHouse");
             const pen = document.getElementById("adminSensorEditPen");
 
-            const id = document.getElementById('adminSensorEditId');
+            const id = document.getElementById("adminSensorEditId");
 
             if (type) type.value = row.dataset.sensorType || "";
             if (name) name.value = row.dataset.name || "";
-            if (house) house.value = row.dataset.houseId || row.dataset.houseNumber || "";
-            if (pen) pen.value = row.dataset.penId || row.dataset.penNumber || "";
+            if (house)
+                house.value =
+                    row.dataset.houseId || row.dataset.houseNumber || "";
+            if (pen)
+                pen.value = row.dataset.penId || row.dataset.penNumber || "";
             if (id) id.value = row.dataset.id || "";
 
             // Load pens for the selected house
@@ -472,12 +507,15 @@ function bindAdminThresholdButtons() {
             if (!section) return;
 
             const type = document.getElementById("adminSensorThresholdType");
-            const typeDisplay = document.getElementById("adminSensorThresholdTypeDisplay");
+            const typeDisplay = document.getElementById(
+                "adminSensorThresholdTypeDisplay",
+            );
             const low = document.getElementById("adminSensorThresholdLow");
             const high = document.getElementById("adminSensorThresholdHigh");
 
             if (type) type.value = section.dataset.sensorType || "";
-            if (typeDisplay) typeDisplay.value = section.dataset.sensorType || "";
+            if (typeDisplay)
+                typeDisplay.value = section.dataset.sensorType || "";
             if (low) low.value = section.dataset.lowestThreshold || "";
             if (high) high.value = section.dataset.highestThreshold || "";
 
@@ -486,25 +524,29 @@ function bindAdminThresholdButtons() {
     });
 
     // Add save button handler
-    const saveButton = document.getElementById('adminSensorThresholdSave');
+    const saveButton = document.getElementById("adminSensorThresholdSave");
     if (saveButton) {
-        saveButton.addEventListener('click', async () => {
-            const type = document.getElementById('adminSensorThresholdType');
-            const low = document.getElementById('adminSensorThresholdLow');
-            const high = document.getElementById('adminSensorThresholdHigh');
+        saveButton.addEventListener("click", async () => {
+            const type = document.getElementById("adminSensorThresholdType");
+            const low = document.getElementById("adminSensorThresholdLow");
+            const high = document.getElementById("adminSensorThresholdHigh");
 
             if (!type || !type.value) {
-                alert('Sensor type is required');
+                alert("Sensor type is required");
                 return;
             }
 
             // Parse and validate threshold values
-            const lowestThreshold = low && low.value.trim() ? parseInt(low.value) : null;
-            const highestThreshold = high && high.value.trim() ? parseInt(high.value) : null;
+            const lowestThreshold =
+                low && low.value.trim() ? parseInt(low.value) : null;
+            const highestThreshold =
+                high && high.value.trim() ? parseInt(high.value) : null;
 
-            if ((low && low.value.trim() && isNaN(lowestThreshold)) || 
-                (high && high.value.trim() && isNaN(highestThreshold))) {
-                alert('Threshold values must be valid numbers');
+            if (
+                (low && low.value.trim() && isNaN(lowestThreshold)) ||
+                (high && high.value.trim() && isNaN(highestThreshold))
+            ) {
+                alert("Threshold values must be valid numbers");
                 return;
             }
 
@@ -515,52 +557,60 @@ function bindAdminThresholdButtons() {
                     highest_threshold: highestThreshold,
                 };
 
-                await apiRequest('/api/admin/sensors/thresholds', 'PUT', payload);
-                closeAdminSensorModal('adminSensorThresholdModal');
+                await apiRequest(
+                    "/api/admin/sensors/thresholds",
+                    "PUT",
+                    payload,
+                );
+                closeAdminSensorModal("adminSensorThresholdModal");
                 await renderAdminSensorSections();
             } catch (error) {
                 alert(`Failed to save sensor thresholds: ${error.message}`);
-                console.error('Failed to save sensor thresholds.', error);
+                console.error("Failed to save sensor thresholds.", error);
             }
         });
     }
 }
 
 function bindAdminDeleteButtons() {
-    document.querySelectorAll('[data-open-delete]').forEach((button) => {
-        button.addEventListener('click', () => {
-            const row = button.closest('tr[data-id]');
-            const modal = document.getElementById('adminSensorDeleteModal');
-            const deleteIdInput = document.getElementById('adminSensorDeleteId');
+    document.querySelectorAll("[data-open-delete]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const row = button.closest("tr[data-id]");
+            const modal = document.getElementById("adminSensorDeleteModal");
+            const deleteIdInput = document.getElementById(
+                "adminSensorDeleteId",
+            );
 
             if (row && modal && deleteIdInput) {
-                deleteIdInput.value = row.dataset.id || '';
+                deleteIdInput.value = row.dataset.id || "";
             }
 
-            openAdminSensorModal('adminSensorDeleteModal');
+            openAdminSensorModal("adminSensorDeleteModal");
         });
     });
 }
 
 function bindAdminDeleteConfirmButton() {
-    const deleteButton = document.querySelector('#adminSensorDeleteModal .admin-sensor-btn.delete');
+    const deleteButton = document.querySelector(
+        "#adminSensorDeleteModal .admin-sensor-btn.delete",
+    );
     if (!deleteButton) return;
 
-    deleteButton.addEventListener('click', async () => {
-        const deleteIdInput = document.getElementById('adminSensorDeleteId');
+    deleteButton.addEventListener("click", async () => {
+        const deleteIdInput = document.getElementById("adminSensorDeleteId");
         const sensorId = deleteIdInput?.value;
 
         if (!sensorId) {
-            console.error('No sensor selected for deletion');
+            console.error("No sensor selected for deletion");
             return;
         }
 
         try {
-            await apiRequest(`/api/admin/sensors/${sensorId}`, 'DELETE');
-            closeAdminSensorModal('adminSensorDeleteModal');
+            await apiRequest(`/api/admin/sensors/${sensorId}`, "DELETE");
+            closeAdminSensorModal("adminSensorDeleteModal");
             await renderAdminSensorSections();
         } catch (error) {
-            console.error('Failed to delete sensor.', error);
+            console.error("Failed to delete sensor.", error);
         }
     });
 }
@@ -579,49 +629,49 @@ function bindAdminAddButton() {
 }
 
 function setupAdminSensorAddModal() {
-    const form = document.getElementById('adminSensorAddForm');
+    const form = document.getElementById("adminSensorAddForm");
     if (!form) return;
 
-    form.addEventListener('submit', async (event) => {
+    form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
 
         try {
-            await apiRequest('/api/admin/sensors', 'POST', payload);
-            closeAdminSensorModal('adminSensorAddModal');
+            await apiRequest("/api/admin/sensors", "POST", payload);
+            closeAdminSensorModal("adminSensorAddModal");
             form.reset();
             setupAdminSensorSelectPlaceholderState();
             await renderAdminSensorSections();
         } catch (error) {
-            console.error('Failed to create sensor.', error);
+            console.error("Failed to create sensor.", error);
         }
     });
 }
 
 function setupAdminSensorEditModal() {
-    const form = document.getElementById('adminSensorEditForm');
+    const form = document.getElementById("adminSensorEditForm");
     if (!form) return;
 
-    form.addEventListener('submit', async (event) => {
+    form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
-        const sensorId = formData.get('sensor_id');
+        const sensorId = formData.get("sensor_id");
 
         if (!sensorId) {
-            console.error('Missing sensor id for update');
+            console.error("Missing sensor id for update");
             return;
         }
 
         try {
-            await apiRequest(`/api/admin/sensors/${sensorId}`, 'PUT', payload);
-            closeAdminSensorModal('adminSensorEditModal');
+            await apiRequest(`/api/admin/sensors/${sensorId}`, "PUT", payload);
+            closeAdminSensorModal("adminSensorEditModal");
             await renderAdminSensorSections();
         } catch (error) {
-            console.error('Failed to update sensor.', error);
+            console.error("Failed to update sensor.", error);
         }
     });
 }
@@ -748,6 +798,114 @@ function setupAdminProfileModal() {
             }
         });
     }
+}
+
+function bindAdminStatusFilters() {
+    document.querySelectorAll(".admin-sensor-section").forEach((section) => {
+        const filterSelect = section.querySelector("[data-status-filter]");
+        const tbody = section.querySelector("tbody");
+        if (!filterSelect || !tbody) return;
+
+        const updateNoMatchRow = (visibleCount) => {
+            const existing = tbody.querySelector(
+                "tr.admin-sensor-filter-empty",
+            );
+            if (visibleCount === 0) {
+                if (!existing) {
+                    const noMatchRow = document.createElement("tr");
+                    noMatchRow.className = "admin-sensor-filter-empty";
+                    noMatchRow.innerHTML = `
+                        <td colspan="5">
+                            <div class="admin-sensor-empty">No sensors match the selected status.</div>
+                        </td>
+                    `;
+                    tbody.appendChild(noMatchRow);
+                }
+            } else if (existing) {
+                existing.remove();
+            }
+        };
+
+        const filterRows = () => {
+            const selected = filterSelect.value.trim().toLowerCase();
+            const rows = Array.from(tbody.querySelectorAll("tr[data-id]"));
+
+            let visibleCount = 0;
+            rows.forEach((row) => {
+                const status = (row.dataset.status || "active").toLowerCase();
+                const matches = selected === "all" || status === selected;
+                row.hidden = !matches;
+                if (matches) visibleCount += 1;
+            });
+
+            updateNoMatchRow(visibleCount);
+        };
+
+        filterSelect.addEventListener("change", filterRows);
+        filterRows();
+    });
+}
+
+function bindAdminToggleStatusButtons() {
+    document.querySelectorAll("[data-toggle-status]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const row = button.closest("tr[data-id]");
+            if (!row) return;
+
+            const sensorId = row.dataset.id;
+            const sensorName = row.dataset.name || "this sensor";
+            const currentStatus = (row.dataset.status || "Active")
+                .trim()
+                .toLowerCase();
+            const nextStatus =
+                currentStatus === "under maintenance"
+                    ? "Active"
+                    : "Under Maintenance";
+
+            const idInput = document.getElementById("adminSensorStatusId");
+            const statusInput = document.getElementById(
+                "adminSensorStatusValue",
+            );
+            const text = document.getElementById("adminSensorStatusText");
+
+            if (idInput) idInput.value = sensorId;
+            if (statusInput) statusInput.value = nextStatus;
+            if (text) {
+                text.textContent =
+                    nextStatus === "Under Maintenance"
+                        ? `Are you sure you want to mark ${sensorName} as under maintenance?`
+                        : `Are you sure you want to mark ${sensorName} as active?`;
+            }
+
+            openAdminSensorModal("adminSensorStatusModal");
+        });
+    });
+}
+
+function bindAdminStatusConfirmButton() {
+    const confirmButton = document.getElementById("adminSensorStatusConfirm");
+    if (!confirmButton) return;
+
+    confirmButton.addEventListener("click", async () => {
+        const sensorId = document.getElementById("adminSensorStatusId")?.value;
+        const nextStatus = document.getElementById(
+            "adminSensorStatusValue",
+        )?.value;
+
+        if (!sensorId || !nextStatus) return;
+
+        try {
+            await apiRequest(`/api/admin/sensors/${sensorId}/status`, "PATCH", {
+                status: nextStatus,
+            });
+
+            closeAdminSensorModal("adminSensorStatusModal");
+            await renderAdminSensorSections();
+        } catch (error) {
+            console.error("Failed to update sensor status.", error);
+            alert(`Failed to update sensor status: ${error.message}`);
+        }
+    });
 }
 
 function escapeHtml(value) {

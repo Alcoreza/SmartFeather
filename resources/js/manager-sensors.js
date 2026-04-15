@@ -57,25 +57,26 @@ function createSectionMarkup(section, index) {
                         <option value="Under Maintenance">Under Maintenance</option>
                     </select>
 
-                    <button
-                        type="button"
-                        class="manager-sensor-threshold-btn"
-                        data-open-threshold
-                        aria-label="Threshold settings for ${escapeHtml(section.title)}"
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 21v-7"></path>
-                            <path d="M4 10V3"></path>
-                            <path d="M12 21v-9"></path>
-                            <path d="M12 8V3"></path>
-                            <path d="M20 21v-5"></path>
-                            <path d="M20 12V3"></path>
-                            <path d="M1 10h6"></path>
-                            <path d="M9 8h6"></path>
-                            <path d="M17 12h6"></path>
-                        </svg>
-                    </button>
-                </div>
+    <button
+        type="button"
+        class="manager-sensor-threshold-btn"
+        data-open-threshold
+        aria-label="Threshold settings for ${escapeHtml(section.title)}"
+    >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 21v-7"></path>
+            <path d="M4 10V3"></path>
+            <path d="M12 21v-9"></path>
+            <path d="M12 8V3"></path>
+            <path d="M20 21v-5"></path>
+            <path d="M20 12V3"></path>
+            <path d="M1 10h6"></path>
+            <path d="M9 8h6"></path>
+            <path d="M17 12h6"></path>
+        </svg>
+    </button>
+</div>
+
             </div>
 
             <div class="manager-sensor-table-wrap">
@@ -149,7 +150,9 @@ function bindManagerSensorFilters() {
         if (!filterSelect || !tbody) return;
 
         const updateNoMatchRow = (visibleCount) => {
-            const existing = tbody.querySelector("tr.manager-sensor-filter-empty");
+            const existing = tbody.querySelector(
+                "tr.manager-sensor-filter-empty",
+            );
             if (visibleCount === 0) {
                 if (!existing) {
                     const noMatchRow = document.createElement("tr");
@@ -343,6 +346,51 @@ function setupManagerProfileModal() {
             }
         });
     }
+}
+function bindManagerStatusFilters() {
+    document.querySelectorAll(".manager-sensor-section").forEach((section) => {
+        const filterSelect = section.querySelector("[data-status-filter]");
+        const tbody = section.querySelector("tbody");
+        if (!filterSelect || !tbody) return;
+
+        const updateNoMatchRow = (visibleCount) => {
+            const existing = tbody.querySelector(
+                "tr.manager-sensor-filter-empty",
+            );
+            if (visibleCount === 0) {
+                if (!existing) {
+                    const noMatchRow = document.createElement("tr");
+                    noMatchRow.className = "manager-sensor-filter-empty";
+                    noMatchRow.innerHTML = `
+                        <td colspan="5">
+                            <div class="manager-sensor-empty">No sensors match the selected status.</div>
+                        </td>
+                    `;
+                    tbody.appendChild(noMatchRow);
+                }
+            } else if (existing) {
+                existing.remove();
+            }
+        };
+
+        const filterRows = () => {
+            const selected = filterSelect.value.trim().toLowerCase();
+            const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
+
+            let visibleCount = 0;
+            rows.forEach((row) => {
+                const status = (row.dataset.status || "active").toLowerCase();
+                const matches = selected === "all" || status === selected;
+                row.hidden = !matches;
+                if (matches) visibleCount += 1;
+            });
+
+            updateNoMatchRow(visibleCount);
+        };
+
+        filterSelect.addEventListener("change", filterRows);
+        filterRows();
+    });
 }
 
 function escapeHtml(value) {

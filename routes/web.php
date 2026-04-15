@@ -239,6 +239,7 @@ Route::prefix('api/admin/sensors')->group(function () {
     Route::get('/houses/{houseId}/pens', [SensorController::class, 'getPensForHouse']);
     Route::post('/', [SensorController::class, 'store']);
     Route::put('/thresholds', [SensorController::class, 'updateThresholds']);
+    Route::patch('/{sensorId}/status', [SensorController::class, 'updateStatus']);
     Route::put('/{sensorId}', [SensorController::class, 'update']);
     Route::delete('/{sensorId}', [SensorController::class, 'destroy']);
 });

@@ -512,3 +512,229 @@ Route::get('/api/manager/biosecurity-logs', function () {
         ],
     ]);
 });
+
+Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
+
+Route::get('/api/manager/reports', function () {
+    return response()->json([
+        'reports' => [
+
+            // ✅ POPULATION
+            'Population' => [
+                [
+                    'batch_id' => 'Batch-2026-01',
+                    'start_date' => '1-21-26',
+                    'end_date' => '2-21-26',
+                    'reporting_date' => '1-27-26',
+                    'pen_no' => '1',
+                    'initial_population' => '500',
+                    'running_population' => '485',
+                    'mortalities' => '15',
+                    'eggs_hatched' => '0',
+                ],
+                [
+                    'batch_id' => 'Batch-2026-02',
+                    'start_date' => '1-21-26',
+                    'end_date' => '2-21-26',
+                    'reporting_date' => '1-27-26',
+                    'pen_no' => '2',
+                    'initial_population' => '500',
+                    'running_population' => '490',
+                    'mortalities' => '10',
+                    'eggs_hatched' => '0',
+                ],
+            ],
+
+            // ✅ ENVIRONMENTAL
+            'Environmental' => [
+                'temperature' => [
+                    [
+                        'batch' => 'Batch-2026-02',
+                        'date' => '1-27-26',
+                        'lowest_reading' => '29',
+                        'highest_reading' => '33',
+                        'average_reading' => '31',
+                        'threshold_violations' => '2',
+                        'house' => '1',
+                    ],
+                ],
+                'ammonia' => [
+                    [
+                        'batch' => 'Batch-2026-02',
+                        'date' => '1-27-26',
+                        'lowest_reading' => '10',
+                        'highest_reading' => '18',
+                        'average_reading' => '14',
+                        'threshold_violations' => '1',
+                        'house' => '1',
+                    ],
+                ],
+                'feeds' => [
+                    [
+                        'batch' => 'Batch-2026-02',
+                        'date' => '1-27-26',
+                        'feeds_level' => '75%',
+                        'house' => '1',
+                        'pen' => '2',
+                        'feeder_number' => '3',
+                    ],
+                ],
+                'water' => [
+                    [
+                        'batch' => 'Batch-2026-02',
+                        'date' => '1-27-26',
+                        'water_level' => '80%',
+                        'house' => '1',
+                        'pen' => '2',
+                        'drinker_number' => '2',
+                    ],
+                ],
+            ],
+
+            // ✅ INVENTORY
+            'Inventory' => [
+                'feeds' => [
+                    [
+                        'purchase_date' => '1-20-26',
+                        'date_of_monitoring' => '1-27-26',
+                        'initial_stock' => '1000',
+                        'remaining_stock' => '650',
+                    ],
+                ],
+                'vitamins_e' => [
+                    [
+                        'purchase_date' => '1-20-26',
+                        'date_of_monitoring' => '1-27-26',
+                        'type' => 'Liquid',
+                        'initial_stock' => '500',
+                        'remaining_stock' => '320',
+                    ],
+                ],
+                'vitamins_d3' => [
+                    [
+                        'purchase_date' => '1-20-26',
+                        'date_of_monitoring' => '1-27-26',
+                        'type' => 'Liquid',
+                        'initial_stock' => '400',
+                        'remaining_stock' => '280',
+                    ],
+                ],
+                'vitamins_b_complex' => [
+                    [
+                        'purchase_date' => '1-20-26',
+                        'date_of_monitoring' => '1-27-26',
+                        'type' => 'Liquid',
+                        'initial_stock' => '450',
+                        'remaining_stock' => '300',
+                    ],
+                ],
+            ],
+
+            // ✅ BIOSECURITY
+            'Biosecurity' => [
+                'cleaning' => [
+                    [
+                        'house' => '1',
+                        'pen' => '4',
+                        'activity' => 'Disinfect',
+                        'date' => '1-21-26',
+                        'time' => '4:43 PM',
+                        'disinfectant_used' => 'Vikron',
+                        'performed_by' => 'John Doe',
+                    ],
+                    [
+                        'house' => '3',
+                        'pen' => '1',
+                        'activity' => 'Pest Control',
+                        'date' => '1-27-26',
+                        'time' => '10:27 AM',
+                        'disinfectant_used' => 'Permethrin',
+                        'performed_by' => 'Juan Cruz',
+                    ],
+                ],
+
+                'personnel_biosecurity_logs' => [
+                    [
+                        'name' => 'John Doe',
+                        'role' => 'Flockman',
+                        'house' => '1',
+                        'date' => '1-21-26',
+                        'time' => '4:43 PM',
+                        'foot_bath' => 'Yes',
+                        'boots_changed' => 'Yes',
+                        'protective_clothing' => 'Yes',
+                    ],
+                ],
+
+                'visitors' => [
+                    [
+                        'date' => '1-21-26',
+                        'time_in' => '11:21 AM',
+                        'time_out' => '3:50 PM',
+                        'name' => 'John Doe',
+                        'purpose' => 'Interview',
+                        'foot_bath' => 'Yes',
+                        'sanitation' => 'Yes',
+                        'ppe' => 'Yes',
+                        'monitored_by' => 'Michael Hooper',
+                    ],
+                ],
+
+                'personnel_entry_logs' => [
+                    [
+                        'name' => 'John Doe',
+                        'role' => 'Flockman',
+                        'house' => '1',
+                        'date' => '1-25-26',
+                        'time' => '4:20 PM',
+                    ],
+                ],
+            ],
+
+            // ✅ WEIGHT SAMPLING
+            'Weight Sampling' => [
+                [
+                    'date' => '1-21-26',
+                    'time' => '4:20 PM',
+                    'house' => '1',
+                    'pen' => '3',
+                    'batch' => 'Batch-2026-02',
+                    'flocks_with_cases' => '1',
+                    'age' => '21 days',
+                    'average_weight' => '650 g',
+                    'target' => '900 g',
+                    'status' => 'Underweight',
+                ],
+                [
+                    'date' => '1-21-26',
+                    'time' => '10:02 PM',
+                    'house' => '2',
+                    'pen' => '4',
+                    'batch' => 'Batch-2026-01',
+                    'flocks_with_cases' => '2',
+                    'age' => '21 days',
+                    'average_weight' => '920 g',
+                    'target' => '900 g',
+                    'status' => 'Normal',
+                ],
+            ],
+
+            // ✅ TASKS
+            'Tasks' => [
+                [
+                    'name' => 'John Doe',
+                    'task_assigned' => 'Feed',
+                    'house_number' => '1',
+                    'pen_number' => '3',
+                    'detailed_task' => 'Feed chickens',
+                    'photo' => '/images/sample-proof.jpg',
+                    'priority' => 'High',
+                    'notes' => 'Urgent',
+                    'time_assigned' => '8:00 AM',
+                    'finish_by' => '10:00 AM',
+                    'time_completed' => '9:30 AM',
+                ],
+            ],
+        ],
+    ]);
+});

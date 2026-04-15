@@ -45,11 +45,16 @@ class HouseController extends Controller
                 'start_date' => 'nullable|date',
             ]);
 
+            $batchCode = trim($validated['batch_code'] ?? '');
+            if ($batchCode === '' || strcasecmp($batchCode, 'Batch-New') === 0) {
+                $batchCode = $this->generateNextBatchCode();
+            }
+
             // Create the house
             $house = House::create([
                 'house_number' => $validated['house_number'],
                 'number_of_pens' => $validated['number_of_pens'],
-                'batch_code' => $validated['batch_code'] ?? 'Batch-New',
+                'batch_code' => $batchCode,
                 'status' => $validated['status'] ?? 'active',
                 'start_date' => $validated['start_date'] ?? now()->format('Y-m-d'),
             ]);
@@ -87,6 +92,30 @@ class HouseController extends Controller
                 'message' => 'Error creating house: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Generate the next batch code for the current year.
+     *
+     * Example: Batch_2026_1, Batch_2026_2, Batch_2026_3, ...
+     */
+    private function generateNextBatchCode()
+    {
+        $year = now()->year;
+        $prefix = "Batch_{$year}_";
+
+        $batchCodes = House::where('batch_code', 'like', "{$prefix}%")
+            ->pluck('batch_code');
+
+        $maxNumber = 0;
+
+        foreach ($batchCodes as $code) {
+            if (preg_match('/^Batch[_-]' . preg_quote($year, '/') . '[_-](\d+)$/', $code, $matches)) {
+                $maxNumber = max($maxNumber, (int) $matches[1]);
+            }
+        }
+
+        return $prefix . ($maxNumber + 1);
     }
 
     /**

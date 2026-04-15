@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const houseName = houseNameInput?.value.trim();
             const houseStatusValue = houseStatusInput?.value || 'active';
-            const houseBatchValue = houseBatchInput?.value.trim() || 'Batch-New';
+            const houseBatchValue = houseBatchInput?.value.trim() || '';
             const penCountValue = Number(penCountInput?.value || 1);
 
             if (!houseName) {
@@ -355,6 +355,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
+                const payload = {
+                    house_number: houseName,
+                    status: houseStatusValue,
+                    number_of_pens: penCountValue > 0 ? penCountValue : 1,
+                };
+                if (houseBatchValue) {
+                    payload.batch_code = houseBatchValue;
+                }
+
                 const response = await fetch('/api/houses', {
                     method: 'POST',
                     headers: {
@@ -362,12 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': getCsrfToken(),
                     },
-                    body: JSON.stringify({
-                        house_number: houseName,
-                        status: houseStatusValue,
-                        batch_code: houseBatchValue,
-                        number_of_pens: penCountValue > 0 ? penCountValue : 1,
-                    }),
+                    body: JSON.stringify(payload),
                 });
 
                 if (!response.ok) {

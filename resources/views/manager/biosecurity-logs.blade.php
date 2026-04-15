@@ -87,12 +87,6 @@
 
             <section class="bio-toolbar">
                 <div class="bio-toolbar-left">
-                    <button type="button" class="bio-circle-btn" aria-label="Back">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
-                            <path d="M15 5l-7 7 7 7"></path>
-                        </svg>
-                    </button>
-
                     <div class="bio-filter-wrap">
                         <select id="bioCategoryFilter" class="bio-filter-select">
                             <option value="Cleaning">Cleaning</option>

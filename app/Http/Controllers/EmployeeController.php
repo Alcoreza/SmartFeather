@@ -44,9 +44,11 @@ class EmployeeController extends Controller
     {
         $employee = Employee::findOrFail($id);
         $data = $request->all();
+
         if (isset($data['Password']) && !$data['Password']) {
             unset($data['Password']);
         }
+
         $employee->update($data);
         return response()->json($employee);
     }

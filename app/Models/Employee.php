@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
 
 class Employee extends Model
 {
-    protected $table = 'user'; // Use the exact table name in Supabase
-    protected $primaryKey = 'EmployeeId'; // exact PK
-    public $timestamps = false; // if your table has no created_at/updated_at
+    protected $table = 'user';
+    protected $primaryKey = 'EmployeeId';
+    public $timestamps = false;
 
     protected $fillable = [
         'FirstName',
@@ -20,6 +21,19 @@ class Employee extends Model
         'Birthday',
         'Gender',
         'Address',
-        'Password', // optional
+        'Password',
     ];
+
+    public function setPasswordAttribute($value)
+    {
+        if (empty($value)) {
+            return;
+        }
+
+        $info = password_get_info($value);
+
+        $this->attributes['Password'] = $info['algo'] === null
+            ? Hash::make($value)
+            : $value;
+    }
 }

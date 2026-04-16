@@ -5,11 +5,38 @@
             <div class="reports-modal-line"></div>
         </div>
 
-        <form class="reports-modal-form">
+        <form class="reports-modal-form" id="generateReportForm">
             <div class="reports-modal-row">
                 <div class="reports-field">
-                    <label for="reportPeriod">Select Time Period</label>
-                    <input type="text" id="reportPeriod" name="report_period">
+                    <label for="generateReportType">Report Type</label>
+                    <input type="text" id="generateReportType" readonly>
+                </div>
+            </div>
+
+            <div class="reports-modal-row">
+                <div class="reports-field">
+                    <label for="reportMonth">Month</label>
+                    <select id="reportMonth" name="month" required>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="reports-modal-row">
+                <div class="reports-field">
+                    <label for="reportYear">Year</label>
+                    <input type="number" id="reportYear" name="year" min="2020" max="2100" value="{{ now()->year }}" required>
                 </div>
             </div>
 

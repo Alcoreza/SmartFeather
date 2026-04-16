@@ -152,6 +152,7 @@ class ReportsController extends Controller
                 $feeds[] = [
                     'purchase_date' => $this->formatDate($row->purchase_date),
                     'date_of_monitoring' => $this->formatDateTime($row->monitoring_date),
+                    'type_of_feed' => $row->item_name ?? '--',
                     'initial_stock' => $row->initial_stock ?? 0,
                     'remaining_stock' => $row->remaining_stock ?? 0,
                 ];

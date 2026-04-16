@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\House;
 use App\Models\Pen;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 
 class HouseController extends Controller
 {
@@ -45,16 +47,11 @@ class HouseController extends Controller
                 'start_date' => 'nullable|date',
             ]);
 
-            $batchCode = trim($validated['batch_code'] ?? '');
-            if ($batchCode === '' || strcasecmp($batchCode, 'Batch-New') === 0) {
-                $batchCode = $this->generateNextBatchCode();
-            }
-
             // Create the house
             $house = House::create([
                 'house_number' => $validated['house_number'],
                 'number_of_pens' => $validated['number_of_pens'],
-                'batch_code' => $batchCode,
+                'batch_code' => $validated['batch_code'] ?? 'Batch-New',
                 'status' => $validated['status'] ?? 'active',
                 'start_date' => $validated['start_date'] ?? now()->format('Y-m-d'),
             ]);
@@ -92,30 +89,6 @@ class HouseController extends Controller
                 'message' => 'Error creating house: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Generate the next batch code for the current year.
-     *
-     * Example: Batch_2026_1, Batch_2026_2, Batch_2026_3, ...
-     */
-    private function generateNextBatchCode()
-    {
-        $year = now()->year;
-        $prefix = "Batch_{$year}_";
-
-        $batchCodes = House::where('batch_code', 'like', "{$prefix}%")
-            ->pluck('batch_code');
-
-        $maxNumber = 0;
-
-        foreach ($batchCodes as $code) {
-            if (preg_match('/^Batch[_-]' . preg_quote($year, '/') . '[_-](\d+)$/', $code, $matches)) {
-                $maxNumber = max($maxNumber, (int) $matches[1]);
-            }
-        }
-
-        return $prefix . ($maxNumber + 1);
     }
 
     /**
@@ -268,27 +241,53 @@ class HouseController extends Controller
     public function getPenRecords()
     {
         try {
-            $houses = House::with('pens')
-                ->orderBy('id', 'asc')
+            $houses = DB::table('house as h')
+                ->leftJoin('pen as p', 'p.house_id', '=', 'h.id')
+                ->leftJoin('population_record as pr', 'pr.pen_id', '=', 'p.id')
+                ->select(
+                    'h.id as house_id',
+                    'h.house_number',
+                    'p.id as pen_id',
+                    'p.pen_name',
+                    'p.capacity',
+                    'pr.eggs_hatched',
+                    'pr.mortality',
+                    'pr.running_population',
+                    'pr.recorded_at'
+                )
+                ->orderBy('h.id', 'asc')
+                ->orderBy('p.id', 'asc')
+                ->orderBy('pr.recorded_at', 'desc')
                 ->get()
-                ->map(function ($house) {
-                    return [
-                        'id' => $house->id,
-                        'name' => $house->house_number,
-                        'pens' => $house->pens->map(function ($pen) use ($house) {
+                ->groupBy('house_id')
+                ->map(function ($records) {
+                    $first = $records->first();
+
+                    $pens = $records
+                        ->filter(function ($record) {
+                            return $record->pen_id !== null && $record->recorded_at !== null;
+                        })
+                        ->map(function ($record) use ($first) {
                             return [
-                                'id' => $pen->id,
-                                'house_name' => 'House ' . $house->house_number,
-                                'pen_name' => $pen->pen_name,
-                                'capacity' => $pen->capacity,
-                                'population' => $pen->population,
-                                'eggs_hatched' => $pen->eggs_hatched,
-                                'mortality' => $pen->mortality,
-                                'recorded_at' => $pen->recorded_at,
+                                'id' => $record->pen_id,
+                                'house_name' => 'House ' . $first->house_number,
+                                'pen_name' => $record->pen_name,
+                                'capacity' => $record->capacity ?? 0,
+                                'population' => $record->running_population ?? 0,
+                                'eggs_hatched' => $record->eggs_hatched ?? 0,
+                                'mortality' => $record->mortality ?? 0,
+                                'recorded_at' => $record->recorded_at,
                             ];
-                        }),
+                        })
+                        ->values();
+
+                    return [
+                        'id' => $first->house_id,
+                        'name' => $first->house_number,
+                        'pens' => $pens,
                     ];
-                });
+                })
+                ->values();
 
             return response()->json([
                 'success' => true,
@@ -302,6 +301,10 @@ class HouseController extends Controller
             ], 500);
         }
     }
+
+
+
+
 
     /**
      * Update pen production data
@@ -323,13 +326,15 @@ class HouseController extends Controller
                 ], 404);
             }
 
-            // Update production data
             if (isset($validated['eggs_hatched'])) {
                 $pen->eggs_hatched = $validated['eggs_hatched'];
             }
+
             if (isset($validated['mortality'])) {
                 $pen->mortality = $validated['mortality'];
             }
+
+
             $pen->recorded_at = now();
             $pen->save();
 
@@ -351,4 +356,5 @@ class HouseController extends Controller
             ], 500);
         }
     }
+
 }

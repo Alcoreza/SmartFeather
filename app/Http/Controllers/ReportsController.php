@@ -1,0 +1,453 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class ReportsController extends Controller
+{
+    public function index(Request $request)
+    {
+        return response()->json([
+            'reports' => [
+                'Population' => $this->getPopulationReport(null, null),
+                'Environmental' => $this->getEnvironmentalReport(null, null),
+                'Inventory' => $this->getInventoryReport(null, null),
+                'Biosecurity' => $this->getBiosecurityReport(null, null),
+                'Weight Sampling' => $this->getWeightSamplingReport(null, null),
+                'Tasks' => $this->getTasksReport(null, null),
+            ],
+        ]);
+    }
+
+    public function generate(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:Population,Environmental,Inventory,Biosecurity,Weight Sampling,Tasks',
+            'format' => 'required|string|in:csv,pdf',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020|max:2100',
+        ]);
+
+        $type = $validated['type'];
+        $format = $validated['format'];
+        $month = (int) $validated['month'];
+        $year = (int) $validated['year'];
+
+        $period = Carbon::create($year, $month, 1);
+        $startDate = $period->copy()->startOfMonth()->toDateString();
+        $endDate = $period->copy()->endOfMonth()->toDateString();
+        $periodLabel = $period->format('F Y');
+
+        $reportData = $this->getReportByType($type, $startDate, $endDate);
+
+        if ($format === 'csv') {
+            return $this->downloadCsv($type, $reportData, $periodLabel);
+        }
+
+        return response()->view('reports.print', [
+            'reportType' => $type,
+            'reportData' => $reportData,
+            'periodLabel' => $periodLabel,
+            'generatedAt' => now()->format('F d, Y h:i A'),
+        ]);
+    }
+
+    private function getReportByType(string $type, ?string $startDate, ?string $endDate)
+    {
+        return match ($type) {
+            'Population' => $this->getPopulationReport($startDate, $endDate),
+            'Environmental' => $this->getEnvironmentalReport($startDate, $endDate),
+            'Inventory' => $this->getInventoryReport($startDate, $endDate),
+            'Biosecurity' => $this->getBiosecurityReport($startDate, $endDate),
+            'Weight Sampling' => $this->getWeightSamplingReport($startDate, $endDate),
+            'Tasks' => $this->getTasksReport($startDate, $endDate),
+            default => [],
+        };
+    }
+
+    private function getPopulationReport(?string $startDate, ?string $endDate): array
+    {
+        if (!Schema::hasTable('house') || !Schema::hasTable('pen')) {
+            return [];
+        }
+
+        $query = DB::table('pen')
+            ->leftJoin('house', 'pen.house_id', '=', 'house.id')
+            ->select(
+                'house.batch_code',
+                'house.start_date',
+                'house.house_number',
+                'pen.pen_name',
+                'pen.capacity',
+                'pen.population',
+                'pen.mortality',
+                'pen.eggs_hatched',
+                'pen.recorded_at'
+            )
+            ->orderBy('house.house_number')
+            ->orderBy('pen.pen_name');
+
+        $this->applyDateRange($query, 'pen.recorded_at', $startDate, $endDate);
+
+        return $query->get()->map(function ($row) {
+            return [
+                'batch_id' => $row->batch_code ?? 'N/A',
+                'start_date' => $this->formatDate($row->start_date),
+                'end_date' => '--',
+                'reporting_date' => $this->formatDate($row->recorded_at),
+                'pen_no' => $row->pen_name ?? '--',
+                'initial_population' => $row->capacity ?? 0,
+                'running_population' => $row->population ?? 0,
+                'mortalities' => $row->mortality ?? 0,
+                'eggs_hatched' => $row->eggs_hatched ?? 0,
+            ];
+        })->values()->all();
+    }
+
+    private function getEnvironmentalReport(?string $startDate, ?string $endDate): array
+    {
+        return [
+            'temperature' => [],
+            'ammonia' => [],
+            'feeds' => [],
+            'water' => [],
+        ];
+    }
+
+    private function getInventoryReport(?string $startDate, ?string $endDate): array
+    {
+        if (!Schema::hasTable('inventories') || !Schema::hasTable('inventory_records')) {
+            return [
+                'feeds' => [],
+                'vitamins' => [],
+            ];
+        }
+
+        $query = DB::table('inventory_records as r')
+            ->join('inventories as i', 'r.inventory_id', '=', 'i.id')
+            ->select(
+                'i.item_name',
+                'i.type',
+                'i.unit',
+                'i.purchase_date',
+                'r.monitoring_date',
+                'r.initial_stock',
+                'r.remaining_stock'
+            )
+            ->orderBy('r.monitoring_date', 'desc');
+
+        $this->applyDateRange($query, 'r.monitoring_date', $startDate, $endDate);
+
+        $records = $query->get();
+
+        $feeds = [];
+        $vitamins = [];
+
+        foreach ($records as $row) {
+            if ($row->type === 'feed') {
+                $feeds[] = [
+                    'purchase_date' => $this->formatDate($row->purchase_date),
+                    'date_of_monitoring' => $this->formatDateTime($row->monitoring_date),
+                    'initial_stock' => $row->initial_stock ?? 0,
+                    'remaining_stock' => $row->remaining_stock ?? 0,
+                ];
+            }
+
+            if ($row->type === 'vitamin') {
+                $vitamins[] = [
+                    'purchase_date' => $this->formatDate($row->purchase_date),
+                    'date_of_monitoring' => $this->formatDateTime($row->monitoring_date),
+                    'type_of_vitamin' => $row->item_name ?? '--',
+                    'initial_stock' => $row->initial_stock ?? 0,
+                    'remaining_stock' => $row->remaining_stock ?? 0,
+                ];
+            }
+        }
+
+        return [
+            'feeds' => $feeds,
+            'vitamins' => $vitamins,
+        ];
+    }
+
+    private function getBiosecurityReport(?string $startDate, ?string $endDate): array
+    {
+        if (!Schema::hasTable('biosecurity_logs')) {
+            return [
+                'cleaning' => [],
+                'personnel_biosecurity_logs' => [],
+                'visitors' => [],
+                'personnel_entry_logs' => [],
+            ];
+        }
+
+        $query = DB::table('biosecurity_logs')
+            ->orderBy('date', 'desc')
+            ->orderBy('time', 'desc');
+
+        $this->applyDateRange($query, 'date', $startDate, $endDate);
+
+        $logs = $query->get();
+
+        $cleaning = [];
+        $personnelBiosecurityLogs = [];
+        $visitors = [];
+        $personnelEntryLogs = [];
+
+        foreach ($logs as $log) {
+            switch ($log->type) {
+                case 'Cleaning':
+                    $cleaning[] = [
+                        'house' => $log->house ?? '--',
+                        'pen' => $log->pen ?? '--',
+                        'activity' => $log->activity ?? '--',
+                        'date' => $this->formatDate($log->date),
+                        'time' => $this->formatTime($log->time),
+                        'disinfectant_used' => $log->disinfectant_used ?? '--',
+                        'performed_by' => $log->performed_by ?? '--',
+                    ];
+                    break;
+
+                case 'Personnel Biosecurity Logs':
+                    $personnelBiosecurityLogs[] = [
+                        'name' => $log->name ?? '--',
+                        'role' => $log->role ?? '--',
+                        'house' => $log->house ?? '--',
+                        'date' => $this->formatDate($log->date),
+                        'time' => $this->formatTime($log->time),
+                        'foot_bath' => $log->foot_bath ?? '--',
+                        'boots_changed' => $log->boots_changed ?? '--',
+                        'protective_clothing' => $log->protective_clothing ?? '--',
+                    ];
+                    break;
+
+                case 'Visitors':
+                    $visitors[] = [
+                        'date' => $this->formatDate($log->date),
+                        'time_in' => $this->formatTime($log->time_in),
+                        'time_out' => $this->formatTime($log->time_out),
+                        'name' => $log->name ?? '--',
+                        'purpose' => $log->purpose ?? '--',
+                        'foot_bath' => $log->foot_bath ?? '--',
+                        'sanitation' => $log->sanitation ?? '--',
+                        'ppe' => $log->ppe ?? '--',
+                        'monitored_by' => $log->monitored_by ?? '--',
+                    ];
+                    break;
+
+                case 'Personnel Entry Logs':
+                    $personnelEntryLogs[] = [
+                        'name' => $log->name ?? '--',
+                        'role' => $log->role ?? '--',
+                        'house' => $log->house ?? '--',
+                        'date' => $this->formatDate($log->date),
+                        'time' => $this->formatTime($log->time),
+                    ];
+                    break;
+            }
+        }
+
+        return [
+            'cleaning' => $cleaning,
+            'personnel_biosecurity_logs' => $personnelBiosecurityLogs,
+            'visitors' => $visitors,
+            'personnel_entry_logs' => $personnelEntryLogs,
+        ];
+    }
+
+    private function getWeightSamplingReport(?string $startDate, ?string $endDate): array
+    {
+        if (!Schema::hasTable('biosecurity_logs')) {
+            return [];
+        }
+
+        $query = DB::table('biosecurity_logs')
+            ->where('type', 'Weight Sampling')
+            ->orderBy('date', 'desc')
+            ->orderBy('time', 'desc');
+
+        $this->applyDateRange($query, 'date', $startDate, $endDate);
+
+        return $query->get()->map(function ($log) {
+            return [
+                'date' => $this->formatDate($log->date),
+                'time' => $this->formatTime($log->time),
+                'house' => $log->house ?? '--',
+                'pen' => $log->pen ?? '--',
+                'batch' => $log->batch ?? '--',
+                'flocks_with_cases' => $log->flocks_with_cases ?? '--',
+                'age' => $log->age ?? '--',
+                'average_weight' => $log->average_weight ?? '--',
+                'target' => $log->target ?? '--',
+                'status' => $log->status ?? '--',
+            ];
+        })->values()->all();
+    }
+
+    private function getTasksReport(?string $startDate, ?string $endDate): array
+    {
+        if (!Schema::hasTable('tasks')) {
+            return [];
+        }
+
+        $query = DB::table('tasks')
+            ->leftJoin('user', 'tasks.user_employeeid', '=', 'user.EmployeeId')
+            ->leftJoin('house', 'tasks.house_houseid', '=', 'house.id')
+            ->leftJoin('pen', 'tasks.pennumber', '=', 'pen.id')
+            ->select(
+                'tasks.tasktype',
+                'tasks.detailedtask',
+                'tasks.timeassigned',
+                'tasks.finishby',
+                'tasks.time_completed',
+                'tasks.prioritylevel',
+                'tasks.notes',
+                'tasks.photourl',
+                'house.house_number',
+                'pen.pen_name',
+                'user.FirstName',
+                'user.MiddleName',
+                'user.LastName',
+                'user.Suffix'
+            )
+            ->orderByDesc('tasks.timeassigned');
+
+        $this->applyDateRange($query, 'tasks.timeassigned', $startDate, $endDate);
+
+        return $query->get()->map(function ($row) {
+            $name = trim(collect([
+                $row->FirstName,
+                $row->MiddleName,
+                $row->LastName,
+                $row->Suffix,
+            ])->filter()->implode(' '));
+
+            return [
+                'name' => $name !== '' ? $name : '--',
+                'task_assigned' => $row->tasktype ?? '--',
+                'house_number' => $row->house_number ?? '--',
+                'pen_number' => $row->pen_name ?? '--',
+                'detailed_task' => $row->detailedtask ?? '--',
+                'photo' => $row->photourl ?? '',
+                'priority' => $row->prioritylevel ?? '--',
+                'notes' => $row->notes ?? '--',
+                'time_assigned' => $this->formatDateTime($row->timeassigned),
+                'finish_by' => $this->formatDateTime($row->finishby),
+                'time_completed' => $this->formatDateTime($row->time_completed),
+            ];
+        })->values()->all();
+    }
+
+    private function downloadCsv(string $type, $reportData, string $periodLabel)
+    {
+        $filename = strtolower(str_replace(' ', '_', $type)) . '_report_' . strtolower(str_replace(' ', '_', $periodLabel)) . '.csv';
+        $rows = $this->flattenReportForCsv($type, $reportData);
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+
+            if (!empty($rows)) {
+                fputcsv($handle, array_keys($rows[0]));
+                foreach ($rows as $row) {
+                    fputcsv($handle, $row);
+                }
+            } else {
+                fputcsv($handle, ['message']);
+                fputcsv($handle, ['No data available']);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    private function flattenReportForCsv(string $type, $reportData): array
+    {
+        if ($type === 'Population' || $type === 'Weight Sampling' || $type === 'Tasks') {
+            return is_array($reportData) ? $reportData : [];
+        }
+
+        $rows = [];
+
+        if ($type === 'Environmental' && is_array($reportData)) {
+            foreach (['temperature', 'ammonia', 'feeds', 'water'] as $section) {
+                foreach (($reportData[$section] ?? []) as $row) {
+                    $rows[] = array_merge(['section' => ucfirst($section)], $row);
+                }
+            }
+        }
+
+        if ($type === 'Inventory' && is_array($reportData)) {
+            foreach (['feeds', 'vitamins'] as $section) {
+                foreach (($reportData[$section] ?? []) as $row) {
+                    $rows[] = array_merge(['section' => ucfirst($section)], $row);
+                }
+            }
+        }
+
+        if ($type === 'Biosecurity' && is_array($reportData)) {
+            foreach (['cleaning', 'personnel_biosecurity_logs', 'visitors', 'personnel_entry_logs'] as $section) {
+                foreach (($reportData[$section] ?? []) as $row) {
+                    $rows[] = array_merge(['section' => $section], $row);
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    private function applyDateRange($query, string $column, ?string $startDate, ?string $endDate): void
+    {
+        if ($startDate) {
+            $query->whereDate($column, '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate($column, '<=', $endDate);
+        }
+    }
+
+    private function formatDate($value): string
+    {
+        if (empty($value)) {
+            return '--';
+        }
+
+        try {
+            return Carbon::parse($value)->format('m-d-y');
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
+    }
+
+    private function formatTime($value): string
+    {
+        if (empty($value)) {
+            return '--';
+        }
+
+        try {
+            return Carbon::parse($value)->format('h:i A');
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
+    }
+
+    private function formatDateTime($value): string
+    {
+        if (empty($value)) {
+            return '--';
+        }
+
+        try {
+            return Carbon::parse($value)->format('m-d-y h:i A');
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
+    }
+}

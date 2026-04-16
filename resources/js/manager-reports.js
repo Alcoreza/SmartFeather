@@ -94,36 +94,14 @@ const REPORT_CONFIG = {
                 ],
             },
             {
-                title: 'Vitamins E',
-                key: 'vitamins_e',
+                title: 'Vitamins',
+                key: 'vitamins',
                 columns: [
                     { key: 'purchase_date', label: 'Purchase<br>Date' },
                     { key: 'date_of_monitoring', label: 'Date of<br>Monitoring' },
-                    { key: 'type', label: 'Type' },
-                    { key: 'initial_stock', label: 'Initial Stock<br>(mL)' },
-                    { key: 'remaining_stock', label: 'Remaining<br>Stock (mL)' },
-                ],
-            },
-            {
-                title: 'Vitamins D-3',
-                key: 'vitamins_d3',
-                columns: [
-                    { key: 'purchase_date', label: 'Purchase<br>Date' },
-                    { key: 'date_of_monitoring', label: 'Date of<br>Monitoring' },
-                    { key: 'type', label: 'Type' },
-                    { key: 'initial_stock', label: 'Initial Stock<br>(mL)' },
-                    { key: 'remaining_stock', label: 'Remaining<br>Stock (mL)' },
-                ],
-            },
-            {
-                title: 'Vitamins B-Complex',
-                key: 'vitamins_b_complex',
-                columns: [
-                    { key: 'purchase_date', label: 'Purchase<br>Date' },
-                    { key: 'date_of_monitoring', label: 'Date of<br>Monitoring' },
-                    { key: 'type', label: 'Type' },
-                    { key: 'initial_stock', label: 'Initial Stock<br>(mL)' },
-                    { key: 'remaining_stock', label: 'Remaining<br>Stock (mL)' },
+                    { key: 'type_of_vitamin', label: 'Type of<br>Vitamin' },
+                    { key: 'initial_stock', label: 'Initial Stock<br>(bottles)' },
+                    { key: 'remaining_stock', label: 'Remaining<br>Stock (bottles)' },
                 ],
             },
         ],
@@ -335,7 +313,7 @@ function renderCurrentReport() {
 function bindReportEvents() {
     if (!reportFilterSelect) return;
 
-    reportFilterSelect.addEventListener('change', (event) => {
+    reportFilterSelect.addEventListener('change', async (event) => {
         reportState.selectedReport = event.target.value;
         renderCurrentReport();
     });
@@ -344,10 +322,29 @@ function bindReportEvents() {
 function setupGenerateReportModal() {
     const modal = document.getElementById('generateReportModal');
     const closeBtn = document.getElementById('closeGenerateReportModal');
+    const form = document.getElementById('generateReportForm');
+    const reportTypeInput = document.getElementById('generateReportType');
+    const fileTypeInput = document.getElementById('reportFileType');
+    const monthInput = document.getElementById('reportMonth');
+    const yearInput = document.getElementById('reportYear');
 
     if (!modal || !generateReportBtn) return;
 
     generateReportBtn.addEventListener('click', () => {
+        if (reportTypeInput) {
+            reportTypeInput.value = reportState.selectedReport;
+        }
+
+        const now = new Date();
+
+        if (monthInput && !monthInput.value) {
+            monthInput.value = String(now.getMonth() + 1);
+        }
+
+        if (yearInput && !yearInput.value) {
+            yearInput.value = String(now.getFullYear());
+        }
+
         modal.classList.add('show');
     });
 
@@ -356,6 +353,27 @@ function setupGenerateReportModal() {
             modal.classList.remove('show');
         });
     }
+
+    form?.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const params = new URLSearchParams({
+            type: reportState.selectedReport,
+            format: fileTypeInput?.value || 'pdf',
+            month: monthInput?.value || String(new Date().getMonth() + 1),
+            year: yearInput?.value || String(new Date().getFullYear()),
+        });
+
+        const url = `/manager/reports/generate?${params.toString()}`;
+
+        modal.classList.remove('show');
+
+        if ((fileTypeInput?.value || 'pdf') === 'pdf') {
+            window.open(url, '_blank');
+        } else {
+            window.location.href = url;
+        }
+    });
 
     modal.addEventListener('click', (event) => {
         if (event.target === modal) {
@@ -419,9 +437,23 @@ function setupProfileModal() {
     });
 }
 
-async function loadReportsData() {
+async function loadReportsData(startDate = '', endDate = '') {
     try {
-        const response = await fetch('/api/manager/reports', {
+        const params = new URLSearchParams();
+
+        if (startDate) {
+            params.append('start_date', startDate);
+        }
+
+        if (endDate) {
+            params.append('end_date', endDate);
+        }
+
+        const url = params.toString()
+            ? `/api/manager/reports?${params.toString()}`
+            : '/api/manager/reports';
+
+        const response = await fetch(url, {
             headers: {
                 Accept: 'application/json',
             },

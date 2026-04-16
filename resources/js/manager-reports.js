@@ -89,6 +89,7 @@ const REPORT_CONFIG = {
                 columns: [
                     { key: 'purchase_date', label: 'Purchase<br>Date' },
                     { key: 'date_of_monitoring', label: 'Date of<br>Monitoring' },
+                    { key: 'type_of_feed', label: 'Type of<br>Feed' }, // 🔥 NEW COLUMN
                     { key: 'initial_stock', label: 'Initial<br>Stock (kg)' },
                     { key: 'remaining_stock', label: 'Remaining<br>Stock (kg)' },
                 ],

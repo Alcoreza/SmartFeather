@@ -6,22 +6,45 @@
         </div>
 
         <form class="inventory-modal-form" id="feedEditForm">
+            <div class="inventory-form-row inventory-form-row-single">
+                <div class="inventory-form-group">
+                    <label for="feedEditSelect">Select Feed</label>
+                    <select id="feedEditSelect" name="selected_item" required>
+                        <option value="">Choose feed item</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="inventory-form-row inventory-form-row-single">
+                <div class="inventory-form-group">
+                    <label for="feedEditItemName">Feed Name</label>
+                    <input type="text" id="feedEditItemName" name="item_name" required readonly>
+                </div>
+            </div>
+
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="feedInitialStock">Initial Stock</label>
-                    <input type="number" id="feedInitialStock" name="initial_stock">
+                    <input type="number" id="feedInitialStock" name="initial_stock" min="0" step="0.01" required>
                 </div>
 
                 <div class="inventory-form-group">
                     <label for="feedRemainingStock">Remaining</label>
-                    <input type="number" id="feedRemainingStock" name="remaining_stock">
+                    <input type="number" id="feedRemainingStock" name="remaining_stock" min="0" step="0.01" required>
+                </div>
+            </div>
+
+            <div class="inventory-form-row inventory-form-row-single">
+                <div class="inventory-form-group">
+                    <label for="feedCriticalStock">Critical Level</label>
+                    <input type="number" id="feedCriticalStock" name="critical" min="0" step="0.01" required>
                 </div>
             </div>
 
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="feedPurchaseDate">Purchase Date</label>
-                    <input type="date" id="feedPurchaseDate" name="purchase_date" max="<?= date('Y-m-d') ?>">
+                    <input type="date" id="feedPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
                 </div>
             </div>
 
@@ -41,33 +64,52 @@
         </div>
 
         <form class="inventory-modal-form" id="vitaminEditForm">
-
-            <!-- Type of Vitamin on top -->
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
-                    <label for="vitaminType">Type of Vitamin</label>
-                    <input type="text" id="vitaminType" name="item_name">
+                    <label for="vitaminEditSelect">Select Vitamin</label>
+                    <select id="vitaminEditSelect" name="selected_item" required>
+                        <option value="">Choose vitamin item</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Initial Stock and Remaining side by side -->
+            <div class="inventory-form-row inventory-form-row-single">
+                <div class="inventory-form-group">
+                    <label for="vitaminType">Type of Vitamin</label>
+                    <input type="text" id="vitaminType" name="item_name" required readonly>
+                </div>
+            </div>
+
+            <div class="inventory-form-row inventory-form-row-single">
+                <div class="inventory-form-group">
+                    <label for="vitaminUnit">Unit</label>
+                    <input type="text" id="vitaminUnit" name="unit" value="bottles" readonly>
+                </div>
+            </div>
+
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="vitaminInitialStock">Initial Stock</label>
-                    <input type="number" id="vitaminInitialStock" name="initial_stock">
+                    <input type="number" id="vitaminInitialStock" name="initial_stock" min="0" step="1" required>
                 </div>
 
                 <div class="inventory-form-group">
                     <label for="vitaminRemainingStock">Remaining</label>
-                    <input type="number" id="vitaminRemainingStock" name="remaining_stock">
+                    <input type="number" id="vitaminRemainingStock" name="remaining_stock" min="0" step="1" required>
                 </div>
             </div>
 
-            <!-- Purchase Date at the bottom -->
+            <div class="inventory-form-row inventory-form-row-single">
+                <div class="inventory-form-group">
+                    <label for="vitaminCriticalStock">Critical Level</label>
+                    <input type="number" id="vitaminCriticalStock" name="critical" min="0" step="1" required>
+                </div>
+            </div>
+
             <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="vitaminPurchaseDate">Purchase Date</label>
-                    <input type="date" id="vitaminPurchaseDate" name="purchase_date" max="<?= date('Y-m-d') ?>">
+                    <input type="date" id="vitaminPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
                 </div>
             </div>
 

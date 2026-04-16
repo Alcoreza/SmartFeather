@@ -39,7 +39,7 @@
                 <h2>Feed Stock</h2>
                 <div class="inventory-actions">
                     <a href="{{ route('manager.inventory.records') }}" class="inventory-rec-btn" aria-label="Records">
-                        Rec
+                        Records
                     </a>
                     <button type="button" class="inventory-edit-btn" id="openFeedEditModal" aria-label="Edit Feed">✎ Edit</button>
                     <button type="button" class="inventory-icon-btn add-btn" id="openFeedAddModal" aria-label="Add Feed">+</button>
@@ -53,10 +53,10 @@
                          data-item-name="{{ $item['item_name'] }}"
                          data-initial-stock="{{ $item['initial_stock'] }}"
                          data-remaining-stock="{{ $item['remaining_stock'] }}"
+                         data-critical="{{ $item['critical'] }}"
                          data-purchase-date="{{ $item['purchase_date'] }}"
                          data-unit="{{ $item['unit'] }}">
-                         
-                        <!-- Show Feed Name -->
+
                         <h3 class="inventory-item-name">{{ $item['item_name'] }}</h3>
 
                         <div class="inventory-item-block">
@@ -71,6 +71,7 @@
                                     </span>
                                     <p><strong>Initial Stock:</strong> {{ $item['initial_stock'] }} {{ $item['unit'] }}</p>
                                     <p><strong>Remaining:</strong> {{ $item['remaining_stock'] }} {{ $item['unit'] }}</p>
+                                    <p><strong>Critical Level:</strong> {{ $item['critical'] }} {{ $item['unit'] }}</p>
                                 </div>
                             </div>
 
@@ -101,9 +102,10 @@
                          data-item-name="{{ $item['item_name'] }}"
                          data-initial-stock="{{ $item['initial_stock'] }}"
                          data-remaining-stock="{{ $item['remaining_stock'] }}"
+                         data-critical="{{ $item['critical'] }}"
                          data-purchase-date="{{ $item['purchase_date'] }}"
                          data-unit="{{ $item['unit'] }}">
-                         
+
                         <h3 class="inventory-item-name">{{ $item['item_name'] }}</h3>
 
                         <div class="inventory-item-block">
@@ -116,8 +118,9 @@
                                     <span class="inventory-status-badge {{ $item['status_class'] }}">
                                         {{ $item['status'] }}
                                     </span>
-                                    <p><strong>Initial Stock:</strong> {{ $item['initial_stock'] }} {{ $item['unit'] }}</p>
-                                    <p><strong>Remaining:</strong> {{ $item['remaining_stock'] }} {{ $item['unit'] }}</p>
+                                    <p><strong>Initial Stock:</strong> {{ $item['initial_stock'] }} bottles</p>
+                                    <p><strong>Remaining:</strong> {{ $item['remaining_stock'] }} bottles</p>
+                                    <p><strong>Critical Level:</strong> {{ $item['critical'] }} bottles</p>
                                 </div>
                             </div>
 

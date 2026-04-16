@@ -9,6 +9,7 @@ use App\Http\Controllers\SensorController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\BiosecurityLogController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportsController;
 
 Route::post('/api/login', [AuthController::class, 'login']);
 

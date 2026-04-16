@@ -364,6 +364,26 @@ function setupGenerateReportModal() {
     });
 }
 
+async function populateProfileModal() {
+    try {
+        const response = await fetch('/api/user');
+        if (!response.ok) throw new Error('Failed to fetch user info');
+        const user = await response.json();
+        document.getElementById('profileFirstName').value = user.FirstName || '';
+        document.getElementById('profileMiddleName').value = user.MiddleName || '';
+        document.getElementById('profileLastName').value = user.LastName || '';
+        document.getElementById('profileSuffix').value = user.Suffix || '';
+        document.getElementById('profileRole').value = user.Role || '';
+        document.getElementById('profilePhone').value = user.PhoneNumber || '';
+        document.getElementById('profileId').value = user.EmployeeId || '';
+        document.getElementById('profileBirthday').value = user.Birthday || '';
+        document.getElementById('profileGender').value = user.Gender || '';
+        document.getElementById('profileAddress').value = user.Address || '';
+    } catch (e) {
+        // Optionally show error
+    }
+}
+
 function setupProfileModal() {
     const modal = document.getElementById('profileModal');
     const openBtn = document.getElementById('openProfileModal');
@@ -371,7 +391,8 @@ function setupProfileModal() {
 
     if (!modal || !openBtn) return;
 
-    openBtn.addEventListener('click', () => {
+    openBtn.addEventListener('click', async () => {
+        await populateProfileModal();
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
     });

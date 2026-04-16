@@ -8,8 +8,12 @@ use App\Http\Controllers\HouseController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\BiosecurityLogController;
+use App\Http\Controllers\ProfileController;
 
 Route::post('/api/login', [AuthController::class, 'login']);
+
+// API endpoint to get current user info
+Route::get('/api/user', [ProfileController::class, 'getCurrentUser']);
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +22,8 @@ Route::post('/api/login', [AuthController::class, 'login']);
 */
 
 Route::view('/', 'auth.login')->name('login');
+
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
 |--------------------------------------------------------------------------

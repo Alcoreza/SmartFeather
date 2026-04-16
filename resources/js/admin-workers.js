@@ -5,6 +5,52 @@ let deleteId = null;
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+// ================= PROFILE MODAL =================
+async function populateAdminProfileModal() {
+    try {
+        const response = await fetch('/api/user');
+        if (!response.ok) throw new Error('Failed to fetch user info');
+        const user = await response.json();
+        document.getElementById('profileFirstName').value = user.FirstName || '';
+        document.getElementById('profileMiddleName').value = user.MiddleName || '';
+        document.getElementById('profileLastName').value = user.LastName || '';
+        document.getElementById('profileSuffix').value = user.Suffix || '';
+        document.getElementById('profileRole').value = user.Role || '';
+        document.getElementById('profilePhone').value = user.PhoneNumber || '';
+        document.getElementById('profileId').value = user.EmployeeId || '';
+        document.getElementById('profileBirthday').value = user.Birthday || '';
+        document.getElementById('profileGender').value = user.Gender || '';
+        document.getElementById('profileAddress').value = user.Address || '';
+    } catch (e) {
+        // Optionally show error
+    }
+}
+
+function setupAdminProfileModal() {
+    const modal = document.getElementById('adminProfileModal');
+    const openBtn = document.getElementById('openAdminProfileModal');
+    const closeBtn = document.getElementById('closeAdminProfileModal');
+
+    if (openBtn && modal) {
+        openBtn.addEventListener('click', async () => {
+            await populateAdminProfileModal();
+            modal.style.display = 'flex';
+        });
+    }
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    modal?.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
 // ================= LOAD EMPLOYEES =================
 // ================= LOAD EMPLOYEES =================
 async function loadEmployees() {
@@ -196,4 +242,7 @@ document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
 });
 
 // ================= INITIAL LOAD =================
-document.addEventListener('DOMContentLoaded', () => loadEmployees());
+document.addEventListener('DOMContentLoaded', () => {
+    loadEmployees();
+    setupAdminProfileModal();
+});

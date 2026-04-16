@@ -62,7 +62,7 @@
 
             <div class="admin-profile-actions">
                 <button type="button" class="admin-profile-btn-action cancel" id="closeAdminProfileModal">Cancel</button>
-                <button type="button" class="admin-profile-btn-action logout">Logout</button>
+                <button type="button" class="admin-profile-btn-action logout" onclick="window.location.href='{{ route('logout') }}'">Logout</button>
             </div>
         </form>
     </div>

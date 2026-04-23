@@ -4,26 +4,35 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
         $request->validate([
-            'user_id' => 'required',
-            'password' => 'required'
+            'user_id' => 'required|integer',
+            'password' => 'required|string',
         ]);
 
         $user = User::where('EmployeeId', $request->user_id)->first();
 
-        if (!$user || !Hash::check($request->password, $user->Password)) {
+        $storedPassword = $user?->Password;
+        $normalizedHash = $storedPassword;
+
+        if ($normalizedHash && str_starts_with($normalizedHash, '$2a$')) {
+            $normalizedHash = '$2y$' . substr($normalizedHash, 4);
+        }
+
+        if (
+            !$user ||
+            !$normalizedHash ||
+            !password_verify($request->password, $normalizedHash)
+        ) {
             return response()->json([
                 'message' => 'Invalid credentials'
             ], 401);
         }
 
-        // Optional: store session
         session([
             'user_id' => $user->EmployeeId,
             'role' => $user->Role,
@@ -42,7 +51,7 @@ class AuthController extends Controller
     {
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/');
     }
 }

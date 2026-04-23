@@ -11,6 +11,7 @@ use App\Http\Controllers\BiosecurityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportsController;
 
+
 Route::post('/api/login', [AuthController::class, 'login']);
 
 // API endpoint to get current user info
@@ -295,3 +296,4 @@ Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
 Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
 Route::get('/api/manager/reports', [ReportsController::class, 'index']);
 Route::get('/manager/reports/generate', [ReportsController::class, 'generate'])->name('manager.reports.generate');
+

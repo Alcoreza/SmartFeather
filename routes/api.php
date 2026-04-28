@@ -7,6 +7,7 @@ use App\Http\Controllers\MobilePopulationController;
 use App\Http\Controllers\MobileFeedsRefillController;
 use App\Http\Controllers\MobileVitaminsRefillController;
 use App\Http\Controllers\MobileProfileController;
+use App\Http\Controllers\MobileDisinfectionController;
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
 Route::post('/mobile/tasks', [MobileTaskController::class, 'getFlockmanTasks']);
@@ -22,3 +23,6 @@ Route::get('/mobile/vitamin-refill/houses/{houseId}/pens', [MobileVitaminsRefill
 Route::get('/mobile/vitamin-refill/options', [MobileVitaminsRefillController::class, 'getVitaminInventoryOptions']);
 Route::post('/mobile/vitamin-refill', [MobileVitaminsRefillController::class, 'submit']);
 Route::get('/mobile/profile/{employeeId}', [MobileProfileController::class, 'show']);
+Route::get('/mobile/disinfection/houses', [MobileDisinfectionController::class, 'getHouses']);
+Route::get('/mobile/disinfection/houses/{houseId}/pens', [MobileDisinfectionController::class, 'getPensByHouse']);
+Route::post('/mobile/disinfection', [MobileDisinfectionController::class, 'submit']);

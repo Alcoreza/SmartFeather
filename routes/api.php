@@ -8,6 +8,7 @@ use App\Http\Controllers\MobileFeedsRefillController;
 use App\Http\Controllers\MobileVitaminsRefillController;
 use App\Http\Controllers\MobileProfileController;
 use App\Http\Controllers\MobileDisinfectionController;
+use App\Http\Controllers\MobileVisitorController;
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
 Route::post('/mobile/tasks', [MobileTaskController::class, 'getFlockmanTasks']);
@@ -26,3 +27,4 @@ Route::get('/mobile/profile/{employeeId}', [MobileProfileController::class, 'sho
 Route::get('/mobile/disinfection/houses', [MobileDisinfectionController::class, 'getHouses']);
 Route::get('/mobile/disinfection/houses/{houseId}/pens', [MobileDisinfectionController::class, 'getPensByHouse']);
 Route::post('/mobile/disinfection', [MobileDisinfectionController::class, 'submit']);
+Route::post('/mobile/visitor', [MobileVisitorController::class, 'submit']);

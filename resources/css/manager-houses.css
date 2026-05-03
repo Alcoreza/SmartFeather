@@ -132,6 +132,15 @@
     cursor: pointer;
 }
 
+.btn-end {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-end:hover {
+    background: #c82333;
+}
+
 .houses-top-grid {
     display: grid;
     grid-template-columns: 1.05fr 1.45fr;
@@ -595,6 +604,31 @@
     max-width: 610px;
     border-radius: 34px;
     padding: 24px 44px 34px;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.delete-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    background: #c82333;
 }
 
 .edit-data-modal .modal-header {

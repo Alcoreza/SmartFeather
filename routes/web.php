@@ -201,6 +201,7 @@ Route::prefix('api/houses')->group(function () {
     Route::get('/', [HouseController::class, 'index']);              // Get all houses
     Route::get('/records/pens', [HouseController::class, 'getPenRecords']); // Get pen records for all houses
     Route::post('/', [HouseController::class, 'store']);             // Create new house
+    Route::delete('/pen/{penId}', [HouseController::class, 'deletePen']); // Delete specific pen (must be before /{id})
     Route::get('/{id}', [HouseController::class, 'show']);           // Get specific house
     Route::put('/{id}', [HouseController::class, 'update']);         // Update house
     Route::delete('/{id}', [HouseController::class, 'destroy']);     // Delete house

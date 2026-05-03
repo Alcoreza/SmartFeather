@@ -195,6 +195,35 @@ class HouseController extends Controller
     }
 
     /**
+     * Delete a specific pen
+     */
+    public function deletePen($penId)
+    {
+        try {
+            $pen = Pen::find($penId);
+
+            if (!$pen) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pen not found'
+                ], 404);
+            }
+
+            $pen->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pen deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting pen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Update pen data (capacity, population, and production data)
      */
     public function updatePen(Request $request, $penId)

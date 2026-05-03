@@ -32,6 +32,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     const editHouseForm = document.getElementById("editHouseForm");
 
+    const endBatchButton = document.getElementById("openEndBatchModal");
+    const endBatchModal = document.getElementById("endBatchModal");
+    const closeEndBatchModal = document.getElementById("closeEndBatchModal");
+    const cancelEndBatchModal = document.getElementById("cancelEndBatchModal");
+    const endBatchForm = document.getElementById("endBatchForm");
+    const penSelectGroup = document.getElementById("penSelectGroup");
+    const endAction = document.getElementById("endAction");
+
     let activeHouseIndex = 0;
     let activePenIndex = 0;
 
@@ -101,6 +109,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (editHouseForm) {
             editHouseForm.reset();
+        }
+    }
+
+    function openEndBatchModal() {
+        const currentHouse = houses[activeHouseIndex];
+        if (!currentHouse || !endBatchModal) return;
+
+        // Populate pen select
+        if (endPenSelect) {
+            endPenSelect.innerHTML = '<option value="">Select a pen...</option>';
+            currentHouse.pens.forEach(pen => {
+                const option = document.createElement('option');
+                option.value = pen.id;
+                option.textContent = pen.pen_name;
+                endPenSelect.appendChild(option);
+            });
+        }
+
+        endBatchModal.classList.add("show");
+    }
+
+    function closeEndModal() {
+        if (endBatchModal) {
+            endBatchModal.classList.remove("show");
+        }
+
+        if (endBatchForm) {
+            endBatchForm.reset();
+        }
+
+        if (penSelectGroup) {
+            penSelectGroup.style.display = 'none';
+        }
+
+        if (endAction) {
+            endAction.value = '';
+        }
+
+        if (endPenSelect) {
+            endPenSelect.innerHTML = '<option value="">Select a pen...</option>';
         }
     }
 
@@ -537,6 +585,88 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await fetchHouses();
             } catch (error) {
                 console.error("Error updating data:", error);
+                alert("Error: " + error.message);
+            }
+        });
+    }
+
+    // End Batch Modal Events
+    if (endBatchButton) {
+        endBatchButton.addEventListener("click", openEndBatchModal);
+    }
+
+    if (closeEndBatchModal) {
+        closeEndBatchModal.addEventListener("click", closeEndModal);
+    }
+
+    if (cancelEndBatchModal) {
+        cancelEndBatchModal.addEventListener("click", closeEndModal);
+    }
+
+    if (endBatchModal) {
+        endBatchModal.addEventListener("click", (event) => {
+            if (event.target === endBatchModal) {
+                closeEndModal();
+            }
+        });
+    }
+
+    // Action select change to show/hide pen select
+    if (endAction) {
+        endAction.addEventListener('change', (event) => {
+            if (event.target.value === 'pen') {
+                penSelectGroup.style.display = 'block';
+            } else {
+                penSelectGroup.style.display = 'none';
+            }
+        });
+    }
+
+    if (endBatchForm) {
+        endBatchForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const endOption = endAction.value;
+            const penId = endPenSelect.value;
+
+            const currentHouse = houses[activeHouseIndex];
+            if (!currentHouse) return;
+
+            let url, method = 'DELETE';
+            if (endOption === 'house') {
+                url = `/api/houses/${currentHouse.id}`;
+            } else if (endOption === 'pen') {
+                if (!penId) {
+                    alert("Please select a pen to delete.");
+                    return;
+                }
+                url = `/api/houses/pen/${penId}`;
+            } else {
+                alert("Please select an action.");
+                return;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                    },
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || "Failed to end batch");
+                }
+
+                const result = await response.json();
+                alert(result.message || "Batch ended successfully!");
+
+                closeEndModal();
+                // Reload the page to refresh the data
+                window.location.reload();
+            } catch (error) {
                 alert("Error: " + error.message);
             }
         });

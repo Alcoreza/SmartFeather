@@ -10,6 +10,7 @@ use App\Http\Controllers\MobileProfileController;
 use App\Http\Controllers\MobileDisinfectionController;
 use App\Http\Controllers\MobileVisitorController;
 use App\Http\Controllers\MobileWeightSamplingController;
+use App\Http\Controllers\MobileNewBatchController;
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
 Route::post('/mobile/tasks', [MobileTaskController::class, 'getFlockmanTasks']);
@@ -32,3 +33,6 @@ Route::post('/mobile/visitor', [MobileVisitorController::class, 'submit']);
 Route::get('/mobile/weight-sampling/houses', [MobileWeightSamplingController::class, 'getHouses']);
 Route::get('/mobile/weight-sampling/houses/{houseId}/pens', [MobileWeightSamplingController::class, 'getPensByHouse']);
 Route::post('/mobile/weight-sampling', [MobileWeightSamplingController::class, 'submit']);
+Route::get('/mobile/new-batch/houses', [MobileNewBatchController::class, 'getHouses']);
+Route::get('/mobile/new-batch/houses/{houseId}/pens', [MobileNewBatchController::class, 'getPensByHouse']);
+Route::post('/mobile/new-batch', [MobileNewBatchController::class, 'submit']);

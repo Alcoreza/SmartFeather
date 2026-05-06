@@ -77,8 +77,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Populate house fields
         if (editHouseName) editHouseName.value = currentHouse.name;
-        if (editBatchId) editBatchId.value = currentHouse.batch;
-        if (editStartDate) editStartDate.value = currentHouse.start_date || "";
 
         // Populate pen selector
         if (editPen) {
@@ -94,6 +92,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Get current pen data
         const currentPen = currentHouse.pens[activePenIndex];
         if (currentPen) {
+            if (editBatchId) editBatchId.value = currentPen.batch || "";
+            if (editStartDate)
+                editStartDate.value =
+                    currentPen.batch_started_at || currentHouse.start_date || "";
             if (editCapacity) editCapacity.value = currentPen.capacity || 0;
             if (editPopulation)
                 editPopulation.value = currentPen.population || 0;
@@ -212,19 +214,24 @@ document.addEventListener("DOMContentLoaded", async () => {
                 id: house.id,
                 name: house.house_number,
                 status: house.status || "Active",
-                batch: house.batch_code || "Batch-New",
+                batch: "",
                 start_date: house.start_date,
-                pens: (house.pens || []).map((pen) => ({
+                pens: (house.pens || []).map((pen) => {
+                    const flockBatch = pen.running_batch || pen.current_batch || null;
+
+                    return {
                     id: pen.id,
                     name: pen.pen_name,
                     pen_name: pen.pen_name,
+                    batch: flockBatch?.batch_code || null,
                     temperature: "0 deg",
                     ammonia: "0 ppm",
                     capacity: pen.capacity || 0,
                     population: pen.population || 0,
                     eggs_hatched: pen.eggs_hatched || 0,
                     mortality: pen.mortality || 0,
-                    batch_started_at: pen.batch_started_at || null,
+                    batch_started_at:
+                        flockBatch?.started_at || pen.batch_started_at || null,
                     cards: [
                         {
                             icon: "🏠",
@@ -235,7 +242,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                         {
                             icon: "📅",
                             title: "Start Date",
-                            subtitle: pen.batch_started_at || "Not set",
+                            subtitle:
+                                flockBatch?.started_at ||
+                                pen.batch_started_at ||
+                                "Not set",
                             accent: "blue",
                         },
                         {
@@ -261,7 +271,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                         { label: "Drinker 2", value: 0 },
                         { label: "Drinker 3", value: 0 },
                     ],
-                })),
+                    };
+                }),
                 records: [],
             }));
 
@@ -305,7 +316,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const pen = house.pens[penIndex];
 
         if (houseStatus) houseStatus.textContent = house.status;
-        if (houseBatch) houseBatch.textContent = house.batch;
+        if (houseBatch) houseBatch.textContent = pen.batch || " ";
         if (houseTemperature) houseTemperature.textContent = pen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
 
@@ -421,12 +432,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             const houseNameInput = document.getElementById("houseName");
             const houseStatusInput =
                 document.getElementById("houseStatusInput");
-            const houseBatchInput = document.getElementById("houseBatchInput");
             const penCountInput = document.getElementById("housePenCount");
 
             const houseName = houseNameInput?.value.trim();
             const houseStatusValue = houseStatusInput?.value || "active";
-            const houseBatchValue = houseBatchInput?.value.trim() || "";
             const penCountValue = Number(penCountInput?.value || 1);
 
             if (!houseName) {
@@ -440,9 +449,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     status: houseStatusValue,
                     number_of_pens: penCountValue > 0 ? penCountValue : 1,
                 };
-                if (houseBatchValue) {
-                    payload.batch_code = houseBatchValue;
-                }
 
                 const response = await fetch("/api/houses", {
                     method: "POST",
@@ -530,8 +536,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                             house_number:
                                 editHouseName?.value.trim() ||
                                 currentHouse.name,
-                            batch_code:
-                                editBatchId?.value.trim() || currentHouse.batch,
                             start_date:
                                 editStartDate?.value || currentHouse.start_date,
                         }),

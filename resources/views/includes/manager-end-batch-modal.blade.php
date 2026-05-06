@@ -17,7 +17,7 @@
 
             <div class="modal-group" id="penSelectGroup" style="display: none;">
                 <label for="endPenSelect">Select Pen:</label>
-                <select id="endPenSelect" required>
+                <select id="endPenSelect">
                     <option value="">Select a pen...</option>
                 </select>
             </div>

@@ -114,27 +114,82 @@ class InventoryController extends Controller
         $type = $request->type;
         $itemName = $request->item_name;
 
-        $query = DB::table('inventory_records as r')
-            ->join('inventories as i', 'r.inventory_id', '=', 'i.id')
-            ->select(
-                'r.id',
-                'i.item_name',
-                'i.type',
-                'r.initial_stock',
-                'r.remaining_stock',
-                'r.monitoring_date'
-            )
-            ->orderBy('r.monitoring_date', 'desc');
+        if ($type === 'feed') {
+            $query = DB::table('feed_refill_records as f')
+                ->join('inventories as i', 'f.inventory_id', '=', 'i.id')
+                ->leftJoin('inventory_records as r', function($join) {
+                    $join->on('r.inventory_id', '=', 'f.inventory_id')
+                         ->whereRaw('DATE(r.monitoring_date) = DATE(f.recorded_at)');
+                })
+                ->select(
+                    'f.id',
+                    'i.item_name',
+                    'i.type',
+                    'f.kilograms_used as deducted',
+                    'f.recorded_at as monitoring_date',
+                    'r.remaining_stock'
+                )
+                ->orderBy('f.recorded_at', 'desc');
 
-        if ($type) {
-            $query->where('i.type', $type);
+            if ($itemName) {
+                $query->where('i.item_name', $itemName);
+            }
+
+            $records = $query->get();
+            foreach ($records as $row) {
+                $row->initial_stock = null;
+            }
+            return response()->json($records);
+        } elseif ($type === 'vitamin') {
+            $query = DB::table('vitamin_refill_records as v')
+                ->join('inventories as i', 'v.inventory_id', '=', 'i.id')
+                ->leftJoin('inventory_records as r', function($join) {
+                    $join->on('r.inventory_id', '=', 'v.inventory_id')
+                         ->whereRaw('DATE(r.monitoring_date) = DATE(v.recorded_at)');
+                })
+                ->select(
+                    'v.id',
+                    'i.item_name',
+                    'i.type',
+                    'v.bottles_used as deducted',
+                    'v.recorded_at as monitoring_date',
+                    'r.remaining_stock'
+                )
+                ->orderBy('v.recorded_at', 'desc');
+
+            if ($itemName) {
+                $query->where('i.item_name', $itemName);
+            }
+
+            $records = $query->get();
+            foreach ($records as $row) {
+                $row->initial_stock = null;
+            }
+            return response()->json($records);
+        } else {
+            // fallback: return inventory_records as before, but no deducted
+            $query = DB::table('inventory_records as r')
+                ->join('inventories as i', 'r.inventory_id', '=', 'i.id')
+                ->select(
+                    'r.id',
+                    'i.item_name',
+                    'i.type',
+                    'r.initial_stock',
+                    'r.remaining_stock',
+                    'r.monitoring_date'
+                )
+                ->orderBy('r.monitoring_date', 'desc');
+
+            if ($itemName) {
+                $query->where('i.item_name', $itemName);
+            }
+
+            $records = $query->get();
+            foreach ($records as $row) {
+                $row->deducted = null;
+            }
+            return response()->json($records);
         }
-
-        if ($itemName) {
-            $query->where('i.item_name', $itemName);
-        }
-
-        return response()->json($query->get());
     }
 
     private function formatItem($item)

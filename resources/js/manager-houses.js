@@ -224,6 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     population: pen.population || 0,
                     eggs_hatched: pen.eggs_hatched || 0,
                     mortality: pen.mortality || 0,
+                    batch_started_at: pen.batch_started_at || null,
                     cards: [
                         {
                             icon: "🏠",
@@ -234,7 +235,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         {
                             icon: "📅",
                             title: "Start Date",
-                            subtitle: house.start_date || "Not set",
+                            subtitle: pen.batch_started_at || "Not set",
                             accent: "blue",
                         },
                         {

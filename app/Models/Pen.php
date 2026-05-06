@@ -6,9 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Pen extends Model
 {
-    // Table name is 'pen'
     protected $table = 'pen';
-    
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -19,11 +18,10 @@ class Pen extends Model
         'eggs_hatched',
         'mortality',
         'recorded_at',
+        'current_batch_code',
+        'batch_started_at',
     ];
 
-    /**
-     * Get the house this pen belongs to
-     */
     public function house()
     {
         return $this->belongsTo(House::class, 'house_id');

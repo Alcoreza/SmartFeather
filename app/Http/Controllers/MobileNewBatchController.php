@@ -79,9 +79,8 @@ class MobileNewBatchController extends Controller
         }
 
         $startedAt = Carbon::parse($validated['date'] . ' ' . $validated['time']);
-        $batchId = null;
 
-        DB::transaction(function () use ($validated, $startedAt, &$batchId) {
+        try {
             $batchId = DB::table('flock_batches')->insertGetId([
                 'batch_code' => $validated['batch_code'],
                 'house_id' => $validated['house_id'],
@@ -98,20 +97,27 @@ class MobileNewBatchController extends Controller
                     'population' => $validated['initial_population'],
                     'recorded_at' => now(),
                 ]);
-        });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'New batch added successfully.',
-            'batch' => [
-                'id' => $batchId,
-                'batch_code' => $validated['batch_code'],
-                'house_id' => $validated['house_id'],
-                'pen_id' => $validated['pen_id'],
-                'initial_population' => $validated['initial_population'],
-                'started_at' => $startedAt->toDateTimeString(),
-                'status' => 'Running',
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'New batch added successfully.',
+                'batch' => [
+                    'id' => $batchId,
+                    'batch_code' => $validated['batch_code'],
+                    'house_id' => $validated['house_id'],
+                    'pen_id' => $validated['pen_id'],
+                    'started_at' => $startedAt->toDateTimeString(),
+                    'status' => 'Running',
+                ],
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23505') {
+                return response()->json([
+                    'message' => 'There is already a running batch in the selected pen.',
+                ], 409);
+            }
+
+            throw $e;
+        }
     }
 }

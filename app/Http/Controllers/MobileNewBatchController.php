@@ -28,7 +28,7 @@ class MobileNewBatchController extends Controller
 
     public function getPensByHouse($houseId)
     {
-        $pens = Pen::with('currentBatch:id,batch_code')
+        $pens = Pen::with('currentBatch:id,batch_code,status')
             ->where('house_id', $houseId)
             ->orderBy('id', 'asc')
             ->get(['id', 'pen_name', 'house_id', 'current_batch_id'])
@@ -38,6 +38,7 @@ class MobileNewBatchController extends Controller
                     'pen_name' => $pen->pen_name,
                     'current_batch_id' => $pen->current_batch_id,
                     'current_batch_code' => $pen->currentBatch?->batch_code,
+                    'current_batch_status' => $pen->currentBatch?->status,
                 ];
             })
             ->values();

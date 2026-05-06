@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const pen = house.pens[penIndex];
 
         if (houseStatus) houseStatus.textContent = house.status;
-        if (houseBatch) houseBatch.textContent = pen.batch || " ";
+        if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
         if (houseTemperature) houseTemperature.textContent = pen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
 
@@ -377,7 +377,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 (house, index) => `
             <button
                 type="button"
-                class="house-tab ${index === activeHouseIndex ? "active" : ""}"
+                class="house-tab ${index === activeHouseIndex ? "active" : " No Batch"}"
                 data-house-index="${index}"
             >
                 ${house.name}

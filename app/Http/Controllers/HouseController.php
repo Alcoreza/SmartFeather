@@ -236,17 +236,28 @@ class HouseController extends Controller
             
             try {
                 // Reset the pen values instead of deleting
+                \Log::info('Ending pen ' . $penId);
+                \Log::info('Before: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
+                
                 $pen->population = 0;
                 $pen->eggs_hatched = 0;
                 $pen->mortality = 0;
                 $pen->batch_started_at = null;
+                $pen->current_batch_id = null;
                 $pen->save();
+                
+                \Log::info('After: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
                 
                 DB::commit();
 
+                // Verify the pen was updated correctly
+                $updatedPen = Pen::find($penId);
+                \Log::info('Verified after save: batch_started_at=' . ($updatedPen->batch_started_at ?? 'NULL') . ', current_batch_id=' . ($updatedPen->current_batch_id ?? 'NULL'));
+
                 return response()->json([
                     'success' => true,
-                    'message' => 'Pen ended successfully with values reset'
+                    'message' => 'Pen ended successfully with values reset',
+                    'pen' => $updatedPen
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();

@@ -217,7 +217,7 @@ class HouseController extends Controller
     }
 
     /**
-     * Delete a specific pen and all associated records
+     * End a specific pen by resetting its values instead of deleting it
      */
     public function deletePen($penId)
     {
@@ -235,24 +235,18 @@ class HouseController extends Controller
             DB::beginTransaction();
             
             try {
-                // Delete all population records for this pen first
-                DB::table('population_record')->where('pen_id', $penId)->delete();
-
-                // Decrement number_of_pens on the parent house if present
-                $house = $pen->house;
-                if ($house) {
-                    $house->number_of_pens = max(0, ($house->number_of_pens ?? 0) - 1);
-                    $house->save();
-                }
-                
-                // Delete the pen itself
-                $pen->delete();
+                // Reset the pen values instead of deleting
+                $pen->population = 0;
+                $pen->eggs_hatched = 0;
+                $pen->mortality = 0;
+                $pen->batch_started_at = null;
+                $pen->save();
                 
                 DB::commit();
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Pen and all associated records deleted successfully'
+                    'message' => 'Pen ended successfully with values reset'
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
@@ -261,7 +255,7 @@ class HouseController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error deleting pen: ' . $e->getMessage()
+                'message' => 'Error ending pen: ' . $e->getMessage()
             ], 500);
         }
     }

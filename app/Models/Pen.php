@@ -36,4 +36,10 @@ class Pen extends Model
     {
         return $this->belongsTo(FlockBatch::class, 'current_batch_id');
     }
+
+    public function runningBatch()
+    {
+        return $this->hasOne(FlockBatch::class, 'pen_id')
+            ->where('status', 'Running');
+    }
 }

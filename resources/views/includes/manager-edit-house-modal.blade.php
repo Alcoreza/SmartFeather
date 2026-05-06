@@ -9,7 +9,7 @@
             <div class="modal-row">
                 <div class="modal-group">
                     <label for="editBatchId">Batch ID</label>
-                    <input type="text" id="editBatchId">
+                    <input type="text" id="editBatchId" readonly>
                 </div>
 
                 <div class="modal-group">

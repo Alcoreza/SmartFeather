@@ -51,32 +51,21 @@ function createSectionMarkup(section, index) {
                 </div>
 
                 <div class="manager-sensor-tools">
-                        <select class="manager-sensor-filter" aria-label="Filter sensors by status">
+                    <select class="manager-sensor-filter" aria-label="Filter sensors by status">
                         <option value="">All Statuses</option>
-                        <option value="Active">Active</option>
-                        <option value="Under Maintenance">Under Maintenance</option>
+                        <option value="active">Active</option>
+                        <option value="under maintenance">Under Maintenance</option>
                     </select>
 
-    <button
-        type="button"
-        class="manager-sensor-threshold-btn"
-        data-open-threshold
-        aria-label="Threshold settings for ${escapeHtml(section.title)}"
-    >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 21v-7"></path>
-            <path d="M4 10V3"></path>
-            <path d="M12 21v-9"></path>
-            <path d="M12 8V3"></path>
-            <path d="M20 21v-5"></path>
-            <path d="M20 12V3"></path>
-            <path d="M1 10h6"></path>
-            <path d="M9 8h6"></path>
-            <path d="M17 12h6"></path>
-        </svg>
-    </button>
-</div>
-
+                    <button
+                        type="button"
+                        class="manager-sensor-threshold-btn"
+                        data-open-threshold
+                        aria-label="Threshold settings"
+                    >
+                        ⚙
+                    </button>
+                </div>
             </div>
 
             <div class="manager-sensor-table-wrap">
@@ -84,40 +73,52 @@ function createSectionMarkup(section, index) {
                     <thead>
                         <tr>
                             <th>Sensor Name</th>
-                            <th>House Number</th>
-                            <th>Pen Number</th>
+                            <th>House</th>
+                            <th>Pen</th>
+                            <th>Value</th> <!-- ✅ NEW -->
                             <th>Status</th>
                             <th>View</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         ${
                             rows.length
-                                ? rows
-                                      .map(
-                                          (item) => `
-                            <tr
-                                data-name="${escapeHtml(item.name)}"
-                                data-house-number="${escapeHtml(item.house_number)}"
-                                data-pen-number="${escapeHtml(item.pen_number)}"
-                                data-status="${escapeHtml(item.status)}"
-                                data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
-                            >
-                                <td>${escapeHtml(item.name)}</td>
-                                <td>${escapeHtml(item.house_number)}</td>
-                                <td>${escapeHtml(item.pen_number)}</td>
-                                <td>${escapeHtml(item.status)}</td>
-                                <td>
-                                    <button
-    type="button"
-    class="manager-sensor-view-btn"
-    data-open-view
-    data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
-    data-sensor-name="${escapeHtml(item.name)}"
+                                ? rows.map(item => `
+<tr
+    data-name="${escapeHtml(item.name)}"
     data-house-number="${escapeHtml(item.house_number)}"
     data-pen-number="${escapeHtml(item.pen_number)}"
-    aria-label="View ${escapeHtml(item.name)}"
+    data-status="${escapeHtml(item.status)}"
+    data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
 >
+    <td>${escapeHtml(item.name)}</td>
+    <td>${escapeHtml(item.house_number)}</td>
+    <td>${escapeHtml(item.pen_number)}</td>
+
+    <!-- ✅ VALUE COLUMN -->
+    <td>
+        <div class="manager-sensor-value">
+            ${escapeHtml(item.formatted_value || "No Data")}
+        </div>
+        <div class="manager-sensor-timestamp">
+            ${item.timestamp ? new Date(item.timestamp).toLocaleString() : ""}
+        </div>
+    </td>
+
+    <td>${escapeHtml(item.status)}</td>
+
+    <td>
+        <button
+            type="button"
+            class="manager-sensor-view-btn"
+            data-open-view
+            data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+            data-sensor-name="${escapeHtml(item.name)}"
+            data-house-number="${escapeHtml(item.house_number)}"
+            data-pen-number="${escapeHtml(item.pen_number)}"
+            aria-label="View ${escapeHtml(item.name)}"
+        >
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
                                             <circle cx="12" cy="12" r="3"></circle>

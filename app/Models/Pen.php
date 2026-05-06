@@ -18,12 +18,17 @@ class Pen extends Model
         'eggs_hatched',
         'mortality',
         'recorded_at',
-        'current_batch_code',
+        'current_batch_id',
         'batch_started_at',
     ];
 
     public function house()
     {
         return $this->belongsTo(House::class, 'house_id');
+    }
+
+    public function currentBatch()
+    {
+        return $this->belongsTo(FlockBatch::class, 'current_batch_id');
     }
 }

@@ -28,13 +28,16 @@ class MobileNewBatchController extends Controller
 
     public function getPensByHouse($houseId)
     {
-        $pens = Pen::where('house_id', $houseId)
+        $pens = Pen::with('currentBatch:id,batch_code')
+            ->where('house_id', $houseId)
             ->orderBy('id', 'asc')
-            ->get(['id', 'pen_name'])
+            ->get(['id', 'pen_name', 'house_id', 'current_batch_id'])
             ->map(function (Pen $pen) {
                 return [
                     'id' => $pen->id,
                     'pen_name' => $pen->pen_name,
+                    'current_batch_id' => $pen->current_batch_id,
+                    'current_batch_code' => $pen->currentBatch?->batch_code,
                 ];
             })
             ->values();
@@ -68,35 +71,41 @@ class MobileNewBatchController extends Controller
             ->where('status', 'Running')
             ->first();
 
-        if ($existingBatch) {
+        if ($existingBatch || !empty($pen->current_batch_id)) {
             return response()->json([
                 'message' => 'There is already a running batch in the selected pen.',
                 'existing_batch' => [
-                    'batch_code' => $existingBatch->batch_code,
-                    'started_at' => $existingBatch->started_at,
+                    'batch_code' => $existingBatch->batch_code ?? null,
+                    'started_at' => $existingBatch->started_at ?? null,
                 ],
             ], 409);
         }
 
         $startedAt = Carbon::parse($validated['date'] . ' ' . $validated['time']);
+        $batchId = null;
 
         try {
-            $batchId = DB::table('flock_batches')->insertGetId([
-                'batch_code' => $validated['batch_code'],
-                'house_id' => $validated['house_id'],
-                'pen_id' => $validated['pen_id'],
-                'started_at' => $startedAt,
-                'status' => 'Running',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            DB::table('pen')
-                ->where('id', $validated['pen_id'])
-                ->update([
-                    'population' => $validated['initial_population'],
-                    'recorded_at' => now(),
+            DB::transaction(function () use ($validated, $startedAt, &$batchId) {
+                $batchId = DB::table('flock_batches')->insertGetId([
+                    'batch_code' => $validated['batch_code'],
+                    'house_id' => $validated['house_id'],
+                    'pen_id' => $validated['pen_id'],
+                    'started_at' => $startedAt,
+                    'status' => 'Running',
+                    'initial_population' => $validated['initial_population'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+
+                DB::table('pen')
+                    ->where('id', $validated['pen_id'])
+                    ->update([
+                        'population' => $validated['initial_population'],
+                        'current_batch_id' => $batchId,
+                        'batch_started_at' => $startedAt,
+                        'recorded_at' => now(),
+                    ]);
+            });
 
             return response()->json([
                 'success' => true,
@@ -106,6 +115,7 @@ class MobileNewBatchController extends Controller
                     'batch_code' => $validated['batch_code'],
                     'house_id' => $validated['house_id'],
                     'pen_id' => $validated['pen_id'],
+                    'initial_population' => $validated['initial_population'],
                     'started_at' => $startedAt->toDateTimeString(),
                     'status' => 'Running',
                 ],

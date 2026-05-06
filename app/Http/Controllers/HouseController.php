@@ -16,7 +16,10 @@ class HouseController extends Controller
     public function index()
     {
         try {
-            $houses = House::with('pens')
+            $houses = House::with([
+                'pens.currentBatch:id,batch_code,started_at,status',
+                'pens.runningBatch:id,batch_code,pen_id,started_at,status',
+            ])
                 ->orderBy('id', 'asc')
                 ->get();
 
@@ -42,7 +45,6 @@ class HouseController extends Controller
             $validated = $request->validate([
                 'house_number' => 'required|string|max:255',
                 'number_of_pens' => 'required|integer|min:1|max:100',
-                'batch_code' => 'nullable|string|max:255',
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
             ]);
@@ -51,7 +53,6 @@ class HouseController extends Controller
             $house = House::create([
                 'house_number' => $validated['house_number'],
                 'number_of_pens' => $validated['number_of_pens'],
-                'batch_code' => $validated['batch_code'] ?? now()->format('Y-m-d'),
                 'status' => $validated['status'] ?? 'active',
                 'start_date' => $validated['start_date'] ?? now()->format('Y-m-d'),
             ]);
@@ -97,7 +98,10 @@ class HouseController extends Controller
     public function show($id)
     {
         try {
-            $house = House::with('pens')->find($id);
+            $house = House::with([
+                'pens.currentBatch:id,batch_code,started_at,status',
+                'pens.runningBatch:id,batch_code,pen_id,started_at,status',
+            ])->find($id);
 
             if (!$house) {
                 return response()->json([
@@ -136,7 +140,6 @@ class HouseController extends Controller
 
             $validated = $request->validate([
                 'house_number' => 'nullable|string|max:255',
-                'batch_code' => 'nullable|string|max:255',
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
             ]);
@@ -238,6 +241,15 @@ class HouseController extends Controller
                 // Reset the pen values instead of deleting
                 \Log::info('Ending pen ' . $penId);
                 \Log::info('Before: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
+
+                DB::table('flock_batches')
+                    ->where('pen_id', $pen->id)
+                    ->where('status', 'Running')
+                    ->update([
+                        'status' => 'Ended',
+                        'ended_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 
                 $pen->population = 0;
                 $pen->eggs_hatched = 0;

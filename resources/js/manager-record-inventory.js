@@ -122,8 +122,8 @@ function setupInventoryRecordTabs() {
             <tr>
                 <td>${row.item_name}</td>
                 <td>${formatDate(row.monitoring_date)}</td>
-                <td>${row.initial_stock}</td>
-                <td>${row.remaining_stock}</td>
+                <td>${row.deducted ?? 0}</td>
+                <td>${row.remaining_stock ?? ''}</td>
             </tr>
         `).join("");
     }
@@ -142,7 +142,7 @@ function setupInventoryRecordTabs() {
             <tr>
                 <th>Item</th>
                 <th>Date</th>
-                <th>Initial (kg)</th>
+                <th>Deducted (kg)</th>
                 <th>Remaining (kg)</th>
             </tr>
         `;
@@ -165,8 +165,8 @@ function setupInventoryRecordTabs() {
             <tr>
                 <th>Item</th>
                 <th>Date</th>
-                <th>Initial (mL)</th>
-                <th>Remaining (mL)</th>
+                <th>Deducted (bottles)</th>
+                <th>Remaining (bottles)</th>
             </tr>
         `;
 

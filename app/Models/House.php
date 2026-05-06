@@ -14,7 +14,6 @@ class House extends Model
     protected $fillable = [
         'house_number',
         'number_of_pens',
-        'batch_code',
         'status',
         'start_date',
     ];

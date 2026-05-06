@@ -22,6 +22,11 @@ class Pen extends Model
         'batch_started_at',
     ];
 
+    protected $casts = [
+        'recorded_at' => 'datetime',
+        'batch_started_at' => 'datetime',
+    ];
+
     public function house()
     {
         return $this->belongsTo(House::class, 'house_id');

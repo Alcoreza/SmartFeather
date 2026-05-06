@@ -39,6 +39,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const endBatchForm = document.getElementById("endBatchForm");
     const penSelectGroup = document.getElementById("penSelectGroup");
     const endAction = document.getElementById("endAction");
+    const endPenSelect = document.getElementById("endPenSelect");
+
+    console.log("Debug: Elements found - endBatchForm:", endBatchForm, "endAction:", endAction, "endPenSelect:", endPenSelect);
 
     let activeHouseIndex = 0;
     let activePenIndex = 0;
@@ -422,8 +425,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const houseName = houseNameInput?.value.trim();
             const houseStatusValue = houseStatusInput?.value || "active";
-            const houseBatchValue =
-                houseBatchInput?.value.trim() || "Batch-New";
+            const houseBatchValue = houseBatchInput?.value.trim() || "";
             const penCountValue = Number(penCountInput?.value || 1);
 
             if (!houseName) {
@@ -432,6 +434,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
 
             try {
+                const payload = {
+                    house_number: houseName,
+                    status: houseStatusValue,
+                    number_of_pens: penCountValue > 0 ? penCountValue : 1,
+                };
+                if (houseBatchValue) {
+                    payload.batch_code = houseBatchValue;
+                }
+
                 const response = await fetch("/api/houses", {
                     method: "POST",
                     headers: {
@@ -439,12 +450,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         "X-Requested-With": "XMLHttpRequest",
                         "X-CSRF-TOKEN": getCsrfToken(),
                     },
-                    body: JSON.stringify({
-                        house_number: houseName,
-                        status: houseStatusValue,
-                        batch_code: houseBatchValue,
-                        number_of_pens: penCountValue > 0 ? penCountValue : 1,
-                    }),
+                    body: JSON.stringify(payload),
                 });
 
                 if (!response.ok) {
@@ -622,51 +628,82 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    console.log("Debug: Attaching event listener to endBatchForm:", endBatchForm);
     if (endBatchForm) {
         endBatchForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
             const endOption = endAction.value;
-            const penId = endPenSelect.value;
+            const penId = endPenSelect ? endPenSelect.value : null;
+
+            console.log('End batch form submitted');
+            console.log('endOption:', endOption);
+            console.log('penId:', penId);
+
+            // Validate form inputs
+            if (!endOption) {
+                alert('Please select an action.');
+                return;
+            }
+
+            if (endOption === 'pen' && (!penId || penId === '')) {
+                alert('Please select a pen to end.');
+                return;
+            }
 
             const currentHouse = houses[activeHouseIndex];
-            if (!currentHouse) return;
+            console.log('currentHouse:', currentHouse);
+
+            if (!currentHouse) {
+                console.error('No current house found');
+                return;
+            }
 
             let url, method = 'DELETE';
             if (endOption === 'house') {
                 url = `/api/houses/${currentHouse.id}`;
+                console.log('Deleting house with URL:', url);
             } else if (endOption === 'pen') {
                 if (!penId) {
                     alert("Please select a pen to delete.");
                     return;
                 }
                 url = `/api/houses/pen/${penId}`;
+                console.log('Deleting pen with URL:', url);
             } else {
                 alert("Please select an action.");
                 return;
             }
 
             try {
+                console.log('Making fetch request to:', url);
                 const response = await fetch(url, {
                     method: method,
                     headers: {
                         "X-Requested-With": "XMLHttpRequest",
                         "X-CSRF-TOKEN": getCsrfToken(),
+                        "Content-Type": "application/json",
                     },
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
                 if (!response.ok) {
                     const error = await response.json();
+                    console.error('Error response:', error);
                     throw new Error(error.message || "Failed to end batch");
                 }
 
                 const result = await response.json();
+                console.log('Success response:', result);
                 alert(result.message || "Batch ended successfully!");
 
                 closeEndModal();
                 // Reload the page to refresh the data
                 window.location.reload();
             } catch (error) {
+                console.error('Fetch error:', error);
                 alert("Error: " + error.message);
             }
         });

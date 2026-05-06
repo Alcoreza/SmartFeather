@@ -213,7 +213,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             houses = (result.data || []).map((house) => ({
                 id: house.id,
                 name: house.house_number,
-                status: house.status || "Active",
+                status: house.status || "Running",
                 batch: "",
                 start_date: house.start_date,
                 pens: (house.pens || []).map((pen) => {
@@ -224,6 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     name: pen.pen_name,
                     pen_name: pen.pen_name,
                     batch: flockBatch?.batch_code || null,
+                    status: flockBatch?.status || "Inactive",
                     temperature: "0 deg",
                     ammonia: "0 ppm",
                     capacity: pen.capacity || 0,
@@ -315,7 +316,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const pen = house.pens[penIndex];
 
-        if (houseStatus) houseStatus.textContent = house.status;
+        if (houseStatus) houseStatus.textContent = pen.status;
         if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
         if (houseTemperature) houseTemperature.textContent = pen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
@@ -326,12 +327,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             waterRow.innerHTML = buildResourceRow(pen.drinkers, "water");
 
         if (houseStatus) {
-            if (house.status.toLowerCase() === "inactive") {
-                houseStatus.classList.remove("chip-green");
-                houseStatus.classList.add("chip-gray");
-            } else {
+            if (pen.status.toLowerCase() === "running") {
                 houseStatus.classList.remove("chip-gray");
                 houseStatus.classList.add("chip-green");
+            } else {
+                houseStatus.classList.remove("chip-green");
+                houseStatus.classList.add("chip-gray");
             }
         }
 
@@ -435,7 +436,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const penCountInput = document.getElementById("housePenCount");
 
             const houseName = houseNameInput?.value.trim();
-            const houseStatusValue = houseStatusInput?.value || "active";
+            const houseStatusValue = houseStatusInput?.value || "Running";
             const penCountValue = Number(penCountInput?.value || 1);
 
             if (!houseName) {

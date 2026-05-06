@@ -51,7 +51,7 @@ class HouseController extends Controller
             $house = House::create([
                 'house_number' => $validated['house_number'],
                 'number_of_pens' => $validated['number_of_pens'],
-                'batch_code' => $validated['batch_code'] ?? 'Batch-New',
+                'batch_code' => $validated['batch_code'] ?? now()->format('Y-m-d'),
                 'status' => $validated['status'] ?? 'active',
                 'start_date' => $validated['start_date'] ?? now()->format('Y-m-d'),
             ]);
@@ -164,29 +164,51 @@ class HouseController extends Controller
     }
 
     /**
-     * Delete a house
+     * Delete a house and all associated pens and records
      */
     public function destroy($id)
     {
+        \Log::info('HouseController@destroy called with id: ' . $id);
+
         try {
             $house = House::find($id);
 
             if (!$house) {
+                \Log::warning('House not found with id: ' . $id);
                 return response()->json([
                     'success' => false,
                     'message' => 'House not found'
                 ], 404);
             }
 
-            // Delete related pens (cascading)
-            $house->pens()->delete();
-            $house->delete();
+            \Log::info('Found house: ' . $house->house_number . ' with ' . $house->pens()->count() . ' pens');
 
-            return response()->json([
-                'success' => true,
-                'message' => 'House deleted successfully'
-            ]);
+            // Use transaction to ensure atomicity
+            DB::beginTransaction();
+
+            try {
+                // Delete all pens associated with this house
+                // This will cascade delete population records if foreign key is set up correctly
+                $pensDeleted = $house->pens()->delete();
+                \Log::info('Deleted ' . $pensDeleted . ' pens for house ' . $house->house_number);
+
+                // Delete the house itself
+                $house->delete();
+                \Log::info('Deleted house: ' . $house->house_number);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'House and all associated pens deleted successfully'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollback();
+                \Log::error('Error during house deletion transaction: ' . $e->getMessage());
+                throw $e;
+            }
         } catch (\Exception $e) {
+            \Log::error('Error deleting house: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error deleting house: ' . $e->getMessage()
@@ -195,7 +217,7 @@ class HouseController extends Controller
     }
 
     /**
-     * Delete a specific pen
+     * Delete a specific pen and all associated records
      */
     public function deletePen($penId)
     {
@@ -209,12 +231,33 @@ class HouseController extends Controller
                 ], 404);
             }
 
-            $pen->delete();
+            // Use transaction to ensure atomicity
+            DB::beginTransaction();
+            
+            try {
+                // Delete all population records for this pen first
+                DB::table('population_record')->where('pen_id', $penId)->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Pen deleted successfully'
-            ]);
+                // Decrement number_of_pens on the parent house if present
+                $house = $pen->house;
+                if ($house) {
+                    $house->number_of_pens = max(0, ($house->number_of_pens ?? 0) - 1);
+                    $house->save();
+                }
+                
+                // Delete the pen itself
+                $pen->delete();
+                
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pen and all associated records deleted successfully'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollback();
+                throw $e;
+            }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

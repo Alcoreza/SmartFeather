@@ -117,7 +117,14 @@ class InventoryController extends Controller
         if ($type === 'feed') {
             $query = DB::table('feed_refill_records as f')
                 ->join('inventories as i', 'f.inventory_id', '=', 'i.id')
-                ->leftJoin('inventory_records as r', function($join) {
+                ->leftJoin(DB::raw('(
+                    SELECT r1.* FROM inventory_records r1
+                    INNER JOIN (
+                        SELECT inventory_id, DATE(monitoring_date) as date, MAX(monitoring_date) as max_date
+                        FROM inventory_records
+                        GROUP BY inventory_id, DATE(monitoring_date)
+                    ) r2 ON r1.inventory_id = r2.inventory_id AND DATE(r1.monitoring_date) = r2.date AND r1.monitoring_date = r2.max_date
+                ) as r'), function($join) {
                     $join->on('r.inventory_id', '=', 'f.inventory_id')
                          ->whereRaw('DATE(r.monitoring_date) = DATE(f.recorded_at)');
                 })
@@ -143,7 +150,14 @@ class InventoryController extends Controller
         } elseif ($type === 'vitamin') {
             $query = DB::table('vitamin_refill_records as v')
                 ->join('inventories as i', 'v.inventory_id', '=', 'i.id')
-                ->leftJoin('inventory_records as r', function($join) {
+                ->leftJoin(DB::raw('(
+                    SELECT r1.* FROM inventory_records r1
+                    INNER JOIN (
+                        SELECT inventory_id, DATE(monitoring_date) as date, MAX(monitoring_date) as max_date
+                        FROM inventory_records
+                        GROUP BY inventory_id, DATE(monitoring_date)
+                    ) r2 ON r1.inventory_id = r2.inventory_id AND DATE(r1.monitoring_date) = r2.date AND r1.monitoring_date = r2.max_date
+                ) as r'), function($join) {
                     $join->on('r.inventory_id', '=', 'v.inventory_id')
                          ->whereRaw('DATE(r.monitoring_date) = DATE(v.recorded_at)');
                 })

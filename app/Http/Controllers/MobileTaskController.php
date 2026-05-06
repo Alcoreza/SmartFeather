@@ -76,6 +76,6 @@ class MobileTaskController extends Controller
             return null;
         }
 
-        return Carbon::parse($value)->format('Y-m-d H:i:s');
+        return Carbon::parse($value)->format('Y-m-d\TH:i:s');
     }
 }

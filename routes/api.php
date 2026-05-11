@@ -36,3 +36,5 @@ Route::post('/mobile/weight-sampling', [MobileWeightSamplingController::class, '
 Route::get('/mobile/new-batch/houses', [MobileNewBatchController::class, 'getHouses']);
 Route::get('/mobile/new-batch/houses/{houseId}/pens', [MobileNewBatchController::class, 'getPensByHouse']);
 Route::post('/mobile/new-batch', [MobileNewBatchController::class, 'submit']);
+
+Route::post('/mobile/tasks/photo-upload-url', [MobileTaskController::class, 'createTaskPhotoUploadUrl']);

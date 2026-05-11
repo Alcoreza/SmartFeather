@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'supabase' => [
+        'url' => env('SUPABASE_URL'),
+        'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY'),
+        'task_photos_bucket' => env('SUPABASE_TASK_PHOTOS_BUCKET', 'task-photos'),
+    ],
+
+
 ];

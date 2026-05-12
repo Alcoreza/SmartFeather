@@ -50,6 +50,8 @@ class MobileDisinfectionController extends Controller
             'pen_id' => 'required|integer|exists:pen,id',
             'activity' => 'required|string|max:255',
             'disinfectant_used' => 'required|string|max:255',
+            'recorded_date' => 'required|date',
+            'recorded_time' => 'required|date_format:H:i:s',
         ]);
 
         $house = House::find($validated['house_id']);
@@ -76,7 +78,7 @@ class MobileDisinfectionController extends Controller
             ));
         }
 
-        $now = now();
+        $createdAt = $validated['recorded_date'] . ' ' . $validated['recorded_time'];
 
         DB::table('cleaning_logs')->insert([
             'house' => $house?->house_number,
@@ -84,10 +86,10 @@ class MobileDisinfectionController extends Controller
             'activity' => $validated['activity'],
             'disinfectant_used' => $validated['disinfectant_used'],
             'performed_by' => $performedBy ?: (string) $validated['employee_id'],
-            'date' => $now->toDateString(),
-            'time' => $now->format('H:i:s'),
-            'created_at' => $now,
-            'updated_at' => $now,
+            'date' => $validated['recorded_date'],
+            'time' => $validated['recorded_time'],
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
         ]);
 
         return response()->json([

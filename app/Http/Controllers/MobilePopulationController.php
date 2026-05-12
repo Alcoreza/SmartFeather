@@ -32,6 +32,7 @@ class MobilePopulationController extends Controller
             'pen_name' => 'required|string',
             'eggs_hatched' => 'required|integer|min:0',
             'mortality' => 'required|integer|min:0',
+            'recorded_at' => 'required|date',
         ]);
 
         $pen = Pen::where('house_id', $validated['house_id'])
@@ -53,13 +54,13 @@ class MobilePopulationController extends Controller
                 'eggs_hatched' => $validated['eggs_hatched'],
                 'mortality' => $validated['mortality'],
                 'running_population' => $newPopulation,
-                'recorded_at' => now(),
+                'recorded_at' => $validated['recorded_at'],
             ]);
 
             $pen->eggs_hatched = $validated['eggs_hatched'];
             $pen->mortality = $validated['mortality'];
             $pen->population = $newPopulation;
-            $pen->recorded_at = now();
+            $pen->recorded_at = $validated['recorded_at'];
             $pen->save();
         });
 

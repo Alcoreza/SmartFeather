@@ -104,7 +104,7 @@ class MobileNewBatchController extends Controller
                         'population' => $validated['initial_population'],
                         'current_batch_id' => $batchId,
                         'batch_started_at' => $startedAt,
-                        'recorded_at' => now(),
+                        'recorded_at' => $startedAt,
                     ]);
             });
 

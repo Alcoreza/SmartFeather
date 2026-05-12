@@ -72,6 +72,7 @@ class MobileVitaminsRefillController extends Controller
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
             'bottles' => 'required|integer|min:1',
+            'recorded_at' => 'required|date',
         ]);
 
         $inventory = DB::table('inventories')
@@ -113,7 +114,7 @@ class MobileVitaminsRefillController extends Controller
                 'house_id' => $validated['house_id'],
                 'pen_id' => $validated['pen_id'],
                 'bottles_used' => $validated['bottles'],
-                'recorded_at' => now(),
+                'recorded_at' => $validated['recorded_at'],
             ]);
 
             DB::table('inventories')
@@ -127,7 +128,7 @@ class MobileVitaminsRefillController extends Controller
                 'inventory_id' => $validated['inventory_id'],
                 'initial_stock' => $initialStock,
                 'remaining_stock' => $newRemaining,
-                'monitoring_date' => now(),
+                'monitoring_date' => $validated['recorded_at'],
             ]);
         });
 

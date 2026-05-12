@@ -73,6 +73,7 @@ class MobileFeedsRefillController extends Controller
             'pen_id' => 'required|integer|exists:pen,id',
             'feeder_number' => 'required|integer|min:1',
             'kilograms' => 'required|integer|min:1',
+            'recorded_at' => 'required|date',
         ]);
 
         $inventory = DB::table('inventories')
@@ -115,7 +116,7 @@ class MobileFeedsRefillController extends Controller
                 'pen_id' => $validated['pen_id'],
                 'feeder_number' => $validated['feeder_number'],
                 'kilograms_used' => $validated['kilograms'],
-                'recorded_at' => now(),
+                'recorded_at' => $validated['recorded_at'],
             ]);
 
             DB::table('inventories')
@@ -129,7 +130,7 @@ class MobileFeedsRefillController extends Controller
                 'inventory_id' => $validated['inventory_id'],
                 'initial_stock' => $initialStock,
                 'remaining_stock' => $newRemaining,
-                'monitoring_date' => now(),
+                'monitoring_date' => $validated['recorded_at'],
             ]);
         });
 

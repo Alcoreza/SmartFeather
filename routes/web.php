@@ -293,8 +293,6 @@ Route::put('/api/manager/biosecurity-logs/{id}', [BiosecurityLogController::clas
 Route::delete('/api/manager/biosecurity-logs/{id}', [BiosecurityLogController::class, 'destroy']);
 
 Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
-
-Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
 Route::get('/api/manager/reports', [ReportsController::class, 'index']);
 Route::get('/manager/reports/generate', [ReportsController::class, 'generate'])->name('manager.reports.generate');
 

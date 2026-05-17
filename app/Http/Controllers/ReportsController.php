@@ -11,14 +11,17 @@ class ReportsController extends Controller
 {
     public function index(Request $request)
     {
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
         return response()->json([
             'reports' => [
-                'Population' => $this->getPopulationReport(null, null),
-                'Environmental' => $this->getEnvironmentalReport(null, null),
-                'Inventory' => $this->getInventoryReport(null, null),
-                'Biosecurity' => $this->getBiosecurityReport(null, null),
-                'Weight Sampling' => $this->getWeightSamplingReport(null, null),
-                'Tasks' => $this->getTasksReport(null, null),
+                'Population' => $this->getPopulationReport($startDate, $endDate),
+                'Environmental' => $this->getEnvironmentalReport($startDate, $endDate),
+                'Inventory' => $this->getInventoryReport($startDate, $endDate),
+                'Biosecurity' => $this->getBiosecurityReport($startDate, $endDate),
+                'Weight Sampling' => $this->getWeightSamplingReport($startDate, $endDate),
+                'Tasks' => $this->getTasksReport($startDate, $endDate),
             ],
         ]);
     }
@@ -77,8 +80,12 @@ class ReportsController extends Controller
 
         $query = DB::table('pen')
             ->leftJoin('house', 'pen.house_id', '=', 'house.id')
+            ->leftJoin('flock_batches as fb', function ($join) {
+                $join->on('fb.pen_id', '=', 'pen.id')
+                     ->where('fb.status', 'Running');
+            })
             ->select(
-                'house.batch_code',
+                'fb.batch_code',
                 'house.start_date',
                 'house.house_number',
                 'pen.pen_name',
@@ -95,25 +102,57 @@ class ReportsController extends Controller
 
         return $query->get()->map(function ($row) {
             return [
-                'batch_id' => $row->batch_code ?? 'N/A',
+                'batch_id' => $row->batch_code ?? '--',
+                'house_number' => $row->house_number ?? '--',
+                'pen_no' => $row->pen_name ?? '--',
                 'start_date' => $this->formatDate($row->start_date),
                 'end_date' => '--',
-                'reporting_date' => $this->formatDate($row->recorded_at),
-                'pen_no' => $row->pen_name ?? '--',
                 'initial_population' => $row->capacity ?? 0,
                 'running_population' => $row->population ?? 0,
                 'mortalities' => $row->mortality ?? 0,
                 'eggs_hatched' => $row->eggs_hatched ?? 0,
+                'reporting_date' => $this->formatDate($row->recorded_at),
             ];
         })->values()->all();
     }
 
     private function getEnvironmentalReport(?string $startDate, ?string $endDate): array
     {
+        $feeds = [];
+
+        if (Schema::hasTable('feed_refill_records') && Schema::hasTable('house') && Schema::hasTable('pen') && Schema::hasTable('inventories')) {
+            $query = DB::table('feed_refill_records as f')
+                ->join('inventories as i', 'f.inventory_id', '=', 'i.id')
+                ->leftJoin('house', 'f.house_id', '=', 'house.id')
+                ->leftJoin('pen', 'f.pen_id', '=', 'pen.id')
+                ->select(
+                    'house.house_number',
+                    'f.recorded_at',
+                    'f.kilograms_used',
+                    'house.house_number as batch_code',
+                    'pen.pen_name',
+                    'f.feeder_number'
+                )
+                ->orderByDesc('f.recorded_at');
+
+            $this->applyDateRange($query, 'f.recorded_at', $startDate, $endDate);
+
+            $feeds = $query->get()->map(function ($row) {
+                return [
+                    'batch' => $row->batch_code ?? '--',
+                    'date' => $this->formatDate($row->recorded_at),
+                    'feeds_level' => $row->kilograms_used ?? 0,
+                    'house' => $row->house_number ?? '--',
+                    'pen' => $row->pen_name ?? '--',
+                    'feeder_number' => $row->feeder_number ?? '--',
+                ];
+            })->values()->all();
+        }
+
         return [
             'temperature' => [],
             'ammonia' => [],
-            'feeds' => [],
+            'feeds' => $feeds,
             'water' => [],
         ];
     }

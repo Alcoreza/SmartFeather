@@ -11,6 +11,8 @@ use App\Http\Controllers\MobileDisinfectionController;
 use App\Http\Controllers\MobileVisitorController;
 use App\Http\Controllers\MobileWeightSamplingController;
 use App\Http\Controllers\MobileNewBatchController;
+use App\Http\Controllers\MobileDashboardController;
+
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
 Route::post('/mobile/tasks', [MobileTaskController::class, 'getFlockmanTasks']);
@@ -38,3 +40,6 @@ Route::get('/mobile/new-batch/houses/{houseId}/pens', [MobileNewBatchController:
 Route::post('/mobile/new-batch', [MobileNewBatchController::class, 'submit']);
 
 Route::post('/mobile/tasks/photo-upload-url', [MobileTaskController::class, 'createTaskPhotoUploadUrl']);
+
+Route::get('/mobile/dashboard', [MobileDashboardController::class, 'show']);
+

@@ -14,7 +14,13 @@ class SensorController extends Controller
 {
     public function index()
     {
-        $sensors = Sensor::with(['house', 'pen', 'configuration', 'maintenances'])
+        $sensors = Sensor::with([
+                'house',
+                'pen',
+                'configuration',
+                'maintenances',
+                'latestReading' // ✅ NEW
+            ])
             ->orderBy('sensortype')
             ->orderBy('sensorname')
             ->get();
@@ -27,27 +33,40 @@ class SensorController extends Controller
                     'title' => $type ?: 'Unknown Sensor',
                     'sensor_type' => $type,
                     'items' => $group->map(function (Sensor $sensor) {
+
                         $status = $sensor->status ?? null;
+
                         if (!$status) {
                             $latestMaintenance = $sensor->maintenances
                                 ->sortByDesc('startdate')
                                 ->first();
+
                             $status = $latestMaintenance?->status;
                         }
 
                         $status = $this->normalizeSensorStatus($status);
+
+                        // ✅ latest reading
+                        $latestValue = $sensor->latestReading?->value;
 
                         return [
                             'id' => $sensor->sensorid,
                             'name' => $sensor->sensorname,
                             'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
                             'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
+
+                            // ✅ VALUE FIELDS
+                            'value' => $latestValue,
+                            'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
+
+                            // ✅ FIX: expose timestamp
+                            'timestamp' => $sensor->latestReading?->recorded_at,
+
                             'status' => $status,
                             'house_id' => $sensor->house?->id,
                             'pen_id' => $sensor->pen?->id,
                             'lowest_threshold' => $sensor->configuration?->lowestthreshold,
                             'highest_threshold' => $sensor->configuration?->highestthreshold,
-                            'status' => $sensor->status ?: 'Active',
                         ];
                     })->values(),
                 ];
@@ -114,8 +133,6 @@ class SensorController extends Controller
             'status' => 'Active',
         ]);
 
-
-        // If this sensor type already has thresholds configured, copy them to the new sensor.
         $existingThreshold = SensorConfiguration::whereIn(
             'sensors_sensorid',
             Sensor::where('sensortype', $validated['sensor_type'])
@@ -144,6 +161,7 @@ class SensorController extends Controller
         ]);
 
         $sensor = Sensor::findOrFail($sensorId);
+
         $sensor->update([
             'sensortype' => $validated['sensor_type'],
             'sensorname' => $validated['sensor_name'],
@@ -153,7 +171,6 @@ class SensorController extends Controller
 
         return response()->json($sensor);
     }
-
 
     public function destroy($sensorId)
     {
@@ -170,6 +187,7 @@ class SensorController extends Controller
         ]);
 
         $sensor = Sensor::findOrFail($sensorId);
+
         $sensor->update([
             'status' => $validated['status'],
         ]);
@@ -179,7 +197,6 @@ class SensorController extends Controller
             'sensor' => $sensor,
         ]);
     }
-
 
     public function updateThresholds(Request $request)
     {
@@ -197,7 +214,7 @@ class SensorController extends Controller
                 [
                     'lowestthreshold' => $validated['lowest_threshold'],
                     'highestthreshold' => $validated['highest_threshold'],
-                ],
+                ]
             );
         }
 
@@ -235,10 +252,6 @@ class SensorController extends Controller
             return 'Under Maintenance';
         }
 
-        if ($status === 'maintenance') {
-            return 'Under Maintenance';
-        }
-
         return 'Active';
     }
 
@@ -266,5 +279,28 @@ class SensorController extends Controller
         }
 
         return $penName;
+    }
+
+    // ✅ VALUE FORMATTER
+    private function formatSensorValue($type, $value)
+    {
+        if ($value === null) return 'No Data';
+
+        switch ($type) {
+            case 'Temperature Sensor':
+                return number_format($value, 1) . ' °C';
+
+            case 'Ammonia Sensor':
+                return $value . ' ppm';
+
+            case 'Feed Sensor':
+                return $value . ' mm';
+
+            case 'Water Sensor':
+                return $value . ' level';
+
+            default:
+                return $value;
+        }
     }
 }

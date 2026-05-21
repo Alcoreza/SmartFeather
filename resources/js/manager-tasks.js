@@ -141,14 +141,16 @@ function renderApprovalTasks(items) {
             <td>${item.pen_number}</td>
             <td>${item.detailed_task}</td>
             <td>
-                <button
-                    type="button"
-                    class="manager-task-photo-link"
-                    data-photo-name="${item.photo_name}"
-                    data-photo-url="${item.photo_url}"
-                >
-                    ${item.photo_name}
-                </button>
+                ${item.photo_url
+                    ? `<button
+                        type="button"
+                        class="manager-task-photo-link"
+                        data-photo-name="${item.photo_name}"
+                        data-photo-url="${item.photo_url}"
+                    >
+                        <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
+                    </button>`
+                    : 'No photo'}
             </td>
             <td>${item.priority}</td>
             <td>${item.time_assigned}</td>
@@ -185,14 +187,16 @@ function renderCompletedTasks(items) {
             <td>${item.pen_number}</td>
             <td>${item.detailed_task}</td>
             <td>
-                <button
-                    type="button"
-                    class="manager-task-photo-link"
-                    data-photo-name="${item.photo_name}"
-                    data-photo-url="${item.photo_url}"
-                >
-                    ${item.photo_name}
-                </button>
+                ${item.photo_url
+                    ? `<button
+                        type="button"
+                        class="manager-task-photo-link"
+                        data-photo-name="${item.photo_name}"
+                        data-photo-url="${item.photo_url}"
+                    >
+                        <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
+                    </button>`
+                    : 'No photo'}
             </td>
             <td>${item.priority}</td>
             <td>${item.notes}</td>

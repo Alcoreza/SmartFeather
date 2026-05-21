@@ -50,7 +50,7 @@ class TaskController extends Controller
                     'time_assigned' => $formatDate($task->timeassigned),
                     'finish_by' => $formatDate($task->finishby),
                     'photo_name' => $task->photourl ? basename($task->photourl) : '',
-                    'photo_url' => $task->photourl ?? '',
+                    'photo_url' => $this->buildTaskPhotoUrl($task->photourl),
                     'notes' => $task->notes ?? '',
                     'time_completed' => $formatDate($task->time_completed),
                     'status' => $status,
@@ -62,6 +62,23 @@ class TaskController extends Controller
             'for_approval' => $tasks->where('status', 'for_approval')->values(),
             'completed' => $tasks->where('status', 'completed')->values(),
         ]);
+    }
+
+    private function buildTaskPhotoUrl(?string $path): ?string
+    {
+        if (blank($path)) {
+            return null;
+        }
+
+        $baseUrl = rtrim(config('services.supabase.url'), '/');
+        $bucket = config('services.supabase.task_photos_bucket');
+
+        return sprintf(
+            '%s/storage/v1/object/public/%s/%s',
+            $baseUrl,
+            $bucket,
+            ltrim($path, '/'),
+        );
     }
 
     public function store(Request $request)

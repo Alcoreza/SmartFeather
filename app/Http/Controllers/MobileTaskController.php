@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -16,10 +17,32 @@ class MobileTaskController extends Controller
             'employee_id' => 'required|integer',
         ]);
 
-        $tasks = Task::where('user_employeeid', $validated['employee_id'])
-            ->orderByDesc('timeassigned')
-            ->get()
-            ->map(function (Task $task) {
+        $tasks = Task::query()
+            ->leftJoin('house', 'tasks.house_houseid', '=', 'house.id')
+            ->leftJoin('pen', function ($join) {
+                $join->on('tasks.house_houseid', '=', 'pen.house_id')
+                    ->on('tasks.pennumber', '=', 'pen.id');
+            })
+            ->where('tasks.user_employeeid', $validated['employee_id'])
+            ->orderByDesc('tasks.timeassigned')
+            ->get([
+                'tasks.taskid',
+                'tasks.tasktype',
+                'tasks.detailedtask',
+                'tasks.timeassigned',
+                'tasks.finishby',
+                'tasks.status',
+                'tasks.notes',
+                'tasks.time_completed',
+                'tasks.user_employeeid',
+                'tasks.house_houseid',
+                'tasks.pennumber',
+                'tasks.prioritylevel',
+                'tasks.photourl',
+                'house.house_number as house_number',
+                'pen.pen_name as pen_name',
+            ])
+            ->map(function ($task) {
                 return [
                     'taskid' => $task->taskid,
                     'tasktype' => $task->tasktype,
@@ -34,6 +57,8 @@ class MobileTaskController extends Controller
                     'pennumber' => $task->pennumber,
                     'prioritylevel' => $task->prioritylevel,
                     'photourl' => $this->buildTaskPhotoUrl($task->photourl),
+                    'house_number' => $task->house_number,
+                    'pen_name' => $task->pen_name,
                 ];
             })
             ->values();
@@ -122,7 +147,6 @@ class MobileTaskController extends Controller
             'token' => $token,
             'public_url' => $this->buildTaskPhotoUrl($path),
         ]);
-
     }
 
     public function submitTaskForApproval(Request $request)
@@ -142,6 +166,38 @@ class MobileTaskController extends Controller
             return response()->json([
                 'message' => 'Task not found for this employee.'
             ], 404);
+        }
+
+        $latestEntry = DB::table('personnel_entry_logs')
+            ->where('employee_id', $validated['employee_id'])
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
+            return response()->json([
+                'message' => 'Please scan IN and complete personnel biosecurity before submitting this task.'
+            ], 403);
+        }
+
+        $hasBiosecuritySubmission = DB::table('personnel_biosecurity_logs')
+            ->where('personnel_entry_log_id', $latestEntry->id)
+            ->exists();
+
+        if (!$hasBiosecuritySubmission) {
+            return response()->json([
+                'message' => 'Please submit the personnel biosecurity form first before submitting this task.'
+            ], 403);
+        }
+
+        if (
+            !empty($task->house_houseid) &&
+            (int) $task->house_houseid !== (int) $latestEntry->house_id
+        ) {
+            return response()->json([
+                'message' => 'This task is assigned to a different house. Please go to the house from your assigned task or scan the correct house first.'
+            ], 403);
         }
 
         $task->status = 'For Approval';

@@ -92,6 +92,7 @@ async function openViewModal(id) {
         document.getElementById('workerMiddleName').value = user.MiddleName ?? '';
         document.getElementById('workerLastName').value = user.LastName;
         document.getElementById('workerSuffix').value = user.Suffix ?? '';
+        document.getElementById('workerUsername').value = user.Username ?? '';
         document.getElementById('workerRole').value = user.Role;
         document.getElementById('workerPhone').value = user.PhoneNumber ?? '';
         document.getElementById('workerId').value = user.EmployeeId;

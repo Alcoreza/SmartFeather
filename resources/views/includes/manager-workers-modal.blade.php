@@ -29,6 +29,11 @@
             </div>
 
             <div class="worker-field">
+                <label>Username</label>
+                <input type="text" id="workerUsername" readonly>
+            </div>
+
+            <div class="worker-field">
                 <label>Role</label>
                 <input type="text" id="workerRole" readonly>
             </div>

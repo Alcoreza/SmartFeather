@@ -10,11 +10,19 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('EmployeeId', $request->user_id)->first();
+        $identifier = trim((string) $request->user_id);
+
+        $user = is_numeric($identifier)
+            ? User::where('EmployeeId', (int) $identifier)->first()
+            : User::where('Username', $identifier)->first();
+
+        if (!$user && is_numeric($identifier)) {
+            $user = User::where('Username', $identifier)->first();
+        }
 
         $storedPassword = $user?->Password;
         $normalizedHash = $storedPassword;

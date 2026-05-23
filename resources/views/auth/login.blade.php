@@ -30,9 +30,9 @@
                                 @csrf
 
                                 <div class="mb-4">
-                                    <label for="user_id" class="form-label login-label">ID</label>
+                                    <label for="user_id" class="form-label login-label">ID or Username</label>
                                     <input type="text" id="user_id" name="user_id" class="form-control custom-input"
-                                        placeholder="Enter your ID">
+                                        placeholder="Enter your ID or username">
                                 </div>
 
                                 <div class="mb-4">

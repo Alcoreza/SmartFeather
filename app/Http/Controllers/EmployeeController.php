@@ -21,6 +21,7 @@ class EmployeeController extends Controller
                 'Birthday' => $u->Birthday,
                 'Gender' => $u->Gender,
                 'Address' => $u->Address,
+                'Username' => $u->Username,
             ];
         });
 
@@ -30,7 +31,19 @@ class EmployeeController extends Controller
     public function show($id)
     {
         $u = Employee::findOrFail($id);
-        return response()->json($u);
+        return response()->json([
+            'EmployeeId' => $u->EmployeeId,
+            'FirstName' => $u->FirstName,
+            'MiddleName' => $u->MiddleName,
+            'LastName' => $u->LastName,
+            'Suffix' => $u->Suffix,
+            'Role' => $u->Role,
+            'PhoneNumber' => $u->PhoneNumber,
+            'Birthday' => $u->Birthday,
+            'Gender' => $u->Gender,
+            'Address' => $u->Address,
+            'Username' => $u->Username,
+        ]);
     }
 
     public function store(Request $request)

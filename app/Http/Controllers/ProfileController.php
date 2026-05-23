@@ -28,6 +28,7 @@ class ProfileController extends Controller
             'Birthday' => $user->Birthday,
             'Gender' => $user->Gender,
             'Address' => $user->Address,
+            'Username' => $user->Username,
         ]);
     }
 }

@@ -22,7 +22,28 @@ class Employee extends Model
         'Gender',
         'Address',
         'Password',
+        'Username',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $employee) {
+            if (empty($employee->Username)) {
+                $employee->Username = self::buildUsername(
+                    $employee->FirstName ?? '',
+                    $employee->LastName ?? ''
+                );
+            }
+        });
+    }
+
+    public static function buildUsername(string $firstName, string $lastName): string
+    {
+        $initial = mb_substr(trim($firstName), 0, 1, 'UTF-8');
+        $surname = trim($lastName);
+
+        return mb_strtoupper($initial . $surname, 'UTF-8');
+    }
 
     public function setPasswordAttribute($value)
     {

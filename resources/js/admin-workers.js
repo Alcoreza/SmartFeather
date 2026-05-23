@@ -1,5 +1,6 @@
 const BASE_URL = '/api/admin/workers';
 let deleteId = null;
+const employeesCache = new Map();
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -64,7 +65,11 @@ async function loadEmployees() {
 
         const data = await res.json();
 
+        employeesCache.clear();
+
         data.forEach(user => {
+            employeesCache.set(String(user.EmployeeId), user);
+
             const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
             table.innerHTML += `
@@ -133,6 +138,7 @@ async function openEditModal(id) {
         document.getElementById('MiddleName').value = user.MiddleName ?? '';
         document.getElementById('LastName').value = user.LastName;
         document.getElementById('Suffix').value = user.Suffix ?? '';
+        document.getElementById('Username').value = user.Username ?? '';
         document.getElementById('Role').value = user.Role;
         document.getElementById('PhoneNumber').value = user.PhoneNumber ?? '';
         document.getElementById('Birthday').value = user.Birthday ?? '';
@@ -154,6 +160,7 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         MiddleName: document.getElementById('MiddleName').value || null,
         LastName: document.getElementById('LastName').value,
         Suffix: document.getElementById('Suffix').value || null,
+        Username: document.getElementById('Username').value,
         Role: document.getElementById('Role').value,
         PhoneNumber: document.getElementById('PhoneNumber').value || null,
         Birthday: document.getElementById('Birthday').value || null,
@@ -180,7 +187,7 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
 
         closeModal('workerModal');
-        loadEmployees();
+        await loadEmployees();
     } catch (err) { console.error(err); alert('Network error'); }
 });
 
@@ -203,26 +210,38 @@ document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', asy
         if (!res.ok) { alert('Error deleting employee'); return; }
 
         closeModal('deleteWorkerModal');
-        loadEmployees();
+        await loadEmployees();
     } catch (err) { console.error(err); alert('Network error'); }
 });
 
 // ================= VIEW EMPLOYEE =================
 async function openViewModal(id) {
+    const cachedUser = employeesCache.get(String(id));
+
+    if (cachedUser) {
+        populateViewModal(cachedUser);
+        openModal('viewModal');
+        return;
+    }
+
     try {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
-        const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
-
-        document.getElementById('view_name').innerText = fullName;
-        document.getElementById('view_role').innerText = user.Role;
-        document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
-        document.getElementById('view_birthday').innerText = user.Birthday ?? '';
-        document.getElementById('view_gender').innerText = user.Gender ?? '';
-        document.getElementById('view_address').innerText = user.Address ?? '';
-
+        populateViewModal(user);
         openModal('viewModal');
     } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+}
+
+function populateViewModal(user) {
+    const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+    document.getElementById('view_name').innerText = fullName;
+    document.getElementById('view_username').innerText = user.Username ?? '';
+    document.getElementById('view_role').innerText = user.Role;
+    document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
+    document.getElementById('view_birthday').innerText = user.Birthday ?? '';
+    document.getElementById('view_gender').innerText = user.Gender ?? '';
+    document.getElementById('view_address').innerText = user.Address ?? '';
 }
 
 // ================= EVENT DELEGATION =================

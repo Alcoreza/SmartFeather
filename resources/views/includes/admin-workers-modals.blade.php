@@ -29,6 +29,11 @@
             </div>
 
             <div class="admin-worker-field">
+                <label>Username</label>
+                <input type="text" id="Username" required>
+            </div>
+
+            <div class="admin-worker-field">
                 <label>Role</label>
                 <select id="Role" required>
                     <option value="Manager">Manager</option>
@@ -86,6 +91,10 @@
             <div class="admin-worker-field">
                 <label>Name:</label>
                 <p id="view_name"></p>
+            </div>
+            <div class="admin-worker-field">
+                <label>Username:</label>
+                <p id="view_username"></p>
             </div>
             <div class="admin-worker-field">
                 <label>Role:</label>

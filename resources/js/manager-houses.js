@@ -124,8 +124,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate pen select
         if (endPenSelect) {
             endPenSelect.innerHTML = '<option value="">Select a pen...</option>';
-            currentHouse.pens.forEach(pen => {
-                const option = document.createElement('option');
+            sortPensById(currentHouse.pens).forEach((pen) => {
+                const option = document.createElement("option");
                 option.value = pen.id;
                 option.textContent = pen.pen_name;
                 endPenSelect.appendChild(option);
@@ -192,10 +192,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             .join("");
     }
 
+    function sortPensById(pens) {
+        return [...(pens || [])].sort((a, b) => {
+            const left = Number(a?.id ?? 0);
+            const right = Number(b?.id ?? 0);
+
+            return left - right;
+        });
+    }
+
     function populatePenOptions(house) {
         if (!housePen) return;
 
-        housePen.innerHTML = house.pens
+        housePen.innerHTML = sortPensById(house.pens)
             .map(
                 (pen, index) => `
             <option value="${index}">${pen.pen_name}</option>
@@ -210,72 +219,74 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!response.ok) throw new Error("Failed to fetch houses");
             const result = await response.json();
 
-            houses = (result.data || []).map((house) => ({
-                id: house.id,
-                name: house.house_number,
-                status: house.status || "Running",
-                batch: "",
-                start_date: house.start_date,
-                pens: (house.pens || []).map((pen) => {
-                    const flockBatch = pen.running_batch || pen.current_batch || null;
+            houses = (result.data || [])
+                .map((house) => ({
+                    id: house.id,
+                    name: house.house_number,
+                    status: house.status || "Running",
+                    batch: "",
+                    start_date: house.start_date,
+                    pens: sortPensById((house.pens || []).map((pen) => {
+                        const flockBatch = pen.running_batch || pen.current_batch || null;
 
-                    return {
-                    id: pen.id,
-                    name: pen.pen_name,
-                    pen_name: pen.pen_name,
-                    batch: flockBatch?.batch_code || null,
-                    status: flockBatch?.status || "Inactive",
-                    temperature: "0 deg",
-                    ammonia: "0 ppm",
-                    capacity: pen.capacity || 0,
-                    population: pen.population || 0,
-                    eggs_hatched: pen.eggs_hatched || 0,
-                    mortality: pen.mortality || 0,
-                    batch_started_at:
-                        flockBatch?.started_at || pen.batch_started_at || null,
-                    cards: [
-                        {
-                            icon: "🏠",
-                            title: `Capacity: ${pen.capacity || 0}`,
-                            subtitle: `Population: ${pen.population || 0}`,
-                            accent: "red",
-                        },
-                        {
-                            icon: "📅",
-                            title: "Start Date",
-                            subtitle:
-                                flockBatch?.started_at ||
-                                pen.batch_started_at ||
-                                "Not set",
-                            accent: "blue",
-                        },
-                        {
-                            icon: "💚",
-                            title: "Current Condition",
-                            subtitle: "Normal",
-                            accent: "green",
-                        },
-                        {
-                            icon: "📊",
-                            title: `Eggs Hatched: ${pen.eggs_hatched || 0}`,
-                            subtitle: `Mortality: ${pen.mortality || 0}`,
-                            accent: "orange",
-                        },
-                    ],
-                    feeders: [
-                        { label: "Feeder 1", value: 0 },
-                        { label: "Feeder 2", value: 0 },
-                        { label: "Feeder 3", value: 0 },
-                    ],
-                    drinkers: [
-                        { label: "Drinker 1", value: 0 },
-                        { label: "Drinker 2", value: 0 },
-                        { label: "Drinker 3", value: 0 },
-                    ],
-                    };
-                }),
-                records: [],
-            }));
+                        return {
+                            id: pen.id,
+                            name: pen.pen_name,
+                            pen_name: pen.pen_name,
+                            batch: flockBatch?.batch_code || null,
+                            status: flockBatch?.status || "Inactive",
+                            temperature: "0 deg",
+                            ammonia: "0 ppm",
+                            capacity: pen.capacity || 0,
+                            population: pen.population || 0,
+                            eggs_hatched: pen.eggs_hatched || 0,
+                            mortality: pen.mortality || 0,
+                            batch_started_at:
+                                flockBatch?.started_at || pen.batch_started_at || null,
+                            cards: [
+                                {
+                                    icon: "🏠",
+                                    title: `Capacity: ${pen.capacity || 0}`,
+                                    subtitle: `Population: ${pen.population || 0}`,
+                                    accent: "red",
+                                },
+                                {
+                                    icon: "📅",
+                                    title: "Start Date",
+                                    subtitle:
+                                        flockBatch?.started_at ||
+                                        pen.batch_started_at ||
+                                        "Not set",
+                                    accent: "blue",
+                                },
+                                {
+                                    icon: "💚",
+                                    title: "Current Condition",
+                                    subtitle: "Normal",
+                                    accent: "green",
+                                },
+                                {
+                                    icon: "📊",
+                                    title: `Eggs Hatched: ${pen.eggs_hatched || 0}`,
+                                    subtitle: `Mortality: ${pen.mortality || 0}`,
+                                    accent: "orange",
+                                },
+                            ],
+                            feeders: [
+                                { label: "Feeder 1", value: 0 },
+                                { label: "Feeder 2", value: 0 },
+                                { label: "Feeder 3", value: 0 },
+                            ],
+                            drinkers: [
+                                { label: "Drinker 1", value: 0 },
+                                { label: "Drinker 2", value: 0 },
+                                { label: "Drinker 3", value: 0 },
+                            ],
+                        };
+                    })),
+                    records: [],
+                }))
+                .sort((a, b) => Number(a.id) - Number(b.id));
 
             if (houses.length > 0) {
                 activeHouseIndex = 0;

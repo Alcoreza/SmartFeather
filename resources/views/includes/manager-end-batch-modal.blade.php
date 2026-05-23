@@ -10,7 +10,7 @@
                 <label for="endAction">Choose Action:</label>
                 <select id="endAction" required>
                     <option value="">Select an action...</option>
-                    <option value="house">End Whole House (Delete house and all pens)</option>
+                    <option value="house">End Whole House (End all pens in the house)</option>
                     <option value="pen">End Specific Pen</option>
                 </select>
             </div>

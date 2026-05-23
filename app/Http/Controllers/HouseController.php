@@ -167,7 +167,7 @@ class HouseController extends Controller
     }
 
     /**
-     * Delete a house and all associated pens and records
+     * End all pens in a house by resetting their values instead of deleting the house
      */
     public function destroy($id)
     {
@@ -184,39 +184,61 @@ class HouseController extends Controller
                 ], 404);
             }
 
-            \Log::info('Found house: ' . $house->house_number . ' with ' . $house->pens()->count() . ' pens');
+            $pens = $house->pens()->get();
+            \Log::info('Found house: ' . $house->house_number . ' with ' . $pens->count() . ' pens');
 
-            // Use transaction to ensure atomicity
             DB::beginTransaction();
 
             try {
-                // Delete all pens associated with this house
-                // This will cascade delete population records if foreign key is set up correctly
-                $pensDeleted = $house->pens()->delete();
-                \Log::info('Deleted ' . $pensDeleted . ' pens for house ' . $house->house_number);
-
-                // Delete the house itself
-                $house->delete();
-                \Log::info('Deleted house: ' . $house->house_number);
+                foreach ($pens as $pen) {
+                    $this->resetPenState($pen);
+                }
 
                 DB::commit();
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'House and all associated pens deleted successfully'
+                    'message' => 'All pens in house ended successfully'
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
-                \Log::error('Error during house deletion transaction: ' . $e->getMessage());
+                \Log::error('Error during house end transaction: ' . $e->getMessage());
                 throw $e;
             }
         } catch (\Exception $e) {
-            \Log::error('Error deleting house: ' . $e->getMessage());
+            \Log::error('Error ending house: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error deleting house: ' . $e->getMessage()
+                'message' => 'Error ending house: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Reset a pen's current batch and production values.
+     */
+    private function resetPenState(Pen $pen): void
+    {
+        \Log::info('Ending pen ' . $pen->id);
+        \Log::info('Before: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
+
+        DB::table('flock_batches')
+            ->where('pen_id', $pen->id)
+            ->where('status', 'Running')
+            ->update([
+                'status' => 'Ended',
+                'ended_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        $pen->population = 0;
+        $pen->eggs_hatched = 0;
+        $pen->mortality = 0;
+        $pen->batch_started_at = null;
+        $pen->current_batch_id = null;
+        $pen->save();
+
+        \Log::info('After: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
     }
 
     /**
@@ -234,35 +256,12 @@ class HouseController extends Controller
                 ], 404);
             }
 
-            // Use transaction to ensure atomicity
             DB::beginTransaction();
-            
-            try {
-                // Reset the pen values instead of deleting
-                \Log::info('Ending pen ' . $penId);
-                \Log::info('Before: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
 
-                DB::table('flock_batches')
-                    ->where('pen_id', $pen->id)
-                    ->where('status', 'Running')
-                    ->update([
-                        'status' => 'Ended',
-                        'ended_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                
-                $pen->population = 0;
-                $pen->eggs_hatched = 0;
-                $pen->mortality = 0;
-                $pen->batch_started_at = null;
-                $pen->current_batch_id = null;
-                $pen->save();
-                
-                \Log::info('After: population=' . $pen->population . ', eggs_hatched=' . $pen->eggs_hatched . ', mortality=' . $pen->mortality . ', batch_started_at=' . $pen->batch_started_at . ', current_batch_id=' . $pen->current_batch_id);
-                
+            try {
+                $this->resetPenState($pen);
                 DB::commit();
 
-                // Verify the pen was updated correctly
                 $updatedPen = Pen::find($penId);
                 \Log::info('Verified after save: batch_started_at=' . ($updatedPen->batch_started_at ?? 'NULL') . ', current_batch_id=' . ($updatedPen->current_batch_id ?? 'NULL'));
 

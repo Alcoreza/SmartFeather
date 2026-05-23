@@ -668,14 +668,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             let url, method = 'DELETE';
             if (endOption === 'house') {
                 url = `/api/houses/${currentHouse.id}`;
-                console.log('Deleting house with URL:', url);
+                console.log('Ending all pens in house with URL:', url);
             } else if (endOption === 'pen') {
                 if (!penId) {
-                    alert("Please select a pen to delete.");
+                    alert("Please select a pen to end.");
                     return;
                 }
                 url = `/api/houses/pen/${penId}`;
-                console.log('Deleting pen with URL:', url);
+                console.log('Ending pen with URL:', url);
             } else {
                 alert("Please select an action.");
                 return;

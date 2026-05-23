@@ -6,6 +6,32 @@ const employeesCache = new Map();
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+function generateUsername(firstName, lastName) {
+    const initial = (firstName || '').trim().charAt(0);
+    const surname = (lastName || '').trim();
+
+    return `${initial}${surname}`.toUpperCase();
+}
+
+function syncUsernamePreview() {
+    const isEditMode = !!document.getElementById('EmployeeId').value;
+    const usernameInput = document.getElementById('Username');
+    const usernameHint = document.getElementById('usernameHint');
+
+    if (isEditMode) {
+        usernameInput.readOnly = false;
+        usernameHint.style.display = 'none';
+        return;
+    }
+
+    usernameInput.readOnly = true;
+    usernameHint.style.display = 'block';
+
+    const firstName = document.getElementById('FirstName').value || '';
+    const lastName = document.getElementById('LastName').value || '';
+    usernameInput.value = generateUsername(firstName, lastName);
+}
+
 // ================= PROFILE MODAL =================
 async function populateAdminProfileModal() {
     try {
@@ -124,30 +150,46 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     document.getElementById('workerModalTitle').innerText = 'Add Employee';
     document.getElementById('workerForm').reset();
     document.getElementById('EmployeeId').value = '';
+    syncUsernamePreview();
     openModal('workerModal');
 });
 
+document.getElementById('FirstName')?.addEventListener('input', syncUsernamePreview);
+document.getElementById('LastName')?.addEventListener('input', syncUsernamePreview);
+
 async function openEditModal(id) {
+    const cachedUser = employeesCache.get(String(id));
+
+    if (cachedUser) {
+        populateEditModal(cachedUser);
+        openModal('workerModal');
+        return;
+    }
+
     try {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
-
-        document.getElementById('workerModalTitle').innerText = 'Edit Employee';
-        document.getElementById('EmployeeId').value = user.EmployeeId;
-        document.getElementById('FirstName').value = user.FirstName;
-        document.getElementById('MiddleName').value = user.MiddleName ?? '';
-        document.getElementById('LastName').value = user.LastName;
-        document.getElementById('Suffix').value = user.Suffix ?? '';
-        document.getElementById('Username').value = user.Username ?? '';
-        document.getElementById('Role').value = user.Role;
-        document.getElementById('PhoneNumber').value = user.PhoneNumber ?? '';
-        document.getElementById('Birthday').value = user.Birthday ?? '';
-        document.getElementById('Gender').value = user.Gender ?? '';
-        document.getElementById('Address').value = user.Address ?? '';
-        document.getElementById('Password').value = '';
-
+        populateEditModal(user);
         openModal('workerModal');
     } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+}
+
+function populateEditModal(user) {
+    document.getElementById('workerModalTitle').innerText = 'Edit Employee';
+    document.getElementById('EmployeeId').value = user.EmployeeId;
+    document.getElementById('FirstName').value = user.FirstName;
+    document.getElementById('MiddleName').value = user.MiddleName ?? '';
+    document.getElementById('LastName').value = user.LastName;
+    document.getElementById('Suffix').value = user.Suffix ?? '';
+    document.getElementById('Username').value = user.Username ?? '';
+    document.getElementById('Username').readOnly = false;
+    document.getElementById('usernameHint').style.display = 'none';
+    document.getElementById('Role').value = user.Role;
+    document.getElementById('PhoneNumber').value = user.PhoneNumber ?? '';
+    document.getElementById('Birthday').value = user.Birthday ?? '';
+    document.getElementById('Gender').value = user.Gender ?? '';
+    document.getElementById('Address').value = user.Address ?? '';
+    document.getElementById('Password').value = '';
 }
 
 // ================= SAVE EMPLOYEE (ADD/EDIT) =================

@@ -30,7 +30,8 @@
 
             <div class="admin-worker-field">
                 <label>Username</label>
-                <input type="text" id="Username" required>
+                <input type="text" id="Username">
+                <small id="usernameHint" style="display:none; color:#4b5563; font-size:0.85rem; margin-top:6px;">Auto-generated from first and last name.</small>
             </div>
 
             <div class="admin-worker-field">

@@ -9,7 +9,7 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = Employee::all()->map(function ($u) {
+        $employees = Employee::orderBy('EmployeeId', 'asc')->get()->map(function ($u) {
             return [
                 'EmployeeId' => $u->EmployeeId,
                 'FirstName' => $u->FirstName,

@@ -91,9 +91,11 @@ async function loadEmployees() {
 
         const data = await res.json();
 
+        const sortedUsers = [...data].sort((a, b) => Number(a.EmployeeId) - Number(b.EmployeeId));
+
         employeesCache.clear();
 
-        data.forEach(user => {
+        sortedUsers.forEach(user => {
             employeesCache.set(String(user.EmployeeId), user);
 
             const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
@@ -107,7 +109,7 @@ async function loadEmployees() {
                         <div class="admin-worker-action-group">
                             
                             <!-- VIEW -->
-                            <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button">
+                            <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${user.EmployeeId}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -115,7 +117,7 @@ async function loadEmployees() {
                             </button>
 
                             <!-- EDIT -->
-                            <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button">
+                            <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${user.EmployeeId}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 20h9"></path>
                                     <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
@@ -123,7 +125,7 @@ async function loadEmployees() {
                             </button>
 
                             <!-- DELETE -->
-                            <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button">
+                            <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${user.EmployeeId}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M3 6h18"></path>
                                     <path d="M8 6V4h8v2"></path>
@@ -269,6 +271,7 @@ async function openViewModal(id) {
     try {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
+        employeesCache.set(String(user.EmployeeId), user);
         populateViewModal(user);
         openModal('viewModal');
     } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
@@ -288,13 +291,22 @@ function populateViewModal(user) {
 
 // ================= EVENT DELEGATION =================
 document.addEventListener('click', e => {
-    const tr = e.target.closest('tr');
-    if (!tr) return;
-    const id = tr.getAttribute('data-id');
+    const viewBtn = e.target.closest('.view-btn');
+    if (viewBtn) {
+        openViewModal(viewBtn.dataset.id);
+        return;
+    }
 
-    if (e.target.classList.contains('edit-btn')) openEditModal(id);
-    if (e.target.classList.contains('view-btn')) openViewModal(id);
-    if (e.target.classList.contains('delete-btn')) openDeleteModal(id);
+    const editBtn = e.target.closest('.edit-btn');
+    if (editBtn) {
+        openEditModal(editBtn.dataset.id);
+        return;
+    }
+
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (deleteBtn) {
+        openDeleteModal(deleteBtn.dataset.id);
+    }
 });
 
 // ================= CLOSE MODALS =================

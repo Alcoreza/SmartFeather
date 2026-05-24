@@ -32,9 +32,63 @@ class InventoryController extends Controller
             'purchase_date' => 'required|date',
         ]);
 
-        $unit = $validated['type'] === 'vitamin'
-            ? 'bottle'
-            : ($validated['unit'] ?? 'kg');
+        $allowedFeedNames = ['Starter Feed', 'Grower Feed', 'Finisher Feed'];
+
+        if ($validated['type'] === 'feed' && !in_array($validated['item_name'], $allowedFeedNames, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid feed type.',
+            ], 422);
+        }
+
+        $unit = $validated['type'] === 'vitamin' ? 'bottle' : 'kg';
+
+        $existingItem = DB::table('inventories')
+            ->where('type', $validated['type'])
+            ->where('item_name', $validated['item_name'])
+            ->first();
+
+        if ($existingItem) {
+            $currentRemainingStock = (float) $validated['remaining_stock'];
+            $addedStock = (float) $validated['initial_stock'];
+
+            $newInitialStock = $addedStock;
+            $newRemainingStock = $currentRemainingStock + $addedStock;
+
+            $latestPurchaseDate = $validated['purchase_date'];
+
+            DB::table('inventories')->where('id', $existingItem->id)->update([
+                'unit' => $unit,
+                'initial_stock' => $newInitialStock,
+                'remaining_stock' => $newRemainingStock,
+                'critical' => $validated['critical'],
+                'purchase_date' => $latestPurchaseDate,
+                'updated_at' => now(),
+            ]);
+
+            DB::table('inventory_records')->insert([
+                'inventory_id' => $existingItem->id,
+                'initial_stock' => $newInitialStock,
+                'remaining_stock' => $newRemainingStock,
+                'monitoring_date' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'updated' => true,
+                'id' => $existingItem->id,
+                'item' => [
+                    'id' => $existingItem->id,
+                    'item_name' => $validated['item_name'],
+                    'type' => $validated['type'],
+                    'unit' => $unit,
+                    'initial_stock' => $newInitialStock,
+                    'remaining_stock' => $newRemainingStock,
+                    'critical' => $validated['critical'],
+                    'purchase_date' => $latestPurchaseDate,
+                ],
+            ]);
+        }
 
         $id = DB::table('inventories')->insertGetId([
             'item_name' => $validated['item_name'],
@@ -57,7 +111,18 @@ class InventoryController extends Controller
 
         return response()->json([
             'success' => true,
+            'updated' => false,
             'id' => $id,
+            'item' => [
+                'id' => $id,
+                'item_name' => $validated['item_name'],
+                'type' => $validated['type'],
+                'unit' => $unit,
+                'initial_stock' => $validated['initial_stock'],
+                'remaining_stock' => $validated['remaining_stock'],
+                'critical' => $validated['critical'],
+                'purchase_date' => $validated['purchase_date'],
+            ],
         ]);
     }
 
@@ -126,7 +191,7 @@ class InventoryController extends Controller
                     ) r2 ON r1.inventory_id = r2.inventory_id AND DATE(r1.monitoring_date) = r2.date AND r1.monitoring_date = r2.max_date
                 ) as r'), function($join) {
                     $join->on('r.inventory_id', '=', 'f.inventory_id')
-                         ->whereRaw('DATE(r.monitoring_date) = DATE(f.recorded_at)');
+                        ->whereRaw('DATE(r.monitoring_date) = DATE(f.recorded_at)');
                 })
                 ->select(
                     'f.id',
@@ -159,7 +224,7 @@ class InventoryController extends Controller
                     ) r2 ON r1.inventory_id = r2.inventory_id AND DATE(r1.monitoring_date) = r2.date AND r1.monitoring_date = r2.max_date
                 ) as r'), function($join) {
                     $join->on('r.inventory_id', '=', 'v.inventory_id')
-                         ->whereRaw('DATE(r.monitoring_date) = DATE(v.recorded_at)');
+                        ->whereRaw('DATE(r.monitoring_date) = DATE(v.recorded_at)');
                 })
                 ->select(
                     'v.id',

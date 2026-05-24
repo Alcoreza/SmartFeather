@@ -73,17 +73,6 @@ async function loadTaskFormOptions() {
             "Select task category",
         );
 
-        if (taskCategorySelect) {
-            const addNewOption = document.createElement("option");
-            addNewOption.value = "__new";
-            addNewOption.textContent = "Add new task type";
-            taskCategorySelect.appendChild(addNewOption);
-
-            taskCategorySelect.onchange = () => {
-                toggleNewTaskCategoryField(taskCategorySelect.value === "__new");
-            };
-        }
-
         fillSimpleSelect(
             document.getElementById("taskPriority"),
             data.priority_levels || [],
@@ -310,7 +299,6 @@ function setupAddTaskModal() {
     if (openButton) {
         openButton.addEventListener("click", async () => {
             await loadTaskFormOptions();
-            resetNewTaskCategoryField();
             openTaskModal("addTaskModal");
         });
     }
@@ -339,22 +327,9 @@ function setupAddTaskModal() {
             // Use textarea element value directly if FormData didn't capture it
             const detailedTaskValue = payload.detailed_task || textareaElement?.value || "";
 
-            let taskType = payload.task_category;
-            const customTaskType = document
-                .getElementById("taskCategoryCustom")
-                ?.value.trim();
-
-            if (taskType === "__new") {
-                if (!customTaskType) {
-                    alert("Please enter a new task type.");
-                    return;
-                }
-                taskType = customTaskType;
-            }
-
             const body = {
                 user_employeeid: payload.worker_name,
-                tasktype: taskType,
+                tasktype: payload.task_category,
                 prioritylevel: payload.priority_level,
                 house_houseid: payload.house_number,
                 pennumber: payload.pen_number,
@@ -384,7 +359,6 @@ function setupAddTaskModal() {
                 await renderManagerTasks();
                 closeTaskModal("addTaskModal");
                 form.reset();
-                resetNewTaskCategoryField();
                 setupTaskSelectPlaceholderState();
             } catch (error) {
                 console.error("Failed to save new task:", error);
@@ -540,27 +514,6 @@ async function loadPensForHouse(houseId) {
         fillSelect(penSelect, [], "number", "label", "Select pen");
         setupTaskSelectPlaceholderState();
     }
-}
-
-function toggleNewTaskCategoryField(show) {
-    const field = document.getElementById("newTaskCategoryField");
-    if (!field) return;
-
-    field.style.display = show ? "block" : "none";
-    if (!show) {
-        const input = document.getElementById("taskCategoryCustom");
-        if (input) {
-            input.value = "";
-        }
-    }
-}
-
-function resetNewTaskCategoryField() {
-    const select = document.getElementById("taskCategory");
-    if (select) {
-        select.value = "";
-    }
-    toggleNewTaskCategoryField(false);
 }
 
 async function updateTaskStatus(taskId, newStatus) {

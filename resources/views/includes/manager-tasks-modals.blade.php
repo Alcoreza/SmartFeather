@@ -49,12 +49,6 @@
                     <select id="taskCategory" name="task_category" class="task-select-placeholder"></select>
                 </div>
 
-                <div class="manager-task-form-field" id="newTaskCategoryField" style="display: none;">
-                    <label for="taskCategoryCustom">New task type</label>
-                    <input type="text" id="taskCategoryCustom" name="task_category_custom"
-                        placeholder="Enter new assign task" />
-                </div>
-
                 <div class="manager-task-form-field">
                     <label for="taskPriority">Priority Level</label>
                     <select id="taskPriority" name="priority_level" class="task-select-placeholder"></select>

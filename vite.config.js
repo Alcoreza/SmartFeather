@@ -21,6 +21,7 @@ export default defineConfig({
                 "resources/css/manager-dashboard.css",
                 "resources/css/manager-houses.css",
                 "resources/css/manager-inventory.css",
+                "resources/css/manager-management.css",
                 "resources/css/manager-record-house.css",
                 "resources/css/manager-record-inventory.css",
                 "resources/css/manager-reports.css",

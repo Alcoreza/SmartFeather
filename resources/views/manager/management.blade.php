@@ -3,22 +3,45 @@
 @section('title', 'Manager Management')
 
 @push('styles')
-    @vite(['resources/css/manager-shared.css'])
+    @vite([
+        'resources/css/manager-shared.css',
+        'resources/css/manager-management.css'
+    ])
 @endpush
 
 @section('content')
     <div class="manager-shell">
         @include('includes.manager-sidebar')
+        @include('includes.manager-profile-modal')
 
-        <main class="manager-main">
-            <div class="manager-tasks-topbar">
-                <h1 class="manager-tasks-title">Management</h1>
+        <main class="manager-main management-main">
+            <div class="management-topbar">
+                <h1 class="management-title">Management</h1>
+
+                <div class="management-topbar-actions">
+                    <button class="manager-profile" type="button" id="openProfileModal" aria-label="Open profile">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <circle cx="12" cy="8" r="4"></circle>
+                            <path d="M4 20c1.8-3.8 5-5.5 8-5.5S18.2 16.2 20 20"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
-            <div class="manager-tasks-divider"></div>
+            <div class="management-divider"></div>
 
-            <section class="manager-task-card">
-                <p>Management section content is ready. You can add your cards, forms, or tables here.</p>
+            <section class="management-section">
+                <div class="management-section-head">
+                    <h2>Management</h2>
+                </div>
+
+                <div class="management-list">
+                    <div class="management-card">
+                        <p>
+                            Management section content is ready. You can add your cards, forms, or tables here.
+                        </p>
+                    </div>
+                </div>
             </section>
         </main>
     </div>

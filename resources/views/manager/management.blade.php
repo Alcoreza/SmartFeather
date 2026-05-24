@@ -35,16 +35,16 @@
             <div class="management-divider"></div>
 
             <section class="management-section">
-                <div class="management-section-head">
-                    <h2>Management</h2>
-                </div>
-
                 <div class="management-list">
-                    <div class="management-card">
-                        <p>
-                            Management section content is ready. You can add your cards, forms, or tables here.
-                        </p>
-                    </div>
+                    <button type="button" class="management-action-card">
+                        <span class="management-action-icon">✓</span>
+                        <span class="management-action-label">Create Task</span>
+                    </button>
+
+                    <button type="button" class="management-action-card">
+                        <span class="management-action-icon">▣</span>
+                        <span class="management-action-label">Add Inventory</span>
+                    </button>
                 </div>
             </section>
         </main>

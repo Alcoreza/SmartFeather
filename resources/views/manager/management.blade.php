@@ -9,6 +9,10 @@
     ])
 @endpush
 
+@push('scripts')
+    @vite('resources/js/manager-management.js')
+@endpush
+
 @section('content')
     <div class="manager-shell">
         @include('includes.manager-sidebar')

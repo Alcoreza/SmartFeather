@@ -45,6 +45,7 @@ export default defineConfig({
                 "resources/js/manager-dashboard.js",
                 "resources/js/manager-houses.js",
                 "resources/js/manager-inventory.js",
+                "resources/js/manager-management.js",
                 "resources/js/manager-record-house.js",
                 "resources/js/manager-record-inventory.js",
                 "resources/js/manager-reports.js",

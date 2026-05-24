@@ -169,12 +169,15 @@ class TaskController extends Controller
                 ];
             });
 
-        $houses = House::all()->map(function (House $house) {
-            return [
-                'id' => $house->id,
-                'number' => $house->house_number,
-            ];
-        });
+        $houses = House::query()
+            ->orderBy('house_number', 'asc')
+            ->get()
+            ->map(function (House $house) {
+                return [
+                    'id' => $house->id,
+                    'number' => $house->house_number,
+                ];
+            });
 
         $taskCategories = DB::table('task_type')
             ->orderBy('id', 'asc')
@@ -193,6 +196,7 @@ class TaskController extends Controller
     public function getPensForHouse($houseId)
     {
         $pens = Pen::where('house_id', $houseId)
+            ->orderBy('id', 'asc')
             ->get(['id', 'pen_name'])
             ->map(function (Pen $pen) {
                 return [

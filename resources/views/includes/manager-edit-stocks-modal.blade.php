@@ -28,7 +28,7 @@
 
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
-                    <label for="feedInitialStock">Initial Stock</label>
+                    <label for="feedInitialStock">Stock to Edit</label>
                     <input type="number" id="feedInitialStock" name="initial_stock" min="0" step="0.01" required>
                 </div>
 
@@ -88,7 +88,7 @@
 
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
-                    <label for="vitaminInitialStock">Initial Stock</label>
+                    <label for="vitaminInitialStock">Stock to Edit</label>
                     <input type="number" id="vitaminInitialStock" name="initial_stock" min="0" step="1" required>
                 </div>
 

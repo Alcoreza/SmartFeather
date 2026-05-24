@@ -24,8 +24,7 @@
             </div>
 
             <div class="inventory-form-row">
-                <div class="inventory-form-group">
-                    <label for="addFeedInitialStock">Initial Stock</label>
+                <div class="inventory-form-group">Stock to Add</label>
                     <input type="number" id="addFeedInitialStock" name="initial_stock" min="0" step="0.01" required>
                 </div>
 
@@ -93,7 +92,7 @@
             <!-- Initial Stock + Remaining -->
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
-                    <label for="addVitaminInitialStock">Initial Stock</label>
+                    <label for="addVitaminInitialStock">Stock to Add</label>
                     <input
                         type="number"
                         id="addVitaminInitialStock"

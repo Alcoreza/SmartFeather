@@ -72,12 +72,12 @@
 
 
                 <div class="manager-task-form-field">
-                    <label for="taskTimeAssigned">Time</label>
+                    <label for="taskTimeAssigned">Time to finish</label>
                     <input type="time" id="taskTimeAssigned" name="time_assigned">
                 </div>
 
                 <div class="manager-task-form-field">
-                    <label for="taskDateAssigned">Date</label>
+                    <label for="taskDateAssigned">Date to finish</label>
                     <input type="date" id="taskDateAssigned" name="date_assigned">
                 </div>
             </div>

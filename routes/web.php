@@ -53,6 +53,7 @@ Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
     ->name('manager.inventory.records.vitamins');
 
 Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
+Route::view('/manager/management', 'manager.management')->name('manager.management');
 
 /*
 |--------------------------------------------------------------------------

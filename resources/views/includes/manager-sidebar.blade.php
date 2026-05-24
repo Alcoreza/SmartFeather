@@ -54,6 +54,12 @@
                 <span class="sidebar-icon">▥</span>
                 <span>Reports</span>
             </a>
+
+            <a href="{{ route('manager.management') }}"
+                class="sidebar-link {{ request()->routeIs('manager.management') ? 'active' : '' }}">
+                <span class="sidebar-icon">⚙</span>
+                <span>Management</span>
+            </a>
         </nav>
     </div>
 </aside>

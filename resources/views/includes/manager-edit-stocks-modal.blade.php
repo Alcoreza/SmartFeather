@@ -6,19 +6,23 @@
         </div>
 
         <form class="inventory-modal-form" id="feedEditForm">
-            <div class="inventory-form-row inventory-form-row-single">
-                <div class="inventory-form-group">
-                    <label for="feedEditSelect">Select Feed</label>
-                    <select id="feedEditSelect" name="selected_item" required>
-                        <option value="">Choose feed item</option>
-                    </select>
-                </div>
+            <div class="inventory-form-row">
+            <div class="inventory-form-group">
+                <label for="feedEditSelect">Select Feed</label>
+                <select id="feedEditSelect" name="selected_item" required>
+                    <option value="">Choose feed item</option>
+                </select>
             </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
-                <div class="inventory-form-group">
-                    <label for="feedEditItemName">Feed Name</label>
-                    <input type="text" id="feedEditItemName" name="item_name" required readonly>
+            <div class="inventory-form-group">
+                <label for="feedUnit">Unit</label>
+                    <input
+                        type="text"
+                        id="feedUnit"
+                        name="unit"
+                        value="kg"
+                        readonly
+                    >
                 </div>
             </div>
 
@@ -34,17 +38,15 @@
                 </div>
             </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
+            <div class="inventory-form-row">
                 <div class="inventory-form-group">
-                    <label for="feedCriticalStock">Critical Level</label>
-                    <input type="number" id="feedCriticalStock" name="critical" min="0" step="0.01" required>
+                    <label for="addFeedCriticalStock">Critical Level</label>
+                    <input type="number" id="addFeedCriticalStock" name="critical" min="0" step="0.01" required>
                 </div>
-            </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
-                    <label for="feedPurchaseDate">Purchase Date</label>
-                    <input type="date" id="feedPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
+                    <label for="addFeedPurchaseDate">Purchase Date</label>
+                    <input type="date" id="addFeedPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
                 </div>
             </div>
 
@@ -64,26 +66,23 @@
         </div>
 
         <form class="inventory-modal-form" id="vitaminEditForm">
-            <div class="inventory-form-row inventory-form-row-single">
+            <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="vitaminEditSelect">Select Vitamin</label>
                     <select id="vitaminEditSelect" name="selected_item" required>
                         <option value="">Choose vitamin item</option>
                     </select>
                 </div>
-            </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
-                <div class="inventory-form-group">
-                    <label for="vitaminType">Type of Vitamin</label>
-                    <input type="text" id="vitaminType" name="item_name" required readonly>
-                </div>
-            </div>
-
-            <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="vitaminUnit">Unit</label>
-                    <input type="text" id="vitaminUnit" name="unit" value="bottles" readonly>
+                    <input
+                        type="text"
+                        id="vitaminUnit"
+                        name="unit"
+                        value="bottle"
+                        readonly
+                    >
                 </div>
             </div>
 
@@ -99,17 +98,15 @@
                 </div>
             </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
+            <div class="inventory-form-row">
                 <div class="inventory-form-group">
-                    <label for="vitaminCriticalStock">Critical Level</label>
-                    <input type="number" id="vitaminCriticalStock" name="critical" min="0" step="1" required>
+                    <label for="addFeedCriticalStock">Critical Level</label>
+                    <input type="number" id="addFeedCriticalStock" name="critical" min="0" step="0.01" required>
                 </div>
-            </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
-                    <label for="vitaminPurchaseDate">Purchase Date</label>
-                    <input type="date" id="vitaminPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
+                    <label for="addFeedPurchaseDate">Purchase Date</label>
+                    <input type="date" id="addFeedPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
                 </div>
             </div>
 

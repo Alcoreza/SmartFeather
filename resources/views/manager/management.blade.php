@@ -36,7 +36,7 @@
 
             <section class="management-section">
                 <div class="management-list">
-                    <button type="button" class="management-action-card">
+                    <button type="button" class="management-action-card" id="openCreateTaskTypeModal">
                         <span class="management-action-icon">✓</span>
                         <span class="management-action-label">Create Task</span>
                     </button>
@@ -47,6 +47,8 @@
                     </button>
                 </div>
             </section>
+
+            @include('includes.manager-create-task-modal')
         </main>
     </div>
 @endsection

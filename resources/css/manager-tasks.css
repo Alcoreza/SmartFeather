@@ -97,6 +97,68 @@ body {
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.manager-task-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.manager-task-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.manager-task-filter-label {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #10351d;
+}
+
+.manager-task-filter-wrap {
+    position: relative;
+}
+
+.manager-task-filter-select {
+    min-width: 180px;
+    width: auto;
+    height: 48px;
+    padding: 0 18px;
+    border: 2px solid var(--manager-green-700);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--manager-green-900);
+    font: inherit;
+    font-size: 1rem;
+    outline: none;
+    box-shadow: var(--manager-shadow-soft);
+    appearance: none;
+    cursor: pointer;
+}
+
+.manager-task-filter-wrap::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--manager-green-900);
+    border-bottom: 2px solid var(--manager-green-900);
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+}
+
+.manager-task-filter-select option {
+    color: var(--manager-green-900);
+    background: #fff;
 }
 
 .manager-task-chip {

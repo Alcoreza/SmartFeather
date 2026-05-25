@@ -40,6 +40,26 @@
                 <div class="manager-task-section-head">
                     <div class="manager-task-chip pending">Pending</div>
 
+                    <div class="manager-task-header-actions">
+                        <div class="manager-task-filter-row">
+                            <label class="manager-task-filter-label" for="taskHouseFilter-pending">House</label>
+                            <div class="manager-task-filter-wrap">
+                                <select id="taskHouseFilter-pending" class="manager-task-filter-select" data-task-section="pending" data-filter-type="house">
+                                    <option value="All">All houses</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="manager-task-filter-row">
+                            <label class="manager-task-filter-label" for="taskPriorityFilter-pending">Priority</label>
+                            <div class="manager-task-filter-wrap">
+                                <select id="taskPriorityFilter-pending" class="manager-task-filter-select" data-task-section="pending" data-filter-type="priority">
+                                    <option value="All">All priorities</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="button" class="manager-task-add-btn" id="openAddTaskModal" aria-label="Add task">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                             <path d="M12 5v14"></path>
@@ -74,6 +94,26 @@
             <section class="manager-task-section">
                 <div class="manager-task-section-head">
                     <div class="manager-task-chip approval">For Approval</div>
+
+                    <div class="manager-task-header-actions">
+                        <div class="manager-task-filter-row">
+                            <label class="manager-task-filter-label" for="taskHouseFilter-for_approval">House</label>
+                            <div class="manager-task-filter-wrap">
+                                <select id="taskHouseFilter-for_approval" class="manager-task-filter-select" data-task-section="for_approval" data-filter-type="house">
+                                    <option value="All">All houses</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="manager-task-filter-row">
+                            <label class="manager-task-filter-label" for="taskPriorityFilter-for_approval">Priority</label>
+                            <div class="manager-task-filter-wrap">
+                                <select id="taskPriorityFilter-for_approval" class="manager-task-filter-select" data-task-section="for_approval" data-filter-type="priority">
+                                    <option value="All">All priorities</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -104,6 +144,26 @@
             <section class="manager-task-section">
                 <div class="manager-task-section-head">
                     <div class="manager-task-chip completed">Completed</div>
+
+                    <div class="manager-task-header-actions">
+                        <div class="manager-task-filter-row">
+                            <label class="manager-task-filter-label" for="taskHouseFilter-completed">House</label>
+                            <div class="manager-task-filter-wrap">
+                                <select id="taskHouseFilter-completed" class="manager-task-filter-select" data-task-section="completed" data-filter-type="house">
+                                    <option value="All">All houses</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="manager-task-filter-row">
+                            <label class="manager-task-filter-label" for="taskPriorityFilter-completed">Priority</label>
+                            <div class="manager-task-filter-wrap">
+                                <select id="taskPriorityFilter-completed" class="manager-task-filter-select" data-task-section="completed" data-filter-type="priority">
+                                    <option value="All">All priorities</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="manager-task-card">

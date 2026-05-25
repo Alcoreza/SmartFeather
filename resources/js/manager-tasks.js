@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([renderManagerTasks(), loadTaskFormOptions()]);
 
+    setupTaskFilters();
     setupTaskSelectPlaceholderState();
     setupManagerTaskModals();
     setupAddTaskModal();
@@ -9,16 +10,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 let taskPendingVerify = null;
+let taskDataCache = {
+    pending: [],
+    for_approval: [],
+    completed: [],
+};
+let taskFilters = {
+    pending: { house: "All", priority: "All" },
+    for_approval: { house: "All", priority: "All" },
+    completed: { house: "All", priority: "All" },
+};
 
 async function renderManagerTasks() {
     try {
         const response = await fetch("/api/manager/tasks");
         const data = await response.json();
 
-        renderPendingTasks(data.pending || []);
-        renderApprovalTasks(data.for_approval || []);
-        renderCompletedTasks(data.completed || []);
-        animateTaskRows();
+        taskDataCache = {
+            pending: data.pending || [],
+            for_approval: data.for_approval || [],
+            completed: data.completed || [],
+        };
+
+        renderPendingTasks(taskDataCache.pending);
+        renderApprovalTasks(taskDataCache.for_approval);
+        renderCompletedTasks(taskDataCache.completed);
+        refreshTaskFilterOptions();
     } catch (error) {
         console.error("Failed to load manager tasks.", error);
     }
@@ -94,11 +111,89 @@ function fillSimpleSelect(select, items, placeholder) {
     `;
 }
 
+function setupTaskFilters() {
+    document.querySelectorAll(".manager-task-filter-select").forEach((select) => {
+        select.addEventListener("change", () => {
+            const section = select.dataset.taskSection;
+            const filterType = select.dataset.filterType;
+
+            if (!section || !filterType) {
+                return;
+            }
+
+            taskFilters[section] = {
+                ...taskFilters[section],
+                [filterType]: select.value,
+            };
+
+            if (section === "pending") {
+                renderPendingTasks(taskDataCache.pending);
+            } else if (section === "for_approval") {
+                renderApprovalTasks(taskDataCache.for_approval);
+            } else if (section === "completed") {
+                renderCompletedTasks(taskDataCache.completed);
+            }
+        });
+    });
+}
+
+function refreshTaskFilterOptions() {
+    const sections = ["pending", "for_approval", "completed"];
+
+    sections.forEach((section) => {
+        const items = taskDataCache[section] || [];
+        const houseOptions = buildTaskFilterOptions(items, "house_number");
+        const priorityOptions = buildTaskFilterOptions(items, "priority");
+
+        updateTaskFilterSelect(`taskHouseFilter-${section}`, houseOptions, taskFilters[section].house);
+        updateTaskFilterSelect(`taskPriorityFilter-${section}`, priorityOptions, taskFilters[section].priority);
+    });
+}
+
+function buildTaskFilterOptions(items, key) {
+    const values = [...new Set(items.map((item) => String(item[key] ?? "").trim()).filter(Boolean))];
+
+    return ["All", ...values.sort((a, b) => a.localeCompare(b))];
+}
+
+function updateTaskFilterSelect(selectId, options, currentValue) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const nextValue = options.includes(currentValue) ? currentValue : "All";
+
+    select.innerHTML = options
+        .map((option) => `<option value="${option}">${option}</option>`)
+        .join("");
+
+    select.value = nextValue;
+}
+
+function applyTaskFilters(items, filters) {
+    return items.filter((item) => {
+        const house = String(item.house_number ?? "");
+        const priority = String(item.priority ?? "");
+
+        const matchesHouse = filters.house === "All" || house === filters.house;
+        const matchesPriority = filters.priority === "All" || priority === filters.priority;
+
+        return matchesHouse && matchesPriority;
+    });
+}
+
 function renderPendingTasks(items) {
     const tbody = document.getElementById("pendingTasksTable");
     if (!tbody) return;
 
-    tbody.innerHTML = items
+    const filteredItems = applyTaskFilters(items, taskFilters.pending);
+
+    if (!filteredItems.length) {
+        tbody.innerHTML = `<tr><td colspan="8">No tasks match the selected filters.</td></tr>`;
+        animateTaskRows();
+        return;
+    }
+
+    tbody.innerHTML = filteredItems
         .map(
             (item) => `
         <tr>
@@ -114,13 +209,23 @@ function renderPendingTasks(items) {
     `,
         )
         .join("");
+
+    animateTaskRows();
 }
 
 function renderApprovalTasks(items) {
     const tbody = document.getElementById("approvalTasksTable");
     if (!tbody) return;
 
-    tbody.innerHTML = items
+    const filteredItems = applyTaskFilters(items, taskFilters.for_approval);
+
+    if (!filteredItems.length) {
+        tbody.innerHTML = `<tr><td colspan="10">No tasks match the selected filters.</td></tr>`;
+        animateTaskRows();
+        return;
+    }
+
+    tbody.innerHTML = filteredItems
         .map(
             (item) => `
         <tr>
@@ -160,13 +265,22 @@ function renderApprovalTasks(items) {
 
     bindPhotoButtons();
     bindVerifyButtons();
+    animateTaskRows();
 }
 
 function renderCompletedTasks(items) {
     const tbody = document.getElementById("completedTasksTable");
     if (!tbody) return;
 
-    tbody.innerHTML = items
+    const filteredItems = applyTaskFilters(items, taskFilters.completed);
+
+    if (!filteredItems.length) {
+        tbody.innerHTML = `<tr><td colspan="11">No tasks match the selected filters.</td></tr>`;
+        animateTaskRows();
+        return;
+    }
+
+    tbody.innerHTML = filteredItems
         .map(
             (item) => `
         <tr>
@@ -198,6 +312,7 @@ function renderCompletedTasks(items) {
         .join("");
 
     bindPhotoButtons();
+    animateTaskRows();
 }
 
 function encodeTaskPayload(item) {

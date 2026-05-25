@@ -301,6 +301,41 @@
     color: #ffffff;
 }
 
+.management-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.management-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.management-form-group select,
+.management-form-group input {
+    width: 100%;
+    border: 1px solid rgba(29, 106, 55, 0.45);
+    border-radius: 999px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    outline: none;
+    background: #ffffff;
+}
+
+.management-form-group select:focus,
+.management-form-group input:focus {
+    border-color: #1d6a37;
+    box-shadow: 0 0 0 4px rgba(29, 106, 55, 0.12);
+}
+
+@media (max-width: 640px) {
+    .management-form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 @keyframes managerTaskFade {
     from {
         opacity: 0;
@@ -331,3 +366,4 @@
         flex-direction: column;
     }
 }
+

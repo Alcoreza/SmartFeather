@@ -8,17 +8,32 @@ use Illuminate\Support\Facades\DB;
 class InventoryController extends Controller
 {
     public function managerIndex()
-    {
-        $items = DB::table('inventories')->get();
+{
+    $items = DB::table('inventories')->get();
 
-        $feedItems = $items->where('type', 'feed')
-            ->map(fn($item) => $this->formatItem($item));
+    $feedItems = $items->where('type', 'feed')
+        ->map(fn($item) => $this->formatItem($item));
 
-        $vitaminItems = $items->where('type', 'vitamin')
-            ->map(fn($item) => $this->formatItem($item));
+    $vitaminItems = $items->where('type', 'vitamin')
+        ->map(fn($item) => $this->formatItem($item));
 
-        return view('manager.inventory', compact('feedItems', 'vitaminItems'));
-    }
+    $feedTypeOptions = DB::table('inventory_types')
+        ->where('category', 'feed')
+        ->orderBy('name')
+        ->get();
+
+    $vitaminTypeOptions = DB::table('inventory_types')
+        ->where('category', 'vitamin')
+        ->orderBy('name')
+        ->get();
+
+    return view('manager.inventory', compact(
+        'feedItems',
+        'vitaminItems',
+        'feedTypeOptions',
+        'vitaminTypeOptions'
+    ));
+}
 
     public function store(Request $request)
     {
@@ -32,12 +47,15 @@ class InventoryController extends Controller
             'purchase_date' => 'required|date',
         ]);
 
-        $allowedFeedNames = ['Starter Feed', 'Grower Feed', 'Finisher Feed'];
+        $typeExists = DB::table('inventory_types')
+            ->where('category', $validated['type'])
+            ->where('name', $validated['item_name'])
+            ->exists();
 
-        if ($validated['type'] === 'feed' && !in_array($validated['item_name'], $allowedFeedNames, true)) {
+        if (!$typeExists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid feed type.',
+                'message' => 'Invalid inventory type.',
             ], 422);
         }
 

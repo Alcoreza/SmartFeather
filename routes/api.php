@@ -40,6 +40,7 @@ Route::get('/mobile/vitamin-refill/context', [MobileVitaminsRefillController::cl
 
 
 Route::get('/mobile/profile/{employeeId}', [MobileProfileController::class, 'show']);
+Route::put('/mobile/profile/{employeeId}', [MobileProfileController::class, 'update']);
 
 Route::get('/mobile/disinfection/context', [MobileDisinfectionController::class, 'getContext']);
 Route::get('/mobile/disinfection/houses', [MobileDisinfectionController::class, 'getHouses']);
@@ -63,4 +64,5 @@ Route::get('/mobile/dashboard', [MobileDashboardController::class, 'show']);
 
 Route::get('/mobile/personnel-logs/context', [MobilePersonnelLogsController::class, 'context']);
 Route::post('/mobile/personnel-logs', [MobilePersonnelLogsController::class, 'submit']);
+
 

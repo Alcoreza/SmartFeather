@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     animateTaskSections();
 });
 
+const ALL_HOUSES_OPTION = "All houses";
+const ALL_PRIORITY_OPTION = "All priority";
+const PRIORITY_ORDER = ["Low", "Medium", "High", "Urgent"];
+
 let taskPendingVerify = null;
 let taskDataCache = {
     pending: [],
@@ -17,9 +21,9 @@ let taskDataCache = {
 };
 let availableHouseOptions = [];
 let taskFilters = {
-    pending: { house: "All", priority: "All" },
-    for_approval: { house: "All", priority: "All" },
-    completed: { house: "All", priority: "All" },
+    pending: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
+    for_approval: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
+    completed: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
 };
 
 async function renderManagerTasks() {
@@ -133,15 +137,25 @@ function setupTaskFilters() {
                 [filterType]: select.value,
             };
 
-            if (section === "pending") {
-                renderPendingTasks(taskDataCache.pending);
-            } else if (section === "for_approval") {
-                renderApprovalTasks(taskDataCache.for_approval);
-            } else if (section === "completed") {
-                renderCompletedTasks(taskDataCache.completed);
-            }
+            renderTaskSection(section);
         });
     });
+}
+
+function renderTaskSection(section) {
+    if (section === "pending") {
+        renderPendingTasks(taskDataCache.pending);
+        return;
+    }
+
+    if (section === "for_approval") {
+        renderApprovalTasks(taskDataCache.for_approval);
+        return;
+    }
+
+    if (section === "completed") {
+        renderCompletedTasks(taskDataCache.completed);
+    }
 }
 
 function refreshTaskFilterOptions() {
@@ -150,7 +164,7 @@ function refreshTaskFilterOptions() {
     sections.forEach((section) => {
         const items = taskDataCache[section] || [];
         const houseOptions = buildHouseFilterOptions();
-        const priorityOptions = buildTaskFilterOptions(items, "priority");
+        const priorityOptions = buildPriorityFilterOptions(items);
 
         updateTaskFilterSelect(`taskHouseFilter-${section}`, houseOptions, taskFilters[section].house);
         updateTaskFilterSelect(`taskPriorityFilter-${section}`, priorityOptions, taskFilters[section].priority);
@@ -160,20 +174,27 @@ function refreshTaskFilterOptions() {
 function buildHouseFilterOptions() {
     const values = [...new Set(availableHouseOptions.filter(Boolean))];
 
-    return ["All", ...values.sort((a, b) => a.localeCompare(b))];
+    return [ALL_HOUSES_OPTION, ...values.sort((a, b) => a.localeCompare(b))];
 }
 
-function buildTaskFilterOptions(items, key) {
-    const values = [...new Set(items.map((item) => String(item[key] ?? "").trim()).filter(Boolean))];
+function buildPriorityFilterOptions(items) {
+    const values = [...new Set((items || [])
+        .map((item) => String(item.priority ?? "").trim())
+        .filter(Boolean))];
 
-    return ["All", ...values.sort((a, b) => a.localeCompare(b))];
+    const ordered = PRIORITY_ORDER.filter((priority) => values.includes(priority));
+    const extras = values
+        .filter((priority) => !PRIORITY_ORDER.includes(priority))
+        .sort((a, b) => a.localeCompare(b));
+
+    return [ALL_PRIORITY_OPTION, ...ordered, ...extras];
 }
 
 function updateTaskFilterSelect(selectId, options, currentValue) {
     const select = document.getElementById(selectId);
     if (!select) return;
 
-    const nextValue = options.includes(currentValue) ? currentValue : "All";
+    const nextValue = options.includes(currentValue) ? currentValue : options[0];
 
     select.innerHTML = options
         .map((option) => `<option value="${option}">${option}</option>`)
@@ -184,11 +205,11 @@ function updateTaskFilterSelect(selectId, options, currentValue) {
 
 function applyTaskFilters(items, filters) {
     return items.filter((item) => {
-        const house = String(item.house_number ?? "");
-        const priority = String(item.priority ?? "");
+        const house = String(item.house_number ?? "").trim();
+        const priority = String(item.priority ?? "").trim();
 
-        const matchesHouse = filters.house === "All" || house === filters.house;
-        const matchesPriority = filters.priority === "All" || priority === filters.priority;
+        const matchesHouse = filters.house === ALL_HOUSES_OPTION || house === filters.house;
+        const matchesPriority = filters.priority === ALL_PRIORITY_OPTION || priority === filters.priority;
 
         return matchesHouse && matchesPriority;
     });

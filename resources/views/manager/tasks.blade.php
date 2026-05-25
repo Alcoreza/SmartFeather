@@ -42,19 +42,17 @@
 
                     <div class="manager-task-header-actions">
                         <div class="manager-task-filter-row">
-                            <label class="manager-task-filter-label" for="taskHouseFilter-pending">House</label>
                             <div class="manager-task-filter-wrap">
                                 <select id="taskHouseFilter-pending" class="manager-task-filter-select" data-task-section="pending" data-filter-type="house">
-                                    <option value="All">All houses</option>
+                                    <option value="All houses">All houses</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="manager-task-filter-row">
-                            <label class="manager-task-filter-label" for="taskPriorityFilter-pending">Priority</label>
                             <div class="manager-task-filter-wrap">
                                 <select id="taskPriorityFilter-pending" class="manager-task-filter-select" data-task-section="pending" data-filter-type="priority">
-                                    <option value="All">All priorities</option>
+                                    <option value="All priority">All priority</option>
                                 </select>
                             </div>
                         </div>
@@ -97,19 +95,17 @@
 
                     <div class="manager-task-header-actions">
                         <div class="manager-task-filter-row">
-                            <label class="manager-task-filter-label" for="taskHouseFilter-for_approval">House</label>
                             <div class="manager-task-filter-wrap">
                                 <select id="taskHouseFilter-for_approval" class="manager-task-filter-select" data-task-section="for_approval" data-filter-type="house">
-                                    <option value="All">All houses</option>
+                                    <option value="All houses">All houses</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="manager-task-filter-row">
-                            <label class="manager-task-filter-label" for="taskPriorityFilter-for_approval">Priority</label>
                             <div class="manager-task-filter-wrap">
                                 <select id="taskPriorityFilter-for_approval" class="manager-task-filter-select" data-task-section="for_approval" data-filter-type="priority">
-                                    <option value="All">All priorities</option>
+                                    <option value="All priority">All priority</option>
                                 </select>
                             </div>
                         </div>
@@ -147,19 +143,17 @@
 
                     <div class="manager-task-header-actions">
                         <div class="manager-task-filter-row">
-                            <label class="manager-task-filter-label" for="taskHouseFilter-completed">House</label>
                             <div class="manager-task-filter-wrap">
                                 <select id="taskHouseFilter-completed" class="manager-task-filter-select" data-task-section="completed" data-filter-type="house">
-                                    <option value="All">All houses</option>
+                                    <option value="All houses">All houses</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="manager-task-filter-row">
-                            <label class="manager-task-filter-label" for="taskPriorityFilter-completed">Priority</label>
                             <div class="manager-task-filter-wrap">
                                 <select id="taskPriorityFilter-completed" class="manager-task-filter-select" data-task-section="completed" data-filter-type="priority">
-                                    <option value="All">All priorities</option>
+                                    <option value="All priority">All priority</option>
                                 </select>
                             </div>
                         </div>

@@ -15,6 +15,7 @@ let taskDataCache = {
     for_approval: [],
     completed: [],
 };
+let availableHouseOptions = [];
 let taskFilters = {
     pending: { house: "All", priority: "All" },
     for_approval: { house: "All", priority: "All" },
@@ -57,6 +58,11 @@ async function loadTaskFormOptions() {
         const houseSelect = document.getElementById("taskHouseNumber");
         const penSelect = document.getElementById("taskPenNumber");
 
+        availableHouseOptions = [...new Set((data.houses || [])
+            .map((house) => String(house.number ?? "").trim())
+            .filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b));
+
         fillSelect(
             houseSelect,
             data.houses || [],
@@ -96,6 +102,7 @@ async function loadTaskFormOptions() {
             "Select priority",
         );
 
+        refreshTaskFilterOptions();
         setupTaskSelectPlaceholderState();
     } catch (error) {
         console.error("Failed to load task form options.", error);
@@ -142,12 +149,18 @@ function refreshTaskFilterOptions() {
 
     sections.forEach((section) => {
         const items = taskDataCache[section] || [];
-        const houseOptions = buildTaskFilterOptions(items, "house_number");
+        const houseOptions = buildHouseFilterOptions();
         const priorityOptions = buildTaskFilterOptions(items, "priority");
 
         updateTaskFilterSelect(`taskHouseFilter-${section}`, houseOptions, taskFilters[section].house);
         updateTaskFilterSelect(`taskPriorityFilter-${section}`, priorityOptions, taskFilters[section].priority);
     });
+}
+
+function buildHouseFilterOptions() {
+    const values = [...new Set(availableHouseOptions.filter(Boolean))];
+
+    return ["All", ...values.sort((a, b) => a.localeCompare(b))];
 }
 
 function buildTaskFilterOptions(items, key) {

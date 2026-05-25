@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Management;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ManagementCreateTaskController extends Controller
 {
@@ -39,6 +40,46 @@ class ManagementCreateTaskController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Management create task type creation error:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function storeInventoryType(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'category' => 'required|in:feed,vitamin',
+                'name' => 'required|string|max:255',
+            ]);
+
+            $category = $validated['category'];
+            $name = trim($validated['name']);
+
+            $exists = DB::table('inventory_types')
+                ->where('category', $category)
+                ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'error' => 'Inventory type already exists.',
+                ], 422);
+            }
+
+            $id = DB::table('inventory_types')->insertGetId([
+                'category' => $category,
+                'name' => $name,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'id' => $id,
+                'category' => $category,
+                'name' => $name,
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Create inventory type error:', ['message' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

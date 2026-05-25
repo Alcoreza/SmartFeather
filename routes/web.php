@@ -192,6 +192,7 @@ Route::prefix('api/manager/inventory')->group(function () {
 
 Route::get('/api/inventory-items', [InventoryController::class, 'items']);
 Route::get('/api/inventory-records', [InventoryController::class, 'records']);
+Route::post('/api/manager/inventory/types', [ManagementCreateTaskController::class, 'storeInventoryType']);
 
 /*
 |--------------------------------------------------------------------------

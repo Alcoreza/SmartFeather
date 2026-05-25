@@ -117,9 +117,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    function updateEndBatchButtonState() {
+        if (!endBatchButton) return;
+
+        const currentHouse = houses[activeHouseIndex];
+        const currentPen = currentHouse?.pens?.[activePenIndex];
+        const hasActiveBatch = Boolean(currentPen?.batch?.toString().trim());
+
+        endBatchButton.disabled = !hasActiveBatch;
+        endBatchButton.setAttribute("aria-disabled", String(!hasActiveBatch));
+        endBatchButton.title = hasActiveBatch
+            ? "End the active batch"
+            : "No active batch to end";
+    }
+
     function openEndBatchModal() {
         const currentHouse = houses[activeHouseIndex];
         if (!currentHouse || !endBatchModal) return;
+
+        if (endBatchButton?.disabled) {
+            return;
+        }
 
         // Populate pen select
         if (endPenSelect) {
@@ -351,6 +369,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             housePen.value = penIndex;
         }
 
+        updateEndBatchButtonState();
         animateStats();
     }
 

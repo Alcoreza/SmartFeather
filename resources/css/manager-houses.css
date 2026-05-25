@@ -143,6 +143,13 @@
     box-shadow: 0 10px 20px rgba(200, 35, 51, 0.22);
 }
 
+.btn-end:disabled {
+    background: #9aa0a6;
+    color: #f5f6f7;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .houses-top-grid {
     display: grid;
     grid-template-columns: 1.05fr 1.45fr;

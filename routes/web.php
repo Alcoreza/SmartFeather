@@ -7,6 +7,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\HouseController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ManagementCreateTaskController;
 use App\Http\Controllers\BiosecurityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportsController;
@@ -53,6 +54,7 @@ Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
     ->name('manager.inventory.records.vitamins');
 
 Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
+Route::view('/manager/management', 'manager.management')->name('manager.management');
 
 /*
 |--------------------------------------------------------------------------
@@ -221,6 +223,7 @@ Route::prefix('api/pens')->group(function () {
 
 Route::get('/api/manager/tasks', [TaskController::class, 'index']);
 Route::post('/api/manager/tasks', [TaskController::class, 'store']);
+Route::post('/api/manager/tasks/types', [ManagementCreateTaskController::class, 'storeTaskType']);
 Route::put('/api/manager/tasks/{taskId}', [TaskController::class, 'update']);
 Route::get('/api/manager/tasks/form-options', [TaskController::class, 'formOptions']);
 Route::get('/api/manager/tasks/houses/{houseId}/pens', [TaskController::class, 'getPensForHouse']);

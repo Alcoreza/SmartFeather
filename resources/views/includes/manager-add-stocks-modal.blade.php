@@ -11,9 +11,9 @@
                     <label for="addFeedName">Feed Name</label>
                     <select id="addFeedName" name="item_name" required>
                         <option value="">Select feed type</option>
-                        <option value="Starter Feed">Starter Feed</option>
-                        <option value="Grower Feed">Grower Feed</option>
-                        <option value="Finisher Feed">Finisher Feed</option>
+                        @foreach ($feedTypeOptions as $type)
+                            <option value="{{ $type->name }}">{{ $type->name }}</option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -69,11 +69,9 @@
                     <label for="addVitaminName">Type of Vitamin</label>
                     <select id="addVitaminName" name="item_name" required>
                         <option value="">Select vitamin type</option>
-                        <option value="Vitamin K">Vitamin K</option>
-                        <option value="Vitamin D3">Vitamin D3</option>
-                        <option value="Vitamin B-Complex">Vitamin B-Complex</option>
-                        <option value="Vitamin C">Vitamin C</option>
-                        <option value="Vitamin A">Vitamin A</option>
+                        @foreach ($vitaminTypeOptions as $type)
+                            <option value="{{ $type->name }}">{{ $type->name }}</option>
+                        @endforeach
                     </select>
                 </div>
 

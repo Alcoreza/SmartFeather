@@ -33,14 +33,23 @@ class MobilePersonnelLogsController extends Controller
             ], 403);
         }
 
+        $houses = DB::table('house')
+            ->orderBy('id', 'asc')
+            ->get(['id', 'house_number'])
+            ->map(function ($house) {
+                return [
+                    'id' => (int) $house->id,
+                    'house_number' => $house->house_number,
+                ];
+            })
+            ->values();
+
         return response()->json([
             'success' => true,
             'employee_id' => (int) $latestEntry->employee_id,
             'personnel_entry_log_id' => (int) $latestEntry->id,
             'name' => $latestEntry->name,
             'role' => $latestEntry->role,
-            'house_id' => $latestEntry->house_id ? (int) $latestEntry->house_id : null,
-            'house' => $latestEntry->house,
             'status' => $latestEntry->status,
             'date' => !empty($latestEntry->date)
                 ? Carbon::parse($latestEntry->date)->format('Y-m-d')
@@ -48,6 +57,7 @@ class MobilePersonnelLogsController extends Controller
             'time' => !empty($latestEntry->time)
                 ? Carbon::parse((string) $latestEntry->time)->format('H:i:s')
                 : '',
+            'houses' => $houses,
         ]);
     }
 
@@ -56,6 +66,7 @@ class MobilePersonnelLogsController extends Controller
         $validated = $request->validate([
             'employee_id' => 'required|integer|exists:user,EmployeeId',
             'personnel_entry_log_id' => 'required|integer|exists:personnel_entry_logs,id',
+            'house_id' => 'required|integer|exists:house,id',
             'foot_bath' => 'required|boolean',
             'boots_changed' => 'required|boolean',
             'protective_clothing' => 'required|boolean',
@@ -95,13 +106,23 @@ class MobilePersonnelLogsController extends Controller
             ]);
         }
 
+        $selectedHouse = DB::table('house')
+            ->where('id', $validated['house_id'])
+            ->first();
+
+        if (!$selectedHouse) {
+            return response()->json([
+                'message' => 'Selected house was not found.',
+            ], 404);
+        }
+
         DB::table('personnel_biosecurity_logs')->insert([
             'employee_id' => $validated['employee_id'],
             'personnel_entry_log_id' => $latestEntry->id,
             'name' => $latestEntry->name,
             'role' => $latestEntry->role,
-            'house_id' => $latestEntry->house_id,
-            'house' => $latestEntry->house,
+            'house_id' => $selectedHouse->id,
+            'house' => $selectedHouse->house_number,
             'date' => $latestEntry->date,
             'time' => $latestEntry->time,
             'foot_bath' => 'Yes',

@@ -9,7 +9,12 @@
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="addFeedName">Feed Name</label>
-                    <input type="text" id="addFeedName" name="item_name" required>
+                    <select id="addFeedName" name="item_name" required>
+                        <option value="">Select feed type</option>
+                        @foreach ($feedTypeOptions as $type)
+                            <option value="{{ $type->name }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="inventory-form-group">
@@ -19,8 +24,7 @@
             </div>
 
             <div class="inventory-form-row">
-                <div class="inventory-form-group">
-                    <label for="addFeedInitialStock">Initial Stock</label>
+                <div class="inventory-form-group">Stock to Add</label>
                     <input type="number" id="addFeedInitialStock" name="initial_stock" min="0" step="0.01" required>
                 </div>
 
@@ -30,14 +34,12 @@
                 </div>
             </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
+            <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="addFeedCriticalStock">Critical Level</label>
                     <input type="number" id="addFeedCriticalStock" name="critical" min="0" step="0.01" required>
                 </div>
-            </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="addFeedPurchaseDate">Purchase Date</label>
                     <input type="date" id="addFeedPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
@@ -60,40 +62,66 @@
         </div>
 
         <form class="inventory-modal-form" id="vitaminAddForm">
-            <div class="inventory-form-row inventory-form-row-single">
-                <div class="inventory-form-group">
-                    <label for="addVitaminName">Type of Vitamin</label>
-                    <input type="text" id="addVitaminName" name="item_name" required>
-                </div>
-            </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
-                <div class="inventory-form-group">
-                    <label for="addVitaminUnit">Unit</label>
-                    <input type="text" id="addVitaminUnit" name="unit" value="bottles" readonly>
-                </div>
-            </div>
-
+            <!-- Vitamin Type + Unit -->
             <div class="inventory-form-row">
                 <div class="inventory-form-group">
-                    <label for="addVitaminInitialStock">Initial Stock</label>
-                    <input type="number" id="addVitaminInitialStock" name="initial_stock" min="0" step="1" required>
+                    <label for="addVitaminName">Type of Vitamin</label>
+                    <select id="addVitaminName" name="item_name" required>
+                        <option value="">Select vitamin type</option>
+                        @foreach ($vitaminTypeOptions as $type)
+                            <option value="{{ $type->name }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="inventory-form-group">
+                    <label for="addVitaminUnit">Unit</label>
+                    <input
+                        type="text"
+                        id="addVitaminUnit"
+                        name="unit"
+                        value="bottle"
+                        readonly
+                    >
+                </div>
+            </div>
+
+            <!-- Initial Stock + Remaining -->
+            <div class="inventory-form-row">
+                <div class="inventory-form-group">
+                    <label for="addVitaminInitialStock">Stock to Add</label>
+                    <input
+                        type="number"
+                        id="addVitaminInitialStock"
+                        name="initial_stock"
+                        min="0"
+                        step="1"
+                        required
+                    >
                 </div>
 
                 <div class="inventory-form-group">
                     <label for="addVitaminRemainingStock">Remaining</label>
-                    <input type="number" id="addVitaminRemainingStock" name="remaining_stock" min="0" step="1" required>
+                    <input
+                        type="number"
+                        id="addVitaminRemainingStock"
+                        name="remaining_stock"
+                        min="0"
+                        step="1"
+                        readonly
+                        required
+                    >
                 </div>
             </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
+            <!-- Critical Level -->
+            <div class="inventory-form-row">
                 <div class="inventory-form-group">
                     <label for="addVitaminCriticalStock">Critical Level</label>
                     <input type="number" id="addVitaminCriticalStock" name="critical" min="0" step="1" required>
                 </div>
-            </div>
 
-            <div class="inventory-form-row inventory-form-row-single">
                 <div class="inventory-form-group">
                     <label for="addVitaminPurchaseDate">Purchase Date</label>
                     <input type="date" id="addVitaminPurchaseDate" name="purchase_date" max="{{ now()->format('Y-m-d') }}" required>
@@ -101,9 +129,22 @@
             </div>
 
             <div class="inventory-modal-actions">
-                <button type="button" class="inventory-cancel-btn" id="closeVitaminAddModal">Cancel</button>
-                <button type="submit" class="inventory-save-btn">Save</button>
+                <button
+                    type="button"
+                    class="inventory-cancel-btn"
+                    id="closeVitaminAddModal"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="submit"
+                    class="inventory-save-btn"
+                >
+                    Save
+                </button>
             </div>
+
         </form>
     </div>
 </div>

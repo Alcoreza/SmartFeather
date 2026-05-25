@@ -10,6 +10,76 @@ const createTaskTypeForm = document.getElementById("createTaskTypeForm");
 const newTaskTypeInput = document.getElementById("newTaskType");
 const createTaskTypeMessage = document.getElementById("createTaskTypeMessage");
 
+const createInventoryTypeModal = document.getElementById("createInventoryTypeModal");
+const openCreateInventoryTypeModalBtn = document.getElementById("openCreateInventoryTypeModal");
+const closeCreateInventoryTypeModalBtn = document.getElementById("closeCreateInventoryTypeModal");
+const cancelCreateInventoryTypeModalBtn = document.getElementById("cancelCreateInventoryTypeModal");
+const createInventoryTypeForm = document.getElementById("createInventoryTypeForm");
+const inventoryCategory = document.getElementById("inventoryCategory");
+const newInventoryTypeName = document.getElementById("newInventoryTypeName");
+const inventoryTypeNameLabel = document.getElementById("inventoryTypeNameLabel");
+const createInventoryTypeMessage = document.getElementById("createInventoryTypeMessage");
+
+function setInventoryMessage(message, type = "error") {
+    if (!createInventoryTypeMessage) return;
+
+    createInventoryTypeMessage.textContent = message || "";
+    createInventoryTypeMessage.className = message
+        ? `manager-management-modal-message ${type}`
+        : "manager-management-modal-message";
+}
+
+function resetCreateInventoryTypeModal() {
+    if (inventoryCategory) inventoryCategory.value = "";
+    if (newInventoryTypeName) newInventoryTypeName.value = "";
+    if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Vitamins";
+
+    setInventoryMessage("");
+}
+
+async function handleCreateInventoryTypeSubmit(event) {
+    event.preventDefault();
+
+    const category = inventoryCategory.value;
+    const name = newInventoryTypeName.value.trim();
+
+    if (!category || !name) {
+        setInventoryMessage("Please complete all fields.", "error");
+        return;
+    }
+
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    try {
+        const response = await fetch("/api/manager/inventory/types", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": token || "",
+            },
+            body: JSON.stringify({
+                category,
+                name,
+            }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || "Unable to save inventory type.");
+        }
+
+        setInventoryMessage(`Added "${data.name}" successfully.`, "success");
+
+        setTimeout(() => {
+            resetCreateInventoryTypeModal();
+            closeModal(createInventoryTypeModal);
+        }, 700);
+    } catch (error) {
+        setInventoryMessage(error.message || "Unable to save inventory type.", "error");
+    }
+}
+
 function setMessage(message, type = "error") {
     if (!createTaskTypeMessage) {
         return;
@@ -197,3 +267,41 @@ if (profileModal || createTaskTypeModal) {
         }
     });
 }
+
+inventoryCategory?.addEventListener("change", () => {
+    if (inventoryCategory.value === "feed") {
+        inventoryTypeNameLabel.textContent = "Type of Feed";
+        newInventoryTypeName.placeholder = "Enter feed type";
+    } else {
+        inventoryTypeNameLabel.textContent = "Type of Vitamins";
+        newInventoryTypeName.placeholder = "Enter vitamin type";
+    }
+});
+
+openCreateInventoryTypeModalBtn?.addEventListener("click", () => {
+    resetCreateInventoryTypeModal();
+    openModal(createInventoryTypeModal);
+
+    setTimeout(() => {
+        inventoryCategory?.focus();
+    }, 60);
+});
+
+closeCreateInventoryTypeModalBtn?.addEventListener("click", () => {
+    resetCreateInventoryTypeModal();
+    closeModal(createInventoryTypeModal);
+});
+
+cancelCreateInventoryTypeModalBtn?.addEventListener("click", () => {
+    resetCreateInventoryTypeModal();
+    closeModal(createInventoryTypeModal);
+});
+
+createInventoryTypeModal?.addEventListener("click", (event) => {
+    if (event.target === createInventoryTypeModal) {
+        resetCreateInventoryTypeModal();
+        closeModal(createInventoryTypeModal);
+    }
+});
+
+createInventoryTypeForm?.addEventListener("submit", handleCreateInventoryTypeSubmit);

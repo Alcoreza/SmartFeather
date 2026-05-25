@@ -37,12 +37,10 @@ function setupInventoryModals() {
     const feedCriticalStock = document.getElementById("feedCriticalStock");
     const feedPurchaseDate = document.getElementById("feedPurchaseDate");
     const feedEditSelect = document.getElementById("feedEditSelect");
-    const feedEditItemName = document.getElementById("feedEditItemName");
 
     const vitaminInitialStock = document.getElementById("vitaminInitialStock");
     const vitaminRemainingStock = document.getElementById("vitaminRemainingStock");
     const vitaminCriticalStock = document.getElementById("vitaminCriticalStock");
-    const vitaminType = document.getElementById("vitaminType");
     const vitaminPurchaseDate = document.getElementById("vitaminPurchaseDate");
     const vitaminEditSelect = document.getElementById("vitaminEditSelect");
 
@@ -176,7 +174,6 @@ function setupInventoryModals() {
         if (!entry) return;
 
         selectedFeedEntry = entry;
-        if (feedEditItemName) feedEditItemName.value = entry.dataset.itemName;
         if (feedInitialStock) feedInitialStock.value = entry.dataset.initialStock;
         if (feedRemainingStock) feedRemainingStock.value = entry.dataset.remainingStock;
         if (feedCriticalStock) feedCriticalStock.value = entry.dataset.critical;
@@ -187,7 +184,6 @@ function setupInventoryModals() {
         if (!entry) return;
 
         selectedVitaminEntry = entry;
-        if (vitaminType) vitaminType.value = entry.dataset.itemName;
         if (vitaminInitialStock) vitaminInitialStock.value = entry.dataset.initialStock;
         if (vitaminRemainingStock) vitaminRemainingStock.value = entry.dataset.remainingStock;
         if (vitaminCriticalStock) vitaminCriticalStock.value = entry.dataset.critical;
@@ -199,7 +195,6 @@ function setupInventoryModals() {
         if (feedEditSelect) {
             feedEditSelect.value = "";
         }
-        if (feedEditItemName) feedEditItemName.value = "";
         if (feedInitialStock) feedInitialStock.value = "";
         if (feedRemainingStock) feedRemainingStock.value = "";
         if (feedCriticalStock) feedCriticalStock.value = "";
@@ -214,7 +209,6 @@ function setupInventoryModals() {
         if (vitaminEditSelect) {
             vitaminEditSelect.value = "";
         }
-        if (vitaminType) vitaminType.value = "";
         if (vitaminInitialStock) vitaminInitialStock.value = "";
         if (vitaminRemainingStock) vitaminRemainingStock.value = "";
         if (vitaminCriticalStock) vitaminCriticalStock.value = "";
@@ -262,12 +256,16 @@ function setupInventoryModals() {
     feedAddForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        const selectedFeedName = addFeedName.value.trim();
+        const addedStock = Number(addFeedInitialStock.value);
+        const currentRemaining = Number(addFeedRemainingStock.value || 0);
+
         const payload = {
-            item_name: addFeedName.value.trim(),
+            item_name: selectedFeedName,
             type: "feed",
-            unit: addFeedUnit.value.trim(),
-            initial_stock: Number(addFeedInitialStock.value),
-            remaining_stock: Number(addFeedRemainingStock.value),
+            unit: addFeedUnit.value.trim() || "kg",
+            initial_stock: addedStock,
+            remaining_stock: currentRemaining,
             critical: Number(addFeedCriticalStock.value),
             purchase_date: addFeedPurchaseDate.value
         };
@@ -275,31 +273,57 @@ function setupInventoryModals() {
         const res = await apiRequest("/api/manager/inventory", "POST", payload);
 
         if (res.success) {
-            const newEntry = createInventoryEntry({
-                type: "feed",
-                id: res.id,
-                itemName: payload.item_name,
-                initialStock: payload.initial_stock,
-                remainingStock: payload.remaining_stock,
-                critical: payload.critical,
-                purchaseDate: payload.purchase_date,
-                unit: payload.unit
-            });
+            const item = res.item;
 
-            feedList.insertAdjacentHTML("beforeend", newEntry);
+            const existingEntry = getExistingFeedEntryByName(item.item_name);
+
+            if (existingEntry) {
+                updateInventoryEntry(existingEntry, {
+                    itemName: item.item_name,
+                    initialStock: item.initial_stock,
+                    remainingStock: item.remaining_stock,
+                    critical: item.critical,
+                    purchaseDate: item.purchase_date,
+                    unit: item.unit
+                });
+            } else {
+                const newEntry = createInventoryEntry({
+                    type: "feed",
+                    id: item.id,
+                    itemName: item.item_name,
+                    initialStock: item.initial_stock,
+                    remainingStock: item.remaining_stock,
+                    critical: item.critical,
+                    purchaseDate: item.purchase_date,
+                    unit: item.unit
+                });
+
+                feedList.insertAdjacentHTML("beforeend", newEntry);
+            }
+
+            populateDropdown("feed");
+            feedAddForm.reset();
+            addFeedRemainingStock.value = "";
+            addFeedUnit.value = "kg";
             feedAddModal.classList.remove("show");
+        } else {
+            alert(res.message || "Failed to save feed stock.");
         }
     });
 
     vitaminAddForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        const selectedVitaminName = addVitaminName.value.trim();
+        const addedStock = Number(addVitaminInitialStock.value);
+        const currentRemaining = Number(addVitaminRemainingStock.value || 0);
+
         const payload = {
-            item_name: addVitaminName.value.trim(),
+            item_name: selectedVitaminName,
             type: "vitamin",
-            unit: "bottles",
-            initial_stock: Number(addVitaminInitialStock.value),
-            remaining_stock: Number(addVitaminRemainingStock.value),
+            unit: addVitaminUnit.value.trim() || "bottle",
+            initial_stock: addedStock,
+            remaining_stock: currentRemaining,
             critical: Number(addVitaminCriticalStock.value),
             purchase_date: addVitaminPurchaseDate.value
         };
@@ -307,30 +331,56 @@ function setupInventoryModals() {
         const res = await apiRequest("/api/manager/inventory", "POST", payload);
 
         if (res.success) {
-            const newEntry = createInventoryEntry({
-                type: "vitamin",
-                id: res.id,
-                itemName: payload.item_name,
-                initialStock: payload.initial_stock,
-                remainingStock: payload.remaining_stock,
-                critical: payload.critical,
-                purchaseDate: payload.purchase_date,
-                unit: "bottles"
-            });
+            const item = res.item;
 
-            vitaminList.insertAdjacentHTML("beforeend", newEntry);
+            const existingEntry = Array.from(document.querySelectorAll(".inventory-vitamin-entry"))
+                .find(entry =>
+                    entry.dataset.itemName?.trim().toLowerCase() === item.item_name.trim().toLowerCase()
+                );
+
+            if (existingEntry) {
+                updateInventoryEntry(existingEntry, {
+                    itemName: item.item_name,
+                    initialStock: item.initial_stock,
+                    remainingStock: item.remaining_stock,
+                    critical: item.critical,
+                    purchaseDate: item.purchase_date,
+                    unit: item.unit
+                });
+            } else {
+                const newEntry = createInventoryEntry({
+                    type: "vitamin",
+                    id: item.id,
+                    itemName: item.item_name,
+                    initialStock: item.initial_stock,
+                    remainingStock: item.remaining_stock,
+                    critical: item.critical,
+                    purchaseDate: item.purchase_date,
+                    unit: item.unit
+                });
+
+                vitaminList.insertAdjacentHTML("beforeend", newEntry);
+            }
+
+            populateDropdown("vitamin");
+            vitaminAddForm.reset();
+            addVitaminRemainingStock.value = "";
+            addVitaminUnit.value = "bottle";
             vitaminAddModal.classList.remove("show");
+        } else {
+            alert(res.message || "Failed to save vitamin stock.");
         }
     });
 
     feedForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
+
         if (!selectedFeedEntry) return;
 
         const id = selectedFeedEntry.dataset.id;
 
         const payload = {
-            item_name: feedEditItemName.value.trim(),
+            item_name: selectedFeedEntry.dataset.itemName,
             initial_stock: Number(feedInitialStock.value),
             remaining_stock: Number(feedRemainingStock.value),
             critical: Number(feedCriticalStock.value),
@@ -341,7 +391,7 @@ function setupInventoryModals() {
 
         if (res.success) {
             updateInventoryEntry(selectedFeedEntry, {
-                itemName: payload.item_name,
+                itemName: selectedFeedEntry.dataset.itemName,
                 initialStock: payload.initial_stock,
                 remainingStock: payload.remaining_stock,
                 critical: payload.critical,
@@ -361,7 +411,7 @@ function setupInventoryModals() {
         const id = selectedVitaminEntry.dataset.id;
 
         const payload = {
-            item_name: vitaminType.value.trim(),
+            item_name: selectedVitaminEntry.dataset.itemName,
             initial_stock: Number(vitaminInitialStock.value),
             remaining_stock: Number(vitaminRemainingStock.value),
             critical: Number(vitaminCriticalStock.value),
@@ -372,7 +422,7 @@ function setupInventoryModals() {
 
         if (res.success) {
             updateInventoryEntry(selectedVitaminEntry, {
-                itemName: payload.item_name,
+                itemName: selectedVitaminEntry.dataset.itemName,
                 initialStock: payload.initial_stock,
                 remainingStock: payload.remaining_stock,
                 critical: payload.critical,
@@ -485,3 +535,51 @@ function setupProfileModal() {
         }
     });
 }
+
+    function getExistingFeedEntryByName(feedName) {
+        return Array.from(document.querySelectorAll(".inventory-feed-entry"))
+            .find(entry =>
+                entry.dataset.itemName?.trim().toLowerCase() === feedName.trim().toLowerCase()
+            );
+    }
+
+    if (addFeedRemainingStock) {
+        addFeedRemainingStock.readOnly = true;
+    }
+
+    addFeedName?.addEventListener("change", () => {
+        const selectedFeedName = addFeedName.value.trim();
+        const existingFeed = getExistingFeedEntryByName(selectedFeedName);
+
+        if (existingFeed) {
+            addFeedRemainingStock.value = existingFeed.dataset.remainingStock || 0;
+            addFeedUnit.value = existingFeed.dataset.unit || "kg";
+        } else {
+            addFeedRemainingStock.value = 0;
+            addFeedUnit.value = "kg";
+        }
+    });
+
+    function getExistingVitaminEntryByName(vitaminName) {
+        return Array.from(document.querySelectorAll(".inventory-vitamin-entry"))
+            .find(entry =>
+                entry.dataset.itemName?.trim().toLowerCase() === vitaminName.trim().toLowerCase()
+            );
+    }
+
+    if (addVitaminRemainingStock) {
+        addVitaminRemainingStock.readOnly = true;
+    }
+
+    addVitaminName?.addEventListener("change", () => {
+        const selectedVitaminName = addVitaminName.value.trim();
+        const existingVitamin = getExistingVitaminEntryByName(selectedVitaminName);
+
+        if (existingVitamin) {
+            addVitaminRemainingStock.value = existingVitamin.dataset.remainingStock || 0;
+            addVitaminUnit.value = existingVitamin.dataset.unit || "bottle";
+        } else {
+            addVitaminRemainingStock.value = 0;
+            addVitaminUnit.value = "bottle";
+        }
+    });

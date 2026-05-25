@@ -69,7 +69,7 @@
                                     <span class="inventory-status-badge {{ $item['status_class'] }}">
                                         {{ $item['status'] }}
                                     </span>
-                                    <p><strong>Initial Stock:</strong> {{ $item['initial_stock'] }} {{ $item['unit'] }}</p>
+                                    <p><strong>Current Stock:</strong> {{ $item['initial_stock'] }} {{ $item['unit'] }}</p>
                                     <p><strong>Remaining:</strong> {{ $item['remaining_stock'] }} {{ $item['unit'] }}</p>
                                     <p><strong>Critical Level:</strong> {{ $item['critical'] }} {{ $item['unit'] }}</p>
                                 </div>
@@ -118,7 +118,7 @@
                                     <span class="inventory-status-badge {{ $item['status_class'] }}">
                                         {{ $item['status'] }}
                                     </span>
-                                    <p><strong>Initial Stock:</strong> {{ $item['initial_stock'] }} bottles</p>
+                                    <p><strong>Current Stock:</strong> {{ $item['initial_stock'] }} bottles</p>
                                     <p><strong>Remaining:</strong> {{ $item['remaining_stock'] }} bottles</p>
                                     <p><strong>Critical Level:</strong> {{ $item['critical'] }} bottles</p>
                                 </div>

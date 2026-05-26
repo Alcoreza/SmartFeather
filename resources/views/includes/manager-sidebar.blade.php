@@ -66,6 +66,13 @@
                 <span class="sidebar-icon">👤</span>
                 <span>Profile</span>
             </a>
+
+            <div style="margin-top: 48px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 28px;">
+            <a href="{{ route('logout') }}" class="sidebar-link" style="color: #fff; background: #c91c16; border-radius: 20px; display: flex; align-items: center; gap: 14px; font-weight: 600;">
+                <span class="sidebar-icon">⎋</span>
+                <span>Logout</span>
+            </a>
+        </div>
         </nav>
     </div>
 </aside>

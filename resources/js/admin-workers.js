@@ -32,14 +32,21 @@ function syncUsernamePreview() {
     usernameInput.value = generateUsername(firstName, lastName);
 }
 
-const passwordInput = document.getElementById('Password');
-const confirmPasswordInput = document.getElementById('ConfirmPassword');
+const passwordInput = document.getElementById('passwordModalPassword');
+const confirmPasswordInput = document.getElementById('passwordModalConfirm');
+const oldPasswordInput = document.getElementById('passwordModalOldPassword');
 const confirmPasswordMessage = document.getElementById('confirmPasswordMessage');
+const oldPasswordMessage = document.getElementById('oldPasswordMessage');
 const phoneInput = document.getElementById('PhoneNumber');
 const birthdayInput = document.getElementById('Birthday');
+let pendingPassword = null;
 
 function clearConfirmPasswordMessage() {
     confirmPasswordMessage.textContent = '';
+}
+
+function clearOldPasswordMessage() {
+    oldPasswordMessage.textContent = '';
 }
 
 function validateConfirmPassword() {
@@ -61,12 +68,32 @@ function validateConfirmPassword() {
 }
 
 function resetConfirmPasswordState() {
+    if (passwordInput) passwordInput.value = '';
     if (confirmPasswordInput) confirmPasswordInput.value = '';
+    if (oldPasswordInput) oldPasswordInput.value = '';
     clearConfirmPasswordMessage();
+    clearOldPasswordMessage();
 }
 
 function isAddMode() {
     return !document.getElementById('EmployeeId').value;
+}
+
+function setPasswordModalMode(mode) {
+    const editPasswordBtn = document.getElementById('editPasswordBtn');
+    const oldPasswordField = document.getElementById('passwordModalOldPasswordField');
+
+    const isEditMode = mode === 'edit';
+
+    if (oldPasswordField) {
+        oldPasswordField.style.display = isEditMode ? 'block' : 'none';
+    }
+
+    document.getElementById('passwordModalTitle').textContent = isEditMode ? 'Change Password' : 'Set Password';
+
+    if (editPasswordBtn) {
+        editPasswordBtn.textContent = isEditMode ? 'Change Password' : 'Set Password';
+    }
 }
 
 function setAddModeRequirements(isAddMode) {
@@ -83,9 +110,7 @@ function getMissingRequiredFields() {
             { id: 'Role', label: 'Role' },
             { id: 'PhoneNumber', label: 'Phone Number' },
             { id: 'Birthday', label: 'Birthday' },
-            { id: 'Gender', label: 'Gender' },
-            { id: 'Password', label: 'Password' },
-            { id: 'ConfirmPassword', label: 'Confirm Password' }
+            { id: 'Gender', label: 'Gender' }
         ]
         : [];
 
@@ -122,8 +147,11 @@ document.getElementById('closeRequiredFieldsModal')?.addEventListener('click', (
 });
 // =============== END REQUIRED FIELDS MODAL ===============
 
-[passwordInput, confirmPasswordInput].forEach(input => {
-    input?.addEventListener('input', validateConfirmPassword);
+[passwordInput, confirmPasswordInput, oldPasswordInput].forEach(input => {
+    input?.addEventListener('input', () => {
+        validateConfirmPassword();
+        clearOldPasswordMessage();
+    });
 });
 
 // ================= PROFILE MODAL =================
@@ -246,7 +274,10 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     document.getElementById('workerModalTitle').innerText = 'Add Employee';
     document.getElementById('workerForm').reset();
     document.getElementById('EmployeeId').value = '';
+    pendingPassword = null;
+    resetConfirmPasswordState();
     setAddModeRequirements(true);
+    setPasswordModalMode('add');
     syncUsernamePreview();
     openModal('workerModal');
 });
@@ -286,8 +317,16 @@ function populateEditModal(user) {
     document.getElementById('Birthday').value = user.Birthday ?? '';
     document.getElementById('Gender').value = user.Gender ?? '';
     document.getElementById('Address').value = user.Address ?? '';
-    document.getElementById('Password').value = user.Password ?? '';
+    pendingPassword = null;
+    resetConfirmPasswordState();
+    setPasswordModalMode('edit');
     setAddModeRequirements(false);
+}
+
+function openPasswordModal() {
+    resetConfirmPasswordState();
+    setPasswordModalMode(isAddMode() ? 'add' : 'edit');
+    openModal('passwordModal');
 }
 
 // ================= SAVE EMPLOYEE (ADD/EDIT) =================
@@ -298,7 +337,8 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (!validateConfirmPassword()) {
+    if (isAddMode() && !pendingPassword) {
+        alert('Please set a password for the new employee before saving.');
         return;
     }
 
@@ -314,7 +354,7 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         Birthday: document.getElementById('Birthday').value || null,
         Gender: document.getElementById('Gender').value || null,
         Address: document.getElementById('Address').value || null,
-        Password: document.getElementById('Password').value || null
+        Password: pendingPassword || null
     };
 
     if (!data.Password) delete data.Password;
@@ -335,8 +375,70 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
 
         closeModal('workerModal');
+        pendingPassword = null;
         await loadEmployees();
     } catch (err) { console.error(err); alert('Network error'); }
+});
+
+document.getElementById('editPasswordBtn')?.addEventListener('click', () => {
+    openPasswordModal();
+});
+
+document.getElementById('passwordForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    if (!validateConfirmPassword()) {
+        return;
+    }
+
+    const password = passwordInput?.value || '';
+    const employeeId = document.getElementById('EmployeeId').value;
+    const oldPassword = oldPasswordInput?.value || '';
+
+    if (!password) {
+        clearConfirmPasswordMessage();
+        return;
+    }
+
+    if (!employeeId) {
+        pendingPassword = password;
+        closeModal('passwordModal');
+        return;
+    }
+
+    if (!oldPassword) {
+        oldPasswordMessage.textContent = 'Please enter your current password.';
+        return;
+    }
+
+    try {
+        const res = await fetch(`${BASE_URL}/${employeeId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ Password: password, OldPassword: oldPassword })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+
+            if (err.errors?.old_password) {
+                oldPasswordMessage.textContent = err.errors.old_password[0];
+                return;
+            }
+
+            alert('Error: ' + JSON.stringify(err.errors ?? err));
+            return;
+        }
+
+        closeModal('passwordModal');
+        await loadEmployees();
+    } catch (err) {
+        console.error(err);
+        alert('Network error');
+    }
 });
 
 // ================= DELETE EMPLOYEE =================

@@ -69,19 +69,46 @@
             </div>
 
             <div class="admin-worker-field">
-                <label>Password*</label>
-                <input type="password" id="Password">
-            </div>
-
-            <div class="admin-worker-field">
-                <label>Confirm Password</label>
-                <input type="password" id="ConfirmPassword">
-                <small id="confirmPasswordMessage" class="admin-worker-field-error" aria-live="polite"></small>
+                <button type="button" id="editPasswordBtn" class="admin-worker-btn save">Edit Password</button>
             </div>
 
             <div class="admin-worker-modal-actions">
                 <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="workerModal">Cancel</button>
                 <button type="submit" class="admin-worker-btn save">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="admin-worker-modal-backdrop" id="passwordModal" style="display:none;">
+    <div class="admin-worker-modal-card">
+        <div class="admin-worker-modal-header">
+            <h2 id="passwordModalTitle">Edit Password</h2>
+            <div class="admin-worker-header-line"></div>
+        </div>
+
+        <form id="passwordForm" class="admin-worker-modal-body">
+            <div class="admin-worker-field" id="passwordModalOldPasswordField" style="display:none;">
+                <label>Current Password</label>
+                <input type="password" id="passwordModalOldPassword" autocomplete="current-password">
+                <small id="oldPasswordMessage" class="admin-worker-field-error" aria-live="polite"></small>
+            </div>
+
+            <div class="admin-worker-field">
+                <label>New Password</label>
+                <input type="password" id="passwordModalPassword" autocomplete="new-password">
+            </div>
+
+            <div class="admin-worker-field">
+                <label>Confirm Password</label>
+                <input type="password" id="passwordModalConfirm" autocomplete="new-password">
+                <small id="confirmPasswordMessage" class="admin-worker-field-error" aria-live="polite"></small>
+            </div>
+
+            <div class="admin-worker-modal-actions">
+                <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="passwordModal">Cancel</button>
+                <button type="submit" class="admin-worker-btn save">Save Password</button>
             </div>
         </form>
     </div>

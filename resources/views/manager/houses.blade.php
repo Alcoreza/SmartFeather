@@ -46,7 +46,7 @@
 
                     <div class="toolbar-right">
                         <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">✎ Edit</button>
-                        <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End</button>
+                        <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
                         <a href="{{ route('manager.houses.record-house') }}" class="toolbar-btn btn-file" title="Records">
                             Records
                         </a>

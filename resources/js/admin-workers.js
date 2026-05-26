@@ -286,7 +286,7 @@ function populateEditModal(user) {
     document.getElementById('Birthday').value = user.Birthday ?? '';
     document.getElementById('Gender').value = user.Gender ?? '';
     document.getElementById('Address').value = user.Address ?? '';
-    document.getElementById('Password').value = '';
+    document.getElementById('Password').value = user.Password ?? '';
     setAddModeRequirements(false);
 }
 

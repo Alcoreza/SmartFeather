@@ -189,7 +189,7 @@ class TaskController extends Controller
             'houses' => $houses,
             'pens' => [],
             'task_categories' => $taskCategories,
-            'priority_levels' => ['Low', 'Medium', 'High', 'Urgent'],
+            'priority_levels' => ['Low', 'Medium', 'High'],
         ]);
     }
 

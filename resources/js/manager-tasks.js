@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 const ALL_HOUSES_OPTION = "All houses";
 const ALL_PRIORITY_OPTION = "All priority";
-const PRIORITY_ORDER = ["Low", "Medium", "High", "Urgent"];
+const PRIORITY_ORDER = ["Low", "Medium", "High"];
 
 let taskPendingVerify = null;
 let taskDataCache = {
@@ -162,9 +162,8 @@ function refreshTaskFilterOptions() {
     const sections = ["pending", "for_approval", "completed"];
 
     sections.forEach((section) => {
-        const items = taskDataCache[section] || [];
         const houseOptions = buildHouseFilterOptions();
-        const priorityOptions = buildPriorityFilterOptions(items);
+        const priorityOptions = buildPriorityFilterOptions();
 
         updateTaskFilterSelect(`taskHouseFilter-${section}`, houseOptions, taskFilters[section].house);
         updateTaskFilterSelect(`taskPriorityFilter-${section}`, priorityOptions, taskFilters[section].priority);
@@ -177,17 +176,8 @@ function buildHouseFilterOptions() {
     return [ALL_HOUSES_OPTION, ...values.sort((a, b) => a.localeCompare(b))];
 }
 
-function buildPriorityFilterOptions(items) {
-    const values = [...new Set((items || [])
-        .map((item) => String(item.priority ?? "").trim())
-        .filter(Boolean))];
-
-    const ordered = PRIORITY_ORDER.filter((priority) => values.includes(priority));
-    const extras = values
-        .filter((priority) => !PRIORITY_ORDER.includes(priority))
-        .sort((a, b) => a.localeCompare(b));
-
-    return [ALL_PRIORITY_OPTION, ...ordered, ...extras];
+function buildPriorityFilterOptions() {
+    return [ALL_PRIORITY_OPTION, ...PRIORITY_ORDER];
 }
 
 function updateTaskFilterSelect(selectId, options, currentValue) {

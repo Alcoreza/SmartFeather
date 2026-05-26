@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class EmployeeController extends Controller
 {
@@ -58,9 +59,29 @@ class EmployeeController extends Controller
         $employee = Employee::findOrFail($id);
         $data = $request->all();
 
+        if (array_key_exists('Password', $data)) {
+            if (!$request->filled('OldPassword')) {
+                return response()->json([
+                    'errors' => [
+                        'old_password' => ['Old password is required to change the password.']
+                    ]
+                ], 422);
+            }
+
+            if (!Hash::check($request->input('OldPassword'), $employee->Password)) {
+                return response()->json([
+                    'errors' => [
+                        'old_password' => ['The old password is incorrect.']
+                    ]
+                ], 422);
+            }
+        }
+
         if (isset($data['Password']) && !$data['Password']) {
             unset($data['Password']);
         }
+
+        unset($data['OldPassword']);
 
         $employee->update($data);
         return response()->json($employee);

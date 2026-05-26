@@ -10,11 +10,11 @@ class MobileAuthController extends Controller
     public function login(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|integer',
+            'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('EmployeeId', $validated['user_id'])->first();
+        $user = User::where('Username', $validated['username'])->first();
 
         $storedPassword = $user?->Password;
         $normalizedHash = $storedPassword;
@@ -28,7 +28,7 @@ class MobileAuthController extends Controller
             : false;
 
         \Log::info('mobile login debug', [
-            'employee_id' => $validated['user_id'],
+            'username' => $validated['username'],
             'user_found' => (bool) $user,
             'role' => $user?->Role,
             'stored_prefix' => $storedPassword ? substr($storedPassword, 0, 4) : null,
@@ -38,7 +38,7 @@ class MobileAuthController extends Controller
 
         if (!$user || !$normalizedHash || !$passwordMatches) {
             return response()->json([
-                'message' => 'Invalid employee ID or password.'
+                'message' => 'Invalid username or password.'
             ], 401);
         }
 
@@ -55,6 +55,7 @@ class MobileAuthController extends Controller
                 'FirstName' => $user->FirstName,
                 'LastName' => $user->LastName,
                 'Role' => $user->Role,
+                'Username' => $user->Username,
             ]
         ]);
     }

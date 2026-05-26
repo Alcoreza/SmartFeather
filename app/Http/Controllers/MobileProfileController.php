@@ -62,6 +62,7 @@ class MobileProfileController extends Controller
     {
         return [
             'employee_id' => (int) $user->EmployeeId,
+            'username' => $user->Username,
             'first_name' => $user->FirstName,
             'middle_name' => $user->MiddleName,
             'last_name' => $user->LastName,

@@ -109,6 +109,15 @@ body {
         color 0.2s ease;
 }
 
+.sidebar-link-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
 .sidebar-link:hover {
     color: #fff;
     transform: translateX(4px);

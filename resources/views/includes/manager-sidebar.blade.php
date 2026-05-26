@@ -60,6 +60,12 @@
                 <span class="sidebar-icon">⚙</span>
                 <span>Management</span>
             </a>
+
+            <a href="{{ route('manager.profile') }}"
+                class="sidebar-link {{ request()->routeIs('manager.profile') ? 'active' : '' }}">
+                <span class="sidebar-icon">👤</span>
+                <span>Profile</span>
+            </a>
         </nav>
     </div>
 </aside>

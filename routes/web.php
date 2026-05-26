@@ -55,7 +55,7 @@ Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
 
 Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
 Route::view('/manager/management', 'manager.management')->name('manager.management');
-Route::view('/manager/profile', 'manager.profile')->name('manager.profile');
+Route::get('/manager/profile', [ProfileController::class, 'managerProfile'])->name('manager.profile');
 
 /*
 |--------------------------------------------------------------------------

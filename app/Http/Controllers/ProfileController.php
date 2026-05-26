@@ -7,16 +7,41 @@ use App\Models\User;
 
 class ProfileController extends Controller
 {
-    public function getCurrentUser(Request $request)
+    protected function currentUser()
     {
         $userId = session('user_id');
+
         if (!$userId) {
+            return null;
+        }
+
+        return User::find($userId);
+    }
+
+    public function managerProfile()
+    {
+        $user = $this->currentUser();
+
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        return view('manager.profile', [
+            'user' => $user,
+            'birthdayDisplay' => $user->Birthday
+                ? \Illuminate\Support\Carbon::parse($user->Birthday)->format('F j, Y')
+                : '',
+        ]);
+    }
+
+    public function getCurrentUser(Request $request)
+    {
+        $user = $this->currentUser();
+
+        if (!$user) {
             return response()->json(['error' => 'Not authenticated'], 401);
         }
-        $user = User::find($userId);
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
+
         return response()->json([
             'EmployeeId' => $user->EmployeeId,
             'FirstName' => $user->FirstName,

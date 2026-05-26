@@ -56,6 +56,7 @@ Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
 Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
 Route::view('/manager/management', 'manager.management')->name('manager.management');
 Route::get('/manager/profile', [ProfileController::class, 'managerProfile'])->name('manager.profile');
+Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
 
 /*
 |--------------------------------------------------------------------------
@@ -66,6 +67,7 @@ Route::get('/manager/profile', [ProfileController::class, 'managerProfile'])->na
 Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
 Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
 Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
+Route::get('/admin/profile', [ProfileController::class, 'adminProfile'])->name('admin.profile');
 
 Route::view('/admin/houses/records', 'admin.record-house')
     ->name('admin.houses.record-house');

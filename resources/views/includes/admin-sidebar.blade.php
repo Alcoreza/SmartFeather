@@ -30,6 +30,25 @@
                 <span class="sidebar-icon">⌁</span>
                 <span>Sensors</span>
             </a>
+
+            <a href="{{ route('admin.profile') }}"
+                class="admin-sidebar-link {{ request()->routeIs('admin.profile') ? 'active' : '' }}">
+                <span class="admin-sidebar-icon">👤</span>
+                <span>Profile</span>
+            </a>
+
+            <div style="margin-top: 48px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 28px;">
+            <a href="{{ route('logout') }}" class="admin-sidebar-link" style="color: #fff; background: #c91c16; border-radius: 20px; display: flex; align-items: center; gap: 14px; font-weight: 600;">
+                <span class="admin-sidebar-icon">⎋</span>
+                <span>Logout</span>
+            </a>
+        </div>
         </nav>
     </div>
 </aside>
+        <div style="margin-top: 48px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 28px;">
+            <a href="{{ route('logout') }}" class="admin-sidebar-link" style="color: #fff; background: #c91c16; border-radius: 20px; display: flex; align-items: center; gap: 14px; font-weight: 600;">
+                <span class="admin-sidebar-icon">⎋</span>
+                <span>Logout</span>
+            </a>
+        </div>

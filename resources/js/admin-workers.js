@@ -32,6 +32,100 @@ function syncUsernamePreview() {
     usernameInput.value = generateUsername(firstName, lastName);
 }
 
+const passwordInput = document.getElementById('Password');
+const confirmPasswordInput = document.getElementById('ConfirmPassword');
+const confirmPasswordMessage = document.getElementById('confirmPasswordMessage');
+const phoneInput = document.getElementById('PhoneNumber');
+const birthdayInput = document.getElementById('Birthday');
+
+function clearConfirmPasswordMessage() {
+    confirmPasswordMessage.textContent = '';
+}
+
+function validateConfirmPassword() {
+    const password = passwordInput?.value || '';
+    const confirmPassword = confirmPasswordInput?.value || '';
+
+    if (!password && !confirmPassword) {
+        clearConfirmPasswordMessage();
+        return true;
+    }
+
+    if (password !== confirmPassword) {
+        confirmPasswordMessage.textContent = 'Passwords do not match.';
+        return false;
+    }
+
+    clearConfirmPasswordMessage();
+    return true;
+}
+
+function resetConfirmPasswordState() {
+    if (confirmPasswordInput) confirmPasswordInput.value = '';
+    clearConfirmPasswordMessage();
+}
+
+function isAddMode() {
+    return !document.getElementById('EmployeeId').value;
+}
+
+function setAddModeRequirements(isAddMode) {
+    if (!isAddMode) {
+        resetConfirmPasswordState();
+    }
+}
+
+function getMissingRequiredFields() {
+    const requiredFields = isAddMode()
+        ? [
+            { id: 'FirstName', label: 'First Name' },
+            { id: 'LastName', label: 'Last Name' },
+            { id: 'Role', label: 'Role' },
+            { id: 'PhoneNumber', label: 'Phone Number' },
+            { id: 'Birthday', label: 'Birthday' },
+            { id: 'Gender', label: 'Gender' },
+            { id: 'Password', label: 'Password' },
+            { id: 'ConfirmPassword', label: 'Confirm Password' }
+        ]
+        : [];
+
+    return requiredFields
+        .filter(field => !(document.getElementById(field.id)?.value || '').trim())
+        .map(field => field.label);
+}
+
+// =============== REQUIRED FIELDS MODAL ===============
+function showRequiredFieldsPopup() {
+    const missingFields = getMissingRequiredFields();
+    if (!missingFields.length) {
+        return false;
+    }
+    const msg = `Please fill in the required fields: ${missingFields.join(', ')}.`;
+    document.getElementById('requiredFieldsMessage').textContent = msg;
+    document.getElementById('requiredFieldsModal').style.display = 'flex';
+    const firstMissingField = document.getElementById(
+        missingFields[0] === 'First Name' ? 'FirstName' :
+        missingFields[0] === 'Last Name' ? 'LastName' :
+        missingFields[0] === 'Role' ? 'Role' :
+        missingFields[0] === 'Phone Number' ? 'PhoneNumber' :
+        missingFields[0] === 'Birthday' ? 'Birthday' :
+        missingFields[0] === 'Gender' ? 'Gender' :
+        missingFields[0] === 'Password' ? 'Password' :
+        'ConfirmPassword'
+    );
+    setTimeout(() => firstMissingField?.focus(), 350);
+    return true;
+}
+
+document.getElementById('closeRequiredFieldsModal')?.addEventListener('click', () => {
+    closeModal('requiredFieldsModal');
+});
+// =============== END REQUIRED FIELDS MODAL ===============
+
+[passwordInput, confirmPasswordInput].forEach(input => {
+    input?.addEventListener('input', validateConfirmPassword);
+});
+
 // ================= PROFILE MODAL =================
 async function populateAdminProfileModal() {
     try {
@@ -152,6 +246,7 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     document.getElementById('workerModalTitle').innerText = 'Add Employee';
     document.getElementById('workerForm').reset();
     document.getElementById('EmployeeId').value = '';
+    setAddModeRequirements(true);
     syncUsernamePreview();
     openModal('workerModal');
 });
@@ -192,11 +287,20 @@ function populateEditModal(user) {
     document.getElementById('Gender').value = user.Gender ?? '';
     document.getElementById('Address').value = user.Address ?? '';
     document.getElementById('Password').value = '';
+    setAddModeRequirements(false);
 }
 
 // ================= SAVE EMPLOYEE (ADD/EDIT) =================
 document.getElementById('workerForm')?.addEventListener('submit', async e => {
     e.preventDefault();
+
+    if (showRequiredFieldsPopup()) {
+        return;
+    }
+
+    if (!validateConfirmPassword()) {
+        return;
+    }
 
     const id = document.getElementById('EmployeeId').value;
     const data = {
@@ -319,3 +423,16 @@ document.addEventListener('DOMContentLoaded', () => {
     loadEmployees();
     setupAdminProfileModal();
 });
+
+// =============== REMOVE NATIVE REQUIRED ATTRIBUTES ===============
+function removeNativeRequiredAttributes() {
+    [
+        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'Password', 'ConfirmPassword'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.removeAttribute('required');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', removeNativeRequiredAttributes);
+// =============== END REMOVE NATIVE REQUIRED ATTRIBUTES ===============

@@ -11,16 +11,16 @@
 
             <div class="admin-worker-form-grid">
                 <div class="admin-worker-field">
-                    <label>First Name</label>
-                    <input type="text" id="FirstName" required>
+                    <label>First Name*</label>
+                    <input type="text" id="FirstName">
                 </div>
                 <div class="admin-worker-field">
                     <label>Middle Name</label>
                     <input type="text" id="MiddleName">
                 </div>
                 <div class="admin-worker-field">
-                    <label>Last Name</label>
-                    <input type="text" id="LastName" required>
+                    <label>Last Name*</label>
+                    <input type="text" id="LastName">
                 </div>
                 <div class="admin-worker-field">
                     <label>Suffix</label>
@@ -35,8 +35,9 @@
             </div>
 
             <div class="admin-worker-field">
-                <label>Role</label>
-                <select id="Role" required>
+                <label>Role*</label>
+                <select id="Role">
+                    <option value="">Select Role</option>
                     <option value="Manager">Manager</option>
                     <option value="Admin">Admin</option>
                     <option value="Flockman">Flockman</option>
@@ -45,7 +46,7 @@
 
             <div class="admin-worker-form-grid">
                 <div class="admin-worker-field">
-                    <label>Phone Number</label>
+                    <label>Phone Number*</label>
                     <input type="text" id="PhoneNumber">
                 </div>
                 <div class="admin-worker-field">
@@ -53,7 +54,7 @@
                     <input type="date" id="Birthday">
                 </div>
                 <div class="admin-worker-field">
-                    <label>Gender</label>
+                    <label>Gender*</label>
                     <select id="Gender">
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
@@ -68,8 +69,14 @@
             </div>
 
             <div class="admin-worker-field">
-                <label>Password</label>
+                <label>Password*</label>
                 <input type="password" id="Password">
+            </div>
+
+            <div class="admin-worker-field">
+                <label>Confirm Password</label>
+                <input type="password" id="ConfirmPassword">
+                <small id="confirmPasswordMessage" class="admin-worker-field-error" aria-live="polite"></small>
             </div>
 
             <div class="admin-worker-modal-actions">

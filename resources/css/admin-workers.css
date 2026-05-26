@@ -269,6 +269,14 @@
     outline: none;
 }
 
+.admin-worker-field-error {
+    display: block;
+    margin-top: 6px;
+    color: #b42318;
+    font-size: 0.85rem;
+    min-height: 1.1em;
+}
+
 .admin-worker-modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -313,6 +321,25 @@
     font-size: 1.05rem;
     color: var(--admin-text-main);
     line-height: 1.6;
+}
+
+.admin-worker-modal-backdrop#requiredFieldsModal {
+    z-index: 3300;
+    background: rgba(0,0,0,0.18);
+}
+
+#requiredFieldsModal .admin-worker-modal-card {
+    border: 2px solid #b42318;
+    box-shadow: 0 8px 32px rgba(180,35,24,0.12);
+    background: #fff8f7;
+}
+
+#requiredFieldsModal h2 {
+    color: #b42318;
+}
+
+#requiredFieldsModal .admin-worker-btn.save {
+    background: linear-gradient(180deg, #b42318, #8a1a12);
 }
 
 @media (max-width: 768px) {

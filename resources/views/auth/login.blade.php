@@ -30,15 +30,15 @@
                                 @csrf
 
                                 <div class="mb-4">
-                                    <label for="user_id" class="form-label login-label">ID or Username</label>
-                                    <input type="text" id="user_id" name="user_id" class="form-control custom-input"
-                                        placeholder="Enter your ID or username">
+                                    <label for="username" class="form-label login-label">Username</label>
+                                    <input type="text" id="username" name="username" class="form-control custom-input"
+                                        placeholder="Enter your username" autocomplete="username">
                                 </div>
 
                                 <div class="mb-4">
                                     <label for="password" class="form-label login-label">Password</label>
                                     <input type="password" id="password" name="password" class="form-control custom-input"
-                                        placeholder="Enter your password">
+                                        placeholder="Enter your password" autocomplete="current-password">
                                 </div>
 
                                 <div class="text-center mt-5">

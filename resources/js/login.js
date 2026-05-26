@@ -3,7 +3,7 @@ const BASE_URL = '/api/login';
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const user_id = document.getElementById('user_id').value;
+    const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
     try {
@@ -14,7 +14,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({
-                user_id,
+                username,
                 password
             })
         });

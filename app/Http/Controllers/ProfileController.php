@@ -34,6 +34,40 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function adminProfile()
+    {
+        $user = $this->currentUser();
+
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        return view('admin.profile', [
+            'user' => $user,
+            'birthdayDisplay' => $user->Birthday
+                ? \Illuminate\Support\Carbon::parse($user->Birthday)->format('F j, Y')
+                : '',
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $this->currentUser();
+
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $validated = $request->validate([
+            'PhoneNumber' => ['required', 'string', 'max:255'],
+            'Address' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user->update($validated);
+
+        return redirect()->back()->with('profile_success', 'Profile updated successfully.');
+    }
+
     public function getCurrentUser(Request $request)
     {
         $user = $this->currentUser();

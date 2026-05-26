@@ -11,6 +11,7 @@ export default defineConfig({
 
                 "resources/css/admin-dashboard.css",
                 "resources/css/admin-houses.css",
+                "resources/css/admin-profile.css",
                 "resources/css/admin-record-house.css",
                 "resources/css/admin-sensor-maintenance.css",
                 "resources/css/admin-sensors.css",
@@ -34,6 +35,7 @@ export default defineConfig({
 
                 "resources/js/app.js",
                 "resources/js/login.js",
+                "resources/js/profile-edit.js",
 
                 "resources/js/admin-dashboard.js",
                 "resources/js/admin-houses.js",

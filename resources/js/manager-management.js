@@ -37,14 +37,88 @@ function resetCreateInventoryTypeModal() {
     setInventoryMessage("");
 }
 
+function showPopup(message, type = "success", callback = null) {
+    const oldPopup = document.getElementById("managementPopupOverlay");
+    if (oldPopup) oldPopup.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "managementPopupOverlay";
+
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+    `;
+
+    const box = document.createElement("div");
+
+    box.style.cssText = `
+        background: #ffffff;
+        width: 360px;
+        max-width: 90%;
+        border-radius: 18px;
+        padding: 28px;
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+        font-family: inherit;
+    `;
+
+    box.innerHTML = `
+        <h2 style="
+            margin:0 0 10px;
+            color:${type === "success" ? "#1f7a3f" : "#b42318"};
+        ">
+            ${type === "success" ? "Success" : "Error"}
+        </h2>
+
+        <p style="
+            margin:0 0 22px;
+            color:#333;
+            font-size:15px;
+        ">
+            ${message}
+        </p>
+
+        <button id="managementPopupOkBtn" style="
+            border:none;
+            background:${type === "success" ? "#1f7a3f" : "#b42318"};
+            color:white;
+            padding:10px 28px;
+            border-radius:999px;
+            cursor:pointer;
+            font-weight:600;
+        ">
+            OK
+        </button>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById("managementPopupOkBtn")
+        .addEventListener("click", () => {
+            overlay.remove();
+
+            if (typeof callback === "function") {
+                callback();
+            }
+        });
+}
+
 async function handleCreateInventoryTypeSubmit(event) {
     event.preventDefault();
 
-    const category = inventoryCategory.value;
-    const name = newInventoryTypeName.value.trim();
+    const category = inventoryCategory?.value || "";
+    const name = newInventoryTypeName?.value.trim() || "";
+    const initialStock = newInventoryInitialStock?.value || "";
+    const critical = newInventoryCritical?.value || "";
 
-    if (!category || !name) {
-        setInventoryMessage("Please complete all fields.", "error");
+    if (!category || !name || initialStock === "" || critical === "") {
+        showPopup("Please complete all fields.", "error");
         return;
     }
 
@@ -55,28 +129,58 @@ async function handleCreateInventoryTypeSubmit(event) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Accept": "application/json",
                 "X-CSRF-TOKEN": token || "",
             },
             body: JSON.stringify({
-                category,
-                name,
+                category: category,
+                name: name,
+                initial_stock: Number(initialStock),
+                critical: Number(critical),
             }),
         });
 
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            throw new Error(data.error || "Unable to save inventory type.");
+
+            if (data.errors) {
+                const firstError = Object.values(data.errors)[0]?.[0];
+
+                showPopup(
+                    firstError || "Unable to save inventory type.",
+                    "error"
+                );
+
+                return;
+            }
+
+            showPopup(
+                data.error || data.message || "Unable to save inventory type.",
+                "error"
+            );
+
+            return;
         }
 
-        setInventoryMessage(`Added "${data.name}" successfully.`, "success");
+        showPopup(
+            `Added "${data.name}" successfully.`,
+            "success",
+            () => {
+                resetCreateInventoryTypeModal();
+                closeModal(createInventoryTypeModal);
+                location.reload();
+            }
+        );
 
-        setTimeout(() => {
-            resetCreateInventoryTypeModal();
-            closeModal(createInventoryTypeModal);
-        }, 700);
     } catch (error) {
-        setInventoryMessage(error.message || "Unable to save inventory type.", "error");
+
+        console.error(error);
+
+        showPopup(
+            error.message || "Unable to save inventory type.",
+            "error"
+        );
     }
 }
 

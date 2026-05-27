@@ -439,12 +439,17 @@ async function uploadVisitorPhoto() {
     }
 
     try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
         const response = await fetch('/api/manager/biosecurity-logs/visitor-photo', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 photo_data: visitorPhotoDataUrl,
                 mime_type: 'image/jpeg',
@@ -474,6 +479,28 @@ async function uploadVisitorPhoto() {
             openCameraButton.disabled = false;
         }
     }
+}
+
+function attachVisitorPhoto() {
+    // store the DataURL in a hidden input so it will be uploaded with the form on Save
+    const hiddenInput = document.getElementById('add_photo_data');
+    const preview = document.getElementById('add_photo_preview');
+    const status = document.getElementById('add_photo_status');
+
+    if (!visitorPhotoDataUrl) {
+        alert('Please capture a photo first.');
+        return;
+    }
+
+    if (hiddenInput) hiddenInput.value = visitorPhotoDataUrl;
+    if (preview) {
+        preview.src = visitorPhotoDataUrl;
+        preview.style.display = 'block';
+    }
+    if (status) status.textContent = 'Photo attached locally. It will be uploaded when you save.';
+
+    // close camera modal but keep photo data for save
+    closeVisitorCameraModal();
 }
 
 function setupEditModal() {
@@ -659,7 +686,8 @@ function setupAddModal() {
         }
 
         if (event.target.closest('#useVisitorPhotoBtn')) {
-            uploadVisitorPhoto();
+            // Attach photo locally; actual upload occurs on Save
+            attachVisitorPhoto();
         }
 
         if (event.target.closest('#closeVisitorCameraModal')) {

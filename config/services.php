@@ -38,11 +38,7 @@ return [
     'supabase' => [
         'url' => env('SUPABASE_URL'),
         'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY'),
-<<<<<<< HEAD
-        'task_photos_bucket' => env('SUPABASE_TASK_PHOTOS_BUCKET', 'taskphotos'),
-=======
         'task_photos_bucket' => env('SUPABASE_TASK_PHOTOS_BUCKET', 'task-photos'),
->>>>>>> 1f79ac738d91a74bce16ffd84401debaddd7827f
         'visitor_photos_bucket' => env('SUPABASE_VISITOR_PHOTOS_BUCKET', 'visitor-photos'),
     ],
 

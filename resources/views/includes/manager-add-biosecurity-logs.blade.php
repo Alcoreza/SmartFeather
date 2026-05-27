@@ -9,6 +9,7 @@
             @csrf
             <input type="hidden" id="addLogType" name="type">
             <input type="hidden" id="add_photo_url" name="photo_url">
+            <input type="hidden" id="add_photo_data" name="photo_data">
 
             <div id="addBioModalFields"></div>
 

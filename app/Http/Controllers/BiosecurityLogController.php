@@ -44,6 +44,19 @@ class BiosecurityLogController extends Controller
 
         $validated = $request->validate($this->getValidationRules($type));
 
+        // If a captured photo was attached (DataURL), upload it now and set photo_url
+        if ($type === 'Visitors' && $request->filled('photo_data')) {
+            try {
+                $path = $this->uploadPhotoFromData($request->input('photo_data'));
+                if ($path) {
+                    // Ensure stored field matches validation rule 'photo_url'
+                    $validated['photo_url'] = $path;
+                }
+            } catch (\Exception $e) {
+                return response()->json(['message' => 'Failed to upload photo during save', 'error' => $e->getMessage()], 500);
+            }
+        }
+
         // Convert IDs to display values
         $validated = $this->convertIdsToValues($type, $validated);
 
@@ -60,27 +73,45 @@ class BiosecurityLogController extends Controller
      */
     public function uploadVisitorPhoto(Request $request)
     {
-        $validated = $request->validate([
-            'photo_data' => 'required|string',
-            'mime_type' => 'required|string|in:image/jpeg,image/png,image/webp',
-        ]);
+        $data = $request->input('photo_data');
+        try {
+            $path = $this->uploadPhotoFromData($data, $request->input('mime_type'));
+            return response()->json([
+                'success' => true,
+                'photo_path' => $path,
+                'photo_url' => $this->buildVisitorPhotoUrl($path),
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to upload photo', 'error' => $e->getMessage()], 500);
+        }
+    }
 
-        $data = $validated['photo_data'];
+    /**
+     * Handle DataURL upload and return the stored path.
+     */
+    private function uploadPhotoFromData(string $data, ?string $mimeType = null): string
+    {
         $matches = [];
 
         if (!preg_match('/^data:image\/(jpeg|png|webp);base64,(.*)$/i', $data, $matches)) {
-            return response()->json(['message' => 'Invalid photo data format.'], 422);
+            throw new \RuntimeException('Invalid photo data format.');
         }
 
-        $mimeType = $validated['mime_type'];
+        $detected = strtolower($matches[1] ?? 'jpeg');
         $base64Data = $matches[2] ?? '';
         $decoded = base64_decode($base64Data);
 
         if ($decoded === false) {
-            return response()->json(['message' => 'Invalid base64 photo data.'], 422);
+            throw new \RuntimeException('Invalid base64 photo data.');
         }
 
-        $extension = match ($mimeType) {
+        $mime = $mimeType ?: match ($detected) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => 'image/jpeg',
+        };
+
+        $extension = match ($mime) {
             'image/png' => 'png',
             'image/webp' => 'webp',
             default => 'jpg',
@@ -92,46 +123,22 @@ class BiosecurityLogController extends Controller
         $serviceRoleKey = config('services.supabase.service_role_key');
 
         if (blank($bucket) || blank($baseUrl) || blank($serviceRoleKey)) {
-            return response()->json(['message' => 'Supabase storage is not configured correctly.'], 500);
-        }
-
-        $endpoint = sprintf('%s/storage/v1/object/upload/sign/%s/%s', $baseUrl, $bucket, $path);
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $serviceRoleKey,
-            'apikey' => $serviceRoleKey,
-            'Content-Type' => 'application/json',
-        ])->post($endpoint, ['expiresIn' => 600]);
-
-        if (!$response->successful()) {
-            return response()->json([
-                'message' => 'Failed to create signed upload URL.',
-                'details' => $response->body(),
-            ], 500);
-        }
-
-        $token = $response->json('token');
-        if (blank($token)) {
-            return response()->json([ 'message' => 'Supabase did not return an upload token.', 'details' => $response->json() ], 500);
+            throw new \RuntimeException('Supabase storage is not configured correctly.');
         }
 
         $uploadEndpoint = sprintf('%s/storage/v1/object/%s/%s', $baseUrl, $bucket, $path);
         $uploadResponse = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Content-Type' => $mimeType,
-        ])->withBody($decoded, $mimeType)->put($uploadEndpoint);
+            'Authorization' => 'Bearer ' . $serviceRoleKey,
+            'apikey' => $serviceRoleKey,
+            'Content-Type' => $mime,
+            'x-upsert' => 'false',
+        ])->withBody($decoded, $mime)->post($uploadEndpoint);
 
         if (!$uploadResponse->successful()) {
-            return response()->json([
-                'message' => 'Failed to upload visitor photo.',
-                'details' => $uploadResponse->body(),
-            ], 500);
+            throw new \RuntimeException('Failed to upload visitor photo: ' . $uploadResponse->body());
         }
 
-        return response()->json([
-            'success' => true,
-            'photo_path' => $path,
-            'photo_url' => $this->buildVisitorPhotoUrl($path),
-        ], 201);
+        return $path;
     }
 
     /**

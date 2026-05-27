@@ -8,6 +8,8 @@ use App\Models\VisitorLog;
 use App\Models\PersonnelEntryLog;
 use App\Models\WeightSamplingLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class BiosecurityLogController extends Controller
 {
@@ -50,6 +52,85 @@ class BiosecurityLogController extends Controller
         return response()->json([
             'message' => 'Log created successfully',
             'log' => $this->formatLogByType($type, $log),
+        ], 201);
+    }
+
+    /**
+     * Upload a visitor photo to Supabase storage
+     */
+    public function uploadVisitorPhoto(Request $request)
+    {
+        $validated = $request->validate([
+            'photo_data' => 'required|string',
+            'mime_type' => 'required|string|in:image/jpeg,image/png,image/webp',
+        ]);
+
+        $data = $validated['photo_data'];
+        $matches = [];
+
+        if (!preg_match('/^data:image\/(jpeg|png|webp);base64,(.*)$/i', $data, $matches)) {
+            return response()->json(['message' => 'Invalid photo data format.'], 422);
+        }
+
+        $mimeType = $validated['mime_type'];
+        $base64Data = $matches[2] ?? '';
+        $decoded = base64_decode($base64Data);
+
+        if ($decoded === false) {
+            return response()->json(['message' => 'Invalid base64 photo data.'], 422);
+        }
+
+        $extension = match ($mimeType) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+
+        $path = sprintf('visitors/%s.%s', Str::uuid()->toString(), $extension);
+        $bucket = config('services.supabase.visitor_photos_bucket');
+        $baseUrl = rtrim(config('services.supabase.url'), '/');
+        $serviceRoleKey = config('services.supabase.service_role_key');
+
+        if (blank($bucket) || blank($baseUrl) || blank($serviceRoleKey)) {
+            return response()->json(['message' => 'Supabase storage is not configured correctly.'], 500);
+        }
+
+        $endpoint = sprintf('%s/storage/v1/object/upload/sign/%s/%s', $baseUrl, $bucket, $path);
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $serviceRoleKey,
+            'apikey' => $serviceRoleKey,
+            'Content-Type' => 'application/json',
+        ])->post($endpoint, ['expiresIn' => 600]);
+
+        if (!$response->successful()) {
+            return response()->json([
+                'message' => 'Failed to create signed upload URL.',
+                'details' => $response->body(),
+            ], 500);
+        }
+
+        $token = $response->json('token');
+        if (blank($token)) {
+            return response()->json([ 'message' => 'Supabase did not return an upload token.', 'details' => $response->json() ], 500);
+        }
+
+        $uploadEndpoint = sprintf('%s/storage/v1/object/%s/%s', $baseUrl, $bucket, $path);
+        $uploadResponse = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => $mimeType,
+        ])->withBody($decoded, $mimeType)->put($uploadEndpoint);
+
+        if (!$uploadResponse->successful()) {
+            return response()->json([
+                'message' => 'Failed to upload visitor photo.',
+                'details' => $uploadResponse->body(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'photo_path' => $path,
+            'photo_url' => $this->buildVisitorPhotoUrl($path),
         ], 201);
     }
 
@@ -123,6 +204,7 @@ class BiosecurityLogController extends Controller
                 'sanitation' => 'nullable|string|max:10',
                 'ppe' => 'nullable|string|max:10',
                 'monitored_by' => 'nullable|string|max:100',
+                'photo_url' => 'nullable|string|max:255',
             ],
             'Personnel Entry Logs' => [
                 'name' => 'nullable|string|max:100',
@@ -281,7 +363,26 @@ class BiosecurityLogController extends Controller
             'sanitation' => $log->sanitation,
             'ppe' => $log->ppe,
             'monitored_by' => $log->monitored_by,
+            'photo_url' => $this->buildVisitorPhotoUrl($log->photo_url),
+            'photo_name' => $log->photo_url ? basename($log->photo_url) : '',
         ];
+    }
+
+    private function buildVisitorPhotoUrl(?string $path): ?string
+    {
+        if (blank($path)) {
+            return null;
+        }
+
+        $baseUrl = rtrim(config('services.supabase.url'), '/');
+        $bucket = config('services.supabase.visitor_photos_bucket');
+
+        return sprintf(
+            '%s/storage/v1/object/public/%s/%s',
+            $baseUrl,
+            $bucket,
+            ltrim($path, '/'),
+        );
     }
 
     private function formatPersonnelEntryLog($log)

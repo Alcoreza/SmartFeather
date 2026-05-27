@@ -7,6 +7,9 @@ const state = {
     allWorkers: [],
 };
 
+let visitorCameraStream = null;
+let visitorPhotoDataUrl = null;
+
 const TABLE_CONFIG = {
     'Personnel Biosecurity Logs': {
         title: 'Personnel Biosecurity Logs',
@@ -54,6 +57,7 @@ const TABLE_CONFIG = {
             { key: 'time_in', label: 'Time In' },
             { key: 'time_out', label: 'Time Out' },
             { key: 'name', label: 'Name' },
+            { key: 'photo_url', label: 'Photo' },
             { key: 'purpose', label: 'Purpose' },
             { key: 'foot_bath', label: 'Foot Bath' },
             { key: 'sanitation', label: 'Sanitation' },
@@ -176,9 +180,18 @@ function renderTableRows(type, rows) {
     }
 
     tableBody.innerHTML = rows.map((row) => {
-        const cells = config.columns.map((col) => `
-            <td>${escapeHtml(row[col.key])}</td>
-        `).join('');
+        const cells = config.columns.map((col) => {
+            if (col.key === 'photo_url') {
+                return `
+                    <td>
+                        ${row.photo_url ? `<img src="${escapeHtml(row.photo_url)}" alt="Visitor photo" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:8px;">` : 'No photo'}
+                    </td>
+                `;
+            }
+            return `
+                <td>${escapeHtml(row[col.key])}</td>
+            `;
+        }).join('');
 
         const encodedRow = encodeURIComponent(JSON.stringify(row));
 
@@ -268,17 +281,38 @@ function createFieldHtml(prefix, field, value = '') {
     `;
 }
 
+function createVisitorPhotoSection(prefix) {
+    return `
+        <div class="bio-modal-row">
+            <div class="bio-field full">
+                <label>Visitor Photo</label>
+                <div class="visitor-photo-section" style="display:flex; flex-direction:column; gap:10px;">
+                    <button type="button" class="bio-btn bio-btn-save" id="${prefix}_open_camera_btn">Use Camera</button>
+                    <img id="${prefix}_photo_preview" src="" alt="Visitor photo preview" style="display:none; width:100%; max-height:180px; object-fit:cover; border-radius:12px; border:1px solid #d1d1d1;" />
+                    <div id="${prefix}_photo_status" style="font-size:0.9rem; color:#444;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function buildModalFields(prefix, type, values = {}) {
     const config = TABLE_CONFIG[type];
     if (!config) return '';
 
-    return config.form.map((row) => {
-        const fieldsHtml = row.fields
+    const fieldsHtml = config.form.map((row) => {
+        const rowFieldsHtml = row.fields
             .map((field) => createFieldHtml(prefix, field, values[field.key] ?? ''))
             .join('');
 
-        return `<div class="${row.rowClass}">${fieldsHtml}</div>`;
+        return `<div class="${row.rowClass}">${rowFieldsHtml}</div>`;
     }).join('');
+
+    if (type === 'Visitors' && prefix === 'add') {
+        return fieldsHtml + createVisitorPhotoSection(prefix);
+    }
+
+    return fieldsHtml;
 }
 
 function decodeRowData(encodedData) {
@@ -289,6 +323,156 @@ function decodeRowData(encodedData) {
     } catch (error) {
         console.error('Invalid row data:', error);
         return {};
+    }
+}
+
+function updateVisitorPhotoPreview(photoUrl, statusText = '') {
+    const previewImg = document.getElementById('add_photo_preview');
+    const status = document.getElementById('add_photo_status');
+    const hiddenInput = document.getElementById('add_photo_url');
+
+    if (!previewImg || !hiddenInput) return;
+
+    if (photoUrl) {
+        previewImg.src = photoUrl;
+        previewImg.style.display = 'block';
+        hiddenInput.value = photoUrl.replace(/^https?:\/\/(.*?\/storage\/v1\/object\/public\/[^/]+\/)/, '');
+        if (status) {
+            status.textContent = statusText || 'Photo ready to save.';
+        }
+    } else {
+        previewImg.style.display = 'none';
+        hiddenInput.value = '';
+        if (status) {
+            status.textContent = statusText;
+        }
+    }
+}
+
+function closeVisitorCameraModal() {
+    const cameraModal = document.getElementById('visitorCameraModal');
+    const video = document.getElementById('visitorCameraVideo');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+
+    if (cameraModal) {
+        cameraModal.classList.remove('show');
+    }
+
+    if (video && video.srcObject) {
+        const tracks = video.srcObject.getTracks();
+        tracks.forEach((track) => track.stop());
+        video.srcObject = null;
+    }
+
+    if (snapshot) {
+        snapshot.style.display = 'none';
+    }
+
+    visitorPhotoDataUrl = null;
+    visitorCameraStream = null;
+}
+
+async function openVisitorCameraModal() {
+    const cameraModal = document.getElementById('visitorCameraModal');
+    const video = document.getElementById('visitorCameraVideo');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+
+    if (!cameraModal || !video || !snapshot || !useButton) return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera access is not available in this browser.');
+        return;
+    }
+
+    try {
+        visitorCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = visitorCameraStream;
+        video.play();
+        snapshot.style.display = 'none';
+        useButton.disabled = true;
+        cameraModal.classList.add('show');
+    } catch (error) {
+        console.error('Camera error:', error);
+        alert('Could not access the camera. Please allow camera access or use a supported browser.');
+    }
+}
+
+function captureVisitorPhoto() {
+    const video = document.getElementById('visitorCameraVideo');
+    const canvas = document.getElementById('visitorCameraCanvas');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+
+    if (!video || !canvas || !snapshot || !useButton) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    visitorPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    snapshot.src = visitorPhotoDataUrl;
+    snapshot.style.display = 'block';
+    useButton.disabled = false;
+}
+
+async function uploadVisitorPhoto() {
+    const status = document.getElementById('add_photo_status');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+    const openCameraButton = document.getElementById('add_open_camera_btn');
+
+    if (!visitorPhotoDataUrl) {
+        alert('Please capture a photo first.');
+        return;
+    }
+
+    if (status) {
+        status.textContent = 'Uploading photo...';
+    }
+    if (useButton) {
+        useButton.disabled = true;
+    }
+    if (openCameraButton) {
+        openCameraButton.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/api/manager/biosecurity-logs/visitor-photo', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                photo_data: visitorPhotoDataUrl,
+                mime_type: 'image/jpeg',
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            console.error('Photo upload error:', errorData);
+            throw new Error('Photo upload failed');
+        }
+
+        const data = await response.json();
+        updateVisitorPhotoPreview(data.photo_url, 'Photo attached.');
+        closeVisitorCameraModal();
+    } catch (error) {
+        console.error('Error uploading visitor photo:', error);
+        alert('Failed to upload photo. Please try again.');
+        if (status) {
+            status.textContent = 'Upload failed. Try again.';
+        }
+    } finally {
+        if (useButton) {
+            useButton.disabled = false;
+        }
+        if (openCameraButton) {
+            openCameraButton.disabled = false;
+        }
     }
 }
 
@@ -424,6 +608,23 @@ function setupAddModal() {
         title.textContent = `Add ${type}`;
         fieldsWrap.innerHTML = buildModalFields('add', type, {});
 
+        const photoInput = document.getElementById('add_photo_url');
+        const photoPreview = document.getElementById('add_photo_preview');
+        const photoStatus = document.getElementById('add_photo_status');
+
+        if (photoInput) {
+            photoInput.value = '';
+        }
+        if (photoPreview) {
+            photoPreview.style.display = 'none';
+            photoPreview.src = '';
+        }
+        if (photoStatus) {
+            photoStatus.textContent = '';
+        }
+
+        visitorPhotoDataUrl = null;
+
         if (logTypeInput) logTypeInput.value = type;
 
         // Set up house change event to load pens (when present)
@@ -446,6 +647,24 @@ function setupAddModal() {
         }
 
         modal.classList.add('show');
+    });
+
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('#add_open_camera_btn')) {
+            openVisitorCameraModal();
+        }
+
+        if (event.target.closest('#captureVisitorPhotoBtn')) {
+            captureVisitorPhoto();
+        }
+
+        if (event.target.closest('#useVisitorPhotoBtn')) {
+            uploadVisitorPhoto();
+        }
+
+        if (event.target.closest('#closeVisitorCameraModal')) {
+            closeVisitorCameraModal();
+        }
     });
 
     // Handle form submission

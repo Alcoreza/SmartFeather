@@ -18,6 +18,7 @@ class VisitorLog extends Model
         'sanitation',
         'ppe',
         'monitored_by',
+        'photo_url',
     ];
 
     protected $casts = [

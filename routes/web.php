@@ -296,6 +296,7 @@ Route::view('/manager/biosecurity-logs', 'manager.biosecurity-logs')
 
 Route::get('/api/manager/biosecurity-logs', [BiosecurityLogController::class, 'index']);
 Route::post('/api/manager/biosecurity-logs', [BiosecurityLogController::class, 'store']);
+Route::post('/api/manager/biosecurity-logs/visitor-photo', [BiosecurityLogController::class, 'uploadVisitorPhoto']);
 Route::put('/api/manager/biosecurity-logs/{id}', [BiosecurityLogController::class, 'update']);
 Route::delete('/api/manager/biosecurity-logs/{id}', [BiosecurityLogController::class, 'destroy']);
 

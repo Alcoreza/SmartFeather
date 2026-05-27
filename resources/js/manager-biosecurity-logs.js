@@ -497,7 +497,7 @@ function attachVisitorPhoto() {
         preview.src = visitorPhotoDataUrl;
         preview.style.display = 'block';
     }
-    if (status) status.textContent = 'Photo attached locally. It will be uploaded when you save.';
+    if (status) status.textContent = '';
 
     // close camera modal but keep photo data for save
     closeVisitorCameraModal();

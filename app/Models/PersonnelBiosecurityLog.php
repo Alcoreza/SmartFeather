@@ -14,7 +14,6 @@ class PersonnelBiosecurityLog extends Model
         'house',
         'date',
         'time',
-        'status',
         'foot_bath',
         'boots_changed',
         'protective_clothing',

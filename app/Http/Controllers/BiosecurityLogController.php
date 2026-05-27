@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CleaningLog;
 use App\Models\PersonnelBiosecurityLog;
 use App\Models\VisitorLog;
 use App\Models\PersonnelEntryLog;
+use App\Models\WeightSamplingLog;
 use Illuminate\Http\Request;
 
 class BiosecurityLogController extends Controller
@@ -15,8 +17,11 @@ class BiosecurityLogController extends Controller
     public function index()
     {
         $groupedLogs = [
-            'Personnel Biosecurity Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
+            'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
+            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelBiosecurityLog($log)),
             'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
+            'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
+            'Weight Sampling' => WeightSamplingLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatWeightSamplingLog($log)),
         ];
 
         // Get overview stats
@@ -33,7 +38,7 @@ class BiosecurityLogController extends Controller
      */
     public function store(Request $request)
     {
-        $type = $request->input('type', 'Personnel Biosecurity Logs');
+        $type = $request->input('type', 'Cleaning');
 
         $validated = $request->validate($this->getValidationRules($type));
 
@@ -76,7 +81,7 @@ class BiosecurityLogController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $type = $request->query('type', 'Personnel Biosecurity Logs');
+        $type = $request->query('type', 'Cleaning');
 
         $log = $this->findLog($type, $id);
         $log->delete();
@@ -92,12 +97,24 @@ class BiosecurityLogController extends Controller
     private function getValidationRules($type, $isUpdate = false)
     {
         $rules = [
+            'Cleaning' => [
+                'house' => 'nullable|string|max:50',
+                'pen' => 'nullable|string|max:50',
+                'activity' => 'nullable|string|max:255',
+                'disinfectant_used' => 'nullable|string|max:255',
+                'performed_by' => 'nullable|string|max:100',
+                'date' => 'nullable|date',
+                'time' => 'nullable',
+            ],
             'Personnel Biosecurity Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
+                'house' => 'nullable|string|max:50',
                 'date' => 'nullable|date',
                 'time' => 'nullable',
-                'status' => 'nullable|string|max:20',
+                'foot_bath' => 'nullable|string|max:10',
+                'boots_changed' => 'nullable|string|max:10',
+                'protective_clothing' => 'nullable|string|max:10',
             ],
             'Visitors' => [
                 'date' => 'nullable|date',
@@ -113,9 +130,21 @@ class BiosecurityLogController extends Controller
             'Personnel Entry Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
+                'house' => 'nullable|string|max:50',
                 'date' => 'nullable|date',
                 'time' => 'nullable',
-                'status' => 'nullable|string|max:20',
+            ],
+            'Weight Sampling' => [
+                'date' => 'nullable|date',
+                'time' => 'nullable',
+                'house' => 'nullable|string|max:50',
+                'pen' => 'nullable|string|max:50',
+                'batch' => 'nullable|string|max:50',
+                'flocks_with_cases' => 'nullable|string|max:50',
+                'age' => 'nullable|string|max:50',
+                'average_weight' => 'nullable|string|max:50',
+                'target' => 'nullable|string|max:50',
+                'status' => 'nullable|string|max:50',
             ],
         ];
 
@@ -127,10 +156,27 @@ class BiosecurityLogController extends Controller
      */
     private function convertIdsToValues($type, $validated, $existingLog = null)
     {
+        // House ID to house number
+        if (in_array($type, ['Cleaning', 'Personnel Biosecurity Logs', 'Personnel Entry Logs', 'Weight Sampling']) && !empty($validated['house'])) {
+            $house = \App\Models\House::find($validated['house']);
+            if ($house) {
+                $validated['house'] = $house->house_number;
+            }
+        }
+
+        // Pen ID to pen name
+        if (in_array($type, ['Cleaning', 'Weight Sampling']) && !empty($validated['pen'])) {
+            $pen = \App\Models\Pen::find($validated['pen']);
+            if ($pen) {
+                $validated['pen'] = $pen->pen_name;
+            }
+        }
 
         // Employee ID to name
         $workerField = null;
-        if ($type === 'Visitors') {
+        if ($type === 'Cleaning') {
+            $workerField = 'performed_by';
+        } elseif ($type === 'Visitors') {
             $workerField = 'monitored_by';
         }
 
@@ -157,9 +203,11 @@ class BiosecurityLogController extends Controller
     private function createLog($type, $validated)
     {
         return match ($type) {
-            'Personnel Biosecurity Logs' => PersonnelEntryLog::create($validated),
+            'Cleaning' => CleaningLog::create($validated),
+            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::create($validated),
             'Visitors' => VisitorLog::create($validated),
             'Personnel Entry Logs' => PersonnelEntryLog::create($validated),
+            'Weight Sampling' => WeightSamplingLog::create($validated),
             default => throw new \InvalidArgumentException("Unknown log type: $type"),
         };
     }
@@ -170,9 +218,11 @@ class BiosecurityLogController extends Controller
     private function findLog($type, $id)
     {
         return match ($type) {
-            'Personnel Biosecurity Logs' => PersonnelEntryLog::findOrFail($id),
+            'Cleaning' => CleaningLog::findOrFail($id),
+            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::findOrFail($id),
             'Visitors' => VisitorLog::findOrFail($id),
             'Personnel Entry Logs' => PersonnelEntryLog::findOrFail($id),
+            'Weight Sampling' => WeightSamplingLog::findOrFail($id),
             default => throw new \InvalidArgumentException("Unknown log type: $type"),
         };
     }
@@ -183,11 +233,28 @@ class BiosecurityLogController extends Controller
     private function formatLogByType($type, $log)
     {
         return match ($type) {
-            'Personnel Biosecurity Logs' => $this->formatPersonnelEntryLog($log),
+            'Cleaning' => $this->formatCleaningLog($log),
+            'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLog($log),
             'Visitors' => $this->formatVisitorLog($log),
             'Personnel Entry Logs' => $this->formatPersonnelEntryLog($log),
+            'Weight Sampling' => $this->formatWeightSamplingLog($log),
             default => $log,
         };
+    }
+
+    private function formatCleaningLog($log)
+    {
+        return [
+            'id' => $log->id,
+            'type' => 'Cleaning',
+            'house' => $log->house,
+            'pen' => $log->pen,
+            'activity' => $log->activity,
+            'disinfectant_used' => $log->disinfectant_used,
+            'performed_by' => $log->performed_by,
+            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
+        ];
     }
 
     private function formatPersonnelBiosecurityLog($log)
@@ -197,9 +264,12 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Biosecurity Logs',
             'name' => $log->name,
             'role' => $log->role,
+            'house' => $log->house,
             'date' => $log->date ? $log->date->format('m-d-y') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
-            'status' => $log->status ?? '',
+            'foot_bath' => $log->foot_bath,
+            'boots_changed' => $log->boots_changed,
+            'protective_clothing' => $log->protective_clothing,
         ];
     }
 
@@ -227,9 +297,27 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Entry Logs',
             'name' => $log->name,
             'role' => $log->role,
+            'house' => $log->house,
             'date' => $log->date ? $log->date->format('m-d-y') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
-            'status' => $log->status ?? '',
+        ];
+    }
+
+    private function formatWeightSamplingLog($log)
+    {
+        return [
+            'id' => $log->id,
+            'type' => 'Weight Sampling',
+            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
+            'house' => $log->house,
+            'pen' => $log->pen,
+            'batch' => $log->batch,
+            'flocks_with_cases' => $log->flocks_with_cases,
+            'age' => $log->age,
+            'average_weight' => $log->average_weight,
+            'target' => $log->target,
+            'status' => $log->status,
         ];
     }
 
@@ -242,9 +330,18 @@ class BiosecurityLogController extends Controller
         $visitors = count($groupedLogs['Visitors']);
         $mortalities = 0;
 
+        // Get last disinfection log
+        $lastDisinfection = CleaningLog::whereNotNull('activity')
+            ->orderBy('date', 'desc')
+            ->orderBy('time', 'desc')
+            ->first();
+
         return [
             'violations' => $violations,
-            'last_disinfection' => ['date' => '--', 'time' => '--'],
+            'last_disinfection' => $lastDisinfection ? [
+                'date' => $lastDisinfection->date ? $lastDisinfection->date->format('m-d-y') : '--',
+                'time' => $lastDisinfection->time ? \Carbon\Carbon::parse($lastDisinfection->time)->format('h:i A') : '--',
+            ] : ['date' => '--', 'time' => '--'],
             'visitors' => $visitors,
             'mortalities' => $mortalities,
         ];

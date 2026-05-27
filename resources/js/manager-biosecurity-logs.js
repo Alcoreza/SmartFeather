@@ -13,9 +13,12 @@ const TABLE_CONFIG = {
         columns: [
             { key: 'name', label: 'Name' },
             { key: 'role', label: 'Role' },
+            { key: 'house', label: 'House' },
             { key: 'date', label: 'Date' },
             { key: 'time', label: 'Time' },
-            { key: 'status', label: 'Status' },
+            { key: 'foot_bath', label: 'Foot Bath' },
+            { key: 'boots_changed', label: 'Boots<br>Changed' },
+            { key: 'protective_clothing', label: 'Protective<br>Clothing' },
         ],
         form: [
             {
@@ -28,14 +31,43 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
+                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
                     { key: 'date', label: 'Date', type: 'date' },
-                    { key: 'status', label: 'Status', type: 'select', options: ['IN', 'OUT'] },
                 ],
             },
             {
                 rowClass: 'bio-modal-row',
                 fields: [
                     { key: 'time', label: 'Time', type: 'time', full: true },
+                ],
+            },
+            {
+                rowClass: 'bio-modal-row two-cols',
+                fields: [
+                    {
+                        key: 'foot_bath',
+                        label: 'Foot Bath',
+                        type: 'select',
+                        options: ['Yes', 'No'],
+                    },
+                    {
+                        key: 'boots_changed',
+                        label: 'Boots Changed',
+                        type: 'select',
+                        options: ['Yes', 'No'],
+                    },
+                ],
+            },
+            {
+                rowClass: 'bio-modal-row',
+                fields: [
+                    {
+                        key: 'protective_clothing',
+                        label: 'Protective Clothing',
+                        type: 'select',
+                        options: ['Yes', 'No'],
+                        full: true,
+                    },
                 ],
             },
         ],
@@ -111,7 +143,6 @@ const TABLE_CONFIG = {
             },
         ],
     },
-
 };
 
 const tableHead = document.getElementById('bioTableHead');
@@ -301,7 +332,7 @@ function setupEditModal() {
         const btn = event.target.closest('.edit-btn');
         if (!btn) return;
 
-        const type = btn.dataset.mode || state.selectedCategory || 'Personnel Biosecurity Logs';
+        const type = btn.dataset.mode || 'Personnel Biosecurity Logs';
         const rowData = decodeRowData(btn.dataset.log);
 
         // Load form options if not already loaded
@@ -404,12 +435,16 @@ function setupAddModal() {
     openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
 
+        // Load form options for available categories
         if (type === 'Personnel Biosecurity Logs' || type === 'Visitors') {
             await loadBioFormOptions();
         }
 
+        // Also load all workers for Visitors modal
         if (type === 'Visitors' && (!state.allWorkers || state.allWorkers.length === 0)) {
             await loadAllWorkers();
+        } else if (!state.houses || !state.workers) {
+            await loadBioFormOptions();
         }
 
         title.textContent = `Add ${type}`;
@@ -417,6 +452,7 @@ function setupAddModal() {
 
         if (logTypeInput) logTypeInput.value = type;
 
+        // Set up house change event to load pens (when present)
         const houseSelect = document.getElementById('add_house');
         const penSelect = document.getElementById('add_pen');
         
@@ -427,6 +463,12 @@ function setupAddModal() {
                     await loadBioPensForHouse(houseId, 'add_pen');
                 }
             });
+            
+            // If a house is already selected, load pens for it
+            const initialHouseId = houseSelect.value;
+            if (initialHouseId) {
+                await loadBioPensForHouse(initialHouseId, 'add_pen');
+            }
         }
 
         modal.classList.add('show');

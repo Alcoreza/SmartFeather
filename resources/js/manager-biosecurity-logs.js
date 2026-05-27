@@ -674,6 +674,7 @@ function setupAddModal() {
         }
 
         modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
     });
 
     document.addEventListener('click', (event) => {
@@ -722,6 +723,7 @@ function setupAddModal() {
                 console.log('Log saved:', result);
 
                 modal.classList.remove('show');
+                document.body.style.overflow = '';
 
                 // Reload logs to show the new entry
                 loadBiosecurityLogs();
@@ -734,11 +736,13 @@ function setupAddModal() {
 
     closeBtn.addEventListener('click', () => {
         modal.classList.remove('show');
+        document.body.style.overflow = '';
     });
 
     modal.addEventListener('click', (event) => {
         if (event.target === modal) {
             modal.classList.remove('show');
+            document.body.style.overflow = '';
         }
     });
 }

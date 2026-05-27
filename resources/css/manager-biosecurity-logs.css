@@ -311,11 +311,13 @@ body {
 .bio-modal {
     width: 100%;
     max-width: 420px;
+    max-height: calc(100vh - 48px);
     background: #f7f7f7;
     border-radius: 26px;
     padding: 20px 22px 20px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
     animation: bioModalPop 0.2s ease;
+    overflow-y: auto;
 }
 
 .bio-modal-wide {

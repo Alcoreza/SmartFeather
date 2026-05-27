@@ -8,53 +8,6 @@ const state = {
 };
 
 const TABLE_CONFIG = {
-    'Cleaning': {
-        title: 'Cleaning',
-        columns: [
-            { key: 'house', label: 'House' },
-            { key: 'pen', label: 'Pen' },
-            { key: 'activity', label: 'Activity' },
-            { key: 'date', label: 'Date' },
-            { key: 'time', label: 'Time' },
-            { key: 'disinfectant_used', label: 'Disinfectant<br>Used' },
-            { key: 'performed_by', label: 'Performed<br>by:' },
-        ],
-        form: [
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'house', label: 'House Number', type: 'select', options: 'houses' },
-                    { key: 'pen', label: 'Pen Number', type: 'select', options: 'pens' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row',
-                fields: [
-                    { key: 'activity', label: 'Activity', type: 'text', full: true },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'date', label: 'Date', type: 'date' },
-                    { key: 'time', label: 'Time', type: 'time' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row',
-                fields: [
-                    { key: 'disinfectant_used', label: 'Disinfectant Used', type: 'text', full: true },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row',
-                fields: [
-                    { key: 'performed_by', label: 'Performed by:', type: 'select', options: 'workers' },
-                ],
-            },
-        ],
-    },
-
     'Personnel Biosecurity Logs': {
         title: 'Personnel Biosecurity Logs',
         columns: [
@@ -159,63 +112,6 @@ const TABLE_CONFIG = {
         ],
     },
 
-    'Weight Sampling': {
-        title: 'Weight Sampling',
-        columns: [
-            { key: 'date', label: 'Date' },
-            { key: 'time', label: 'Time' },
-            { key: 'house', label: 'House' },
-            { key: 'pen', label: 'Pen' },
-            { key: 'batch', label: 'Batch' },
-            { key: 'flocks_with_cases', label: 'Flocks with<br>Cases' },
-            { key: 'age', label: 'Age' },
-            { key: 'average_weight', label: 'Average<br>Weight' },
-            { key: 'target', label: 'Target' },
-            { key: 'status', label: 'Status' },
-        ],
-        form: [
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'date', label: 'Date', type: 'date' },
-                    { key: 'time', label: 'Time', type: 'time' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
-                    { key: 'pen', label: 'Pen', type: 'select', options: 'pens' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'batch', label: 'Batch', type: 'text' },
-                    { key: 'flocks_with_cases', label: 'Flocks with Cases', type: 'text' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'age', label: 'Age', type: 'text' },
-                    { key: 'average_weight', label: 'Average Weight', type: 'text' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'target', label: 'Target', type: 'text' },
-                    {
-                        key: 'status',
-                        label: 'Status',
-                        type: 'select',
-                        options: ['Normal', 'Underweight', 'Overweight'],
-                    },
-                ],
-            },
-        ],
-    },
 };
 
 const tableHead = document.getElementById('bioTableHead');
@@ -405,7 +301,7 @@ function setupEditModal() {
         const btn = event.target.closest('.edit-btn');
         if (!btn) return;
 
-        const type = btn.dataset.mode || 'Cleaning';
+        const type = btn.dataset.mode || state.selectedCategory || 'Personnel Biosecurity Logs';
         const rowData = decodeRowData(btn.dataset.log);
 
         // Load form options if not already loaded
@@ -508,16 +404,12 @@ function setupAddModal() {
     openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
 
-        // Always reload form options for Cleaning, Personnel Biosecurity Logs, Visitors, and Weight Sampling
-        if (type === 'Cleaning' || type === 'Personnel Biosecurity Logs' || type === 'Visitors' || type === 'Weight Sampling') {
+        if (type === 'Personnel Biosecurity Logs' || type === 'Visitors') {
             await loadBioFormOptions();
         }
-        
-        // Also load all workers for Visitors modal
+
         if (type === 'Visitors' && (!state.allWorkers || state.allWorkers.length === 0)) {
             await loadAllWorkers();
-        } else if (!state.houses || !state.workers) {
-            await loadBioFormOptions();
         }
 
         title.textContent = `Add ${type}`;
@@ -525,7 +417,6 @@ function setupAddModal() {
 
         if (logTypeInput) logTypeInput.value = type;
 
-        // Set up house change event to load pens (for Cleaning and Weight Sampling)
         const houseSelect = document.getElementById('add_house');
         const penSelect = document.getElementById('add_pen');
         
@@ -536,14 +427,6 @@ function setupAddModal() {
                     await loadBioPensForHouse(houseId, 'add_pen');
                 }
             });
-            
-            // For Weight Sampling, also load pens on modal open if house is pre-selected
-            if (type === 'Weight Sampling') {
-                const initialHouseId = houseSelect.value;
-                if (initialHouseId) {
-                    await loadBioPensForHouse(initialHouseId, 'add_pen');
-                }
-            }
         }
 
         modal.classList.add('show');

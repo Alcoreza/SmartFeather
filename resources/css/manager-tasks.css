@@ -503,6 +503,23 @@ body {
     margin-top: 18px;
 }
 
+.manager-task-form-error {
+    display: none;
+    margin-bottom: 16px;
+    border: 1.5px solid rgba(199, 54, 45, 0.35);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: rgba(217, 63, 50, 0.08);
+    color: #9d251d;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.manager-task-form-error.show {
+    display: block;
+}
+
 .manager-task-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -561,6 +578,13 @@ body {
     border-color: #2c8748;
     box-shadow: 0 0 0 4px rgba(44, 135, 72, 0.1);
     transform: translateY(-1px);
+}
+
+.manager-task-form-field.has-error input,
+.manager-task-form-field.has-error select,
+.manager-task-form-field.has-error textarea {
+    border-color: #c7362d;
+    box-shadow: 0 0 0 4px rgba(199, 54, 45, 0.1);
 }
 
 .manager-task-form-field select {

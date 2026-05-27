@@ -38,6 +38,8 @@
         </div>
 
         <form class="manager-task-form-body" id="addTaskForm">
+            <div class="manager-task-form-error" id="addTaskFormError" role="alert" aria-live="polite"></div>
+
             <div class="manager-task-form-field full">
                 <label for="taskWorkerName">Assign Flockman</label>
                 <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>

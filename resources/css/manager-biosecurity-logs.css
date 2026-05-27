@@ -359,6 +359,23 @@ body {
     margin-top: 10px;
 }
 
+.bio-form-error {
+    display: none;
+    margin-bottom: 14px;
+    border: 1.5px solid rgba(199, 54, 45, 0.35);
+    border-radius: 16px;
+    padding: 11px 13px;
+    background: rgba(217, 63, 50, 0.08);
+    color: #9d251d;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.bio-form-error.show {
+    display: block;
+}
+
 .bio-modal-row {
     margin-bottom: 14px;
 }
@@ -400,6 +417,12 @@ body {
 .bio-field select:focus {
     border-color: #1d6f24;
     box-shadow: 0 0 0 2px rgba(29, 111, 36, 0.1);
+}
+
+.bio-field.has-error input,
+.bio-field.has-error select {
+    border-color: #c7362d;
+    box-shadow: 0 0 0 3px rgba(199, 54, 45, 0.1);
 }
 
 .bio-field.full input,

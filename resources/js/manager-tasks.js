@@ -434,21 +434,34 @@ function setupManagerTaskModals() {
 function setupAddTaskModal() {
     const openButton = document.getElementById("openAddTaskModal");
     const form = document.getElementById("addTaskForm");
+    const formError = document.getElementById("addTaskFormError");
 
     if (openButton) {
         openButton.addEventListener("click", async () => {
             await loadTaskFormOptions();
+            clearAddTaskFormError();
             openTaskModal("addTaskModal");
         });
     }
 
     if (form) {
+        form.querySelectorAll("input, select, textarea").forEach((field) => {
+            field.addEventListener("input", () => clearTaskFieldError(field));
+            field.addEventListener("change", () => clearTaskFieldError(field));
+        });
+
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
 
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
-            
+
+            const missingFields = validateAddTaskRequiredFields(form, payload);
+            if (missingFields.length) {
+                showAddTaskFormError(formError, missingFields);
+                return;
+            }
+
             const textareaElement = document.getElementById("taskDetailedDescription");
 
             const date = payload.date_assigned || "";
@@ -501,9 +514,79 @@ function setupAddTaskModal() {
                 setupTaskSelectPlaceholderState();
             } catch (error) {
                 console.error("Failed to save new task:", error);
-                alert("Error saving task: " + error.message);
+                showAddTaskFormError(formError, "Unable to save task. Please try again.");
             }
         });
+    }
+}
+
+function validateAddTaskRequiredFields(form, payload) {
+    const requiredFields = [
+        { name: "worker_name", label: "Assign Flockman" },
+        { name: "task_category", label: "Task" },
+        { name: "priority_level", label: "Priority Level" },
+        { name: "house_number", label: "House Number" },
+        { name: "pen_number", label: "Pen Number" },
+        { name: "time_assigned", label: "Time to finish" },
+        { name: "date_assigned", label: "Date to finish" },
+    ];
+
+    const missingFields = requiredFields.filter(({ name }) => {
+        return !String(payload[name] ?? "").trim();
+    });
+
+    form.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
+        field.classList.remove("has-error");
+    });
+
+    missingFields.forEach(({ name }) => {
+        const field = form.elements[name];
+        field?.closest(".manager-task-form-field")?.classList.add("has-error");
+    });
+
+    if (missingFields.length) {
+        form.elements[missingFields[0].name]?.focus();
+    }
+
+    return missingFields.map(({ label }) => label);
+}
+
+function showAddTaskFormError(formError, messageOrFields) {
+    if (!formError) return;
+
+    if (Array.isArray(messageOrFields)) {
+        formError.textContent = messageOrFields.length === 1
+            ? `${messageOrFields[0]} is required.`
+            : `Please complete all required fields: ${messageOrFields.join(", ")}.`;
+    } else {
+        formError.textContent = messageOrFields;
+    }
+
+    formError.classList.add("show");
+    formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function clearAddTaskFormError() {
+    const form = document.getElementById("addTaskForm");
+    const formError = document.getElementById("addTaskFormError");
+
+    formError?.classList.remove("show");
+    if (formError) {
+        formError.textContent = "";
+    }
+
+    form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
+        field.classList.remove("has-error");
+    });
+}
+
+function clearTaskFieldError(field) {
+    field.closest(".manager-task-form-field")?.classList.remove("has-error");
+
+    const form = document.getElementById("addTaskForm");
+    const hasErrors = form?.querySelector(".manager-task-form-field.has-error");
+    if (!hasErrors) {
+        clearAddTaskFormError();
     }
 }
 

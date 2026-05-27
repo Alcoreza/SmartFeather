@@ -11,6 +11,8 @@
             <input type="hidden" id="add_photo_url" name="photo_url">
             <input type="hidden" id="add_photo_data" name="photo_data">
 
+            <div class="bio-form-error" id="addBioFormError" role="alert" aria-live="polite"></div>
+
             <div id="addBioModalFields"></div>
 
             <div class="bio-modal-actions">

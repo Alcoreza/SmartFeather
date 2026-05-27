@@ -50,5 +50,14 @@
                 </div>
             </div>
         </div>
+
+        <div class="login-error-modal-backdrop" id="loginErrorModal" aria-hidden="true">
+            <div class="login-error-modal" role="alertdialog" aria-modal="true" aria-labelledby="loginErrorTitle">
+                <div class="login-error-icon" aria-hidden="true">!</div>
+                <h2 id="loginErrorTitle">Login Failed</h2>
+                <p id="loginErrorMessage">Wrong username or password.</p>
+                <button type="button" class="login-error-btn" id="closeLoginErrorModal">OK</button>
+            </div>
+        </div>
     </section>
 @endsection

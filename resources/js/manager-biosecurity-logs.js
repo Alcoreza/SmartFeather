@@ -614,6 +614,7 @@ function setupAddModal() {
     const title = document.getElementById('addBioModalTitle');
     const fieldsWrap = document.getElementById('addBioModalFields');
     const logTypeInput = document.getElementById('addLogType');
+    const formError = document.getElementById('addBioFormError');
 
     if (!modal || !openBtn || !closeBtn || !title || !fieldsWrap) return;
 
@@ -634,6 +635,7 @@ function setupAddModal() {
 
         title.textContent = `Add ${type}`;
         fieldsWrap.innerHTML = buildModalFields('add', type, {});
+        clearAddBioFormError();
 
         const photoInput = document.getElementById('add_photo_url');
         const photoPreview = document.getElementById('add_photo_preview');
@@ -699,10 +701,29 @@ function setupAddModal() {
     // Handle form submission
     const form = document.getElementById('addBioForm');
     if (form) {
+        form.addEventListener('input', (event) => {
+            if (event.target.matches('input, select')) {
+                clearBioFieldError(event.target);
+            }
+        });
+
+        form.addEventListener('change', (event) => {
+            if (event.target.matches('input, select')) {
+                clearBioFieldError(event.target);
+            }
+        });
+
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
             const formData = new FormData(form);
+            const payload = Object.fromEntries(formData.entries());
+            const missingFields = validateAddBioRequiredFields(form, payload);
+
+            if (missingFields.length) {
+                showAddBioFormError(formError, missingFields);
+                return;
+            }
 
             try {
                 const response = await fetch('/api/manager/biosecurity-logs', {
@@ -729,7 +750,7 @@ function setupAddModal() {
                 loadBiosecurityLogs();
             } catch (error) {
                 console.error('Error saving log:', error);
-                alert('Failed to save log. Please try again.');
+                showAddBioFormError(formError, 'Failed to save log. Please try again.');
             }
         });
     }
@@ -737,14 +758,106 @@ function setupAddModal() {
     closeBtn.addEventListener('click', () => {
         modal.classList.remove('show');
         document.body.style.overflow = '';
+        clearAddBioFormError();
     });
 
     modal.addEventListener('click', (event) => {
         if (event.target === modal) {
             modal.classList.remove('show');
             document.body.style.overflow = '';
+            clearAddBioFormError();
         }
     });
+}
+
+function validateAddBioRequiredFields(form, payload) {
+    const requiredFieldsByType = {
+        'Personnel Biosecurity Logs': [
+            { name: 'name', label: 'Name' },
+            { name: 'role', label: 'Role' },
+            { name: 'date', label: 'Date' },
+            { name: 'time', label: 'Time' },
+            { name: 'status', label: 'Status' },
+        ],
+        'Visitors': [
+            { name: 'date', label: 'Date' },
+            { name: 'name', label: 'Name' },
+            { name: 'time_in', label: 'Time In' },
+            { name: 'time_out', label: 'Time Out' },
+            { name: 'purpose', label: 'Purpose' },
+            { name: 'foot_bath', label: 'Foot Bath' },
+            { name: 'sanitation', label: 'Sanitation' },
+            { name: 'ppe', label: 'PPE' },
+            { name: 'monitored_by', label: 'Monitored By' },
+            { name: 'photo_data', label: 'Visitor Photo' },
+        ],
+    };
+
+    const requiredFields = requiredFieldsByType[payload.type] || [];
+    const missingFields = requiredFields.filter(({ name }) => {
+        return !String(payload[name] ?? '').trim();
+    });
+
+    form.querySelectorAll('.bio-field.has-error').forEach((field) => {
+        field.classList.remove('has-error');
+    });
+
+    missingFields.forEach(({ name }) => {
+        const field = form.elements[name];
+        const fieldWrapper = field?.closest('.bio-field')
+            || document.getElementById('add_photo_preview')?.closest('.bio-field');
+
+        fieldWrapper?.classList.add('has-error');
+    });
+
+    if (missingFields.length) {
+        if (missingFields[0].name === 'photo_data') {
+            document.getElementById('add_open_camera_btn')?.focus();
+        } else {
+            form.elements[missingFields[0].name]?.focus();
+        }
+    }
+
+    return missingFields.map(({ label }) => label);
+}
+
+function showAddBioFormError(formError, messageOrFields) {
+    if (!formError) return;
+
+    if (Array.isArray(messageOrFields)) {
+        formError.textContent = messageOrFields.length === 1
+            ? `${messageOrFields[0]} is required.`
+            : `Please complete all required fields: ${messageOrFields.join(', ')}.`;
+    } else {
+        formError.textContent = messageOrFields;
+    }
+
+    formError.classList.add('show');
+    formError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function clearAddBioFormError() {
+    const form = document.getElementById('addBioForm');
+    const formError = document.getElementById('addBioFormError');
+
+    formError?.classList.remove('show');
+    if (formError) {
+        formError.textContent = '';
+    }
+
+    form?.querySelectorAll('.bio-field.has-error').forEach((field) => {
+        field.classList.remove('has-error');
+    });
+}
+
+function clearBioFieldError(field) {
+    field.closest('.bio-field')?.classList.remove('has-error');
+
+    const form = document.getElementById('addBioForm');
+    const hasErrors = form?.querySelector('.bio-field.has-error');
+    if (!hasErrors) {
+        clearAddBioFormError();
+    }
 }
 
 function bindEvents() {

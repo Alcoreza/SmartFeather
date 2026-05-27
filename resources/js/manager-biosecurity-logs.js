@@ -13,12 +13,9 @@ const TABLE_CONFIG = {
         columns: [
             { key: 'name', label: 'Name' },
             { key: 'role', label: 'Role' },
-            { key: 'house', label: 'House' },
             { key: 'date', label: 'Date' },
             { key: 'time', label: 'Time' },
-            { key: 'foot_bath', label: 'Foot Bath' },
-            { key: 'boots_changed', label: 'Boots<br>Changed' },
-            { key: 'protective_clothing', label: 'Protective<br>Clothing' },
+            { key: 'status', label: 'Status' },
         ],
         form: [
             {
@@ -31,41 +28,18 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
                     { key: 'date', label: 'Date', type: 'date' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row',
-                fields: [
-                    { key: 'time', label: 'Time', type: 'time', full: true },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    {
-                        key: 'foot_bath',
-                        label: 'Foot Bath',
-                        type: 'select',
-                        options: ['Yes', 'No'],
-                    },
-                    {
-                        key: 'boots_changed',
-                        label: 'Boots Changed',
-                        type: 'select',
-                        options: ['Yes', 'No'],
-                    },
+                    { key: 'time', label: 'Time', type: 'time' },
                 ],
             },
             {
                 rowClass: 'bio-modal-row',
                 fields: [
                     {
-                        key: 'protective_clothing',
-                        label: 'Protective Clothing',
+                        key: 'status',
+                        label: 'Status',
                         type: 'select',
-                        options: ['Yes', 'No'],
+                        options: ['IN', 'OUT'],
                         full: true,
                     },
                 ],
@@ -267,7 +241,7 @@ function createFieldHtml(prefix, field, value = '') {
             <div class="${wrapperClass}">
                 <label for="${fieldId}">${field.label}</label>
                 <select id="${fieldId}" name="${field.key}" class="bio-select-placeholder">
-                    <option value="">- - -</option>
+                    <option value="">---</option>
                     ${optionsHtml}
                 </select>
             </div>
@@ -662,7 +636,7 @@ async function loadBioPensForHouse(houseId, selectId) {
     if (!penSelect) return;
 
     if (!houseId) {
-        penSelect.innerHTML = '<option value="">- - -</option>';
+        penSelect.innerHTML = '<option value="">---</option>';
         penSelect.disabled = true;
         return;
     }
@@ -673,7 +647,7 @@ async function loadBioPensForHouse(houseId, selectId) {
 
         state.pens = data.pens || [];
 
-        penSelect.innerHTML = '<option value="">- - -</option>' +
+        penSelect.innerHTML = '<option value="">---</option>' +
             state.pens.map(p => `<option value="${p.number}">${p.label}</option>`).join('');
         
         penSelect.disabled = false;

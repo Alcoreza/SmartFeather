@@ -109,12 +109,9 @@ class BiosecurityLogController extends Controller
             'Personnel Biosecurity Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
-                'house' => 'nullable|string|max:50',
                 'date' => 'nullable|date',
                 'time' => 'nullable',
-                'foot_bath' => 'nullable|string|max:10',
-                'boots_changed' => 'nullable|string|max:10',
-                'protective_clothing' => 'nullable|string|max:10',
+                'status' => 'nullable|string|max:20',
             ],
             'Visitors' => [
                 'date' => 'nullable|date',
@@ -264,12 +261,9 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Biosecurity Logs',
             'name' => $log->name,
             'role' => $log->role,
-            'house' => $log->house,
             'date' => $log->date ? $log->date->format('m-d-y') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
-            'foot_bath' => $log->foot_bath,
-            'boots_changed' => $log->boots_changed,
-            'protective_clothing' => $log->protective_clothing,
+            'status' => $log->status,
         ];
     }
 

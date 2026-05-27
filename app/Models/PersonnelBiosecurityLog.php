@@ -6,17 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class PersonnelBiosecurityLog extends Model
 {
-    protected $table = 'personnel_biosecurity_logs';
+    protected $table = 'personnel_entry_logs';
 
     protected $fillable = [
         'name',
         'role',
-        'house',
         'date',
         'time',
-        'foot_bath',
-        'boots_changed',
-        'protective_clothing',
+        'employee_id',
+        'status',
     ];
 
     protected $casts = [

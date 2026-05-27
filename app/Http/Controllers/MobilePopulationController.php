@@ -32,11 +32,12 @@ class MobilePopulationController extends Controller
             ], 403);
         }
 
-        $hasBiosecuritySubmission = DB::table('personnel_biosecurity_logs')
+        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->exists();
+            ->orderByDesc('id')
+            ->first();
 
-        if (!$hasBiosecuritySubmission) {
+        if (!$latestBiosecurity) {
             return response()->json([
                 'message' => 'Please submit the personnel biosecurity form first before accessing population recording.',
                 'access_allowed' => false,
@@ -46,11 +47,11 @@ class MobilePopulationController extends Controller
             ], 403);
         }
 
-        $house = House::find($latestEntry->house_id);
+        $house = House::find($latestBiosecurity->house_id);
 
         if (!$house) {
             return response()->json([
-                'message' => 'Assigned house from personnel entry was not found.',
+                'message' => 'Assigned house from personnel biosecurity was not found.',
                 'access_allowed' => false,
                 'house_id' => null,
                 'house_number' => null,
@@ -105,19 +106,20 @@ class MobilePopulationController extends Controller
             ], 403);
         }
 
-        $hasBiosecuritySubmission = DB::table('personnel_biosecurity_logs')
+        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->exists();
+            ->orderByDesc('id')
+            ->first();
 
-        if (!$hasBiosecuritySubmission) {
+        if (!$latestBiosecurity) {
             return response()->json([
                 'message' => 'Please submit the personnel biosecurity form first before recording population.'
             ], 403);
         }
 
-        if ((int) $latestEntry->house_id !== (int) $validated['house_id']) {
+        if ((int) $latestBiosecurity->house_id !== (int) $validated['house_id']) {
             return response()->json([
-                'message' => 'You can only record population for the house assigned by your latest personnel entry scan.'
+                'message' => 'You can only record population for the house selected in your personnel biosecurity form.'
             ], 403);
         }
 

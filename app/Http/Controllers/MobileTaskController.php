@@ -181,11 +181,12 @@ class MobileTaskController extends Controller
             ], 403);
         }
 
-        $hasBiosecuritySubmission = DB::table('personnel_biosecurity_logs')
+        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->exists();
+            ->orderByDesc('id')
+            ->first();
 
-        if (!$hasBiosecuritySubmission) {
+        if (!$latestBiosecurity) {
             return response()->json([
                 'message' => 'Please submit the personnel biosecurity form first before submitting this task.'
             ], 403);
@@ -193,10 +194,10 @@ class MobileTaskController extends Controller
 
         if (
             !empty($task->house_houseid) &&
-            (int) $task->house_houseid !== (int) $latestEntry->house_id
+            (int) $task->house_houseid !== (int) $latestBiosecurity->house_id
         ) {
             return response()->json([
-                'message' => 'This task is assigned to a different house. Please go to the house from your assigned task or scan the correct house first.'
+                'message' => 'This task is assigned to a different house. Please select the correct house in Personnel Logs first.'
             ], 403);
         }
 

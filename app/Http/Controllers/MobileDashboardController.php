@@ -12,6 +12,10 @@ class MobileDashboardController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|integer|exists:user,EmployeeId',
+            'environment_house_id' => 'nullable|integer',
+            'environment_pen_id' => 'nullable|integer',
+            'resource_house_id' => 'nullable|integer',
+            'resource_pen_id' => 'nullable|integer',
         ]);
 
         $latestPopulationDate = DB::table('population_record')
@@ -44,6 +48,33 @@ class MobileDashboardController extends Controller
             ->where('status', 'Pending')
             ->count();
 
+        $environmentFilterOptions = $this->buildSensorFilterOptions(['temperature', 'ammonia']);
+        $resourceFilterOptions = $this->buildSensorFilterOptions(['feed', 'water']);
+
+        $environmentSelection = $this->resolveSelection(
+            $environmentFilterOptions,
+            $validated['environment_house_id'] ?? null,
+            $validated['environment_pen_id'] ?? null
+        );
+
+        $resourceSelection = $this->resolveSelection(
+            $resourceFilterOptions,
+            $validated['resource_house_id'] ?? null,
+            $validated['resource_pen_id'] ?? null
+        );
+
+        $environmentReadings = $this->latestReadingsByType(
+            ['temperature', 'ammonia'],
+            $environmentSelection['house_id'],
+            $environmentSelection['pen_id']
+        );
+
+        $resourceReadings = $this->latestReadingsByType(
+            ['feed', 'water'],
+            $resourceSelection['house_id'],
+            $resourceSelection['pen_id']
+        );
+
         return response()->json([
             'success' => true,
             'welcome_text' => 'Welcome!',
@@ -71,38 +102,52 @@ class MobileDashboardController extends Controller
                     'icon_bg' => '#808080',
                 ],
             ],
+            'environment_filter' => [
+                'selected_house_id' => $environmentSelection['house_id'],
+                'selected_pen_id' => $environmentSelection['pen_id'],
+                'options' => $environmentFilterOptions,
+            ],
+            'resource_filter' => [
+                'selected_house_id' => $resourceSelection['house_id'],
+                'selected_pen_id' => $resourceSelection['pen_id'],
+                'options' => $resourceFilterOptions,
+            ],
             'gauges' => [
                 [
                     'label' => 'Temperature',
-                    'value' => 11,
+                    'value' => $environmentReadings['temperature']['value'],
                     'unit' => 'deg',
                     'min' => 0,
                     'max' => 40,
                     'color' => '#6ABF4B',
+                    'recorded_at' => $environmentReadings['temperature']['recorded_at'],
                 ],
                 [
                     'label' => 'Ammonia',
-                    'value' => 15,
+                    'value' => $environmentReadings['ammonia']['value'],
                     'unit' => 'ppm',
                     'min' => 0,
                     'max' => 40,
                     'color' => '#F4B43A',
+                    'recorded_at' => $environmentReadings['ammonia']['recorded_at'],
                 ],
             ],
             'resources' => [
                 [
                     'label' => 'Feed',
-                    'value' => 90,
+                    'value' => $resourceReadings['feed']['value'],
                     'unit' => '%',
                     'max' => 100,
                     'color' => '#C88A3D',
+                    'recorded_at' => $resourceReadings['feed']['recorded_at'],
                 ],
                 [
                     'label' => 'Water',
-                    'value' => 40,
+                    'value' => $resourceReadings['water']['value'],
                     'unit' => '%',
                     'max' => 100,
                     'color' => '#6CDDE5',
+                    'recorded_at' => $resourceReadings['water']['recorded_at'],
                 ],
             ],
             'pending_tasks' => (string) $pendingTasks,
@@ -127,5 +172,143 @@ class MobileDashboardController extends Controller
                 ],
             ],
         ]);
+    }
+
+    private function buildSensorFilterOptions(array $sensorTypes): array
+    {
+        return DB::table('sensors as s')
+            ->leftJoin('house as h', 's.house_houseid', '=', 'h.id')
+            ->leftJoin('pen as p', function ($join) {
+                $join->on('s.pen_penid', '=', 'p.id')
+                    ->on('s.house_houseid', '=', 'p.house_id');
+            })
+            ->where(function ($query) use ($sensorTypes) {
+                foreach ($sensorTypes as $type) {
+                    if ($type === 'temperature') {
+                        $query->orWhereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%temp%']);
+                    }
+
+                    if ($type === 'ammonia') {
+                        $query->orWhereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%ammonia%'])
+                            ->orWhereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%nh3%']);
+                    }
+
+                    if ($type === 'feed') {
+                        $query->orWhereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%feed%']);
+                    }
+
+                    if ($type === 'water') {
+                        $query->orWhereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%water%']);
+                    }
+                }
+            })
+            ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
+            ->whereNotNull('s.house_houseid')
+            ->whereNotNull('s.pen_penid')
+            ->select(
+                's.house_houseid',
+                's.pen_penid',
+                'h.house_number',
+                'p.pen_name'
+            )
+            ->distinct()
+            ->orderBy('s.house_houseid')
+            ->orderBy('s.pen_penid')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'house_id' => (int) $row->house_houseid,
+                    'house_number' => $row->house_number ?: 'House ' . $row->house_houseid,
+                    'pen_id' => (int) $row->pen_penid,
+                    'pen_name' => $row->pen_name ?: 'Pen ' . $row->pen_penid,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function resolveSelection(array $options, ?int $houseId, ?int $penId): array
+    {
+        if (empty($options)) {
+            return [
+                'house_id' => null,
+                'pen_id' => null,
+            ];
+        }
+
+        foreach ($options as $option) {
+            if (
+                (int) $option['house_id'] === (int) $houseId &&
+                (int) $option['pen_id'] === (int) $penId
+            ) {
+                return [
+                    'house_id' => (int) $option['house_id'],
+                    'pen_id' => (int) $option['pen_id'],
+                ];
+            }
+        }
+
+        return [
+            'house_id' => (int) $options[0]['house_id'],
+            'pen_id' => (int) $options[0]['pen_id'],
+        ];
+    }
+
+    private function latestReadingsByType(array $sensorTypes, ?int $houseId, ?int $penId): array
+    {
+        $defaults = [];
+        foreach ($sensorTypes as $type) {
+            $defaults[$type] = [
+                'value' => 0,
+                'recorded_at' => null,
+            ];
+        }
+
+        if (!$houseId || !$penId) {
+            return $defaults;
+        }
+
+        $rows = DB::table('sensors as s')
+            ->join('sensor_readings as sr', 's.sensorid', '=', 'sr.sensorid')
+            ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
+            ->where('s.house_houseid', $houseId)
+            ->where('s.pen_penid', $penId)
+            ->select(
+                DB::raw("
+                CASE
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%temp%' THEN 'temperature'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%ammonia%' THEN 'ammonia'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%nh3%' THEN 'ammonia'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%feed%' THEN 'feed'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%water%' THEN 'water'
+                    ELSE LOWER(TRIM(s.sensortype))
+                END as sensor_type
+            "),
+                'sr.value',
+                'sr.recorded_at',
+                'sr.reading_id'
+            )
+            ->orderByDesc('sr.recorded_at')
+            ->orderByDesc('sr.reading_id')
+            ->get()
+            ->filter(function ($row) use ($sensorTypes) {
+                return in_array($row->sensor_type, $sensorTypes, true);
+            })
+            ->groupBy('sensor_type');
+
+        foreach ($sensorTypes as $type) {
+            $latest = $rows[$type][0] ?? null;
+
+            if ($latest) {
+                $defaults[$type] = [
+                    'value' => (float) $latest->value,
+                    'recorded_at' => $latest->recorded_at
+                        ? Carbon::parse($latest->recorded_at)->toDateTimeString()
+                        : null,
+                ];
+            }
+        }
+
+        return $defaults;
     }
 }

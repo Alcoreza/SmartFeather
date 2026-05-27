@@ -11,9 +11,9 @@ class PersonnelEntryLog extends Model
     protected $fillable = [
         'name',
         'role',
-        'house',
         'date',
         'time',
+        'status',
     ];
 
     protected $casts = [

@@ -1,5 +1,5 @@
 const state = {
-    selectedCategory: 'Cleaning',
+    selectedCategory: 'Personnel Biosecurity Logs',
     logs: {},
     houses: [],
     workers: [],
@@ -60,12 +60,9 @@ const TABLE_CONFIG = {
         columns: [
             { key: 'name', label: 'Name' },
             { key: 'role', label: 'Role' },
-            { key: 'house', label: 'House' },
             { key: 'date', label: 'Date' },
             { key: 'time', label: 'Time' },
-            { key: 'foot_bath', label: 'Foot Bath' },
-            { key: 'boots_changed', label: 'Boots<br>Changed' },
-            { key: 'protective_clothing', label: 'Protective<br>Clothing' },
+            { key: 'status', label: 'Status' },
         ],
         form: [
             {
@@ -78,43 +75,14 @@ const TABLE_CONFIG = {
             {
                 rowClass: 'bio-modal-row two-cols',
                 fields: [
-                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
                     { key: 'date', label: 'Date', type: 'date' },
+                    { key: 'status', label: 'Status', type: 'select', options: ['IN', 'OUT'] },
                 ],
             },
             {
                 rowClass: 'bio-modal-row',
                 fields: [
                     { key: 'time', label: 'Time', type: 'time', full: true },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    {
-                        key: 'foot_bath',
-                        label: 'Foot Bath',
-                        type: 'select',
-                        options: ['Yes', 'No'],
-                    },
-                    {
-                        key: 'boots_changed',
-                        label: 'Boots Changed',
-                        type: 'select',
-                        options: ['Yes', 'No'],
-                    },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row',
-                fields: [
-                    {
-                        key: 'protective_clothing',
-                        label: 'Protective Clothing',
-                        type: 'select',
-                        options: ['Yes', 'No'],
-                        full: true,
-                    },
                 ],
             },
         ],
@@ -186,39 +154,6 @@ const TABLE_CONFIG = {
                         type: 'select',
                         options: 'allWorkers',
                     },
-                ],
-            },
-        ],
-    },
-
-    'Personnel Entry Logs': {
-        title: 'Personnel Entry Logs',
-        columns: [
-            { key: 'name', label: 'Name' },
-            { key: 'role', label: 'Role' },
-            { key: 'house', label: 'House' },
-            { key: 'date', label: 'Date' },
-            { key: 'time', label: 'Time' },
-        ],
-        form: [
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'name', label: 'Name', type: 'text' },
-                    { key: 'role', label: 'Role', type: 'text' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row two-cols',
-                fields: [
-                    { key: 'house', label: 'House', type: 'select', options: 'houses' },
-                    { key: 'date', label: 'Date', type: 'date' },
-                ],
-            },
-            {
-                rowClass: 'bio-modal-row',
-                fields: [
-                    { key: 'time', label: 'Time', type: 'time', full: true },
                 ],
             },
         ],
@@ -573,8 +508,8 @@ function setupAddModal() {
     openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
 
-        // Always reload form options for Cleaning, Personnel Biosecurity Logs, Visitors, Personnel Entry Logs, and Weight Sampling
-        if (type === 'Cleaning' || type === 'Personnel Biosecurity Logs' || type === 'Visitors' || type === 'Personnel Entry Logs' || type === 'Weight Sampling') {
+        // Always reload form options for Cleaning, Personnel Biosecurity Logs, Visitors, and Weight Sampling
+        if (type === 'Cleaning' || type === 'Personnel Biosecurity Logs' || type === 'Visitors' || type === 'Weight Sampling') {
             await loadBioFormOptions();
         }
         

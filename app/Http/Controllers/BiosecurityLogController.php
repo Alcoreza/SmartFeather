@@ -18,9 +18,8 @@ class BiosecurityLogController extends Controller
     {
         $groupedLogs = [
             'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
-            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelBiosecurityLog($log)),
+            'Personnel Biosecurity Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
             'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
-            'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
             'Weight Sampling' => WeightSamplingLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatWeightSamplingLog($log)),
         ];
 
@@ -109,12 +108,9 @@ class BiosecurityLogController extends Controller
             'Personnel Biosecurity Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
-                'house' => 'nullable|string|max:50',
                 'date' => 'nullable|date',
                 'time' => 'nullable',
-                'foot_bath' => 'nullable|string|max:10',
-                'boots_changed' => 'nullable|string|max:10',
-                'protective_clothing' => 'nullable|string|max:10',
+                'status' => 'nullable|string|max:20',
             ],
             'Visitors' => [
                 'date' => 'nullable|date',
@@ -130,9 +126,9 @@ class BiosecurityLogController extends Controller
             'Personnel Entry Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
-                'house' => 'nullable|string|max:50',
                 'date' => 'nullable|date',
                 'time' => 'nullable',
+                'status' => 'nullable|string|max:20',
             ],
             'Weight Sampling' => [
                 'date' => 'nullable|date',
@@ -157,7 +153,7 @@ class BiosecurityLogController extends Controller
     private function convertIdsToValues($type, $validated, $existingLog = null)
     {
         // House ID to house number
-        if (in_array($type, ['Cleaning', 'Personnel Biosecurity Logs', 'Personnel Entry Logs', 'Weight Sampling']) && !empty($validated['house'])) {
+        if (in_array($type, ['Cleaning', 'Weight Sampling']) && !empty($validated['house'])) {
             $house = \App\Models\House::find($validated['house']);
             if ($house) {
                 $validated['house'] = $house->house_number;
@@ -204,7 +200,7 @@ class BiosecurityLogController extends Controller
     {
         return match ($type) {
             'Cleaning' => CleaningLog::create($validated),
-            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::create($validated),
+            'Personnel Biosecurity Logs' => PersonnelEntryLog::create($validated),
             'Visitors' => VisitorLog::create($validated),
             'Personnel Entry Logs' => PersonnelEntryLog::create($validated),
             'Weight Sampling' => WeightSamplingLog::create($validated),
@@ -219,7 +215,7 @@ class BiosecurityLogController extends Controller
     {
         return match ($type) {
             'Cleaning' => CleaningLog::findOrFail($id),
-            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::findOrFail($id),
+            'Personnel Biosecurity Logs' => PersonnelEntryLog::findOrFail($id),
             'Visitors' => VisitorLog::findOrFail($id),
             'Personnel Entry Logs' => PersonnelEntryLog::findOrFail($id),
             'Weight Sampling' => WeightSamplingLog::findOrFail($id),
@@ -234,7 +230,7 @@ class BiosecurityLogController extends Controller
     {
         return match ($type) {
             'Cleaning' => $this->formatCleaningLog($log),
-            'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLog($log),
+            'Personnel Biosecurity Logs' => $this->formatPersonnelEntryLog($log),
             'Visitors' => $this->formatVisitorLog($log),
             'Personnel Entry Logs' => $this->formatPersonnelEntryLog($log),
             'Weight Sampling' => $this->formatWeightSamplingLog($log),
@@ -264,12 +260,9 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Biosecurity Logs',
             'name' => $log->name,
             'role' => $log->role,
-            'house' => $log->house,
             'date' => $log->date ? $log->date->format('m-d-y') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
-            'foot_bath' => $log->foot_bath,
-            'boots_changed' => $log->boots_changed,
-            'protective_clothing' => $log->protective_clothing,
+            'status' => $log->status ?? '',
         ];
     }
 
@@ -297,9 +290,9 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Entry Logs',
             'name' => $log->name,
             'role' => $log->role,
-            'house' => $log->house,
             'date' => $log->date ? $log->date->format('m-d-y') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
+            'status' => $log->status ?? '',
         ];
     }
 

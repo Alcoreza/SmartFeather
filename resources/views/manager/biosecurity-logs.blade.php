@@ -83,9 +83,8 @@
                     <div class="bio-filter-wrap">
                         <select id="bioCategoryFilter" class="bio-filter-select">
                             <option value="Cleaning">Cleaning</option>
-                            <option value="Personnel Biosecurity Logs">Personnel Biosecurity Logs</option>
+                            <option value="Personnel Biosecurity Logs" selected>Personnel Biosecurity Logs</option>
                             <option value="Visitors">Visitors</option>
-                            <option value="Personnel Entry Logs">Personnel Entry Logs</option>
                             <option value="Weight Sampling">Weight Sampling</option>
                         </select>
                     </div>

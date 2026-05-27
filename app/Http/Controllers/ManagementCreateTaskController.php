@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Management;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ManagementCreateTaskController extends Controller
 {
@@ -50,14 +50,18 @@ class ManagementCreateTaskController extends Controller
             $validated = $request->validate([
                 'category' => 'required|in:feed,vitamin',
                 'name' => 'required|string|max:255',
+                'initial_stock' => 'required|numeric|min:0',
+                'critical' => 'required|numeric|min:0',
             ]);
 
             $category = $validated['category'];
             $name = trim($validated['name']);
+            $unit = $category === 'vitamin' ? 'bottle' : 'kg';
 
             $exists = DB::table('inventory_types')
                 ->where('category', $category)
                 ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+                ->whereNull('archived_at')
                 ->exists();
 
             if ($exists) {
@@ -66,21 +70,68 @@ class ManagementCreateTaskController extends Controller
                 ], 422);
             }
 
-            $id = DB::table('inventory_types')->insertGetId([
+            DB::beginTransaction();
+
+            $inventoryTypeId = DB::table('inventory_types')->insertGetId([
                 'category' => $category,
                 'name' => $name,
+                'initial_stock' => $validated['initial_stock'],
+                'critical' => $validated['critical'],
+                'archived_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
+            $inventoryId = DB::table('inventories')->insertGetId([
+                'item_name' => $name,
+                'type' => $category,
+                'unit' => $unit,
+                'initial_stock' => $validated['initial_stock'],
+                'remaining_stock' => $validated['initial_stock'],
+                'critical' => $validated['critical'],
+                'purchase_date' => now()->toDateString(),
+                'archived_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('inventory_records')->insert([
+                'inventory_id' => $inventoryId,
+                'initial_stock' => $validated['initial_stock'],
+                'remaining_stock' => $validated['initial_stock'],
+                'deducted' => 0,
+                'monitoring_date' => now(),
+            ]);
+
+            DB::commit();
+
             return response()->json([
-                'id' => $id,
+                'success' => true,
+                'message' => 'Inventory type saved successfully.',
+                'id' => $inventoryTypeId,
+                'inventory_id' => $inventoryId,
                 'category' => $category,
                 'name' => $name,
+                'initial_stock' => $validated['initial_stock'],
+                'remaining_stock' => $validated['initial_stock'],
+                'critical' => $validated['critical'],
+                'unit' => $unit,
+                'purchase_date' => now()->toDateString(),
             ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+
         } catch (\Exception $e) {
-            Log::error('Create inventory type error:', ['message' => $e->getMessage()]);
-            return response()->json(['error' => $e->getMessage()], 500);
+            DB::rollBack();
+
+            Log::error('Create inventory type error:', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

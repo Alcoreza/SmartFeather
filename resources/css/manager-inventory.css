@@ -468,6 +468,32 @@
     animation-delay: 0.33s;
 }
 
+.inventory-archive-btn,
+.inventory-item-archive-btn {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.inventory-archive-btn:hover,
+.inventory-item-archive-btn:hover {
+    background: #f62b2b;
+}
+
+#openArchiveInventoryModal {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+#openArchiveInventoryModal:hover {
+    background: #b91c1c !important;
+    box-shadow: 0 12px 22px rgba(220, 38, 38, 0.35) !important;
+}
+
 @keyframes inventoryFadeUp {
     from {
         opacity: 0;

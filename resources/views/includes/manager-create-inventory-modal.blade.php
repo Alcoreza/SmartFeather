@@ -12,7 +12,7 @@
         <form id="createInventoryTypeForm" class="manager-management-modal-form">
             <div class="management-form-row">
                 <div class="management-form-group">
-                    <label for="inventoryCategory">Inventory type</label>
+                    <label for="inventoryCategory">Inventory Type</label>
                     <select id="inventoryCategory" name="category" required>
                         <option value="">Select type</option>
                         <option value="feed">Feed</option>
@@ -33,8 +33,37 @@
                 </div>
             </div>
 
+            <div class="management-form-row">
+                <div class="management-form-group">
+                    <label for="newInventoryInitialStock">Initial Stock</label>
+                    <input
+                        type="number"
+                        id="newInventoryInitialStock"
+                        name="initial_stock"
+                        placeholder="Enter initial stock"
+                        min="0"
+                        step="0.01"
+                        required
+                    >
+                </div>
+
+                <div class="management-form-group">
+                    <label for="newInventoryCritical">Critical Level</label>
+                    <input
+                        type="number"
+                        id="newInventoryCritical"
+                        name="critical"
+                        placeholder="Enter critical level"
+                        min="0"
+                        step="0.01"
+                        required
+                    >
+                </div>
+            </div>
+
             <p class="manager-management-modal-help">
                 This adds a new inventory type to the inventory dropdown list.
+                Initial stock and critical level will be permanent and managed here.
             </p>
 
             <p class="manager-management-modal-message" id="createInventoryTypeMessage"></p>
@@ -43,6 +72,7 @@
                 <button type="button" class="manager-management-modal-secondary-btn" id="cancelCreateInventoryTypeModal">
                     Cancel
                 </button>
+
                 <button type="submit" class="manager-management-modal-primary-btn">
                     Save
                 </button>

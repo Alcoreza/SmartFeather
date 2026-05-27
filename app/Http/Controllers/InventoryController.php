@@ -8,188 +8,228 @@ use Illuminate\Support\Facades\DB;
 class InventoryController extends Controller
 {
     public function managerIndex()
-{
-    $items = DB::table('inventories')->get();
+    {
+        $items = DB::table('inventories')
+            ->whereNull('archived_at')
+            ->get();
 
-    $feedItems = $items->where('type', 'feed')
-        ->map(fn($item) => $this->formatItem($item));
+        $feedItems = $items->where('type', 'feed')
+            ->map(fn ($item) => $this->formatItem($item));
 
-    $vitaminItems = $items->where('type', 'vitamin')
-        ->map(fn($item) => $this->formatItem($item));
+        $vitaminItems = $items->where('type', 'vitamin')
+            ->map(fn ($item) => $this->formatItem($item));
 
-    $feedTypeOptions = DB::table('inventory_types')
-        ->where('category', 'feed')
-        ->orderBy('name')
-        ->get();
+        $feedTypeOptions = DB::table('inventory_types')
+            ->where('category', 'feed')
+            ->whereNull('archived_at')
+            ->orderBy('name')
+            ->get();
 
-    $vitaminTypeOptions = DB::table('inventory_types')
-        ->where('category', 'vitamin')
-        ->orderBy('name')
-        ->get();
+        $vitaminTypeOptions = DB::table('inventory_types')
+            ->where('category', 'vitamin')
+            ->whereNull('archived_at')
+            ->orderBy('name')
+            ->get();
 
-    return view('manager.inventory', compact(
-        'feedItems',
-        'vitaminItems',
-        'feedTypeOptions',
-        'vitaminTypeOptions'
-    ));
-}
+        return view('manager.inventory', compact(
+            'feedItems',
+            'vitaminItems',
+            'feedTypeOptions',
+            'vitaminTypeOptions'
+        ));
+    }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'item_name' => 'required|string|max:255',
-            'type' => 'required|in:feed,vitamin',
-            'unit' => 'nullable|string|max:50',
-            'initial_stock' => 'required|numeric|min:0',
-            'remaining_stock' => 'required|numeric|min:0',
-            'critical' => 'required|numeric|min:0',
-            'purchase_date' => 'required|date',
-        ]);
+        try {
+            $validated = $request->validate([
+                'item_name' => 'required|string|max:255',
+                'type' => 'required|in:feed,vitamin',
+                'stock_to_add' => 'required|numeric|min:0',
+                'purchase_date' => 'required|date',
+            ]);
 
-        $typeExists = DB::table('inventory_types')
-            ->where('category', $validated['type'])
-            ->where('name', $validated['item_name'])
-            ->exists();
+            $inventoryType = DB::table('inventory_types')
+                ->where('category', $validated['type'])
+                ->where('name', $validated['item_name'])
+                ->whereNull('archived_at')
+                ->first();
 
-        if (!$typeExists) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid inventory type.',
-            ], 422);
-        }
+            if (!$inventoryType) {
+                return response()->json([
+                    'error' => 'Inventory type not found or already archived.',
+                ], 404);
+            }
 
-        $unit = $validated['type'] === 'vitamin' ? 'bottle' : 'kg';
+            $unit = $validated['type'] === 'vitamin' ? 'bottle' : 'kg';
+            $stockToAdd = (float) $validated['stock_to_add'];
 
-        $existingItem = DB::table('inventories')
-            ->where('type', $validated['type'])
-            ->where('item_name', $validated['item_name'])
-            ->first();
+            $existingInventory = DB::table('inventories')
+                ->where('item_name', $validated['item_name'])
+                ->where('type', $validated['type'])
+                ->whereNull('archived_at')
+                ->first();
 
-        if ($existingItem) {
-            $currentRemainingStock = (float) $validated['remaining_stock'];
-            $addedStock = (float) $validated['initial_stock'];
+            if ($existingInventory) {
+                $newRemainingStock = (float) $existingInventory->remaining_stock + $stockToAdd;
 
-            $newInitialStock = $addedStock;
-            $newRemainingStock = $currentRemainingStock + $addedStock;
+                DB::table('inventories')
+                    ->where('id', $existingInventory->id)
+                    ->update([
+                        'unit' => $unit,
+                        'remaining_stock' => $newRemainingStock,
+                        'purchase_date' => $validated['purchase_date'],
+                        'updated_at' => now(),
+                    ]);
 
-            $latestPurchaseDate = $validated['purchase_date'];
+                DB::table('inventory_records')->insert([
+                    'inventory_id' => $existingInventory->id,
+                    'initial_stock' => $existingInventory->initial_stock,
+                    'remaining_stock' => $newRemainingStock,
+                    'deducted' => 0,
+                    'monitoring_date' => now(),
+                ]);
 
-            DB::table('inventories')->where('id', $existingItem->id)->update([
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Stock added successfully.',
+                ]);
+            }
+
+            $inventoryId = DB::table('inventories')->insertGetId([
+                'item_name' => $validated['item_name'],
+                'type' => $validated['type'],
                 'unit' => $unit,
-                'initial_stock' => $newInitialStock,
-                'remaining_stock' => $newRemainingStock,
-                'critical' => $validated['critical'],
-                'purchase_date' => $latestPurchaseDate,
+                'initial_stock' => $inventoryType->initial_stock,
+                'remaining_stock' => $stockToAdd,
+                'critical' => $inventoryType->critical,
+                'purchase_date' => $validated['purchase_date'],
+                'archived_at' => null,
+                'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             DB::table('inventory_records')->insert([
-                'inventory_id' => $existingItem->id,
-                'initial_stock' => $newInitialStock,
-                'remaining_stock' => $newRemainingStock,
+                'inventory_id' => $inventoryId,
+                'initial_stock' => $inventoryType->initial_stock,
+                'remaining_stock' => $stockToAdd,
+                'deducted' => 0,
                 'monitoring_date' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'updated' => true,
-                'id' => $existingItem->id,
-                'item' => [
-                    'id' => $existingItem->id,
-                    'item_name' => $validated['item_name'],
-                    'type' => $validated['type'],
-                    'unit' => $unit,
-                    'initial_stock' => $newInitialStock,
-                    'remaining_stock' => $newRemainingStock,
-                    'critical' => $validated['critical'],
-                    'purchase_date' => $latestPurchaseDate,
-                ],
+                'message' => 'Inventory added successfully.',
             ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $id = DB::table('inventories')->insertGetId([
-            'item_name' => $validated['item_name'],
-            'type' => $validated['type'],
-            'unit' => $unit,
-            'initial_stock' => $validated['initial_stock'],
-            'remaining_stock' => $validated['remaining_stock'],
-            'critical' => $validated['critical'],
-            'purchase_date' => $validated['purchase_date'],
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('inventory_records')->insert([
-            'inventory_id' => $id,
-            'initial_stock' => $validated['initial_stock'],
-            'remaining_stock' => $validated['remaining_stock'],
-            'monitoring_date' => now(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'updated' => false,
-            'id' => $id,
-            'item' => [
-                'id' => $id,
-                'item_name' => $validated['item_name'],
-                'type' => $validated['type'],
-                'unit' => $unit,
-                'initial_stock' => $validated['initial_stock'],
-                'remaining_stock' => $validated['remaining_stock'],
-                'critical' => $validated['critical'],
-                'purchase_date' => $validated['purchase_date'],
-            ],
-        ]);
     }
 
     public function update(Request $request, $id)
     {
-        $item = DB::table('inventories')->where('id', $id)->first();
+        try {
+            $validated = $request->validate([
+                'stock_to_reduce' => 'required|numeric|min:0',
+            ]);
 
-        if (!$item) {
+            $inventory = DB::table('inventories')
+                ->where('id', $id)
+                ->whereNull('archived_at')
+                ->first();
+
+            if (!$inventory) {
+                return response()->json([
+                    'error' => 'Inventory not found.',
+                ], 404);
+            }
+
+            $stockToReduce = (float) $validated['stock_to_reduce'];
+            $newRemainingStock = (float) $inventory->remaining_stock - $stockToReduce;
+
+            if ($newRemainingStock < 0) {
+                $stockToReduce = (float) $inventory->remaining_stock;
+                $newRemainingStock = 0;
+            }
+
+            DB::table('inventories')
+                ->where('id', $id)
+                ->update([
+                    'remaining_stock' => $newRemainingStock,
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('inventory_records')->insert([
+                'inventory_id' => $id,
+                'initial_stock' => $inventory->initial_stock,
+                'remaining_stock' => $newRemainingStock,
+                'deducted' => $stockToReduce,
+                'monitoring_date' => now(),
+            ]);
+
             return response()->json([
-                'success' => false,
-                'message' => 'Inventory item not found.',
-            ], 404);
+                'success' => true,
+                'message' => 'Stock reduced successfully.',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $validated = $request->validate([
-            'item_name' => 'required|string|max:255',
-            'initial_stock' => 'required|numeric|min:0',
-            'remaining_stock' => 'required|numeric|min:0',
-            'critical' => 'required|numeric|min:0',
-            'purchase_date' => 'required|date',
-        ]);
-
-        $unit = $item->type === 'vitamin' ? 'bottle' : $item->unit;
-
-        DB::table('inventories')->where('id', $id)->update([
-            'item_name' => $validated['item_name'],
-            'unit' => $unit,
-            'initial_stock' => $validated['initial_stock'],
-            'remaining_stock' => $validated['remaining_stock'],
-            'critical' => $validated['critical'],
-            'purchase_date' => $validated['purchase_date'],
-            'updated_at' => now(),
-        ]);
-
-        DB::table('inventory_records')->insert([
-            'inventory_id' => $id,
-            'initial_stock' => $validated['initial_stock'],
-            'remaining_stock' => $validated['remaining_stock'],
-            'monitoring_date' => now(),
-        ]);
-
-        return response()->json(['success' => true]);
     }
 
     public function destroy($id)
     {
-        DB::table('inventories')->where('id', $id)->delete();
+        try {
+            DB::beginTransaction();
 
-        return response()->json(['success' => true]);
+            $inventory = DB::table('inventories')
+                ->where('id', $id)
+                ->whereNull('archived_at')
+                ->first();
+
+            if (!$inventory) {
+                DB::rollBack();
+
+                return response()->json([
+                    'error' => 'Inventory not found or already archived.',
+                ], 404);
+            }
+
+            DB::table('inventories')
+                ->where('id', $id)
+                ->update([
+                    'archived_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('inventory_types')
+                ->where('category', $inventory->type)
+                ->where('name', $inventory->item_name)
+                ->whereNull('archived_at')
+                ->update([
+                    'archived_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Inventory archived successfully.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function records(Request $request)
@@ -197,96 +237,30 @@ class InventoryController extends Controller
         $type = $request->type;
         $itemName = $request->item_name;
 
-        if ($type === 'feed') {
-            $query = DB::table('feed_refill_records as f')
-                ->join('inventories as i', 'f.inventory_id', '=', 'i.id')
-                ->leftJoin(DB::raw('(
-                    SELECT r1.* FROM inventory_records r1
-                    INNER JOIN (
-                        SELECT inventory_id, DATE(monitoring_date) as date, MAX(monitoring_date) as max_date
-                        FROM inventory_records
-                        GROUP BY inventory_id, DATE(monitoring_date)
-                    ) r2 ON r1.inventory_id = r2.inventory_id AND DATE(r1.monitoring_date) = r2.date AND r1.monitoring_date = r2.max_date
-                ) as r'), function($join) {
-                    $join->on('r.inventory_id', '=', 'f.inventory_id')
-                        ->whereRaw('DATE(r.monitoring_date) = DATE(f.recorded_at)');
-                })
-                ->select(
-                    'f.id',
-                    'i.item_name',
-                    'i.type',
-                    'f.kilograms_used as deducted',
-                    'f.recorded_at as monitoring_date',
-                    'r.remaining_stock'
-                )
-                ->orderBy('f.recorded_at', 'desc');
+        $query = DB::table('inventory_records as r')
+            ->join('inventories as i', 'r.inventory_id', '=', 'i.id')
+            ->whereNull('i.archived_at')
+            ->select(
+                'r.id',
+                'i.item_name',
+                'i.type',
+                'r.initial_stock',
+                'r.remaining_stock',
+                'r.deducted',
+                'r.monitoring_date'
+            )
+            ->orderBy('r.monitoring_date', 'desc')
+            ->orderBy('r.id', 'desc');
 
-            if ($itemName) {
-                $query->where('i.item_name', $itemName);
-            }
-
-            $records = $query->get();
-            foreach ($records as $row) {
-                $row->initial_stock = null;
-            }
-            return response()->json($records);
-        } elseif ($type === 'vitamin') {
-            $query = DB::table('vitamin_refill_records as v')
-                ->join('inventories as i', 'v.inventory_id', '=', 'i.id')
-                ->leftJoin(DB::raw('(
-                    SELECT r1.* FROM inventory_records r1
-                    INNER JOIN (
-                        SELECT inventory_id, DATE(monitoring_date) as date, MAX(monitoring_date) as max_date
-                        FROM inventory_records
-                        GROUP BY inventory_id, DATE(monitoring_date)
-                    ) r2 ON r1.inventory_id = r2.inventory_id AND DATE(r1.monitoring_date) = r2.date AND r1.monitoring_date = r2.max_date
-                ) as r'), function($join) {
-                    $join->on('r.inventory_id', '=', 'v.inventory_id')
-                        ->whereRaw('DATE(r.monitoring_date) = DATE(v.recorded_at)');
-                })
-                ->select(
-                    'v.id',
-                    'i.item_name',
-                    'i.type',
-                    'v.bottles_used as deducted',
-                    'v.recorded_at as monitoring_date',
-                    'r.remaining_stock'
-                )
-                ->orderBy('v.recorded_at', 'desc');
-
-            if ($itemName) {
-                $query->where('i.item_name', $itemName);
-            }
-
-            $records = $query->get();
-            foreach ($records as $row) {
-                $row->initial_stock = null;
-            }
-            return response()->json($records);
-        } else {
-            // fallback: return inventory_records as before, but no deducted
-            $query = DB::table('inventory_records as r')
-                ->join('inventories as i', 'r.inventory_id', '=', 'i.id')
-                ->select(
-                    'r.id',
-                    'i.item_name',
-                    'i.type',
-                    'r.initial_stock',
-                    'r.remaining_stock',
-                    'r.monitoring_date'
-                )
-                ->orderBy('r.monitoring_date', 'desc');
-
-            if ($itemName) {
-                $query->where('i.item_name', $itemName);
-            }
-
-            $records = $query->get();
-            foreach ($records as $row) {
-                $row->deducted = null;
-            }
-            return response()->json($records);
+        if ($type) {
+            $query->where('i.type', $type);
         }
+
+        if ($itemName) {
+            $query->where('i.item_name', $itemName);
+        }
+
+        return response()->json($query->get());
     }
 
     private function formatItem($item)
@@ -326,10 +300,10 @@ class InventoryController extends Controller
         $type = $request->type;
 
         $items = DB::table('inventories')
-            ->when($type, fn($q) => $q->where('type', $type))
+            ->whereNull('archived_at')
+            ->when($type, fn ($q) => $q->where('type', $type))
             ->pluck('item_name');
 
         return response()->json($items);
     }
 }
-

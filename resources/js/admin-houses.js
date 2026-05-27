@@ -1,34 +1,34 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    let tabs = document.querySelectorAll('.house-tab');
+document.addEventListener("DOMContentLoaded", async () => {
+    let tabs = document.querySelectorAll(".house-tab");
     let houses = [];
 
     // Get CSRF token from meta tag
     const getCsrfToken = () => {
-        return document.querySelector('meta[name="csrf-token"]')?.content || '';
+        return document.querySelector('meta[name="csrf-token"]')?.content || "";
     };
 
-    const houseStatus = document.getElementById('houseStatus');
-    const houseBatch = document.getElementById('houseBatch');
-    const housePen = document.getElementById('housePen');
-    const houseTemperature = document.getElementById('houseTemperature');
-    const houseAmmonia = document.getElementById('houseAmmonia');
-    const infoGrid = document.getElementById('infoGrid');
-    const feedRow = document.getElementById('feedRow');
-    const waterRow = document.getElementById('waterRow');
+    const houseStatus = document.getElementById("houseStatus");
+    const houseBatch = document.getElementById("houseBatch");
+    const housePen = document.getElementById("housePen");
+    const houseTemperature = document.getElementById("houseTemperature");
+    const houseAmmonia = document.getElementById("houseAmmonia");
+    const infoGrid = document.getElementById("infoGrid");
+    const feedRow = document.getElementById("feedRow");
+    const waterRow = document.getElementById("waterRow");
 
-    const housesTabsContainer = document.querySelector('.houses-tabs');
+    const housesTabsContainer = document.querySelector(".houses-tabs");
 
-    const addHouseButton = document.getElementById('openAddHouseModal');
-    const addHouseModal = document.getElementById('addHouseModal');
-    const closeAddHouseModal = document.getElementById('closeAddHouseModal');
-    const cancelAddHouseModal = document.getElementById('cancelAddHouseModal');
-    const addHouseForm = document.getElementById('addHouseForm');
+    const addHouseButton = document.getElementById("openAddHouseModal");
+    const addHouseModal = document.getElementById("addHouseModal");
+    const closeAddHouseModal = document.getElementById("closeAddHouseModal");
+    const cancelAddHouseModal = document.getElementById("cancelAddHouseModal");
+    const addHouseForm = document.getElementById("addHouseForm");
 
-    const editHouseButton = document.getElementById('openEditHouseModal');
-    const editHouseModal = document.getElementById('editHouseModal');
-    const closeEditHouseModal = document.getElementById('closeEditHouseModal');
-    const cancelEditHouseModal = document.getElementById('cancelEditHouseModal');
-    const editHouseForm = document.getElementById('editHouseForm');
+    const editHouseButton = document.getElementById("openEditHouseModal");
+    const editHouseModal = document.getElementById("editHouseModal");
+    const closeEditHouseModal = document.getElementById("closeEditHouseModal");
+    const cancelEditHouseModal = document.getElementById("cancelEditHouseModal");
+    const editHouseForm = document.getElementById("editHouseForm");
 
     let activeHouseIndex = 0;
     let activePenIndex = 0;
@@ -53,37 +53,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentHouse = houses[activeHouseIndex];
         if (!currentHouse || !editHouseModal) return;
 
-        const editHouseName = document.getElementById('editHouseName');
-        const editBatchId = document.getElementById('editBatchId');
-        const editStartDate = document.getElementById('editStartDate');
-        const editPen = document.getElementById('editPen');
-        const editCapacity = document.getElementById('editCapacity');
-        const editPopulation = document.getElementById('editPopulation');
-        const editEggsHatched = document.getElementById('editEggsHatched');
-        const editMortality = document.getElementById('editMortality');
+        const editHouseName = document.getElementById("editHouseName");
+        const editBatchId = document.getElementById("editBatchId");
+        const editStartDate = document.getElementById("editStartDate");
+        const editPen = document.getElementById("editPen");
+        const editCapacity = document.getElementById("editCapacity");
+        const editPopulation = document.getElementById("editPopulation");
+        const editEggsHatched = document.getElementById("editEggsHatched");
+        const editMortality = document.getElementById("editMortality");
 
         // Populate house fields
         if (editHouseName) editHouseName.value = currentHouse.name;
-        if (editBatchId) editBatchId.value = currentHouse.batch;
-        if (editStartDate) editStartDate.value = currentHouse.start_date || '';
 
         // Populate pen selector
         if (editPen) {
-            editPen.innerHTML = currentHouse.pens.map((pen, index) => `
-                <option value="${index}" ${index === activePenIndex ? 'selected' : ''}>${pen.pen_name}</option>
-            `).join('');
+            editPen.innerHTML = currentHouse.pens
+                .map(
+                    (pen, index) => `
+                <option value="${index}" ${index === activePenIndex ? "selected" : ""}>${pen.pen_name}</option>
+            `,
+                )
+                .join("");
         }
 
         // Get current pen data
         const currentPen = currentHouse.pens[activePenIndex];
         if (currentPen) {
+            if (editBatchId) editBatchId.value = currentPen.batch || currentPen.batch_code || "";
+            if (editStartDate)
+                editStartDate.value =
+                    currentPen.batch_started_at || currentHouse.start_date || "";
             if (editCapacity) editCapacity.value = currentPen.capacity || 0;
-            if (editPopulation) editPopulation.value = currentPen.population || 0;
-            if (editEggsHatched) editEggsHatched.value = currentPen.eggs_hatched || 0;
+            if (editPopulation)
+                editPopulation.value = currentPen.population || 0;
+            if (editEggsHatched)
+                editEggsHatched.value = currentPen.eggs_hatched || 0;
             if (editMortality) editMortality.value = currentPen.mortality || 0;
         }
 
-        editHouseModal.classList.add('show');
+        editHouseModal.classList.add("show");
     }
 
     function closeEditModal() {
@@ -111,85 +119,124 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function buildResourceRow(items, type) {
-        return items.map((item, index) => `
+        return items
+            .map(
+                (item, index) => `
             <div class="resource-item stat-animate">
                 <div class="resource-bar-box">
-                    <div class="resource-bar ${type === 'feed' ? 'feed-bar' : 'water-bar'}" style="width: ${item.value}%;"></div>
+                    <div class="resource-bar ${type === "feed" ? "feed-bar" : "water-bar"}" style="width: ${item.value}%;"></div>
                 </div>
-                <div class="resource-value ${type === 'feed' ? 'feed-text' : 'water-text'}">${item.value}%</div>
+                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"}">${item.value}%</div>
                 <div class="resource-label">${item.label}</div>
             </div>
-            ${index < items.length - 1 ? '<div class="resource-line"></div>' : ''}
-        `).join('');
+            ${index < items.length - 1 ? '<div class="resource-line"></div>' : ""}
+        `,
+            )
+            .join("");
+    }
+
+    function sortPensById(pens) {
+        return [...(pens || [])].sort((a, b) => {
+            const left = Number(a?.id ?? 0);
+            const right = Number(b?.id ?? 0);
+
+            return left - right;
+        });
     }
 
     function populatePenOptions(house) {
         if (!housePen) return;
 
-        housePen.innerHTML = house.pens.map((pen, index) => `
+        housePen.innerHTML = sortPensById(house.pens)
+            .map(
+                (pen, index) => `
             <option value="${index}">${pen.pen_name}</option>
-        `).join('');
+        `,
+            )
+            .join("");
     }
 
     async function fetchHouses() {
         try {
-            const response = await fetch('/api/houses');
-            if (!response.ok) throw new Error('Failed to fetch houses');
+            const response = await fetch("/api/houses");
+            if (!response.ok) throw new Error("Failed to fetch houses");
             const result = await response.json();
-            
-            houses = (result.data || []).map(house => ({
-                id: house.id,
-                name: house.house_number,
-                status: house.status || 'Active',
-                batch: house.batch_code || 'Batch-New',
-                start_date: house.start_date,
-                pens: (house.pens || []).map((pen, index) => ({
-                    id: pen.id,
-                    name: pen.pen_name,
-                    pen_name: pen.pen_name,
-                    temperature: '0 deg',
-                    ammonia: '0 ppm',
-                    capacity: pen.capacity || 0,
-                    population: pen.population || 0,
-                    cards: [
-                        {
-                            icon: '🏠',
-                            title: `Capacity: ${pen.capacity || 0}`,
-                            subtitle: `Population: ${pen.population || 0}`,
-                            accent: 'red',
-                        },
-                        {
-                            icon: '📅',
-                            title: 'Start Date',
-                            subtitle: house.start_date || 'Not set',
-                            accent: 'blue',
-                        },
-                        {
-                            icon: '💚',
-                            title: 'Current Condition',
-                            subtitle: 'Normal',
-                            accent: 'green',
-                        },
-                        {
-                            icon: '📊',
-                            title: 'Eggs Hatched: 0',
-                            subtitle: 'Mortality: 0',
-                            accent: 'orange',
-                        },
-                    ],
-                    feeders: [
-                        { label: 'Feeder 1', value: 0 },
-                        { label: 'Feeder 2', value: 0 },
-                        { label: 'Feeder 3', value: 0 },
-                    ],
-                    drinkers: [
-                        { label: 'Drinker 1', value: 0 },
-                        { label: 'Drinker 2', value: 0 },
-                        { label: 'Drinker 3', value: 0 },
-                    ],
-                })),
-                records: [],
-            }));
+
+            houses = (result.data || [])
+                .map((house) => {
+                    const sortedPens = sortPensById((house.pens || []).map((pen) => {
+                        const flockBatch = pen.running_batch || pen.current_batch || null;
+
+                        return {
+                            id: pen.id,
+                            name: pen.pen_name,
+                            pen_name: pen.pen_name,
+                            batch: flockBatch?.batch_code || null,
+                            status: flockBatch?.status || "Inactive",
+                            temperature: "0 deg",
+                            ammonia: "0 ppm",
+                            capacity: pen.capacity || 0,
+                            population: pen.population || 0,
+                            eggs_hatched: pen.eggs_hatched || 0,
+                            mortality: pen.mortality || 0,
+                            batch_started_at:
+                                flockBatch?.started_at || pen.batch_started_at || null,
+                            cards: [
+                                {
+                                    icon: "🏠",
+                                    title: `Capacity: ${pen.capacity || 0}`,
+                                    subtitle: `Population: ${pen.population || 0}`,
+                                    accent: "red",
+                                },
+                                {
+                                    icon: "📅",
+                                    title: "Start Date",
+                                    subtitle:
+                                        flockBatch?.started_at ||
+                                        pen.batch_started_at ||
+                                        "Not set",
+                                    accent: "blue",
+                                },
+                                {
+                                    icon: "💚",
+                                    title: "Current Condition",
+                                    subtitle: "Normal",
+                                    accent: "green",
+                                },
+                                {
+                                    icon: "📊",
+                                    title: `Eggs Hatched: ${pen.eggs_hatched || 0}`,
+                                    subtitle: `Mortality: ${pen.mortality || 0}`,
+                                    accent: "orange",
+                                },
+                            ],
+                            feeders: [
+                                { label: "Feeder 1", value: 0 },
+                                { label: "Feeder 2", value: 0 },
+                                { label: "Feeder 3", value: 0 },
+                            ],
+                            drinkers: [
+                                { label: "Drinker 1", value: 0 },
+                                { label: "Drinker 2", value: 0 },
+                                { label: "Drinker 3", value: 0 },
+                            ],
+                        };
+                    }));
+
+                    // Extract batch code from first pen for house-level display
+                    const houseBatchCode = sortedPens.length > 0 ? (sortedPens[0].batch || "Batch-New") : "Batch-New";
+
+                    return {
+                        id: house.id,
+                        name: house.house_number,
+                        status: house.status || "active",
+                        batch: houseBatchCode,
+                        start_date: house.start_date,
+                        pens: sortedPens,
+                        records: [],
+                    };
+                })
+                .sort((a, b) => Number(a.id) - Number(b.id));
 
             if (houses.length > 0) {
                 activeHouseIndex = 0;
@@ -197,8 +244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderHouse(0);
             }
         } catch (error) {
-            console.error('Error fetching houses:', error);
-            alert('Error loading houses: ' + error.message);
+            console.error("Error fetching houses:", error);
+            alert("Error loading houses: " + error.message);
         }
     }
 
@@ -230,22 +277,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const pen = house.pens[penIndex];
 
-        if (houseStatus) houseStatus.textContent = house.status;
-        if (houseBatch) houseBatch.textContent = house.batch;
+        if (houseStatus) houseStatus.textContent = pen.status;
+        if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
         if (houseTemperature) houseTemperature.textContent = pen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
-        if (feedRow) feedRow.innerHTML = buildResourceRow(pen.feeders, 'feed');
-        if (waterRow) waterRow.innerHTML = buildResourceRow(pen.drinkers, 'water');
+        if (feedRow) feedRow.innerHTML = buildResourceRow(pen.feeders, "feed");
+        if (waterRow)
+            waterRow.innerHTML = buildResourceRow(pen.drinkers, "water");
 
         if (houseStatus) {
-            if (house.status.toLowerCase() === 'inactive') {
-                houseStatus.classList.remove('chip-green');
-                houseStatus.classList.add('chip-gray');
+            if (pen.status.toLowerCase() === "running") {
+                houseStatus.classList.remove("chip-gray");
+                houseStatus.classList.add("chip-green");
             } else {
-                houseStatus.classList.remove('chip-gray');
-                houseStatus.classList.add('chip-green');
+                houseStatus.classList.remove("chip-green");
+                houseStatus.classList.add("chip-gray");
             }
         }
 
@@ -336,21 +384,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (addHouseForm) {
-        addHouseForm.addEventListener('submit', async (event) => {
+        addHouseForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
-            const houseNameInput = document.getElementById('houseName');
-            const houseStatusInput = document.getElementById('houseStatusInput');
-            const houseBatchInput = document.getElementById('houseBatchInput');
-            const penCountInput = document.getElementById('housePenCount');
+            const houseNameInput = document.getElementById("houseName");
+            const houseStatusInput = document.getElementById("houseStatusInput");
+            const penCountInput = document.getElementById("housePenCount");
 
             const houseName = houseNameInput?.value.trim();
-            const houseStatusValue = houseStatusInput?.value || 'active';
-            const houseBatchValue = houseBatchInput?.value.trim() || '';
+            const houseStatusValue = houseStatusInput?.value || "active";
             const penCountValue = Number(penCountInput?.value || 1);
 
             if (!houseName) {
-                alert('Please enter a house name.');
+                alert("Please enter a house name.");
                 return;
             }
 
@@ -360,35 +406,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     status: houseStatusValue,
                     number_of_pens: penCountValue > 0 ? penCountValue : 1,
                 };
-                if (houseBatchValue) {
-                    payload.batch_code = houseBatchValue;
-                }
 
-                const response = await fetch('/api/houses', {
-                    method: 'POST',
+                const response = await fetch("/api/houses", {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': getCsrfToken(),
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN": getCsrfToken(),
                     },
                     body: JSON.stringify(payload),
                 });
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.message || 'Failed to create house');
+                    throw new Error(error.message || "Failed to create house");
                 }
 
                 const result = await response.json();
-                alert('House created successfully!');
-                
+                alert("House created successfully!");
+
                 addHouseForm.reset();
                 closeAddModal();
-                
+
                 await fetchHouses();
             } catch (error) {
-                console.error('Error creating house:', error);
-                alert('Error creating house: ' + error.message);
+                console.error("Error creating house:", error);
+                alert("Error creating house: " + error.message);
             }
         });
     }
@@ -414,53 +457,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (editHouseForm) {
-        editHouseForm.addEventListener('submit', async (event) => {
+        editHouseForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
-            const editHouseName = document.getElementById('editHouseName');
-            const editBatchId = document.getElementById('editBatchId');
-            const editStartDate = document.getElementById('editStartDate');
-            const editPen = document.getElementById('editPen');
-            const editCapacity = document.getElementById('editCapacity');
-            const editPopulation = document.getElementById('editPopulation');
-            const editEggsHatched = document.getElementById('editEggsHatched');
-            const editMortality = document.getElementById('editMortality');
+            const editHouseName = document.getElementById("editHouseName");
+            const editBatchId = document.getElementById("editBatchId");
+            const editStartDate = document.getElementById("editStartDate");
+            const editPen = document.getElementById("editPen");
+            const editCapacity = document.getElementById("editCapacity");
+            const editPopulation = document.getElementById("editPopulation");
+            const editEggsHatched = document.getElementById("editEggsHatched");
+            const editMortality = document.getElementById("editMortality");
 
             const currentHouse = houses[activeHouseIndex];
             if (!currentHouse) return;
 
-            const selectedPenIndex = editPen ? Number(editPen.value) : activePenIndex;
+            const selectedPenIndex = editPen
+                ? Number(editPen.value)
+                : activePenIndex;
             const currentPen = currentHouse.pens[selectedPenIndex];
             if (!currentPen) return;
 
             try {
                 // 1. Update house data
-                const houseResponse = await fetch(`/api/houses/${currentHouse.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': getCsrfToken(),
+                const houseResponse = await fetch(
+                    `/api/houses/${currentHouse.id}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            "X-CSRF-TOKEN": getCsrfToken(),
+                        },
+                        body: JSON.stringify({
+                            house_number:
+                                editHouseName?.value.trim() ||
+                                currentHouse.name,
+                            start_date:
+                                editStartDate?.value || currentHouse.start_date,
+                        }),
                     },
-                    body: JSON.stringify({
-                        house_number: editHouseName?.value.trim() || currentHouse.name,
-                        batch_code: editBatchId?.value.trim() || currentHouse.batch,
-                        start_date: editStartDate?.value || currentHouse.start_date,
-                    }),
-                });
+                );
 
                 if (!houseResponse.ok) {
                     const error = await houseResponse.json();
-                    throw new Error(error.message || 'Failed to update house');
+                    throw new Error(error.message || "Failed to update house");
                 }
 
                 // 2. Update pen data (capacity, population)
                 const penResponse = await fetch(`/api/pens/${currentPen.id}`, {
-                    method: 'PUT',
+                    method: "PUT",
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': getCsrfToken(),
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN": getCsrfToken(),
                     },
                     body: JSON.stringify({
                         capacity: parseInt(editCapacity?.value) || 0,
@@ -470,35 +520,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (!penResponse.ok) {
                     const error = await penResponse.json();
-                    throw new Error(error.message || 'Failed to update pen');
+                    throw new Error(error.message || "Failed to update pen");
                 }
 
                 // 3. Update pen production data
-                const productionResponse = await fetch(`/api/pens/${currentPen.id}/production`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': getCsrfToken(),
+                const productionResponse = await fetch(
+                    `/api/pens/${currentPen.id}/production`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            "X-CSRF-TOKEN": getCsrfToken(),
+                        },
+                        body: JSON.stringify({
+                            eggs_hatched: parseInt(editEggsHatched?.value) || 0,
+                            mortality: parseInt(editMortality?.value) || 0,
+                        }),
                     },
-                    body: JSON.stringify({
-                        eggs_hatched: parseInt(editEggsHatched?.value) || 0,
-                        mortality: parseInt(editMortality?.value) || 0,
-                    }),
-                });
+                );
 
                 if (!productionResponse.ok) {
                     const error = await productionResponse.json();
-                    throw new Error(error.message || 'Failed to update production data');
+                    throw new Error(
+                        error.message || "Failed to update production data",
+                    );
                 }
 
-                alert('House and pen data updated successfully!');
+                alert("House and pen data updated successfully!");
                 activePenIndex = selectedPenIndex;
                 closeEditModal();
                 await fetchHouses();
             } catch (error) {
-                console.error('Error updating data:', error);
-                alert('Error: ' + error.message);
+                console.error("Error updating data:", error);
+                alert("Error: " + error.message);
             }
         });
     }

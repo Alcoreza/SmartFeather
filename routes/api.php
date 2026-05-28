@@ -47,7 +47,9 @@ Route::get('/mobile/disinfection/houses', [MobileDisinfectionController::class, 
 Route::get('/mobile/disinfection/houses/{houseId}/pens', [MobileDisinfectionController::class, 'getPensByHouse']);
 Route::post('/mobile/disinfection', [MobileDisinfectionController::class, 'submit']);
 
-Route::post('/mobile/visitor', [MobileVisitorController::class, 'submit']);
+Route::post('/mobile/visitor/time-in', [MobileVisitorController::class, 'timeIn']);
+Route::get('/mobile/visitor/open', [MobileVisitorController::class, 'getOpenVisitors']);
+Route::post('/mobile/visitor/time-out', [MobileVisitorController::class, 'timeOut']);
 Route::post('/mobile/visitor/photo-upload-url', [MobileVisitorController::class, 'createVisitorPhotoUploadUrl']);
 
 Route::get('/mobile/weight-sampling/context', [MobileWeightSamplingController::class, 'getContext']);

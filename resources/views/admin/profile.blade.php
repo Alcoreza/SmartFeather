@@ -148,6 +148,48 @@
                         @csrf
                         @method('PATCH')
 
+                        <div class="profile-edit-form-grid">
+                            <div class="profile-edit-field">
+                                <label for="profileEditFirstName">First name</label>
+                                <input type="text" id="profileEditFirstName" value="{{ $user->FirstName ?? '' }}" readonly>
+                            </div>
+
+                            <div class="profile-edit-field">
+                                <label for="profileEditMiddleName">Middle name</label>
+                                <input type="text" id="profileEditMiddleName" value="{{ $user->MiddleName ?? '' }}" readonly>
+                            </div>
+
+                            <div class="profile-edit-field">
+                                <label for="profileEditLastName">Last name</label>
+                                <input type="text" id="profileEditLastName" value="{{ $user->LastName ?? '' }}" readonly>
+                            </div>
+
+                            <div class="profile-edit-field">
+                                <label for="profileEditSuffix">Suffix</label>
+                                <input type="text" id="profileEditSuffix" value="{{ $user->Suffix ?? '' }}" readonly>
+                            </div>
+
+                            <div class="profile-edit-field">
+                                <label for="profileEditBirthday">Birthday</label>
+                                <input type="text" id="profileEditBirthday" value="{{ $birthdayDisplay }}" readonly>
+                            </div>
+
+                            <div class="profile-edit-field">
+                                <label for="profileEditGender">Gender</label>
+                                <input type="text" id="profileEditGender" value="{{ $user->Gender ?? '' }}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="profile-edit-field">
+                            <label for="profileEditRole">Role</label>
+                            <input type="text" id="profileEditRole" value="{{ $user->Role ?? '' }}" readonly>
+                        </div>
+
+                        <div class="profile-edit-field">
+                            <label for="profileEditUsername">Username</label>
+                            <input type="text" id="profileEditUsername" value="{{ $user->Username ?? '' }}" readonly>
+                        </div>
+
                         <div class="profile-edit-field">
                             <label for="profileEditPhoneNumber">Phone number</label>
                             <input type="text" id="profileEditPhoneNumber" name="PhoneNumber" value="{{ old('PhoneNumber', $user->PhoneNumber ?? '') }}">

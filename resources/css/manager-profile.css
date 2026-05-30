@@ -290,6 +290,8 @@ body.modal-open {
 
 .profile-edit-modal-card {
     width: min(100%, 520px);
+    max-height: 90vh;
+    overflow-y: auto;
     background: #ffffff;
     border-radius: 28px;
     padding: 24px;
@@ -327,6 +329,19 @@ body.modal-open {
     border: 1.5px solid rgba(10, 51, 27, 0.12);
     background: #f8fbf8;
     box-sizing: border-box;
+}
+
+.profile-edit-field input[readonly] {
+    background: #f0f0f0;
+    color: #666;
+    cursor: not-allowed;
+    border-color: rgba(10, 51, 27, 0.08);
+}
+
+.profile-edit-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
 }
 
 .profile-edit-actions {

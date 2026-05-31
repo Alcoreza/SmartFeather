@@ -23,7 +23,7 @@ class MobileVisitorController extends Controller
 
         if (blank($bucket) || blank($baseUrl) || blank($serviceRoleKey)) {
             return response()->json([
-                'message' => 'Supabase storage is not configured correctly.'
+                'message' => 'Supabase storage is not configured correctly.',
             ], 500);
         }
 
@@ -81,13 +81,12 @@ class MobileVisitorController extends Controller
         ]);
     }
 
-    public function submit(Request $request)
+    public function timeIn(Request $request)
     {
         $validated = $request->validate([
             'employee_id' => 'required|integer|exists:user,EmployeeId',
             'date' => 'required|date',
             'time_in' => 'required|date_format:H:i',
-            'time_out' => 'required|date_format:H:i',
             'name' => 'required|string|max:100',
             'purpose' => 'required|string|max:255',
             'foot_bath' => 'required|boolean',
@@ -97,10 +96,105 @@ class MobileVisitorController extends Controller
         ]);
 
         $employee = Employee::find($validated['employee_id']);
+        $monitoredBy = $this->resolveMonitoredBy($employee, $validated['employee_id']);
 
-        $monitoredBy = null;
+        $id = DB::table('visitor_logs')->insertGetId([
+            'employee_id' => $validated['employee_id'],
+            'date' => $validated['date'],
+            'time_in' => $validated['time_in'],
+            'time_out' => null,
+            'name' => $validated['name'],
+            'purpose' => $validated['purpose'],
+            'foot_bath' => $validated['foot_bath'] ? 'Yes' : 'No',
+            'sanitation' => $validated['sanitation'] ? 'Yes' : 'No',
+            'ppe' => $validated['ppe'] ? 'Yes' : 'No',
+            'photo_url' => $validated['photo_path'] ?? null,
+            'monitored_by' => $monitoredBy,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Visitor timed in successfully.',
+            'visitor_log_id' => $id,
+        ]);
+    }
+
+    public function getOpenVisitors(Request $request)
+    {
+        $request->validate([
+            'employee_id' => 'required|integer|exists:user,EmployeeId',
+        ]);
+
+        $visitors = DB::table('visitor_logs')
+            ->whereNull('time_out')
+            ->orderByDesc('date')
+            ->orderByDesc('time_in')
+            ->orderByDesc('id')
+            ->get()
+            ->map(function ($visitor) {
+                return [
+                    'id' => (int) $visitor->id,
+                    'date' => $visitor->date,
+                    'time_in' => $visitor->time_in ? substr((string) $visitor->time_in, 0, 5) : '',
+                    'name' => $visitor->name,
+                    'purpose' => $visitor->purpose,
+                    'foot_bath' => strtoupper((string) $visitor->foot_bath) === 'YES',
+                    'sanitation' => strtoupper((string) $visitor->sanitation) === 'YES',
+                    'ppe' => strtoupper((string) $visitor->ppe) === 'YES',
+                    'photo_url' => $this->buildVisitorPhotoUrl($visitor->photo_url),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'visitors' => $visitors,
+        ]);
+    }
+
+    public function timeOut(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|integer|exists:user,EmployeeId',
+            'visitor_log_id' => 'required|integer|exists:visitor_logs,id',
+            'time_out' => 'required|date_format:H:i',
+        ]);
+
+        $visitor = DB::table('visitor_logs')
+            ->where('id', $validated['visitor_log_id'])
+            ->first();
+
+        if (!$visitor) {
+            return response()->json([
+                'message' => 'Visitor log not found.',
+            ], 404);
+        }
+
+        if (!empty($visitor->time_out)) {
+            return response()->json([
+                'message' => 'This visitor has already been timed out.',
+            ], 422);
+        }
+
+        DB::table('visitor_logs')
+            ->where('id', $validated['visitor_log_id'])
+            ->update([
+                'time_out' => $validated['time_out'],
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Visitor timed out successfully.',
+        ]);
+    }
+
+    private function resolveMonitoredBy(?Employee $employee, int $employeeId): string
+    {
         if ($employee) {
-            $monitoredBy = trim(sprintf(
+            return trim(sprintf(
                 '%s %s %s %s',
                 $employee->FirstName ?? '',
                 $employee->MiddleName ?? '',
@@ -109,25 +203,7 @@ class MobileVisitorController extends Controller
             ));
         }
 
-        DB::table('visitor_logs')->insert([
-            'date' => $validated['date'],
-            'time_in' => $validated['time_in'],
-            'time_out' => $validated['time_out'],
-            'name' => $validated['name'],
-            'purpose' => $validated['purpose'],
-            'foot_bath' => $validated['foot_bath'] ? 'Yes' : 'No',
-            'sanitation' => $validated['sanitation'] ? 'Yes' : 'No',
-            'ppe' => $validated['ppe'] ? 'Yes' : 'No',
-            'photo_url' => $validated['photo_path'] ?? null,
-            'monitored_by' => $monitoredBy ?: (string) $validated['employee_id'],
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Visitor log submitted successfully.',
-        ]);
+        return (string) $employeeId;
     }
 
     private function buildVisitorPhotoUrl(?string $path): ?string

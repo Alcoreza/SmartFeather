@@ -43,10 +43,44 @@ class MobileDashboardController extends Controller
             ->whereNotNull('current_batch_id')
             ->sum('population');
 
-        $pendingTasks = (int) DB::table('tasks')
-            ->where('user_employeeid', $validated['employee_id'])
-            ->where('status', 'Pending')
-            ->count();
+        $pendingTasksQuery = DB::table('tasks as t')
+            ->leftJoin('house as h', 't.house_houseid', '=', 'h.id')
+            ->leftJoin('pen as p', function ($join) {
+                $join->on('t.pennumber', '=', 'p.id')
+                    ->on('t.house_houseid', '=', 'p.house_id');
+            })
+            ->where('t.user_employeeid', $validated['employee_id'])
+            ->where('t.status', 'Pending');
+
+        $pendingTasks = (int) $pendingTasksQuery->count();
+
+        $pendingTask = DB::table('tasks as t')
+            ->leftJoin('house as h', 't.house_houseid', '=', 'h.id')
+            ->leftJoin('pen as p', function ($join) {
+                $join->on('t.pennumber', '=', 'p.id')
+                    ->on('t.house_houseid', '=', 'p.house_id');
+            })
+            ->where('t.user_employeeid', $validated['employee_id'])
+            ->where('t.status', 'Pending')
+            ->orderByRaw("
+                CASE
+                    WHEN t.prioritylevel = 'High' THEN 1
+                    WHEN t.prioritylevel = 'Medium' THEN 2
+                    WHEN t.prioritylevel = 'Low' THEN 3
+                    ELSE 4
+                END
+            ")
+            ->orderBy('t.finishby')
+            ->orderByDesc('t.timeassigned')
+            ->select(
+                't.tasktype',
+                't.detailedtask',
+                't.finishby',
+                't.prioritylevel',
+                'h.house_number',
+                'p.pen_name'
+            )
+            ->first();
 
         $environmentFilterOptions = $this->buildSensorFilterOptions(['temperature', 'ammonia']);
         $resourceFilterOptions = $this->buildSensorFilterOptions(['feed', 'water']);
@@ -150,7 +184,17 @@ class MobileDashboardController extends Controller
                     'recorded_at' => $resourceReadings['water']['recorded_at'],
                 ],
             ],
-            'pending_tasks' => (string) $pendingTasks,
+            'pending_task_count' => $pendingTasks,
+            'pending_task' => $pendingTask ? [
+                'title' => $pendingTask->tasktype,
+                'detail' => $pendingTask->detailedtask,
+                'priority' => $pendingTask->prioritylevel,
+                'finish_by' => $pendingTask->finishby
+                    ? Carbon::parse($pendingTask->finishby)->format('M j, g:i A')
+                    : null,
+                'house_label' => $pendingTask->house_number,
+                'pen_label' => $pendingTask->pen_name,
+            ] : null,
             'quick_access' => [
                 [
                     'title' => 'Population',
@@ -275,15 +319,15 @@ class MobileDashboardController extends Controller
             ->where('s.pen_penid', $penId)
             ->select(
                 DB::raw("
-                CASE
-                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%temp%' THEN 'temperature'
-                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%ammonia%' THEN 'ammonia'
-                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%nh3%' THEN 'ammonia'
-                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%feed%' THEN 'feed'
-                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%water%' THEN 'water'
-                    ELSE LOWER(TRIM(s.sensortype))
-                END as sensor_type
-            "),
+                    CASE
+                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%temp%' THEN 'temperature'
+                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%ammonia%' THEN 'ammonia'
+                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%nh3%' THEN 'ammonia'
+                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%feed%' THEN 'feed'
+                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%water%' THEN 'water'
+                        ELSE LOWER(TRIM(s.sensortype))
+                    END as sensor_type
+                "),
                 'sr.value',
                 'sr.recorded_at',
                 'sr.reading_id'

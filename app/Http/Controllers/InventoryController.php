@@ -11,6 +11,7 @@ class InventoryController extends Controller
     {
         $items = DB::table('inventories')
             ->whereNull('archived_at')
+            ->orderBy('id', 'asc')
             ->get();
 
         $feedItems = $items->where('type', 'feed')
@@ -49,26 +50,36 @@ class InventoryController extends Controller
                 'purchase_date' => 'required|date',
             ]);
 
+            $itemName = trim($validated['item_name']);
+            $itemType = $validated['type'];
+
+            $unit = $itemType === 'vitamin' ? 'bottle' : 'kg';
+            $stockToAdd = (float) $validated['stock_to_add'];
+
             $inventoryType = DB::table('inventory_types')
-                ->where('category', $validated['type'])
-                ->where('name', $validated['item_name'])
+                ->where('category', $itemType)
+                ->whereRaw('LOWER(name) = ?', [strtolower($itemName)])
                 ->whereNull('archived_at')
                 ->first();
 
-            if (!$inventoryType) {
+            $existingInventory = DB::table('inventories')
+                ->whereRaw('LOWER(item_name) = ?', [strtolower($itemName)])
+                ->where('type', $itemType)
+                ->whereNull('archived_at')
+                ->first();
+
+            if (!$inventoryType && !$existingInventory) {
                 return response()->json([
                     'error' => 'Inventory type not found or already archived.',
                 ], 404);
             }
 
-            $unit = $validated['type'] === 'vitamin' ? 'bottle' : 'kg';
-            $stockToAdd = (float) $validated['stock_to_add'];
-
-            $existingInventory = DB::table('inventories')
-                ->where('item_name', $validated['item_name'])
-                ->where('type', $validated['type'])
-                ->whereNull('archived_at')
-                ->first();
+            if (!$inventoryType && $existingInventory) {
+                $inventoryType = (object) [
+                    'initial_stock' => $existingInventory->initial_stock,
+                    'critical' => $existingInventory->critical,
+                ];
+            }
 
             if ($existingInventory) {
                 $newRemainingStock = (float) $existingInventory->remaining_stock + $stockToAdd;
@@ -97,8 +108,8 @@ class InventoryController extends Controller
             }
 
             $inventoryId = DB::table('inventories')->insertGetId([
-                'item_name' => $validated['item_name'],
-                'type' => $validated['type'],
+                'item_name' => $itemName,
+                'type' => $itemType,
                 'unit' => $unit,
                 'initial_stock' => $inventoryType->initial_stock,
                 'remaining_stock' => $stockToAdd,

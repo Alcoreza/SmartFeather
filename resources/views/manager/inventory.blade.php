@@ -55,19 +55,10 @@
                     <button
                         type="button"
                         class="inventory-edit-btn"
-                        id="openFeedEditModal"
-                        aria-label="Edit Feed"
+                        id="openEditStockModal"
+                        aria-label="Edit Stock"
                     >
-                        ✎ Edit
-                    </button>
-
-                    <button
-                        type="button"
-                        class="inventory-icon-btn add-btn"
-                        id="openFeedAddModal"
-                        aria-label="Add Feed"
-                    >
-                        +
+                        ✎ Edit Stock
                     </button>
 
                 </div>
@@ -85,64 +76,48 @@
                         data-initial-stock="{{ $item['initial_stock'] }}"
                         data-remaining-stock="{{ $item['remaining_stock'] }}"
                         data-critical="{{ $item['critical'] }}"
-                        data-purchase-date="{{ $item['purchase_date'] }}"
                         data-unit="{{ $item['unit'] }}"
                     >
 
-                        <div class="inventory-entry-header">
+                        <div class="inventory-card inventory-stock-card">
 
-                            <h3 class="inventory-item-name">
-                                {{ $item['item_name'] }}
-                            </h3>
+                            <div class="inventory-stock-card-header">
+                                <h3 class="inventory-item-name">
+                                    {{ $item['item_name'] }}
+                                </h3>
+                                <span class="inventory-status-badge {{ $item['status_class'] }}">
+                                    {{ $item['status'] }}
+                                </span>
+                            </div>
 
-                        </div>
+                            <div class="inventory-stock-card-body">
 
-                        <div class="inventory-item-block">
-
-                            <div class="inventory-card inventory-stock-card">
-
-                                <div
-                                    class="inventory-ring {{ $item['status_class'] }}"
-                                    style="--percent: {{ $item['percentage'] }};"
-                                >
-                                    <div class="inventory-ring-inner"></div>
+                                <div class="inventory-stock-summary">
+                                    <div class="inventory-stock-amount">
+                                        {{ $item['remaining_stock'] }} <span class="inventory-stock-unit">{{ $item['unit'] === 'bottles' ? 'btls' : $item['unit'] }}</span>
+                                    </div>
+                                    <div class="inventory-stock-subtitle">Remaining</div>
                                 </div>
 
                                 <div class="inventory-stock-details">
 
-                                    <span class="inventory-status-badge {{ $item['status_class'] }}">
-                                        {{ $item['status'] }}
-                                    </span>
-
                                     <p>
                                         <strong>Initial Stock:</strong>
-                                        {{ $item['initial_stock'] }} {{ $item['unit'] }}
-                                    </p>
-
-                                    <p>
-                                        <strong>Remaining:</strong>
-                                        {{ $item['remaining_stock'] }} {{ $item['unit'] }}
+                                        <span class="inventory-stock-detail-value">{{ $item['initial_stock'] }} <span class="inventory-stock-detail-unit">{{ $item['unit'] === 'bottles' ? 'btls' : $item['unit'] }}</span></span>
                                     </p>
 
                                     <p>
                                         <strong>Critical Level:</strong>
-                                        {{ $item['critical'] }} {{ $item['unit'] }}
+                                        <span class="inventory-stock-detail-value">{{ number_format($item['critical'], 0, '.', '') }} <span class="inventory-stock-detail-unit">{{ $item['unit'] === 'bottles' ? 'btls' : $item['unit'] }}</span></span>
                                     </p>
 
                                 </div>
 
-                            </div>
-
-                            <div class="inventory-card inventory-date-card">
-
-                                <div class="inventory-date-icon">
-                                    🗓
+                                <div class="inventory-stock-progress">
+                                    <div class="inventory-progress-track" style="--percent: {{ $item['percentage'] }};">
+                                        <div class="inventory-progress-fill"></div>
+                                    </div>
                                 </div>
-
-                                <p>
-                                    <strong>Recent Purchase Date:</strong>
-                                    {{ $item['purchase_date'] }}
-                                </p>
 
                             </div>
 
@@ -163,27 +138,6 @@
 
                 <h2>Vitamins Stock</h2>
 
-                <div class="inventory-actions">
-
-                    <button
-                        type="button"
-                        class="inventory-edit-btn"
-                        id="openVitaminEditModal"
-                        aria-label="Edit Vitamin"
-                    >
-                        ✎ Edit
-                    </button>
-
-                    <button
-                        type="button"
-                        class="inventory-icon-btn add-btn"
-                        id="openVitaminAddModal"
-                        aria-label="Add Vitamin"
-                    >
-                        +
-                    </button>
-
-                </div>
 
             </div>
 
@@ -198,64 +152,48 @@
                         data-initial-stock="{{ $item['initial_stock'] }}"
                         data-remaining-stock="{{ $item['remaining_stock'] }}"
                         data-critical="{{ $item['critical'] }}"
-                        data-purchase-date="{{ $item['purchase_date'] }}"
                         data-unit="{{ $item['unit'] }}"
                     >
 
-                        <div class="inventory-entry-header">
+                        <div class="inventory-card inventory-stock-card">
 
-                            <h3 class="inventory-item-name">
-                                {{ $item['item_name'] }}
-                            </h3>
+                            <div class="inventory-stock-card-header">
+                                <h3 class="inventory-item-name">
+                                    {{ $item['item_name'] }}
+                                </h3>
+                                <span class="inventory-status-badge {{ $item['status_class'] }}">
+                                    {{ $item['status'] }}
+                                </span>
+                            </div>
 
-                        </div>
+                            <div class="inventory-stock-card-body">
 
-                        <div class="inventory-item-block">
-
-                            <div class="inventory-card inventory-stock-card">
-
-                                <div
-                                    class="inventory-ring {{ $item['status_class'] }}"
-                                    style="--percent: {{ $item['percentage'] }};"
-                                >
-                                    <div class="inventory-ring-inner"></div>
+                                <div class="inventory-stock-summary">
+                                    <div class="inventory-stock-amount">
+                                        {{ $item['remaining_stock'] }} <span class="inventory-stock-unit">btls</span>
+                                    </div>
+                                    <div class="inventory-stock-subtitle">Remaining</div>
                                 </div>
 
                                 <div class="inventory-stock-details">
 
-                                    <span class="inventory-status-badge {{ $item['status_class'] }}">
-                                        {{ $item['status'] }}
-                                    </span>
-
                                     <p>
                                         <strong>Initial Stock:</strong>
-                                        {{ $item['initial_stock'] }} bottles
-                                    </p>
-
-                                    <p>
-                                        <strong>Remaining:</strong>
-                                        {{ $item['remaining_stock'] }} bottles
+                                        <span class="inventory-stock-detail-value">{{ $item['initial_stock'] }} <span class="inventory-stock-detail-unit">btls</span></span>
                                     </p>
 
                                     <p>
                                         <strong>Critical Level:</strong>
-                                        {{ $item['critical'] }} bottles
+                                        <span class="inventory-stock-detail-value">{{ number_format($item['critical'], 0, '.', '') }} <span class="inventory-stock-detail-unit">btls</span></span>
                                     </p>
 
                                 </div>
 
-                            </div>
-
-                            <div class="inventory-card inventory-date-card">
-
-                                <div class="inventory-date-icon">
-                                    🗓
+                                <div class="inventory-stock-progress">
+                                    <div class="inventory-progress-track" style="--percent: {{ $item['percentage'] }};">
+                                        <div class="inventory-progress-fill"></div>
+                                    </div>
                                 </div>
-
-                                <p>
-                                    <strong>Recent Purchase Date:</strong>
-                                    {{ $item['purchase_date'] }}
-                                </p>
 
                             </div>
 
@@ -273,8 +211,7 @@
 
 </div>
 
-@include('includes.manager-edit-stocks-modal')
-@include('includes.manager-add-stocks-modal')
+@include('includes.manager-edit-stock-modal')
 @include('includes.manager-archive-inventory-modal')
 @include('includes.manager-profile-modal')
 

@@ -227,7 +227,7 @@ body {
 
 .bio-table {
     width: 100%;
-    min-width: 880px;
+    min-width: 1100px;
     border-collapse: separate;
     border-spacing: 0 10px;
 }
@@ -419,10 +419,21 @@ body {
     box-shadow: 0 0 0 2px rgba(29, 111, 36, 0.1);
 }
 
+.bio-field.has-error label {
+    color: #b42318;
+}
+
 .bio-field.has-error input,
 .bio-field.has-error select {
-    border-color: #c7362d;
-    box-shadow: 0 0 0 3px rgba(199, 54, 45, 0.1);
+    border-color: #d92d20;
+    background: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
+}
+
+.bio-field.has-error input:focus,
+.bio-field.has-error select:focus {
+    border-color: #d92d20;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
 }
 
 .bio-field.full input,

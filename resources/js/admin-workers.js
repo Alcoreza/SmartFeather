@@ -132,6 +132,12 @@ function syncRequiredFieldHighlight(field) {
     }
 
     clearRequiredFieldHighlight(input);
+
+    const hasErrors = document.querySelector('#workerForm .admin-worker-field.has-error');
+    if (!hasErrors) {
+        shouldTrackRequiredHighlights = false;
+        clearWorkerFormError();
+    }
 }
 
 function clearRequiredFieldHighlights() {
@@ -157,28 +163,39 @@ function getMissingRequiredFields() {
         : [];
 }
 
-// =============== REQUIRED FIELDS MODAL ===============
-function showRequiredFieldsPopup() {
+function showWorkerFormError(message = 'Please fill in the required fields.') {
+    const formError = document.getElementById('workerFormError');
+    if (!formError) return;
+
+    formError.textContent = message;
+    formError.classList.add('show');
+    formError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function clearWorkerFormError() {
+    const formError = document.getElementById('workerFormError');
+
+    formError?.classList.remove('show');
+    if (formError) {
+        formError.textContent = '';
+    }
+}
+
+function showRequiredFieldsError() {
     const missingFields = getMissingRequiredFields();
     if (!missingFields.length) {
         clearRequiredFieldHighlights();
+        clearWorkerFormError();
         return false;
     }
 
     markMissingRequiredFields(missingFields);
 
-    const msg = 'Please fill in the required fields.';
-    document.getElementById('requiredFieldsMessage').textContent = msg;
-    document.getElementById('requiredFieldsModal').style.display = 'flex';
+    showWorkerFormError();
     const firstMissingField = document.getElementById(missingFields[0].id);
     setTimeout(() => firstMissingField?.focus(), 350);
     return true;
 }
-
-document.getElementById('closeRequiredFieldsModal')?.addEventListener('click', () => {
-    closeModal('requiredFieldsModal');
-});
-// =============== END REQUIRED FIELDS MODAL ===============
 
 [passwordInput, confirmPasswordInput, oldPasswordInput].forEach(input => {
     input?.addEventListener('input', () => {
@@ -310,6 +327,7 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     pendingPassword = null;
     resetConfirmPasswordState();
     clearRequiredFieldHighlights();
+    clearWorkerFormError();
     setAddModeRequirements(true);
     setPasswordModalMode('add');
     syncUsernamePreview();
@@ -354,6 +372,7 @@ function populateEditModal(user) {
     pendingPassword = null;
     resetConfirmPasswordState();
     clearRequiredFieldHighlights();
+    clearWorkerFormError();
     setPasswordModalMode('edit');
     setAddModeRequirements(false);
 }
@@ -368,12 +387,12 @@ function openPasswordModal() {
 document.getElementById('workerForm')?.addEventListener('submit', async e => {
     e.preventDefault();
 
-    if (showRequiredFieldsPopup()) {
+    if (showRequiredFieldsError()) {
         return;
     }
 
     if (isAddMode() && !pendingPassword) {
-        alert('Please set a password for the new employee before saving.');
+        showWorkerFormError('Please set a password for the new employee before saving.');
         return;
     }
 
@@ -444,6 +463,7 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
 
     if (!employeeId) {
         pendingPassword = password;
+        clearWorkerFormError();
         closeModal('passwordModal');
         return;
     }

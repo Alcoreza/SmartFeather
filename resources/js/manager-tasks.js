@@ -20,6 +20,16 @@ let taskDataCache = {
     completed: [],
 };
 let availableHouseOptions = [];
+const addTaskRequiredFields = [
+    { name: "worker_name", label: "Assign Flockman" },
+    { name: "task_category", label: "Task" },
+    { name: "priority_level", label: "Priority Level" },
+    { name: "house_number", label: "House Number" },
+    { name: "pen_number", label: "Pen Number" },
+    { name: "time_assigned", label: "Time to finish" },
+    { name: "date_assigned", label: "Date to finish" },
+];
+let shouldTrackAddTaskRequiredHighlights = false;
 let taskFilters = {
     pending: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
     for_approval: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
@@ -521,23 +531,11 @@ function setupAddTaskModal() {
 }
 
 function validateAddTaskRequiredFields(form, payload) {
-    const requiredFields = [
-        { name: "worker_name", label: "Assign Flockman" },
-        { name: "task_category", label: "Task" },
-        { name: "priority_level", label: "Priority Level" },
-        { name: "house_number", label: "House Number" },
-        { name: "pen_number", label: "Pen Number" },
-        { name: "time_assigned", label: "Time to finish" },
-        { name: "date_assigned", label: "Date to finish" },
-    ];
-
-    const missingFields = requiredFields.filter(({ name }) => {
+    const missingFields = addTaskRequiredFields.filter(({ name }) => {
         return !String(payload[name] ?? "").trim();
     });
 
-    form.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
-        field.classList.remove("has-error");
-    });
+    clearAddTaskRequiredFieldHighlights(false);
 
     missingFields.forEach(({ name }) => {
         const field = form.elements[name];
@@ -545,19 +543,20 @@ function validateAddTaskRequiredFields(form, payload) {
     });
 
     if (missingFields.length) {
+        shouldTrackAddTaskRequiredHighlights = true;
         form.elements[missingFields[0].name]?.focus();
+    } else {
+        shouldTrackAddTaskRequiredHighlights = false;
     }
 
-    return missingFields.map(({ label }) => label);
+    return missingFields;
 }
 
 function showAddTaskFormError(formError, messageOrFields) {
     if (!formError) return;
 
     if (Array.isArray(messageOrFields)) {
-        formError.textContent = messageOrFields.length === 1
-            ? `${messageOrFields[0]} is required.`
-            : `Please complete all required fields: ${messageOrFields.join(", ")}.`;
+        formError.textContent = "Please fill in the required fields.";
     } else {
         formError.textContent = messageOrFields;
     }
@@ -575,19 +574,48 @@ function clearAddTaskFormError() {
         formError.textContent = "";
     }
 
+    clearAddTaskRequiredFieldHighlights();
+}
+
+function clearAddTaskRequiredFieldHighlights(resetTracking = true) {
+    const form = document.getElementById("addTaskForm");
+
+    if (resetTracking) {
+        shouldTrackAddTaskRequiredHighlights = false;
+    }
+
     form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
         field.classList.remove("has-error");
     });
 }
 
 function clearTaskFieldError(field) {
-    field.closest(".manager-task-form-field")?.classList.remove("has-error");
+    syncAddTaskRequiredFieldHighlight(field);
 
     const form = document.getElementById("addTaskForm");
     const hasErrors = form?.querySelector(".manager-task-form-field.has-error");
     if (!hasErrors) {
         clearAddTaskFormError();
     }
+}
+
+function syncAddTaskRequiredFieldHighlight(field) {
+    const fieldWrapper = field.closest(".manager-task-form-field");
+    const isRequiredField = addTaskRequiredFields.some(({ name }) => name === field.name);
+
+    if (!isRequiredField) {
+        fieldWrapper?.classList.remove("has-error");
+        return;
+    }
+
+    const isMissing = !String(field.value ?? "").trim();
+
+    if (shouldTrackAddTaskRequiredHighlights && isMissing) {
+        fieldWrapper?.classList.add("has-error");
+        return;
+    }
+
+    fieldWrapper?.classList.remove("has-error");
 }
 
 function openTaskModal(id) {

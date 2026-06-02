@@ -24,7 +24,6 @@
 
         @include('includes.admin-profile-modal')
         @include('includes.admin-workers-modals')
-        @include('includes.admin-workers-required-fields-modal')
 
         <div class="admin-workers-divider"></div>
 

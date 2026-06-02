@@ -8,6 +8,7 @@
 
         <form id="workerForm" class="admin-worker-modal-body">
             <input type="hidden" id="EmployeeId">
+            <div class="admin-worker-form-error" id="workerFormError" role="alert" aria-live="polite"></div>
 
             <div class="admin-worker-form-grid">
                 <div class="admin-worker-field">

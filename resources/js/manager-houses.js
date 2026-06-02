@@ -45,9 +45,111 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let activeHouseIndex = 0;
     let activePenIndex = 0;
+    const addHouseRequiredFields = [
+        { id: "houseName", label: "House Number" },
+        { id: "housePenCount", label: "Number of Pens" },
+    ];
+    let shouldTrackAddHouseRequiredHighlights = false;
+
+    function isAddHouseRequiredFieldEmpty(field) {
+        if (field.id === "housePenCount") {
+            return Number(document.getElementById(field.id)?.value || 0) <= 0;
+        }
+
+        return !(document.getElementById(field.id)?.value || "").trim();
+    }
+
+    function clearAddHouseRequiredFieldHighlight(input) {
+        input?.closest(".modal-group")?.classList.remove("has-error");
+    }
+
+    function syncAddHouseRequiredFieldHighlight(field) {
+        const input = document.getElementById(field.id);
+        if (!input) return;
+
+        if (shouldTrackAddHouseRequiredHighlights && isAddHouseRequiredFieldEmpty(field)) {
+            input.closest(".modal-group")?.classList.add("has-error");
+            return;
+        }
+
+        clearAddHouseRequiredFieldHighlight(input);
+
+        const hasErrors = addHouseForm?.querySelector(".modal-group.has-error");
+        if (!hasErrors) {
+            shouldTrackAddHouseRequiredHighlights = false;
+            clearAddHouseFormError();
+        }
+    }
+
+    function clearAddHouseRequiredFieldHighlights() {
+        shouldTrackAddHouseRequiredHighlights = false;
+
+        document
+            .querySelectorAll("#addHouseForm .modal-group.has-error")
+            .forEach((field) => field.classList.remove("has-error"));
+    }
+
+    function showAddHouseFormError() {
+        const formError = document.getElementById("addHouseFormError");
+        if (!formError) return;
+
+        formError.textContent = "Please fill in the required fields.";
+        formError.classList.add("show");
+        formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function clearAddHouseFormError() {
+        const formError = document.getElementById("addHouseFormError");
+
+        formError?.classList.remove("show");
+        if (formError) {
+            formError.textContent = "";
+        }
+    }
+
+    function resetAddHouseForm() {
+        if (!addHouseForm) return;
+
+        addHouseForm.reset();
+
+        const penCountInput = document.getElementById("housePenCount");
+        if (penCountInput) penCountInput.value = "0";
+    }
+
+    function getMissingAddHouseRequiredFields() {
+        return addHouseRequiredFields.filter(isAddHouseRequiredFieldEmpty);
+    }
+
+    function showAddHouseRequiredFieldsError() {
+        const missingFields = getMissingAddHouseRequiredFields();
+
+        if (!missingFields.length) {
+            clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
+            return false;
+        }
+
+        clearAddHouseRequiredFieldHighlights();
+        shouldTrackAddHouseRequiredHighlights = true;
+
+        missingFields.forEach((field) => {
+            document
+                .getElementById(field.id)
+                ?.closest(".modal-group")
+                ?.classList.add("has-error");
+        });
+
+        showAddHouseFormError();
+        setTimeout(() => document.getElementById(missingFields[0].id)?.focus(), 250);
+
+        return true;
+    }
 
     function openAddModal() {
         if (addHouseModal) {
+            resetAddHouseForm();
+            clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
             addHouseModal.classList.add("show");
         }
     }
@@ -58,7 +160,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (addHouseForm) {
-            addHouseForm.reset();
+            resetAddHouseForm();
+            clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
         }
     }
 
@@ -457,8 +561,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (addHouseForm) {
+        addHouseRequiredFields.forEach((field) => {
+            const input = document.getElementById(field.id);
+
+            input?.addEventListener("input", () => syncAddHouseRequiredFieldHighlight(field));
+            input?.addEventListener("change", () => syncAddHouseRequiredFieldHighlight(field));
+        });
+
         addHouseForm.addEventListener("submit", async (event) => {
             event.preventDefault();
+
+            if (showAddHouseRequiredFieldsError()) {
+                return;
+            }
 
             const houseNameInput = document.getElementById("houseName");
             const houseStatusInput =
@@ -467,18 +582,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const houseName = houseNameInput?.value.trim();
             const houseStatusValue = houseStatusInput?.value || "Running";
-            const penCountValue = Number(penCountInput?.value || 1);
-
-            if (!houseName) {
-                alert("Please enter a house name.");
-                return;
-            }
+            const penCountValue = Number(penCountInput?.value || 0);
 
             try {
                 const payload = {
                     house_number: houseName,
                     status: houseStatusValue,
-                    number_of_pens: penCountValue > 0 ? penCountValue : 1,
+                    number_of_pens: penCountValue,
                 };
 
                 const response = await fetch("/api/houses", {
@@ -499,7 +609,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const result = await response.json();
                 alert("House created successfully!");
 
-                addHouseForm.reset();
+                resetAddHouseForm();
+                clearAddHouseRequiredFieldHighlights();
+                clearAddHouseFormError();
                 closeAddModal();
 
                 await fetchHouses();

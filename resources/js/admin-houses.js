@@ -60,6 +60,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         clearAddHouseRequiredFieldHighlight(input);
+
+        const hasErrors = addHouseForm?.querySelector(".modal-group.has-error");
+        if (!hasErrors) {
+            shouldTrackAddHouseRequiredHighlights = false;
+            clearAddHouseFormError();
+        }
     }
 
     function clearAddHouseRequiredFieldHighlights() {
@@ -79,15 +85,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (penCountInput) penCountInput.value = "0";
     }
 
+    function showAddHouseFormError() {
+        const formError = document.getElementById("addHouseFormError");
+        if (!formError) return;
+
+        formError.textContent = "Please fill in the required fields.";
+        formError.classList.add("show");
+        formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function clearAddHouseFormError() {
+        const formError = document.getElementById("addHouseFormError");
+
+        formError?.classList.remove("show");
+        if (formError) {
+            formError.textContent = "";
+        }
+    }
+
     function getMissingAddHouseRequiredFields() {
         return addHouseRequiredFields.filter(isAddHouseRequiredFieldEmpty);
     }
 
-    function showAddHouseRequiredFieldsModal() {
+    function showAddHouseRequiredFieldsError() {
         const missingFields = getMissingAddHouseRequiredFields();
 
         if (!missingFields.length) {
             clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
             return false;
         }
 
@@ -101,27 +126,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ?.classList.add("has-error");
         });
 
-        const message = document.getElementById("adminHouseRequiredFieldsMessage");
-        if (message) {
-            message.textContent = "Please fill in the required fields.";
-        }
-
-        const requiredModal = document.getElementById("adminHouseRequiredFieldsModal");
-        requiredModal?.classList.add("show");
-
+        showAddHouseFormError();
         setTimeout(() => document.getElementById(missingFields[0].id)?.focus(), 250);
 
         return true;
-    }
-
-    function closeAddHouseRequiredFieldsModal() {
-        document.getElementById("adminHouseRequiredFieldsModal")?.classList.remove("show");
     }
 
     function openAddModal() {
         if (addHouseModal) {
             resetAddHouseForm();
             clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
             addHouseModal.classList.add('show');
         }
     }
@@ -134,6 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (addHouseForm) {
             resetAddHouseForm();
             clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
         }
     }
 
@@ -479,28 +495,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             input?.addEventListener("change", () => syncAddHouseRequiredFieldHighlight(field));
         });
 
-        document.getElementById("adminHouseRequiredFieldsClose")?.addEventListener("click", () => {
-            closeAddHouseRequiredFieldsModal();
-        });
-
-        document
-            .getElementById("adminHouseRequiredFieldsModal")
-            ?.addEventListener("click", (event) => {
-                if (event.target.id === "adminHouseRequiredFieldsModal") {
-                    closeAddHouseRequiredFieldsModal();
-                }
-            });
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                closeAddHouseRequiredFieldsModal();
-            }
-        });
-
         addHouseForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
-            if (showAddHouseRequiredFieldsModal()) {
+            if (showAddHouseRequiredFieldsError()) {
                 return;
             }
 
@@ -539,6 +537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 resetAddHouseForm();
                 clearAddHouseRequiredFieldHighlights();
+                clearAddHouseFormError();
                 closeAddModal();
 
                 await fetchHouses();

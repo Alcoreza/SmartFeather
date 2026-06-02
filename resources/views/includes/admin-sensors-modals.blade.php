@@ -85,6 +85,8 @@
         </div>
 
         <form class="admin-sensor-form-body" id="adminSensorAddForm">
+            <div class="admin-sensor-form-error" id="adminSensorAddFormError" role="alert" aria-live="polite"></div>
+
             <div class="admin-sensor-form-field full">
                 <label for="adminSensorAddType">Sensor Type*</label>
                 <select id="adminSensorAddType" name="sensor_type" class="admin-sensor-select-placeholder"></select>

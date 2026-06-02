@@ -9,6 +9,28 @@ const state = {
 
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
+let shouldTrackAddBioRequiredHighlights = false;
+
+const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
+    'Personnel Biosecurity Logs': [
+        { name: 'name', label: 'Name' },
+        { name: 'role', label: 'Role' },
+        { name: 'date', label: 'Date' },
+        { name: 'time', label: 'Time' },
+        { name: 'status', label: 'Status' },
+    ],
+    'Visitors': [
+        { name: 'date', label: 'Date' },
+        { name: 'name', label: 'Name' },
+        { name: 'time_in', label: 'Time In' },
+        { name: 'time_out', label: 'Time Out' },
+        { name: 'purpose', label: 'Purpose' },
+        { name: 'foot_bath', label: 'Foot Bath' },
+        { name: 'ppe', label: 'PPE' },
+        { name: 'sanitation', label: 'Sanitation' },
+        { name: 'monitored_by', label: 'Monitored By' },
+    ],
+};
 
 const TABLE_CONFIG = {
     'Personnel Biosecurity Logs': {
@@ -17,8 +39,9 @@ const TABLE_CONFIG = {
             { key: 'name', label: 'Name' },
             { key: 'role', label: 'Role' },
             { key: 'date', label: 'Date' },
-            { key: 'time', label: 'Time' },
-            { key: 'status', label: 'Status' },
+            { key: 'time_in', label: 'Time In' },
+            { key: 'time_out', label: 'Time Out' },
+            { key: 'remarks', label: 'Remarks' },
         ],
         form: [
             {
@@ -224,9 +247,30 @@ function renderCurrentTable() {
     renderTableRows(type, rows);
 }
 
+function normalizeFieldValueForInput(field, value = '') {
+    if (!value) return '';
+
+    if (field.type === 'time') {
+        const match = String(value).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+        if (!match) return value;
+
+        let hours = Number(match[1]);
+        const minutes = match[2];
+        const meridiem = match[3]?.toUpperCase();
+
+        if (meridiem === 'PM' && hours < 12) hours += 12;
+        if (meridiem === 'AM' && hours === 12) hours = 0;
+
+        return `${String(hours).padStart(2, '0')}:${minutes}`;
+    }
+
+    return value;
+}
+
 function createFieldHtml(prefix, field, value = '') {
     const fieldId = `${prefix}_${field.key}`;
     const wrapperClass = field.full ? 'bio-field full' : 'bio-field';
+    const inputValue = normalizeFieldValueForInput(field, value);
 
     if (field.type === 'select') {
         let options = field.options || [];
@@ -274,7 +318,7 @@ function createFieldHtml(prefix, field, value = '') {
                 type="${field.type || 'text'}"
                 id="${fieldId}"
                 name="${field.key}"
-                value="${escapeHtml(value)}"
+                value="${escapeHtml(inputValue)}"
                 ${extraAttrs}
             >
         </div>
@@ -745,6 +789,7 @@ function setupAddModal() {
 
                 modal.classList.remove('show');
                 document.body.style.overflow = '';
+                clearAddBioFormError();
 
                 // Reload logs to show the new entry
                 loadBiosecurityLogs();
@@ -771,63 +816,21 @@ function setupAddModal() {
 }
 
 function validateAddBioRequiredFields(form, payload) {
-    const requiredFieldsByType = {
-        'Personnel Biosecurity Logs': [
-            { name: 'name', label: 'Name' },
-            { name: 'role', label: 'Role' },
-            { name: 'date', label: 'Date' },
-            { name: 'time', label: 'Time' },
-            { name: 'status', label: 'Status' },
-        ],
-        'Visitors': [
-            { name: 'date', label: 'Date' },
-            { name: 'name', label: 'Name' },
-            { name: 'time_in', label: 'Time In' },
-            { name: 'time_out', label: 'Time Out' },
-            { name: 'purpose', label: 'Purpose' },
-            { name: 'foot_bath', label: 'Foot Bath' },
-            { name: 'sanitation', label: 'Sanitation' },
-            { name: 'ppe', label: 'PPE' },
-            { name: 'monitored_by', label: 'Monitored By' },
-            { name: 'photo_data', label: 'Visitor Photo' },
-        ],
-    };
-
-    const requiredFields = requiredFieldsByType[payload.type] || [];
+    const requiredFields = ADD_BIO_REQUIRED_FIELDS_BY_TYPE[payload.type] || [];
     const missingFields = requiredFields.filter(({ name }) => {
         return !String(payload[name] ?? '').trim();
     });
 
-    form.querySelectorAll('.bio-field.has-error').forEach((field) => {
-        field.classList.remove('has-error');
-    });
+    markMissingAddBioRequiredFields(missingFields);
 
-    missingFields.forEach(({ name }) => {
-        const field = form.elements[name];
-        const fieldWrapper = field?.closest('.bio-field')
-            || document.getElementById('add_photo_preview')?.closest('.bio-field');
-
-        fieldWrapper?.classList.add('has-error');
-    });
-
-    if (missingFields.length) {
-        if (missingFields[0].name === 'photo_data') {
-            document.getElementById('add_open_camera_btn')?.focus();
-        } else {
-            form.elements[missingFields[0].name]?.focus();
-        }
-    }
-
-    return missingFields.map(({ label }) => label);
+    return missingFields;
 }
 
 function showAddBioFormError(formError, messageOrFields) {
     if (!formError) return;
 
     if (Array.isArray(messageOrFields)) {
-        formError.textContent = messageOrFields.length === 1
-            ? `${messageOrFields[0]} is required.`
-            : `Please complete all required fields: ${messageOrFields.join(', ')}.`;
+        formError.textContent = 'Please fill in the required fields.';
     } else {
         formError.textContent = messageOrFields;
     }
@@ -848,16 +851,79 @@ function clearAddBioFormError() {
     form?.querySelectorAll('.bio-field.has-error').forEach((field) => {
         field.classList.remove('has-error');
     });
+
+    shouldTrackAddBioRequiredHighlights = false;
 }
 
 function clearBioFieldError(field) {
-    field.closest('.bio-field')?.classList.remove('has-error');
+    syncAddBioRequiredFieldHighlight(field);
 
     const form = document.getElementById('addBioForm');
     const hasErrors = form?.querySelector('.bio-field.has-error');
     if (!hasErrors) {
         clearAddBioFormError();
     }
+}
+
+function isAddBioRequiredFieldEmpty(field) {
+    const form = document.getElementById('addBioForm');
+    return !String(form?.elements[field.name]?.value ?? '').trim();
+}
+
+function getAddBioRequiredFieldWrapper(field) {
+    const form = document.getElementById('addBioForm');
+    const input = form?.elements[field.name];
+
+    return input?.closest('.bio-field')
+        || document.getElementById('add_photo_preview')?.closest('.bio-field');
+}
+
+function syncAddBioRequiredFieldHighlight(input) {
+    const form = document.getElementById('addBioForm');
+    const type = form?.elements.type?.value;
+    const requiredField = (ADD_BIO_REQUIRED_FIELDS_BY_TYPE[type] || [])
+        .find(({ name }) => name === input.name);
+
+    if (!requiredField) {
+        input.closest('.bio-field')?.classList.remove('has-error');
+        return;
+    }
+
+    const fieldWrapper = input.closest('.bio-field');
+
+    if (shouldTrackAddBioRequiredHighlights && isAddBioRequiredFieldEmpty(requiredField)) {
+        fieldWrapper?.classList.add('has-error');
+        return;
+    }
+
+    fieldWrapper?.classList.remove('has-error');
+}
+
+function clearAddBioRequiredFieldHighlights(resetTracking = true) {
+    const form = document.getElementById('addBioForm');
+
+    if (resetTracking) {
+        shouldTrackAddBioRequiredHighlights = false;
+    }
+
+    form?.querySelectorAll('.bio-field.has-error').forEach((field) => {
+        field.classList.remove('has-error');
+    });
+}
+
+function markMissingAddBioRequiredFields(missingFields) {
+    clearAddBioRequiredFieldHighlights(false);
+
+    if (!missingFields.length) {
+        shouldTrackAddBioRequiredHighlights = false;
+        return;
+    }
+
+    shouldTrackAddBioRequiredHighlights = true;
+
+    missingFields.forEach((field) => {
+        getAddBioRequiredFieldWrapper(field)?.classList.add('has-error');
+    });
 }
 
 function bindEvents() {

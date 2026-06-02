@@ -289,6 +289,23 @@
     min-height: 1.1em;
 }
 
+.admin-worker-form-error {
+    display: none;
+    margin-bottom: 16px;
+    border: 1.5px solid rgba(199, 54, 45, 0.35);
+    border-radius: 16px;
+    padding: 11px 13px;
+    background: rgba(217, 63, 50, 0.08);
+    color: #b42318;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.admin-worker-form-error.show {
+    display: block;
+}
+
 .admin-worker-modal-actions {
     display: flex;
     justify-content: flex-end;

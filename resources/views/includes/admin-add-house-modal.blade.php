@@ -6,6 +6,8 @@
         </div>
 
         <form id="addHouseForm">
+            <div class="house-form-error" id="addHouseFormError" role="alert" aria-live="polite"></div>
+
             <div class="modal-row">
                 <div class="modal-group">
                     <label for="houseName">House Number*</label>

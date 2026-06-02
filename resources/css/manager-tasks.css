@@ -580,11 +580,16 @@ body {
     transform: translateY(-1px);
 }
 
+.manager-task-form-field.has-error label {
+    color: #b42318;
+}
+
 .manager-task-form-field.has-error input,
 .manager-task-form-field.has-error select,
 .manager-task-form-field.has-error textarea {
-    border-color: #c7362d;
-    box-shadow: 0 0 0 4px rgba(199, 54, 45, 0.1);
+    border-color: #d92d20;
+    background: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
 }
 
 .manager-task-form-field select {

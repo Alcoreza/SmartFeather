@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupAdminSensorModals();
     setupAdminSensorAddModal();
     setupAdminSensorEditModal();
+    setupAdminSensorRequiredFieldsModal();
 
     await renderAdminSensorSections();
     await loadAdminSensorFormOptions();
@@ -10,6 +11,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindAdminAddButton();
     setupAdminSensorSelectPlaceholderState();
 });
+
+const adminSensorAddRequiredFields = [
+    { id: "adminSensorAddType", label: "Sensor Type" },
+    { id: "adminSensorAddName", label: "Sensor Name" },
+    { id: "adminSensorAddHouse", label: "House Number" },
+    { id: "adminSensorAddPen", label: "Pen Number" },
+];
+
+let shouldTrackAdminSensorRequiredHighlights = false;
 
 async function renderAdminSensorSections() {
     const mount = document.getElementById("adminSensorSections");
@@ -234,6 +244,10 @@ async function loadAdminSensorFormOptions() {
         if (addHouseSelect) {
             addHouseSelect.addEventListener("change", async (event) => {
                 await loadAdminPensForHouse(event.target.value, addPenSelect);
+                setupAdminSensorSelectPlaceholderState();
+                syncAdminSensorRequiredFieldHighlight(
+                    adminSensorAddRequiredFields.find((field) => field.id === "adminSensorAddPen"),
+                );
             });
         }
 
@@ -333,6 +347,93 @@ function setupAdminSensorSelectPlaceholderState() {
 
         select._adminSensorPlaceholderHandler = updateState;
         select.addEventListener("change", updateState);
+    });
+}
+
+function isAdminSensorRequiredFieldEmpty(field) {
+    if (!field) return false;
+
+    return !(document.getElementById(field.id)?.value || "").trim();
+}
+
+function clearAdminSensorRequiredFieldHighlight(input) {
+    input?.closest(".admin-sensor-form-field")?.classList.remove("has-error");
+}
+
+function syncAdminSensorRequiredFieldHighlight(field) {
+    if (!field) return;
+
+    const input = document.getElementById(field.id);
+    if (!input) return;
+
+    if (
+        shouldTrackAdminSensorRequiredHighlights &&
+        isAdminSensorRequiredFieldEmpty(field)
+    ) {
+        input.closest(".admin-sensor-form-field")?.classList.add("has-error");
+        return;
+    }
+
+    clearAdminSensorRequiredFieldHighlight(input);
+}
+
+function clearAdminSensorRequiredFieldHighlights() {
+    shouldTrackAdminSensorRequiredHighlights = false;
+
+    document
+        .querySelectorAll("#adminSensorAddForm .admin-sensor-form-field.has-error")
+        .forEach((field) => field.classList.remove("has-error"));
+}
+
+function getMissingAdminSensorAddRequiredFields() {
+    return adminSensorAddRequiredFields.filter(isAdminSensorRequiredFieldEmpty);
+}
+
+function markMissingAdminSensorRequiredFields(missingFields) {
+    clearAdminSensorRequiredFieldHighlights();
+    shouldTrackAdminSensorRequiredHighlights = true;
+
+    missingFields.forEach((field) => {
+        document
+            .getElementById(field.id)
+            ?.closest(".admin-sensor-form-field")
+            ?.classList.add("has-error");
+    });
+}
+
+function showAdminSensorRequiredFieldsModal() {
+    const missingFields = getMissingAdminSensorAddRequiredFields();
+
+    if (!missingFields.length) {
+        clearAdminSensorRequiredFieldHighlights();
+        return false;
+    }
+
+    markMissingAdminSensorRequiredFields(missingFields);
+
+    const message = document.getElementById("adminSensorRequiredFieldsMessage");
+    if (message) {
+        message.textContent = "Please fill in the required fields.";
+    }
+
+    openAdminSensorModal("adminSensorRequiredFieldsModal");
+    setTimeout(() => document.getElementById(missingFields[0].id)?.focus(), 250);
+
+    return true;
+}
+
+function setupAdminSensorRequiredFieldsModal() {
+    const closeButton = document.getElementById("adminSensorRequiredFieldsClose");
+
+    closeButton?.addEventListener("click", () => {
+        closeAdminSensorModal("adminSensorRequiredFieldsModal");
+    });
+
+    adminSensorAddRequiredFields.forEach((field) => {
+        const input = document.getElementById(field.id);
+
+        input?.addEventListener("input", () => syncAdminSensorRequiredFieldHighlight(field));
+        input?.addEventListener("change", () => syncAdminSensorRequiredFieldHighlight(field));
     });
 }
 
@@ -579,6 +680,7 @@ function bindAdminAddButton() {
         const form = document.getElementById("adminSensorAddForm");
         if (form) form.reset();
 
+        clearAdminSensorRequiredFieldHighlights();
         setupAdminSensorSelectPlaceholderState();
         openAdminSensorModal("adminSensorAddModal");
     });
@@ -591,6 +693,10 @@ function setupAdminSensorAddModal() {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        if (showAdminSensorRequiredFieldsModal()) {
+            return;
+        }
+
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
 
@@ -598,6 +704,7 @@ function setupAdminSensorAddModal() {
             await apiRequest("/api/admin/sensors", "POST", payload);
             closeAdminSensorModal("adminSensorAddModal");
             form.reset();
+            clearAdminSensorRequiredFieldHighlights();
             setupAdminSensorSelectPlaceholderState();
             await renderAdminSensorSections();
         } catch (error) {

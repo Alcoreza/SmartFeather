@@ -20,6 +20,7 @@
         <main class="admin-main">
             @include('includes.admin-profile-modal')
             @include('includes.admin-add-house-modal')
+            @include('includes.admin-house-required-fields-modal')
             @include('includes.admin-edit-house-modal')
 
             <section class="houses-page">

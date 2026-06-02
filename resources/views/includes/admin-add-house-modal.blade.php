@@ -8,13 +8,13 @@
         <form id="addHouseForm">
             <div class="modal-row">
                 <div class="modal-group">
-                    <label for="houseName">House Number</label>
-                    <input type="text" id="houseName" required>
+                    <label for="houseName">House Number*</label>
+                    <input type="text" id="houseName">
                 </div>
 
                 <div class="modal-group">
-                    <label for="housePenCount">Number of Pens</label>
-                    <input type="number" id="housePenCount" min="1" value="1">
+                    <label for="housePenCount">Number of Pens*</label>
+                    <input type="number" id="housePenCount" min="0" value="0">
                 </div>
             </div>
 

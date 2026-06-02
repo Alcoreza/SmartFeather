@@ -18,6 +18,7 @@
         @include('includes.admin-sidebar')
         @include('includes.admin-profile-modal')
         @include('includes.admin-sensors-modals')
+        @include('includes.admin-sensors-required-fields-modal')
 
         <main class="admin-main">
             <div class="admin-sensors-topbar">

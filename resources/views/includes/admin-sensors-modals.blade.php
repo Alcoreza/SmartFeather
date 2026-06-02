@@ -86,24 +86,24 @@
 
         <form class="admin-sensor-form-body" id="adminSensorAddForm">
             <div class="admin-sensor-form-field full">
-                <label for="adminSensorAddType">Sensor Type</label>
+                <label for="adminSensorAddType">Sensor Type*</label>
                 <select id="adminSensorAddType" name="sensor_type" class="admin-sensor-select-placeholder"></select>
             </div>
 
             <div class="admin-sensor-form-field full">
-                <label for="adminSensorAddName">Sensor Name</label>
+                <label for="adminSensorAddName">Sensor Name*</label>
                 <input type="text" id="adminSensorAddName" name="sensor_name">
             </div>
 
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
-                    <label for="adminSensorAddHouse">House Number</label>
+                    <label for="adminSensorAddHouse">House Number*</label>
                     <select id="adminSensorAddHouse" name="house_houseid"
                         class="admin-sensor-select-placeholder"></select>
                 </div>
 
                 <div class="admin-sensor-form-field">
-                    <label for="adminSensorAddPen">Pen Number</label>
+                    <label for="adminSensorAddPen">Pen Number*</label>
                     <select id="adminSensorAddPen" name="pen_penid" class="admin-sensor-select-placeholder"></select>
                 </div>
             </div>

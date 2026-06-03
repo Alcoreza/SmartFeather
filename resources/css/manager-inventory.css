@@ -291,20 +291,41 @@
 }
 
 .inventory-progress-track {
+    --progress-start: #c58a3a;
+    --progress-end: #f3a12d;
+    --progress-track-bg: #e5e7eb;
     width: 100%;
     max-width: 100%;
     height: 8px;
     border-radius: 999px;
-    background: #e5e7eb;
+    background: var(--progress-track-bg);
     overflow: hidden;
     box-sizing: border-box;
+}
+
+.inventory-progress-track.high {
+    --progress-start: #1f7a3f;
+    --progress-end: #39a75f;
+    --progress-track-bg: #dff3e7;
+}
+
+.inventory-progress-track.moderate {
+    --progress-start: #d69d13;
+    --progress-end: #f0c63d;
+    --progress-track-bg: #fbf0c5;
+}
+
+.inventory-progress-track.critical {
+    --progress-start: #b91c1c;
+    --progress-end: #ef4444;
+    --progress-track-bg: #f8d7da;
 }
 
 .inventory-progress-fill {
     width: calc(var(--percent) * 1%);
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #c58a3a 0%, #f3a12d 100%);
+    background: linear-gradient(90deg, var(--progress-start) 0%, var(--progress-end) 100%);
 }
 
 .inventory-stock-details {

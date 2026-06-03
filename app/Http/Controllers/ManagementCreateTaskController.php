@@ -90,6 +90,8 @@ class ManagementCreateTaskController extends Controller
                 'initial_stock' => $validated['initial_stock'],
                 'remaining_stock' => $validated['initial_stock'],
                 'deducted' => 0,
+                'added' => 0,
+                'initial_purchase_date' => now()->toDateString(),
                 'monitoring_date' => now(),
             ]);
 

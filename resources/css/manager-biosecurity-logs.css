@@ -378,9 +378,9 @@ body {
 
 .bio-table {
     width: 100%;
-    min-width: 1100px;
     border-collapse: separate;
     border-spacing: 0 10px;
+    table-layout: fixed;
 }
 
 .bio-table tbody {
@@ -414,6 +414,94 @@ body {
 .bio-table th.bio-personnel-name-col,
 .bio-table td.bio-personnel-name-col {
     text-align: left;
+}
+
+/* Column width and alignment styles */
+.bio-table th.bio-name-col,
+.bio-table td.bio-name-col {
+    width: 30%;
+    text-align: left;
+    padding-left: 16px;
+}
+
+.bio-table th.bio-role-col,
+.bio-table td.bio-role-col {
+    width: 10%;
+    text-align: center;
+}
+
+.bio-table th.bio-date-col,
+.bio-table td.bio-date-col {
+    width: 15%;
+    text-align: center;
+}
+
+.bio-table th.bio-time-col,
+.bio-table td.bio-time-col {
+    width: 12.5%;
+    text-align: center;
+}
+
+.bio-table th.bio-remarks-col,
+.bio-table td.bio-remarks-col {
+    width: 15%;
+    text-align: left;
+    padding-left: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-height: 48px;
+}
+
+.bio-table th:last-child,
+.bio-table td:last-child {
+    width: 5%;
+    text-align: center;
+}
+
+/* Visitor-specific column widths */
+.bio-table th.bio-visitor-date-col,
+.bio-table td.bio-visitor-date-col {
+    width: 9%;
+    text-align: center;
+}
+
+.bio-table th.bio-visitor-time-col,
+.bio-table td.bio-visitor-time-col {
+    width: 9%;
+    text-align: center;
+}
+
+.bio-table th.bio-visitor-name-col,
+.bio-table td.bio-visitor-name-col {
+    width: 15%;
+    text-align: left;
+    padding-left: 16px;
+}
+
+.bio-table th.bio-purpose-col,
+.bio-table td.bio-purpose-col {
+    width: 14%;
+    text-align: left;
+    padding-left: 14px;
+}
+
+.bio-table th.bio-photo-col,
+.bio-table td.bio-photo-col {
+    width: 10%;
+    text-align: center;
+}
+
+.bio-table th.bio-yesno-col,
+.bio-table td.bio-yesno-col {
+    width: 7%;
+    text-align: center;
+}
+
+.bio-table th.bio-monitored-col,
+.bio-table td.bio-monitored-col {
+    width: 8%;
+    text-align: center;
 }
 
 .bio-table td:first-child {

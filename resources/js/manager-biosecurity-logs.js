@@ -208,8 +208,34 @@ function renderTableHead(type) {
 }
 
 function getBioColumnClass(type, key) {
-    if (type === 'Personnel Biosecurity Logs' && key === 'name') {
-        return 'bio-personnel-name-col';
+    // Personnel Biosecurity Logs columns
+    if (type === 'Personnel Biosecurity Logs') {
+        switch (key) {
+            case 'name': return 'bio-name-col';
+            case 'role': return 'bio-role-col';
+            case 'date': return 'bio-date-col';
+            case 'time_in': return 'bio-time-col';
+            case 'time_out': return 'bio-time-col';
+            case 'remarks': return 'bio-remarks-col';
+            default: return '';
+        }
+    }
+
+    // Visitors columns
+    if (type === 'Visitors') {
+        switch (key) {
+            case 'date': return 'bio-visitor-date-col';
+            case 'time_in': return 'bio-visitor-time-col';
+            case 'time_out': return 'bio-visitor-time-col';
+            case 'name': return 'bio-visitor-name-col';
+            case 'photo_url': return 'bio-photo-col';
+            case 'purpose': return 'bio-purpose-col';
+            case 'foot_bath': return 'bio-yesno-col';
+            case 'sanitation': return 'bio-yesno-col';
+            case 'ppe': return 'bio-yesno-col';
+            case 'monitored_by': return 'bio-monitored-col';
+            default: return '';
+        }
     }
 
     return '';

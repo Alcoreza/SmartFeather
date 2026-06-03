@@ -49,12 +49,49 @@ function showPopup(message, type = "success", callback = null) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
-        overlay.remove();
+    overlay.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 180, easing: "ease-out" }
+    );
 
-        if (typeof callback === "function") {
-            callback();
-        }
+    box.animate(
+        type === "error"
+            ? [
+                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
+                { opacity: 1, transform: "translateY(0) scale(1.02)" },
+                { opacity: 1, transform: "translateX(-6px) scale(1)" },
+                { opacity: 1, transform: "translateX(6px) scale(1)" },
+                { opacity: 1, transform: "translateX(0) scale(1)" }
+            ]
+            : [
+                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
+                { opacity: 1, transform: "translateY(0) scale(1.02)" },
+                { opacity: 1, transform: "translateY(0) scale(1)" }
+            ],
+        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
+    );
+
+    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
+        const fadeOut = overlay.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            { duration: 140, easing: "ease-in" }
+        );
+
+        box.animate(
+            [
+                { opacity: 1, transform: "translateY(0) scale(1)" },
+                { opacity: 0, transform: "translateY(10px) scale(0.96)" }
+            ],
+            { duration: 140, easing: "ease-in" }
+        );
+
+        fadeOut.onfinish = () => {
+            overlay.remove();
+
+            if (typeof callback === "function") {
+                callback();
+            }
+        };
     });
 }
 
@@ -480,9 +517,16 @@ function setupInventoryModals() {
                 }
             } else {
                 const id = selectedFeedEntry.dataset.id;
+                const stockToReduce = Number(feedStockQuantity.value);
+                const remainingStock = Number(selectedFeedEntry.dataset.remainingStock);
+
+                if (stockToReduce > remainingStock) {
+                    showPopup("Stock to reduce cannot be higher than the remaining feed stock.", "error");
+                    return;
+                }
 
                 payload = {
-                    stock_to_reduce: Number(feedStockQuantity.value),
+                    stock_to_reduce: stockToReduce,
                     reduced_date: feedStockPurchaseDate.value
                 };
 
@@ -544,9 +588,16 @@ function setupInventoryModals() {
                 }
             } else {
                 const id = selectedVitaminEntry.dataset.id;
+                const stockToReduce = Number(vitaminStockQuantity.value);
+                const remainingStock = Number(selectedVitaminEntry.dataset.remainingStock);
+
+                if (stockToReduce > remainingStock) {
+                    showPopup("Stock to reduce cannot be higher than the remaining vitamin stock.", "error");
+                    return;
+                }
 
                 payload = {
-                    stock_to_reduce: Number(vitaminStockQuantity.value),
+                    stock_to_reduce: stockToReduce,
                     reduced_date: vitaminStockPurchaseDate.value
                 };
 

@@ -58,29 +58,19 @@ class ManagementCreateTaskController extends Controller
             $name = trim($validated['name']);
             $unit = $category === 'vitamin' ? 'bottle' : 'kg';
 
-            $exists = DB::table('inventory_types')
-                ->where('category', $category)
-                ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+            $exists = DB::table('inventories')
+                ->where('type', $category)
+                ->whereRaw('LOWER(item_name) = ?', [strtolower($name)])
                 ->whereNull('archived_at')
                 ->exists();
 
             if ($exists) {
                 return response()->json([
-                    'error' => 'Inventory type already exists.',
+                    'error' => 'Inventory item already exists.',
                 ], 422);
             }
 
             DB::beginTransaction();
-
-            $inventoryTypeId = DB::table('inventory_types')->insertGetId([
-                'category' => $category,
-                'name' => $name,
-                'initial_stock' => $validated['initial_stock'],
-                'critical' => $validated['critical'],
-                'archived_at' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
 
             $inventoryId = DB::table('inventories')->insertGetId([
                 'item_name' => $name,
@@ -107,8 +97,8 @@ class ManagementCreateTaskController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Inventory type saved successfully.',
-                'id' => $inventoryTypeId,
+                'message' => 'Inventory item saved successfully.',
+                'id' => $inventoryId,
                 'inventory_id' => $inventoryId,
                 'category' => $category,
                 'name' => $name,
@@ -125,7 +115,7 @@ class ManagementCreateTaskController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Create inventory type error:', [
+            Log::error('Create inventory item error:', [
                 'message' => $e->getMessage(),
             ]);
 

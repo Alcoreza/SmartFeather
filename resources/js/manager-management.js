@@ -148,7 +148,7 @@ async function handleCreateInventoryTypeSubmit(event) {
                 const firstError = Object.values(data.errors)[0]?.[0];
 
                 showPopup(
-                    firstError || "Unable to save inventory type.",
+                    firstError || "Unable to save inventory item.",
                     "error"
                 );
 
@@ -156,7 +156,7 @@ async function handleCreateInventoryTypeSubmit(event) {
             }
 
             showPopup(
-                data.error || data.message || "Unable to save inventory type.",
+                data.error || data.message || "Unable to save inventory item.",
                 "error"
             );
 
@@ -178,7 +178,7 @@ async function handleCreateInventoryTypeSubmit(event) {
         console.error(error);
 
         showPopup(
-            error.message || "Unable to save inventory type.",
+            error.message || "Unable to save inventory item.",
             "error"
         );
     }

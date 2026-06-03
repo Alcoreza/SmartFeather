@@ -215,6 +215,8 @@ function setupInventoryModals() {
 
     const feedStockPurchaseDate = document.getElementById("feedStockPurchaseDate");
     const vitaminStockPurchaseDate = document.getElementById("vitaminStockPurchaseDate");
+    const feedPurchaseDateLabel = document.getElementById("feedPurchaseDateLabel");
+    const vitaminPurchaseDateLabel = document.getElementById("vitaminPurchaseDateLabel");
 
     let selectedFeedEntry = null;
     let selectedVitaminEntry = null;
@@ -252,12 +254,14 @@ function setupInventoryModals() {
             if (feedStockAction) feedStockAction.value = action;
             feedModalTitle.textContent = action === "add" ? "Add Feed Stock" : "Reduce Feed Stock";
             feedQuantityLabel.textContent = action === "add" ? "Stock to Add" : "Stock to Reduce";
+            feedPurchaseDateLabel.textContent = action === "add" ? "Recent Purchase Date" : "Date Reduced";
             feedCurrentStockGroup.style.display = "flex";
         } else {
             currentVitaminAction = action;
             if (vitaminStockAction) vitaminStockAction.value = action;
             vitaminModalTitle.textContent = action === "add" ? "Add Vitamin Stock" : "Reduce Vitamin Stock";
             vitaminQuantityLabel.textContent = action === "add" ? "Stock to Add" : "Stock to Reduce";
+            vitaminPurchaseDateLabel.textContent = action === "add" ? "Recent Purchase Date" : "Date Reduced";
             vitaminCurrentStockGroup.style.display = "flex";
         }
     }
@@ -275,6 +279,7 @@ function setupInventoryModals() {
             if (feedStockPurchaseDate) feedStockPurchaseDate.value = "";
             feedCurrentStockGroup.style.display = "none";
             if (feedQuantityLabel) feedQuantityLabel.textContent = "Quantity";
+            if (feedPurchaseDateLabel) feedPurchaseDateLabel.textContent = "Recent Purchase Date";
             if (feedModalTitle) feedModalTitle.textContent = "Edit Feed Stock";
             if (feedModalTypeSelect) feedModalTypeSelect.value = "feed";
             selectedFeedEntry = null;
@@ -292,6 +297,7 @@ function setupInventoryModals() {
             if (vitaminStockPurchaseDate) vitaminStockPurchaseDate.value = "";
             vitaminCurrentStockGroup.style.display = "none";
             if (vitaminQuantityLabel) vitaminQuantityLabel.textContent = "Quantity";
+            if (vitaminPurchaseDateLabel) vitaminPurchaseDateLabel.textContent = "Recent Purchase Date";
             if (vitaminModalTitle) vitaminModalTitle.textContent = "Edit Vitamin Stock";
             if (vitaminModalTypeSelect) vitaminModalTypeSelect.value = "vitamin";
             selectedVitaminEntry = null;
@@ -346,6 +352,7 @@ function setupInventoryModals() {
             if (feedInventoryIdUnified) feedInventoryIdUnified.value = "";
             if (feedStockAction) feedStockAction.value = "";
             feedQuantityLabel.textContent = "Quantity";
+            feedPurchaseDateLabel.textContent = "Recent Purchase Date";
             feedModalTitle.textContent = "Edit Feed Stock";
             selectedFeedEntry = null;
             return;
@@ -374,6 +381,7 @@ function setupInventoryModals() {
             if (vitaminInventoryIdUnified) vitaminInventoryIdUnified.value = "";
             if (vitaminStockAction) vitaminStockAction.value = "";
             vitaminQuantityLabel.textContent = "Quantity";
+            vitaminPurchaseDateLabel.textContent = "Recent Purchase Date";
             vitaminModalTitle.textContent = "Edit Vitamin Stock";
             selectedVitaminEntry = null;
             return;
@@ -475,7 +483,7 @@ function setupInventoryModals() {
 
                 payload = {
                     stock_to_reduce: Number(feedStockQuantity.value),
-                    purchase_date: feedStockPurchaseDate.value
+                    reduced_date: feedStockPurchaseDate.value
                 };
 
                 const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
@@ -539,7 +547,7 @@ function setupInventoryModals() {
 
                 payload = {
                     stock_to_reduce: Number(vitaminStockQuantity.value),
-                    purchase_date: vitaminStockPurchaseDate.value
+                    reduced_date: vitaminStockPurchaseDate.value
                 };
 
                 const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);

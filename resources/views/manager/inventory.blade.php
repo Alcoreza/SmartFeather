@@ -85,9 +85,6 @@
                                 <h3 class="inventory-item-name">
                                     {{ $item['item_name'] }}
                                 </h3>
-                                <span class="inventory-status-badge {{ $item['status_class'] }}">
-                                    {{ $item['status'] }}
-                                </span>
                             </div>
 
                             <div class="inventory-stock-card-body">
@@ -116,6 +113,9 @@
                                 <div class="inventory-stock-progress">
                                     <div class="inventory-progress-track {{ $item['status_class'] }}" style="--percent: {{ $item['percentage'] }};">
                                         <div class="inventory-progress-fill"></div>
+                                        <div class="inventory-progress-label">
+                                            {{ $item['status'] }} · {{ $item['percentage'] }}%
+                                        </div>
                                     </div>
                                 </div>
 
@@ -161,9 +161,6 @@
                                 <h3 class="inventory-item-name">
                                     {{ $item['item_name'] }}
                                 </h3>
-                                <span class="inventory-status-badge {{ $item['status_class'] }}">
-                                    {{ $item['status'] }}
-                                </span>
                             </div>
 
                             <div class="inventory-stock-card-body">
@@ -192,6 +189,9 @@
                                 <div class="inventory-stock-progress">
                                     <div class="inventory-progress-track {{ $item['status_class'] }}" style="--percent: {{ $item['percentage'] }};">
                                         <div class="inventory-progress-fill"></div>
+                                        <div class="inventory-progress-label">
+                                            {{ $item['status'] }} · {{ $item['percentage'] }}%
+                                        </div>
                                     </div>
                                 </div>
 

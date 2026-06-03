@@ -8,7 +8,10 @@ const state = {
     nameSearch: '',
     dateFrom: '',
     dateTo: '',
+    currentPage: 0,
 };
+
+const BIO_ROWS_PER_PAGE = 5;
 
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
@@ -151,7 +154,6 @@ const TABLE_CONFIG = {
 
 const tableHead = document.getElementById('bioTableHead');
 const tableBody = document.getElementById('bioLogsTableBody');
-const filterSelect = document.getElementById('bioCategoryFilter');
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -245,6 +247,41 @@ function filterBiosecurityLogs(type, logs) {
     return filtered;
 }
 
+function renderBioTable(type, filteredRows) {
+    const config = TABLE_CONFIG[type];
+    if (!config || !tableBody) return;
+
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / BIO_ROWS_PER_PAGE));
+    state.currentPage = Math.min(state.currentPage, totalPages - 1);
+
+    if (!filteredRows.length) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${config.columns.length + 1}" class="bio-empty">
+                    No logs found for this category.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const start = state.currentPage * BIO_ROWS_PER_PAGE;
+    const pageRows = filteredRows.slice(start, start + BIO_ROWS_PER_PAGE);
+    const placeholderRows = BIO_ROWS_PER_PAGE - pageRows.length;
+
+    renderTableRows(type, pageRows);
+
+    // Add placeholder rows if needed
+    if (placeholderRows > 0) {
+        const placeholderHtml = Array.from({ length: placeholderRows }, () => `
+            <tr class="bio-placeholder-row" aria-hidden="true">
+                <td colspan="${config.columns.length + 1}">&nbsp;</td>
+            </tr>
+        `).join('');
+        tableBody.innerHTML += placeholderHtml;
+    }
+}
+
 function renderTableRows(type, rows) {
     const config = TABLE_CONFIG[type];
     if (!config || !tableBody) return;
@@ -306,13 +343,19 @@ function renderTableRows(type, rows) {
     }).join('');
 }
 
-function renderCurrentTable() {
+function renderCurrentTable(resetPage = true) {
     const type = state.selectedCategory;
     const allRows = state.logs[type] || [];
     const filteredRows = filterBiosecurityLogs(type, allRows);
 
+    // Reset page when filters change, but not when navigating pages
+    if (resetPage) {
+        state.currentPage = 0;
+    }
+
     renderTableHead(type);
-    renderTableRows(type, filteredRows);
+    renderBioTable(type, filteredRows);
+    updateBioPagination(filteredRows.length);
 }
 
 function normalizeFieldValueForInput(field, value = '') {
@@ -995,11 +1038,19 @@ function markMissingAddBioRequiredFields(missingFields) {
 }
 
 function bindEvents() {
-    if (!filterSelect) return;
+    // Handle category button clicks
+    const categoryButtons = document.querySelectorAll('.bio-category-btn');
+    categoryButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const category = btn.dataset.category;
+            state.selectedCategory = category;
 
-    filterSelect.addEventListener('change', (event) => {
-        state.selectedCategory = event.target.value;
-        renderCurrentTable();
+            // Update active button state
+            categoryButtons.forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            renderCurrentTable();
+        });
     });
 
     // Add event listeners for search and date filters
@@ -1027,6 +1078,9 @@ function bindEvents() {
             renderCurrentTable();
         });
     }
+
+    // Setup pagination
+    setupBioPagination();
 }
 
 async function loadBiosecurityLogs() {
@@ -1188,3 +1242,55 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAddModal();
     setupProfileModal();
 });
+
+function updateBioPagination(totalRows) {
+    const pagination = document.querySelector('[data-bio-pagination]');
+    const prevButton = document.querySelector('[data-bio-prev]');
+    const nextButton = document.querySelector('[data-bio-next]');
+    const dots = document.querySelector('[data-bio-dots]');
+    const totalPages = Math.max(1, Math.ceil(totalRows / BIO_ROWS_PER_PAGE));
+
+    if (pagination) {
+        pagination.classList.toggle('is-hidden', totalRows <= BIO_ROWS_PER_PAGE);
+    }
+
+    if (prevButton) {
+        prevButton.disabled = state.currentPage === 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = state.currentPage >= totalPages - 1;
+    }
+
+    if (dots) {
+        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="bio-page-dot ${index === state.currentPage ? 'active' : ''}"
+                data-bio-page="${index}"
+                aria-label="Go to page ${index + 1}"
+                aria-current="${index === state.currentPage ? 'page' : 'false'}"
+            ></button>
+        `).join('');
+    }
+}
+
+function setupBioPagination() {
+    document.querySelector('[data-bio-prev]')?.addEventListener('click', () => {
+        state.currentPage = Math.max(0, state.currentPage - 1);
+        renderCurrentTable(false);
+    });
+
+    document.querySelector('[data-bio-next]')?.addEventListener('click', () => {
+        state.currentPage += 1;
+        renderCurrentTable(false);
+    });
+
+    document.querySelector('[data-bio-dots]')?.addEventListener('click', event => {
+        const dot = event.target.closest('[data-bio-page]');
+        if (!dot) return;
+
+        state.currentPage = Number(dot.dataset.bioPage || 0);
+        renderCurrentTable(false);
+    });
+}

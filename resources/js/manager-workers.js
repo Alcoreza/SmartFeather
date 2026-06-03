@@ -82,13 +82,26 @@ function renderWorkersTable() {
     workersCurrentPage = Math.min(workersCurrentPage, totalPages - 1);
 
     if (!filteredWorkers.length) {
-        table.innerHTML = '<tr><td colspan="4">No employees match the selected filter.</td></tr>';
+        table.innerHTML = `
+            <tr>
+                <td colspan="4" class="workers-empty-row">No employees match the selected filter.</td>
+            </tr>
+            ${Array.from({ length: WORKERS_ROWS_PER_PAGE - 1 }, () => `
+                <tr class="workers-placeholder-row" aria-hidden="true">
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+            `).join('')}
+        `;
         updateWorkersPagination(0);
         return;
     }
 
     const start = workersCurrentPage * WORKERS_ROWS_PER_PAGE;
     const pageWorkers = filteredWorkers.slice(start, start + WORKERS_ROWS_PER_PAGE);
+    const placeholderRows = WORKERS_ROWS_PER_PAGE - pageWorkers.length;
 
     table.innerHTML = pageWorkers.map(user => {
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
@@ -108,7 +121,14 @@ function renderWorkersTable() {
                 </td>
             </tr>
         `;
-    }).join('');
+    }).join('') + Array.from({ length: placeholderRows }, () => `
+        <tr class="workers-placeholder-row" aria-hidden="true">
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+    `).join('');
 
     updateWorkersPagination(filteredWorkers.length);
 }
@@ -121,7 +141,7 @@ function updateWorkersPagination(totalRows) {
     const totalPages = Math.max(1, Math.ceil(totalRows / WORKERS_ROWS_PER_PAGE));
 
     if (pagination) {
-        pagination.hidden = totalRows <= WORKERS_ROWS_PER_PAGE;
+        pagination.classList.toggle('is-hidden', totalRows <= WORKERS_ROWS_PER_PAGE);
     }
 
     if (prevButton) {

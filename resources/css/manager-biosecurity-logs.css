@@ -251,6 +251,11 @@ body {
     background: rgba(255, 255, 255, 0.86);
 }
 
+.bio-table th.bio-personnel-name-col,
+.bio-table td.bio-personnel-name-col {
+    text-align: left;
+}
+
 .bio-table td:first-child {
     border-top-left-radius: 16px;
     border-bottom-left-radius: 16px;

@@ -42,6 +42,12 @@
             <section class="workers-card">
                 <div class="workers-table-wrap">
                     <table class="workers-table">
+                        <colgroup>
+                            <col class="workers-name-col">
+                            <col class="workers-id-col">
+                            <col class="workers-role-col">
+                            <col class="workers-actions-col">
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>Name</th>

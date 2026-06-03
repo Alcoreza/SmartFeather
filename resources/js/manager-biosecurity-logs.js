@@ -177,7 +177,9 @@ function renderTableHead(type) {
     const config = TABLE_CONFIG[type];
     if (!config || !tableHead) return;
 
-    const headers = config.columns.map((col) => `<th>${col.label}</th>`).join('');
+    const headers = config.columns
+        .map((col) => `<th class="${getBioColumnClass(type, col.key)}">${col.label}</th>`)
+        .join('');
 
     tableHead.innerHTML = `
         <tr>
@@ -185,6 +187,14 @@ function renderTableHead(type) {
             <th></th>
         </tr>
     `;
+}
+
+function getBioColumnClass(type, key) {
+    if (type === 'Personnel Biosecurity Logs' && key === 'name') {
+        return 'bio-personnel-name-col';
+    }
+
+    return '';
 }
 
 function renderTableRows(type, rows) {
@@ -204,15 +214,17 @@ function renderTableRows(type, rows) {
 
     tableBody.innerHTML = rows.map((row) => {
         const cells = config.columns.map((col) => {
+            const columnClass = getBioColumnClass(type, col.key);
+
             if (col.key === 'photo_url') {
                 return `
-                    <td>
+                    <td class="${columnClass}">
                         ${row.photo_url ? `<img src="${escapeHtml(row.photo_url)}" alt="Visitor photo" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:8px;">` : 'No photo'}
                     </td>
                 `;
             }
             return `
-                <td>${escapeHtml(row[col.key])}</td>
+                <td class="${columnClass}">${escapeHtml(row[col.key])}</td>
             `;
         }).join('');
 

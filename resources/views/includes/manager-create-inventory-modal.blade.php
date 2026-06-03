@@ -26,7 +26,7 @@
                         type="text"
                         id="newInventoryTypeName"
                         name="name"
-                        placeholder="Enter inventory type"
+                        placeholder="Enter inventory item"
                         autocomplete="off"
                         required
                     >
@@ -62,8 +62,8 @@
             </div>
 
             <p class="manager-management-modal-help">
-                This adds a new inventory type to the inventory dropdown list.
-                Initial stock and critical level will be permanent and managed here.
+                This adds a new inventory item to the inventory list.
+                Initial stock and critical level will be managed from this item.
             </p>
 
             <p class="manager-management-modal-message" id="createInventoryTypeMessage"></p>

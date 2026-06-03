@@ -124,12 +124,15 @@ class InventoryController extends Controller
             }
 
             $stockToReduce = (float) $validated['stock_to_reduce'];
-            $newRemainingStock = (float) $inventory->remaining_stock - $stockToReduce;
+            $remainingStock = (float) $inventory->remaining_stock;
 
-            if ($newRemainingStock < 0) {
-                $stockToReduce = (float) $inventory->remaining_stock;
-                $newRemainingStock = 0;
+            if ($stockToReduce > $remainingStock) {
+                return response()->json([
+                    'error' => 'Stock to reduce cannot be higher than the remaining stock.',
+                ], 422);
             }
+
+            $newRemainingStock = $remainingStock - $stockToReduce;
 
             DB::table('inventories')
                 ->where('id', $id)

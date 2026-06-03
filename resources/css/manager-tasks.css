@@ -244,9 +244,10 @@ body {
 
 .manager-task-table-wrap {
     width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: hidden;
     scrollbar-width: thin;
+    height: 380px;
+    flex: 1;
 }
 
 .manager-task-table {
@@ -306,6 +307,77 @@ body {
 .manager-task-table td:last-child {
     border-top-right-radius: 16px;
     border-bottom-right-radius: 16px;
+}
+
+.manager-task-row-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(10, 51, 27, 0.08);
+}
+
+.manager-task-page-btn {
+    min-width: 94px;
+    height: 38px;
+    border: 1.5px solid #2c8748;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #f6fbf6);
+    color: #2c8748;
+    font: inherit;
+    font-size: 0.94rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(44, 135, 72, 0.08);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.manager-task-page-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(44, 135, 72, 0.12);
+}
+
+.manager-task-page-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.manager-task-page-dots {
+    min-width: 72px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.manager-task-page-dot {
+    width: 10px;
+    height: 10px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(6, 51, 32, 0.22);
+    cursor: pointer;
+    padding: 0;
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.manager-task-page-dot:hover {
+    transform: scale(1.18);
+    background: rgba(44, 135, 72, 0.55);
+}
+
+.manager-task-page-dot.active {
+    transform: scale(1.25);
+    background: #2c8748;
+    box-shadow: 0 0 0 4px rgba(44, 135, 72, 0.14);
 }
 
 .manager-task-photo-link {
@@ -689,5 +761,9 @@ body {
 
     .manager-task-confirm-actions {
         flex-direction: column;
+    }
+
+    .manager-task-row-pagination {
+        flex-wrap: wrap;
     }
 }

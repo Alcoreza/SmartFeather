@@ -54,6 +54,16 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div class="workers-pagination" data-workers-pagination>
+                    <button type="button" class="workers-page-btn" data-workers-prev>
+                        Previous
+                    </button>
+                    <div class="workers-page-dots" data-workers-dots></div>
+                    <button type="button" class="workers-page-btn" data-workers-next>
+                        Next
+                    </button>
+                </div>
             </section>
         </main>
     </div>

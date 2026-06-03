@@ -99,6 +99,77 @@
     border-bottom-right-radius: 16px;
 }
 
+.workers-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(10, 51, 27, 0.08);
+}
+
+.workers-page-btn {
+    min-width: 94px;
+    height: 38px;
+    border: 1.5px solid #2c8748;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #f6fbf6);
+    color: #2c8748;
+    font: inherit;
+    font-size: 0.94rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(44, 135, 72, 0.08);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.workers-page-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(44, 135, 72, 0.12);
+}
+
+.workers-page-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.workers-page-dots {
+    min-width: 72px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.workers-page-dot {
+    width: 10px;
+    height: 10px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(6, 51, 32, 0.22);
+    cursor: pointer;
+    padding: 0;
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.workers-page-dot:hover {
+    transform: scale(1.18);
+    background: rgba(44, 135, 72, 0.55);
+}
+
+.workers-page-dot.active {
+    transform: scale(1.25);
+    background: #2c8748;
+    box-shadow: 0 0 0 4px rgba(44, 135, 72, 0.14);
+}
+
 /* View Button */
 .view-worker-btn {
     width: 44px;
@@ -245,6 +316,10 @@
 
     .workers-filter {
         width: 100%;
+    }
+
+    .workers-pagination {
+        flex-wrap: wrap;
     }
 
     .worker-form-grid.two-col {

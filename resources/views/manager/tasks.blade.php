@@ -80,6 +80,16 @@
                             <tbody id="pendingTasksTable"></tbody>
                         </table>
                     </div>
+
+                    <div class="manager-task-row-pagination" data-task-pagination="pending">
+                        <button type="button" class="manager-task-page-btn" data-task-row-prev="pending">
+                            Previous
+                        </button>
+                        <div class="manager-task-page-dots" data-task-row-dots="pending"></div>
+                        <button type="button" class="manager-task-page-btn" data-task-row-next="pending">
+                            Next
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -127,6 +137,16 @@
 
                             <tbody id="approvalTasksTable"></tbody>
                         </table>
+                    </div>
+
+                    <div class="manager-task-row-pagination" data-task-pagination="for_approval">
+                        <button type="button" class="manager-task-page-btn" data-task-row-prev="for_approval">
+                            Previous
+                        </button>
+                        <div class="manager-task-page-dots" data-task-row-dots="for_approval"></div>
+                        <button type="button" class="manager-task-page-btn" data-task-row-next="for_approval">
+                            Next
+                        </button>
                     </div>
                 </div>
             </section>
@@ -176,6 +196,16 @@
 
                             <tbody id="completedTasksTable"></tbody>
                         </table>
+                    </div>
+
+                    <div class="manager-task-row-pagination" data-task-pagination="completed">
+                        <button type="button" class="manager-task-page-btn" data-task-row-prev="completed">
+                            Previous
+                        </button>
+                        <div class="manager-task-page-dots" data-task-row-dots="completed"></div>
+                        <button type="button" class="manager-task-page-btn" data-task-row-next="completed">
+                            Next
+                        </button>
                     </div>
                 </div>
             </section>

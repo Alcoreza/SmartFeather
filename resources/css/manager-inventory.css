@@ -291,12 +291,13 @@
 }
 
 .inventory-progress-track {
-    --progress-start: #c58a3a;
-    --progress-end: #f3a12d;
+    --progress-start: #64748b;
+    --progress-end: #64748b;
     --progress-track-bg: #e5e7eb;
+    position: relative;
     width: 100%;
     max-width: 100%;
-    height: 8px;
+    height: 26px;
     border-radius: 999px;
     background: var(--progress-track-bg);
     overflow: hidden;
@@ -304,21 +305,21 @@
 }
 
 .inventory-progress-track.high {
-    --progress-start: #1f7a3f;
-    --progress-end: #39a75f;
-    --progress-track-bg: #dff3e7;
+    --progress-start: #4f9b70;
+    --progress-end: #63ad7f;
+    --progress-track-bg: #edf7f0;
 }
 
 .inventory-progress-track.moderate {
-    --progress-start: #d69d13;
-    --progress-end: #f0c63d;
-    --progress-track-bg: #fbf0c5;
+    --progress-start: #d2a43a;
+    --progress-end: #e0b84a;
+    --progress-track-bg: #fbf4d8;
 }
 
 .inventory-progress-track.critical {
-    --progress-start: #b91c1c;
-    --progress-end: #ef4444;
-    --progress-track-bg: #f8d7da;
+    --progress-start: #b95a52;
+    --progress-end: #cf6d65;
+    --progress-track-bg: #fae8e6;
 }
 
 .inventory-progress-fill {
@@ -326,6 +327,23 @@
     height: 100%;
     border-radius: 999px;
     background: linear-gradient(90deg, var(--progress-start) 0%, var(--progress-end) 100%);
+}
+
+.inventory-progress-label {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    color: #111827;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.48);
 }
 
 .inventory-stock-details {

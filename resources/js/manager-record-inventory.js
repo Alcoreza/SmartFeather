@@ -61,6 +61,7 @@ function setupInventoryRecordTabs() {
     const tableBody = document.getElementById("recordTableBody");
 
     let currentType = "feed";
+    let renderVersion = 0;
 
     /* ===== FETCH ITEMS (for dropdown) ===== */
     async function fetchItems(type) {
@@ -74,10 +75,10 @@ function setupInventoryRecordTabs() {
     }
 
     /* ===== POPULATE DROPDOWN ===== */
-    async function populateFilter(type) {
+    async function populateFilter(type, providedItems = null) {
         if (!filterWrap || !recordFilter) return;
 
-        const items = await fetchItems(type);
+        const items = providedItems || await fetchItems(type);
 
         recordFilter.innerHTML = `
             <option value="">All ${type}</option>
@@ -106,31 +107,55 @@ function setupInventoryRecordTabs() {
     }
 
     /* ===== RENDER TABLE ===== */
-    async function renderTable() {
-        const selectedItem = recordFilter.value;
+    function renderLoading() {
+        tableBody.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+    }
 
-        tableBody.innerHTML = `<tr><td colspan="4">Loading...</td></tr>`;
-
-        const data = await fetchRecords(currentType, selectedItem);
-
+    function renderRows(data) {
         if (!data.length) {
-            tableBody.innerHTML = `<tr><td colspan="4">No records found</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="6">No records found</td></tr>`;
             return;
         }
 
-        tableBody.innerHTML = data.map(row => `
-            <tr>
-                <td>${row.item_name}</td>
-                <td>${formatDate(row.monitoring_date)}</td>
-                <td>${row.deducted ?? 0}</td>
-                <td>${row.remaining_stock ?? ''}</td>
-            </tr>
-        `).join("");
+        tableBody.innerHTML = data.map((row, index) => {
+            const movement = getMovement(row);
+
+            return `
+                <tr style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
+                    <td>${escapeHtml(row.item_name)}</td>
+                    <td>
+                        <span class="record-movement-badge ${movement.className}">
+                            ${movement.label}
+                        </span>
+                    </td>
+                    <td class="record-quantity ${movement.className}">
+                        ${movement.quantity}
+                    </td>
+                    <td>${formatDate(movement.date)}</td>
+                    <td>${formatDate(row.initial_purchase_date)}</td>
+                    <td>${formatNumber(row.remaining_stock)}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    async function renderTable() {
+        const version = ++renderVersion;
+        const selectedItem = recordFilter.value;
+
+        renderLoading();
+
+        const data = await fetchRecords(currentType, selectedItem);
+
+        if (version !== renderVersion) return;
+
+        renderRows(data);
     }
 
     /* ===== FEED TAB ===== */
     async function renderFeed() {
         currentType = "feed";
+        const version = ++renderVersion;
 
         // UPDATED CLASSES
         feedTab.classList.add("active", "feed-active");
@@ -141,19 +166,31 @@ function setupInventoryRecordTabs() {
         tableHead.innerHTML = `
             <tr>
                 <th>Item</th>
-                <th>Date</th>
-                <th>Deducted (kg)</th>
+                <th>Movement</th>
+                <th>Quantity</th>
+                <th>Movement Date</th>
+                <th>Initial Purchase Date</th>
                 <th>Remaining (kg)</th>
             </tr>
         `;
 
-        await populateFilter("feed");
-        await renderTable();
+        renderLoading();
+
+        const [items, data] = await Promise.all([
+            fetchItems("feed"),
+            fetchRecords("feed"),
+        ]);
+
+        if (version !== renderVersion) return;
+
+        await populateFilter("feed", items);
+        renderRows(data);
     }
 
     /* ===== VITAMIN TAB ===== */
     async function renderVitamins() {
         currentType = "vitamin";
+        const version = ++renderVersion;
 
         // UPDATED CLASSES
         vitaminsTab.classList.add("active", "vitamins-active");
@@ -164,14 +201,25 @@ function setupInventoryRecordTabs() {
         tableHead.innerHTML = `
             <tr>
                 <th>Item</th>
-                <th>Date</th>
-                <th>Deducted (bottles)</th>
+                <th>Movement</th>
+                <th>Quantity</th>
+                <th>Movement Date</th>
+                <th>Initial Purchase Date</th>
                 <th>Remaining (bottles)</th>
             </tr>
         `;
 
-        await populateFilter("vitamin");
-        await renderTable();
+        renderLoading();
+
+        const [items, data] = await Promise.all([
+            fetchItems("vitamin"),
+            fetchRecords("vitamin"),
+        ]);
+
+        if (version !== renderVersion) return;
+
+        await populateFilter("vitamin", items);
+        renderRows(data);
     }
 
     /* ===== EVENTS ===== */
@@ -184,6 +232,54 @@ function setupInventoryRecordTabs() {
 
     /* ===== HELPERS ===== */
     function formatDate(dateString) {
+        if (!dateString) return "--";
         return new Date(dateString).toLocaleDateString();
+    }
+
+    function formatNumber(value) {
+        const number = Number(value ?? 0);
+
+        return Number.isInteger(number)
+            ? number.toString()
+            : number.toFixed(2);
+    }
+
+    function getMovement(row) {
+        const added = Number(row.added ?? 0);
+        const deducted = Number(row.deducted ?? 0);
+
+        if (added > 0) {
+            return {
+                label: "Added Stock",
+                className: "movement-added",
+                quantity: `+${formatNumber(added)}`,
+                date: row.recent_purchase_date,
+            };
+        }
+
+        if (deducted > 0) {
+            return {
+                label: "Reduced Stock",
+                className: "movement-reduced",
+                quantity: `-${formatNumber(deducted)}`,
+                date: row.reduced_date,
+            };
+        }
+
+        return {
+            label: "Initial Stock",
+            className: "movement-initial",
+            quantity: formatNumber(row.initial_stock),
+            date: row.initial_purchase_date || row.monitoring_date,
+        };
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 }

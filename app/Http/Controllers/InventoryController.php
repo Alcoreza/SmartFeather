@@ -86,6 +86,9 @@ class InventoryController extends Controller
                 'initial_stock' => $existingInventory->initial_stock,
                 'remaining_stock' => $newRemainingStock,
                 'deducted' => 0,
+                'added' => $stockToAdd,
+                'initial_purchase_date' => $this->initialPurchaseDate($existingInventory->id, $existingInventory->purchase_date),
+                'recent_purchase_date' => $validated['purchase_date'],
                 'monitoring_date' => now(),
             ]);
 
@@ -106,6 +109,7 @@ class InventoryController extends Controller
         try {
             $validated = $request->validate([
                 'stock_to_reduce' => 'required|numeric|min:0',
+                'reduced_date' => 'required|date',
             ]);
 
             $inventory = DB::table('inventories')
@@ -120,12 +124,15 @@ class InventoryController extends Controller
             }
 
             $stockToReduce = (float) $validated['stock_to_reduce'];
-            $newRemainingStock = (float) $inventory->remaining_stock - $stockToReduce;
+            $remainingStock = (float) $inventory->remaining_stock;
 
-            if ($newRemainingStock < 0) {
-                $stockToReduce = (float) $inventory->remaining_stock;
-                $newRemainingStock = 0;
+            if ($stockToReduce > $remainingStock) {
+                return response()->json([
+                    'error' => 'Stock to reduce cannot be higher than the remaining stock.',
+                ], 422);
             }
+
+            $newRemainingStock = $remainingStock - $stockToReduce;
 
             DB::table('inventories')
                 ->where('id', $id)
@@ -139,6 +146,9 @@ class InventoryController extends Controller
                 'initial_stock' => $inventory->initial_stock,
                 'remaining_stock' => $newRemainingStock,
                 'deducted' => $stockToReduce,
+                'added' => 0,
+                'initial_purchase_date' => $this->initialPurchaseDate($id, $inventory->purchase_date),
+                'reduced_date' => $validated['reduced_date'],
                 'monitoring_date' => now(),
             ]);
 
@@ -210,6 +220,10 @@ class InventoryController extends Controller
                 'r.initial_stock',
                 'r.remaining_stock',
                 'r.deducted',
+                'r.added',
+                'r.initial_purchase_date',
+                'r.recent_purchase_date',
+                'r.reduced_date',
                 'r.monitoring_date'
             )
             ->orderBy('r.monitoring_date', 'desc')
@@ -256,6 +270,15 @@ class InventoryController extends Controller
             'status' => $status[0],
             'status_class' => $status[1],
         ];
+    }
+
+    private function initialPurchaseDate($inventoryId, $fallback = null)
+    {
+        return DB::table('inventory_records')
+            ->where('inventory_id', $inventoryId)
+            ->whereNotNull('initial_purchase_date')
+            ->orderBy('id')
+            ->value('initial_purchase_date') ?? $fallback;
     }
 
     public function items(Request $request)

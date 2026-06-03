@@ -154,6 +154,51 @@
     font-weight: 500;
 }
 
+.record-movement-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 116px;
+    min-height: 28px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.record-movement-badge.movement-initial {
+    background: #eef2f7;
+    color: #334155;
+}
+
+.record-movement-badge.movement-added {
+    background: #e7f6ec;
+    color: #126033;
+}
+
+.record-movement-badge.movement-reduced {
+    background: #fdebea;
+    color: #9f1f18;
+}
+
+.record-quantity {
+    font-weight: 800 !important;
+    white-space: nowrap;
+}
+
+.record-quantity.movement-initial {
+    color: #334155;
+}
+
+.record-quantity.movement-added {
+    color: #126033;
+}
+
+.record-quantity.movement-reduced {
+    color: #9f1f18;
+}
+
 .record-inventory-topbar,
 .record-inventory-controls,
 .record-table-card {
@@ -171,26 +216,7 @@
 .record-table tbody tr {
     opacity: 0;
     animation: recordRowFade 0.5s ease forwards;
-}
-
-.record-table tbody tr:nth-child(1) {
-    animation-delay: 0.18s;
-}
-
-.record-table tbody tr:nth-child(2) {
-    animation-delay: 0.26s;
-}
-
-.record-table tbody tr:nth-child(3) {
-    animation-delay: 0.34s;
-}
-
-.record-table tbody tr:nth-child(4) {
-    animation-delay: 0.42s;
-}
-
-.record-table tbody tr:nth-child(5) {
-    animation-delay: 0.5s;
+    animation-delay: var(--row-delay, 0s);
 }
 
 @keyframes recordFadeUp {
@@ -234,6 +260,6 @@
     }
 
     .record-table {
-        min-width: 860px;
+        min-width: 820px;
     }
 }

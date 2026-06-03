@@ -5,10 +5,38 @@ const state = {
     workers: [],
     pens: [],
     allWorkers: [],
+    nameSearch: '',
+    dateFrom: '',
+    dateTo: '',
+    currentPage: 0,
 };
+
+const BIO_ROWS_PER_PAGE = 5;
 
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
+let shouldTrackAddBioRequiredHighlights = false;
+
+const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
+    'Personnel Biosecurity Logs': [
+        { name: 'name', label: 'Name' },
+        { name: 'role', label: 'Role' },
+        { name: 'date', label: 'Date' },
+        { name: 'time', label: 'Time' },
+        { name: 'status', label: 'Status' },
+    ],
+    'Visitors': [
+        { name: 'date', label: 'Date' },
+        { name: 'name', label: 'Name' },
+        { name: 'time_in', label: 'Time In' },
+        { name: 'time_out', label: 'Time Out' },
+        { name: 'purpose', label: 'Purpose' },
+        { name: 'foot_bath', label: 'Foot Bath' },
+        { name: 'ppe', label: 'PPE' },
+        { name: 'sanitation', label: 'Sanitation' },
+        { name: 'monitored_by', label: 'Monitored By' },
+    ],
+};
 
 const TABLE_CONFIG = {
     'Personnel Biosecurity Logs': {
@@ -17,8 +45,9 @@ const TABLE_CONFIG = {
             { key: 'name', label: 'Name' },
             { key: 'role', label: 'Role' },
             { key: 'date', label: 'Date' },
-            { key: 'time', label: 'Time' },
-            { key: 'status', label: 'Status' },
+            { key: 'time_in', label: 'Time In' },
+            { key: 'time_out', label: 'Time Out' },
+            { key: 'remarks', label: 'Remarks' },
         ],
         form: [
             {
@@ -125,7 +154,6 @@ const TABLE_CONFIG = {
 
 const tableHead = document.getElementById('bioTableHead');
 const tableBody = document.getElementById('bioLogsTableBody');
-const filterSelect = document.getElementById('bioCategoryFilter');
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -134,6 +162,19 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function formatDateForDisplay(isoDate) {
+    if (!isoDate) return '';
+    
+    // Convert YYYY-MM-DD to MM-DD-YY for display
+    const match = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return isoDate; // Return as-is if format doesn't match
+    
+    const [, year, month, day] = match;
+    const shortYear = String(year).slice(-2);
+    
+    return `${month}-${day}-${shortYear}`;
 }
 
 function setOverview(overview) {
@@ -146,7 +187,7 @@ function setOverview(overview) {
     if (violations) violations.textContent = overview?.violations ?? 0;
     if (visitors) visitors.textContent = overview?.visitors ?? 0;
     if (mortalities) mortalities.textContent = overview?.mortalities ?? 0;
-    if (disinfectionDate) disinfectionDate.textContent = overview?.last_disinfection?.date ?? '--';
+    if (disinfectionDate) disinfectionDate.textContent = formatDateForDisplay(overview?.last_disinfection?.date) ?? '--';
     if (disinfectionTime) disinfectionTime.textContent = overview?.last_disinfection?.time ?? '--';
 }
 
@@ -154,7 +195,9 @@ function renderTableHead(type) {
     const config = TABLE_CONFIG[type];
     if (!config || !tableHead) return;
 
-    const headers = config.columns.map((col) => `<th>${col.label}</th>`).join('');
+    const headers = config.columns
+        .map((col) => `<th class="${getBioColumnClass(type, col.key)}">${col.label}</th>`)
+        .join('');
 
     tableHead.innerHTML = `
         <tr>
@@ -162,6 +205,107 @@ function renderTableHead(type) {
             <th></th>
         </tr>
     `;
+}
+
+function getBioColumnClass(type, key) {
+    // Personnel Biosecurity Logs columns
+    if (type === 'Personnel Biosecurity Logs') {
+        switch (key) {
+            case 'name': return 'bio-name-col';
+            case 'role': return 'bio-role-col';
+            case 'date': return 'bio-date-col';
+            case 'time_in': return 'bio-time-col';
+            case 'time_out': return 'bio-time-col';
+            case 'remarks': return 'bio-remarks-col';
+            default: return '';
+        }
+    }
+
+    // Visitors columns
+    if (type === 'Visitors') {
+        switch (key) {
+            case 'date': return 'bio-visitor-date-col';
+            case 'time_in': return 'bio-visitor-time-col';
+            case 'time_out': return 'bio-visitor-time-col';
+            case 'name': return 'bio-visitor-name-col';
+            case 'photo_url': return 'bio-photo-col';
+            case 'purpose': return 'bio-purpose-col';
+            case 'foot_bath': return 'bio-yesno-col';
+            case 'sanitation': return 'bio-yesno-col';
+            case 'ppe': return 'bio-yesno-col';
+            case 'monitored_by': return 'bio-monitored-col';
+            default: return '';
+        }
+    }
+
+    return '';
+}
+
+function filterBiosecurityLogs(type, logs) {
+    let filtered = logs || [];
+
+    // Filter by name
+    if (state.nameSearch.trim()) {
+        const searchTerm = state.nameSearch.trim().toLowerCase();
+        filtered = filtered.filter((log) => {
+            const name = String(log.name || '').toLowerCase();
+            return name.includes(searchTerm);
+        });
+    }
+
+    // Filter by date range
+    if (state.dateFrom || state.dateTo) {
+        filtered = filtered.filter((log) => {
+            const logDate = String(log.date || '');
+            
+            if (state.dateFrom && logDate < state.dateFrom) {
+                return false;
+            }
+            
+            if (state.dateTo && logDate > state.dateTo) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+
+    return filtered;
+}
+
+function renderBioTable(type, filteredRows) {
+    const config = TABLE_CONFIG[type];
+    if (!config || !tableBody) return;
+
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / BIO_ROWS_PER_PAGE));
+    state.currentPage = Math.min(state.currentPage, totalPages - 1);
+
+    if (!filteredRows.length) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${config.columns.length + 1}" class="bio-empty">
+                    No logs found for this category.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const start = state.currentPage * BIO_ROWS_PER_PAGE;
+    const pageRows = filteredRows.slice(start, start + BIO_ROWS_PER_PAGE);
+    const placeholderRows = BIO_ROWS_PER_PAGE - pageRows.length;
+
+    renderTableRows(type, pageRows);
+
+    // Add placeholder rows if needed
+    if (placeholderRows > 0) {
+        const placeholderHtml = Array.from({ length: placeholderRows }, () => `
+            <tr class="bio-placeholder-row" aria-hidden="true">
+                <td colspan="${config.columns.length + 1}">&nbsp;</td>
+            </tr>
+        `).join('');
+        tableBody.innerHTML += placeholderHtml;
+    }
 }
 
 function renderTableRows(type, rows) {
@@ -181,15 +325,24 @@ function renderTableRows(type, rows) {
 
     tableBody.innerHTML = rows.map((row) => {
         const cells = config.columns.map((col) => {
+            const columnClass = getBioColumnClass(type, col.key);
+
             if (col.key === 'photo_url') {
                 return `
-                    <td>
+                    <td class="${columnClass}">
                         ${row.photo_url ? `<img src="${escapeHtml(row.photo_url)}" alt="Visitor photo" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:8px;">` : 'No photo'}
                     </td>
                 `;
             }
+            
+            // Format date for display if it's a date column
+            let cellValue = row[col.key];
+            if (col.key === 'date' && cellValue) {
+                cellValue = formatDateForDisplay(cellValue);
+            }
+            
             return `
-                <td>${escapeHtml(row[col.key])}</td>
+                <td class="${columnClass}">${escapeHtml(cellValue)}</td>
             `;
         }).join('');
 
@@ -216,17 +369,45 @@ function renderTableRows(type, rows) {
     }).join('');
 }
 
-function renderCurrentTable() {
+function renderCurrentTable(resetPage = true) {
     const type = state.selectedCategory;
-    const rows = state.logs[type] || [];
+    const allRows = state.logs[type] || [];
+    const filteredRows = filterBiosecurityLogs(type, allRows);
+
+    // Reset page when filters change, but not when navigating pages
+    if (resetPage) {
+        state.currentPage = 0;
+    }
 
     renderTableHead(type);
-    renderTableRows(type, rows);
+    renderBioTable(type, filteredRows);
+    updateBioPagination(filteredRows.length);
+}
+
+function normalizeFieldValueForInput(field, value = '') {
+    if (!value) return '';
+
+    if (field.type === 'time') {
+        const match = String(value).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+        if (!match) return value;
+
+        let hours = Number(match[1]);
+        const minutes = match[2];
+        const meridiem = match[3]?.toUpperCase();
+
+        if (meridiem === 'PM' && hours < 12) hours += 12;
+        if (meridiem === 'AM' && hours === 12) hours = 0;
+
+        return `${String(hours).padStart(2, '0')}:${minutes}`;
+    }
+
+    return value;
 }
 
 function createFieldHtml(prefix, field, value = '') {
     const fieldId = `${prefix}_${field.key}`;
     const wrapperClass = field.full ? 'bio-field full' : 'bio-field';
+    const inputValue = normalizeFieldValueForInput(field, value);
 
     if (field.type === 'select') {
         let options = field.options || [];
@@ -274,7 +455,7 @@ function createFieldHtml(prefix, field, value = '') {
                 type="${field.type || 'text'}"
                 id="${fieldId}"
                 name="${field.key}"
-                value="${escapeHtml(value)}"
+                value="${escapeHtml(inputValue)}"
                 ${extraAttrs}
             >
         </div>
@@ -745,6 +926,7 @@ function setupAddModal() {
 
                 modal.classList.remove('show');
                 document.body.style.overflow = '';
+                clearAddBioFormError();
 
                 // Reload logs to show the new entry
                 loadBiosecurityLogs();
@@ -771,63 +953,21 @@ function setupAddModal() {
 }
 
 function validateAddBioRequiredFields(form, payload) {
-    const requiredFieldsByType = {
-        'Personnel Biosecurity Logs': [
-            { name: 'name', label: 'Name' },
-            { name: 'role', label: 'Role' },
-            { name: 'date', label: 'Date' },
-            { name: 'time', label: 'Time' },
-            { name: 'status', label: 'Status' },
-        ],
-        'Visitors': [
-            { name: 'date', label: 'Date' },
-            { name: 'name', label: 'Name' },
-            { name: 'time_in', label: 'Time In' },
-            { name: 'time_out', label: 'Time Out' },
-            { name: 'purpose', label: 'Purpose' },
-            { name: 'foot_bath', label: 'Foot Bath' },
-            { name: 'sanitation', label: 'Sanitation' },
-            { name: 'ppe', label: 'PPE' },
-            { name: 'monitored_by', label: 'Monitored By' },
-            { name: 'photo_data', label: 'Visitor Photo' },
-        ],
-    };
-
-    const requiredFields = requiredFieldsByType[payload.type] || [];
+    const requiredFields = ADD_BIO_REQUIRED_FIELDS_BY_TYPE[payload.type] || [];
     const missingFields = requiredFields.filter(({ name }) => {
         return !String(payload[name] ?? '').trim();
     });
 
-    form.querySelectorAll('.bio-field.has-error').forEach((field) => {
-        field.classList.remove('has-error');
-    });
+    markMissingAddBioRequiredFields(missingFields);
 
-    missingFields.forEach(({ name }) => {
-        const field = form.elements[name];
-        const fieldWrapper = field?.closest('.bio-field')
-            || document.getElementById('add_photo_preview')?.closest('.bio-field');
-
-        fieldWrapper?.classList.add('has-error');
-    });
-
-    if (missingFields.length) {
-        if (missingFields[0].name === 'photo_data') {
-            document.getElementById('add_open_camera_btn')?.focus();
-        } else {
-            form.elements[missingFields[0].name]?.focus();
-        }
-    }
-
-    return missingFields.map(({ label }) => label);
+    return missingFields;
 }
 
 function showAddBioFormError(formError, messageOrFields) {
     if (!formError) return;
 
     if (Array.isArray(messageOrFields)) {
-        formError.textContent = messageOrFields.length === 1
-            ? `${messageOrFields[0]} is required.`
-            : `Please complete all required fields: ${messageOrFields.join(', ')}.`;
+        formError.textContent = 'Please fill in the required fields.';
     } else {
         formError.textContent = messageOrFields;
     }
@@ -848,10 +988,12 @@ function clearAddBioFormError() {
     form?.querySelectorAll('.bio-field.has-error').forEach((field) => {
         field.classList.remove('has-error');
     });
+
+    shouldTrackAddBioRequiredHighlights = false;
 }
 
 function clearBioFieldError(field) {
-    field.closest('.bio-field')?.classList.remove('has-error');
+    syncAddBioRequiredFieldHighlight(field);
 
     const form = document.getElementById('addBioForm');
     const hasErrors = form?.querySelector('.bio-field.has-error');
@@ -860,13 +1002,111 @@ function clearBioFieldError(field) {
     }
 }
 
-function bindEvents() {
-    if (!filterSelect) return;
+function isAddBioRequiredFieldEmpty(field) {
+    const form = document.getElementById('addBioForm');
+    return !String(form?.elements[field.name]?.value ?? '').trim();
+}
 
-    filterSelect.addEventListener('change', (event) => {
-        state.selectedCategory = event.target.value;
-        renderCurrentTable();
+function getAddBioRequiredFieldWrapper(field) {
+    const form = document.getElementById('addBioForm');
+    const input = form?.elements[field.name];
+
+    return input?.closest('.bio-field')
+        || document.getElementById('add_photo_preview')?.closest('.bio-field');
+}
+
+function syncAddBioRequiredFieldHighlight(input) {
+    const form = document.getElementById('addBioForm');
+    const type = form?.elements.type?.value;
+    const requiredField = (ADD_BIO_REQUIRED_FIELDS_BY_TYPE[type] || [])
+        .find(({ name }) => name === input.name);
+
+    if (!requiredField) {
+        input.closest('.bio-field')?.classList.remove('has-error');
+        return;
+    }
+
+    const fieldWrapper = input.closest('.bio-field');
+
+    if (shouldTrackAddBioRequiredHighlights && isAddBioRequiredFieldEmpty(requiredField)) {
+        fieldWrapper?.classList.add('has-error');
+        return;
+    }
+
+    fieldWrapper?.classList.remove('has-error');
+}
+
+function clearAddBioRequiredFieldHighlights(resetTracking = true) {
+    const form = document.getElementById('addBioForm');
+
+    if (resetTracking) {
+        shouldTrackAddBioRequiredHighlights = false;
+    }
+
+    form?.querySelectorAll('.bio-field.has-error').forEach((field) => {
+        field.classList.remove('has-error');
     });
+}
+
+function markMissingAddBioRequiredFields(missingFields) {
+    clearAddBioRequiredFieldHighlights(false);
+
+    if (!missingFields.length) {
+        shouldTrackAddBioRequiredHighlights = false;
+        return;
+    }
+
+    shouldTrackAddBioRequiredHighlights = true;
+
+    missingFields.forEach((field) => {
+        getAddBioRequiredFieldWrapper(field)?.classList.add('has-error');
+    });
+}
+
+function bindEvents() {
+    // Handle category button clicks
+    const categoryButtons = document.querySelectorAll('.bio-category-btn');
+    categoryButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const category = btn.dataset.category;
+            state.selectedCategory = category;
+
+            // Update active button state
+            categoryButtons.forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            renderCurrentTable();
+        });
+    });
+
+    // Add event listeners for search and date filters
+    const nameSearchInput = document.getElementById('bioNameSearch');
+    const dateFromInput = document.getElementById('bioDateFrom');
+    const dateToInput = document.getElementById('bioDateTo');
+
+    if (nameSearchInput) {
+        nameSearchInput.addEventListener('input', (event) => {
+            state.nameSearch = event.target.value;
+            renderCurrentTable();
+        });
+    }
+
+    if (dateFromInput) {
+        dateFromInput.addEventListener('change', (event) => {
+            state.dateFrom = event.target.value;
+            renderCurrentTable();
+        });
+    }
+
+    if (dateToInput) {
+        dateToInput.addEventListener('change', (event) => {
+            state.dateTo = event.target.value;
+            renderCurrentTable();
+        });
+    }
+
+    // Setup pagination
+    setupBioPagination();
 }
 
 async function loadBiosecurityLogs() {
@@ -1028,3 +1268,55 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAddModal();
     setupProfileModal();
 });
+
+function updateBioPagination(totalRows) {
+    const pagination = document.querySelector('[data-bio-pagination]');
+    const prevButton = document.querySelector('[data-bio-prev]');
+    const nextButton = document.querySelector('[data-bio-next]');
+    const dots = document.querySelector('[data-bio-dots]');
+    const totalPages = Math.max(1, Math.ceil(totalRows / BIO_ROWS_PER_PAGE));
+
+    if (pagination) {
+        pagination.classList.toggle('is-hidden', totalRows <= BIO_ROWS_PER_PAGE);
+    }
+
+    if (prevButton) {
+        prevButton.disabled = state.currentPage === 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = state.currentPage >= totalPages - 1;
+    }
+
+    if (dots) {
+        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="bio-page-dot ${index === state.currentPage ? 'active' : ''}"
+                data-bio-page="${index}"
+                aria-label="Go to page ${index + 1}"
+                aria-current="${index === state.currentPage ? 'page' : 'false'}"
+            ></button>
+        `).join('');
+    }
+}
+
+function setupBioPagination() {
+    document.querySelector('[data-bio-prev]')?.addEventListener('click', () => {
+        state.currentPage = Math.max(0, state.currentPage - 1);
+        renderCurrentTable(false);
+    });
+
+    document.querySelector('[data-bio-next]')?.addEventListener('click', () => {
+        state.currentPage += 1;
+        renderCurrentTable(false);
+    });
+
+    document.querySelector('[data-bio-dots]')?.addEventListener('click', event => {
+        const dot = event.target.closest('[data-bio-page]');
+        if (!dot) return;
+
+        state.currentPage = Number(dot.dataset.bioPage || 0);
+        renderCurrentTable(false);
+    });
+}

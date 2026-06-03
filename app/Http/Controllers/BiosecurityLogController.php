@@ -20,7 +20,9 @@ class BiosecurityLogController extends Controller
     {
         $groupedLogs = [
             'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
-            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelBiosecurityLog($log)),
+            'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLogs(
+                PersonnelBiosecurityLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
+            ),
             'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
             'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
             'Weight Sampling' => WeightSamplingLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatWeightSamplingLog($log)),
@@ -338,7 +340,7 @@ class BiosecurityLogController extends Controller
             'activity' => $log->activity,
             'disinfectant_used' => $log->disinfectant_used,
             'performed_by' => $log->performed_by,
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
         ];
     }
@@ -350,10 +352,105 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Biosecurity Logs',
             'name' => $log->name,
             'role' => $log->role,
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
+            'time_in' => strtoupper((string) $log->status) === 'IN' && $log->time
+                ? \Carbon\Carbon::parse($log->time)->format('h:i A')
+                : '',
+            'time_out' => strtoupper((string) $log->status) === 'OUT' && $log->time
+                ? \Carbon\Carbon::parse($log->time)->format('h:i A')
+                : '',
             'status' => $log->status,
+            'remarks' => strtoupper((string) $log->status) === 'IN' ? 'Pending Out' : '',
         ];
+    }
+
+    private function formatPersonnelBiosecurityLogs($logs)
+    {
+        $pendingEntries = [];
+        $rows = [];
+
+        foreach ($logs as $log) {
+            $status = strtoupper(trim((string) $log->status));
+            $personKey = $this->getPersonnelLogKey($log);
+            $time = $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '';
+
+            if ($status === 'IN') {
+                $pendingEntries[$personKey][] = [
+                    'id' => $log->id,
+                    'type' => 'Personnel Biosecurity Logs',
+                    'name' => $log->name,
+                    'role' => $log->role,
+                    'date' => $log->date ? $log->date->format('Y-m-d') : '',
+                    'time' => $time,
+                    'time_in' => $time,
+                    'time_out' => '',
+                    'status' => 'IN',
+                    'remarks' => 'Pending Out',
+                    'sort_at' => $this->getPersonnelLogSortValue($log),
+                ];
+
+                continue;
+            }
+
+            if ($status === 'OUT') {
+                $pendingIndex = isset($pendingEntries[$personKey])
+                    ? count($pendingEntries[$personKey]) - 1
+                    : -1;
+
+                if ($pendingIndex >= 0) {
+                    $row = array_pop($pendingEntries[$personKey]);
+                    $row['time_out'] = $time;
+                    $row['remarks'] = '';
+                    $rows[] = $row;
+                    continue;
+                }
+
+                $rows[] = [
+                    'id' => $log->id,
+                    'type' => 'Personnel Biosecurity Logs',
+                    'name' => $log->name,
+                    'role' => $log->role,
+                    'date' => $log->date ? $log->date->format('Y-m-d') : '',
+                    'time' => $time,
+                    'time_in' => '',
+                    'time_out' => $time,
+                    'status' => 'OUT',
+                    'remarks' => '',
+                    'sort_at' => $this->getPersonnelLogSortValue($log),
+                ];
+            }
+        }
+
+        foreach ($pendingEntries as $entries) {
+            foreach ($entries as $entry) {
+                $rows[] = $entry;
+            }
+        }
+
+        usort($rows, fn($left, $right) => strcmp($right['sort_at'] ?? '', $left['sort_at'] ?? ''));
+
+        return collect($rows)->map(function ($row) {
+            unset($row['sort_at']);
+            return $row;
+        })->values();
+    }
+
+    private function getPersonnelLogKey($log): string
+    {
+        if ($log->employee_id) {
+            return 'employee:' . $log->employee_id;
+        }
+
+        return 'person:' . strtolower(trim((string) $log->name)) . '|' . strtolower(trim((string) $log->role));
+    }
+
+    private function getPersonnelLogSortValue($log): string
+    {
+        $date = $log->date ? $log->date->format('Y-m-d') : '0000-00-00';
+        $time = $log->time ? \Carbon\Carbon::parse($log->time)->format('H:i:s') : '00:00:00';
+
+        return "{$date} {$time} " . str_pad((string) $log->id, 10, '0', STR_PAD_LEFT);
     }
 
     private function formatVisitorLog($log)
@@ -361,7 +458,7 @@ class BiosecurityLogController extends Controller
         return [
             'id' => $log->id,
             'type' => 'Visitors',
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time_in' => $log->time_in ? \Carbon\Carbon::parse($log->time_in)->format('h:i A') : '',
             'time_out' => $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('h:i A') : '',
             'name' => $log->name,
@@ -400,7 +497,7 @@ class BiosecurityLogController extends Controller
             'name' => $log->name,
             'role' => $log->role,
             'house' => $log->house,
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
         ];
     }
@@ -410,7 +507,7 @@ class BiosecurityLogController extends Controller
         return [
             'id' => $log->id,
             'type' => 'Weight Sampling',
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
             'house' => $log->house,
             'pen' => $log->pen,
@@ -441,7 +538,7 @@ class BiosecurityLogController extends Controller
         return [
             'violations' => $violations,
             'last_disinfection' => $lastDisinfection ? [
-                'date' => $lastDisinfection->date ? $lastDisinfection->date->format('m-d-y') : '--',
+                'date' => $lastDisinfection->date ? $lastDisinfection->date->format('Y-m-d') : '--',
                 'time' => $lastDisinfection->time ? \Carbon\Carbon::parse($lastDisinfection->time)->format('h:i A') : '--',
             ] : ['date' => '--', 'time' => '--'],
             'visitors' => $visitors,

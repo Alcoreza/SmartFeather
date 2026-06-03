@@ -1,7 +1,9 @@
 <aside class="admin-sidebar">
     <div class="admin-sidebar-top">
         <div class="admin-sidebar-brand">
-            <div class="admin-sidebar-logo">F</div>
+            <div class="admin-sidebar-logo">
+                <img src="{{ asset('images/AppLogoSmartFeather.png') }}" alt="SmartFeather">
+            </div>
         </div>
 
         <div class="admin-sidebar-divider"></div>

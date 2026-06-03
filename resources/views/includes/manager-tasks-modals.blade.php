@@ -41,39 +41,39 @@
             <div class="manager-task-form-error" id="addTaskFormError" role="alert" aria-live="polite"></div>
 
             <div class="manager-task-form-field full">
-                <label for="taskWorkerName">Assign Flockman</label>
+                <label for="taskWorkerName">Assign Flockman*</label>
                 <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>
             </div>
 
             <div class="manager-task-form-grid">
                 <div class="manager-task-form-field">
-                    <label for="taskCategory">Task</label>
+                    <label for="taskCategory">Task*</label>
                     <select id="taskCategory" name="task_category" class="task-select-placeholder"></select>
                 </div>
 
                 <div class="manager-task-form-field">
-                    <label for="taskPriority">Priority Level</label>
+                    <label for="taskPriority">Priority Level*</label>
                     <select id="taskPriority" name="priority_level" class="task-select-placeholder"></select>
                 </div>
 
                 <div class="manager-task-form-field">
-                    <label for="taskHouseNumber">House Number</label>
+                    <label for="taskHouseNumber">House Number*</label>
                     <select id="taskHouseNumber" name="house_number" class="task-select-placeholder"></select>
                 </div>
 
                 <div class="manager-task-form-field">
-                    <label for="taskPenNumber">Pen Number</label>
+                    <label for="taskPenNumber">Pen Number*</label>
                     <select id="taskPenNumber" name="pen_number" class="task-select-placeholder"></select>
                 </div>
 
 
                 <div class="manager-task-form-field">
-                    <label for="taskTimeAssigned">Time to finish</label>
+                    <label for="taskTimeAssigned">Time to finish*</label>
                     <input type="time" id="taskTimeAssigned" name="time_assigned">
                 </div>
 
                 <div class="manager-task-form-field">
-                    <label for="taskDateAssigned">Date to finish</label>
+                    <label for="taskDateAssigned">Date to finish*</label>
                     <input type="date" id="taskDateAssigned" name="date_assigned">
                 </div>
             </div>

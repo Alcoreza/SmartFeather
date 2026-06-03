@@ -80,11 +80,69 @@
 
             <section class="bio-toolbar">
                 <div class="bio-toolbar-left">
-                    <div class="bio-filter-wrap">
-                        <select id="bioCategoryFilter" class="bio-filter-select">
-                            <option value="Personnel Biosecurity Logs">Personnel Biosecurity Logs</option>
-                            <option value="Visitors">Visitors</option>
-                        </select>
+                    <div class="bio-category-buttons">
+                        <button 
+                            type="button" 
+                            class="bio-category-btn active" 
+                            data-category="Personnel Biosecurity Logs"
+                            title="View personnel logs"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            Personnel
+                        </button>
+                        <button 
+                            type="button" 
+                            class="bio-category-btn" 
+                            data-category="Visitors"
+                            title="View visitor logs"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            Visitors
+                        </button>
+                    </div>
+
+                    <div class="bio-filters-container">
+                        <div class="bio-search-wrap">
+                            <svg class="bio-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input 
+                                type="text" 
+                                id="bioNameSearch" 
+                                class="bio-search-input" 
+                                placeholder="Search by name..."
+                            >
+                        </div>
+
+                        <div class="bio-date-filter-wrap">
+                            <div class="bio-date-group">
+                                <label class="bio-date-label">From:</label>
+                                <input 
+                                    type="date" 
+                                    id="bioDateFrom" 
+                                    class="bio-date-input" 
+                                    title="Start date"
+                                >
+                            </div>
+                            <div class="bio-date-group">
+                                <label class="bio-date-label">To:</label>
+                                <input 
+                                    type="date" 
+                                    id="bioDateTo" 
+                                    class="bio-date-input" 
+                                    title="End date"
+                                >
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -102,6 +160,16 @@
                         <thead id="bioTableHead"></thead>
                         <tbody id="bioLogsTableBody"></tbody>
                     </table>
+                </div>
+
+                <div class="bio-pagination" data-bio-pagination>
+                    <button type="button" class="bio-page-btn" data-bio-prev>
+                        Previous
+                    </button>
+                    <div class="bio-page-dots" data-bio-dots></div>
+                    <button type="button" class="bio-page-btn" data-bio-next>
+                        Next
+                    </button>
                 </div>
             </section>
 

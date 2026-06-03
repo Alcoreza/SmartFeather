@@ -1,4 +1,9 @@
 const BASE_URL = '/api/admin/workers';
+const WORKERS_ROWS_PER_PAGE = 5;
+
+let workersCache = [];
+let workersCurrentPage = 0;
+let workersCurrentRole = 'All';
 
 // ================= PROFILE MODAL =================
 async function populateProfileModal() {
@@ -52,34 +57,132 @@ async function loadEmployees() {
         const res = await fetch(BASE_URL);
         if (!res.ok) throw new Error('Failed to fetch');
 
-        const data = await res.json();
-        const table = document.getElementById('workersTableBody');
-        table.innerHTML = '';
-
-        data.forEach(user => {
-            const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
-
-            table.innerHTML += `
-                <tr data-id="${user.EmployeeId}">
-                    <td>${fullName}</td>
-                    <td>${user.EmployeeId}</td>
-                    <td>${user.Role}</td>
-                    <td class="text-center">
-                        <button class="view-worker-btn icon-btn" type="button" data-id="${user.EmployeeId}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
+        workersCache = await res.json();
+        workersCurrentPage = 0;
+        renderWorkersTable();
 
     } catch (err) {
         console.error(err);
         alert('Failed to load employees');
     }
+}
+
+function getFilteredWorkers() {
+    return workersCache.filter(user => {
+        return workersCurrentRole === 'All' || user.Role === workersCurrentRole;
+    });
+}
+
+function renderWorkersTable() {
+    const table = document.getElementById('workersTableBody');
+    if (!table) return;
+
+    const filteredWorkers = getFilteredWorkers();
+    const totalPages = Math.max(1, Math.ceil(filteredWorkers.length / WORKERS_ROWS_PER_PAGE));
+    workersCurrentPage = Math.min(workersCurrentPage, totalPages - 1);
+
+    if (!filteredWorkers.length) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="4" class="workers-empty-row">No employees match the selected filter.</td>
+            </tr>
+            ${Array.from({ length: WORKERS_ROWS_PER_PAGE - 1 }, () => `
+                <tr class="workers-placeholder-row" aria-hidden="true">
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+            `).join('')}
+        `;
+        updateWorkersPagination(0);
+        return;
+    }
+
+    const start = workersCurrentPage * WORKERS_ROWS_PER_PAGE;
+    const pageWorkers = filteredWorkers.slice(start, start + WORKERS_ROWS_PER_PAGE);
+    const placeholderRows = WORKERS_ROWS_PER_PAGE - pageWorkers.length;
+
+    table.innerHTML = pageWorkers.map(user => {
+        const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+        return `
+            <tr data-id="${user.EmployeeId}">
+                <td>${fullName}</td>
+                <td>${user.EmployeeId}</td>
+                <td>${user.Role}</td>
+                <td class="text-center">
+                    <button class="view-worker-btn icon-btn" type="button" data-id="${user.EmployeeId}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('') + Array.from({ length: placeholderRows }, () => `
+        <tr class="workers-placeholder-row" aria-hidden="true">
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+    `).join('');
+
+    updateWorkersPagination(filteredWorkers.length);
+}
+
+function updateWorkersPagination(totalRows) {
+    const pagination = document.querySelector('[data-workers-pagination]');
+    const prevButton = document.querySelector('[data-workers-prev]');
+    const nextButton = document.querySelector('[data-workers-next]');
+    const dots = document.querySelector('[data-workers-dots]');
+    const totalPages = Math.max(1, Math.ceil(totalRows / WORKERS_ROWS_PER_PAGE));
+
+    if (pagination) {
+        pagination.classList.toggle('is-hidden', totalRows <= WORKERS_ROWS_PER_PAGE);
+    }
+
+    if (prevButton) {
+        prevButton.disabled = workersCurrentPage === 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = workersCurrentPage >= totalPages - 1;
+    }
+
+    if (dots) {
+        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="workers-page-dot ${index === workersCurrentPage ? 'active' : ''}"
+                data-workers-page="${index}"
+                aria-label="Go to page ${index + 1}"
+                aria-current="${index === workersCurrentPage ? 'page' : 'false'}"
+            ></button>
+        `).join('');
+    }
+}
+
+function setupWorkersPagination() {
+    document.querySelector('[data-workers-prev]')?.addEventListener('click', () => {
+        workersCurrentPage = Math.max(0, workersCurrentPage - 1);
+        renderWorkersTable();
+    });
+
+    document.querySelector('[data-workers-next]')?.addEventListener('click', () => {
+        workersCurrentPage += 1;
+        renderWorkersTable();
+    });
+
+    document.querySelector('[data-workers-dots]')?.addEventListener('click', event => {
+        const dot = event.target.closest('[data-workers-page]');
+        if (!dot) return;
+
+        workersCurrentPage = Number(dot.dataset.workersPage || 0);
+        renderWorkersTable();
+    });
 }
 
 // ================= VIEW MODAL =================
@@ -139,16 +242,14 @@ document.addEventListener('keydown', (e) => {
 
 // ================= ROLE FILTER =================
 document.getElementById('roleFilter')?.addEventListener('change', e => {
-    const selected = e.target.value;
-
-    document.querySelectorAll('#workersTableBody tr').forEach(row => {
-        const role = row.children[2].innerText;
-        row.style.display = (selected === 'All' || role === selected) ? '' : 'none';
-    });
+    workersCurrentRole = e.target.value;
+    workersCurrentPage = 0;
+    renderWorkersTable();
 });
 
 // ================= INITIAL LOAD =================
 document.addEventListener('DOMContentLoaded', () => {
+    setupWorkersPagination();
     loadEmployees();
     setupProfileModal();
 });

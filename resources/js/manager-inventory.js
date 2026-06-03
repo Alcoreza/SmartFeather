@@ -49,12 +49,49 @@ function showPopup(message, type = "success", callback = null) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
-        overlay.remove();
+    overlay.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 180, easing: "ease-out" }
+    );
 
-        if (typeof callback === "function") {
-            callback();
-        }
+    box.animate(
+        type === "error"
+            ? [
+                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
+                { opacity: 1, transform: "translateY(0) scale(1.02)" },
+                { opacity: 1, transform: "translateX(-6px) scale(1)" },
+                { opacity: 1, transform: "translateX(6px) scale(1)" },
+                { opacity: 1, transform: "translateX(0) scale(1)" }
+            ]
+            : [
+                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
+                { opacity: 1, transform: "translateY(0) scale(1.02)" },
+                { opacity: 1, transform: "translateY(0) scale(1)" }
+            ],
+        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
+    );
+
+    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
+        const fadeOut = overlay.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            { duration: 140, easing: "ease-in" }
+        );
+
+        box.animate(
+            [
+                { opacity: 1, transform: "translateY(0) scale(1)" },
+                { opacity: 0, transform: "translateY(10px) scale(0.96)" }
+            ],
+            { duration: 140, easing: "ease-in" }
+        );
+
+        fadeOut.onfinish = () => {
+            overlay.remove();
+
+            if (typeof callback === "function") {
+                callback();
+            }
+        };
     });
 }
 
@@ -173,63 +210,65 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function setupInventoryModals() {
-    const feedModal = document.getElementById("feedEditModal");
-    const vitaminModal = document.getElementById("vitaminEditModal");
-    const feedAddModal = document.getElementById("feedAddModal");
-    const vitaminAddModal = document.getElementById("vitaminAddModal");
+    const feedModal = document.getElementById("feedEditStockModal");
+    const vitaminModal = document.getElementById("vitaminEditStockModal");
 
-    const openFeedBtn = document.getElementById("openFeedEditModal");
-    const openVitaminBtn = document.getElementById("openVitaminEditModal");
-    const openFeedAddBtn = document.getElementById("openFeedAddModal");
-    const openVitaminAddBtn = document.getElementById("openVitaminAddModal");
+    const openEditStockBtn = document.getElementById("openEditStockModal");
+    const feedModalTypeSelect = document.getElementById("feedModalTypeSelect");
+    const vitaminModalTypeSelect = document.getElementById("vitaminModalTypeSelect");
 
-    const closeFeedBtn = document.getElementById("closeFeedEditModal");
-    const closeVitaminBtn = document.getElementById("closeVitaminEditModal");
-    const closeFeedAddBtn = document.getElementById("closeFeedAddModal");
-    const closeVitaminAddBtn = document.getElementById("closeVitaminAddModal");
+    const feedActionDropdown = document.getElementById("feedActionDropdown");
+    const vitaminActionDropdown = document.getElementById("vitaminActionDropdown");
 
-    const feedEditSelect = document.getElementById("feedEditSelect");
-    const vitaminEditSelect = document.getElementById("vitaminEditSelect");
+    const closeFeedBtn = document.getElementById("closeFeedEditStockModal");
+    const closeVitaminBtn = document.getElementById("closeVitaminEditStockModal");
 
-    const feedInventoryId = document.getElementById("feedInventoryId");
-    const vitaminInventoryId = document.getElementById("vitaminInventoryId");
+    const feedEditStockSelect = document.getElementById("feedEditStockSelect");
+    const vitaminEditStockSelect = document.getElementById("vitaminEditStockSelect");
 
-    const feedStockToReduce = document.getElementById("feedStockToReduce");
-    const vitaminStockToReduce = document.getElementById("vitaminStockToReduce");
+    const feedInventoryIdUnified = document.getElementById("feedInventoryIdUnified");
+    const vitaminInventoryIdUnified = document.getElementById("vitaminInventoryIdUnified");
 
-    const feedCurrentRemaining = document.getElementById("feedCurrentRemaining");
-    const vitaminCurrentRemaining = document.getElementById("vitaminCurrentRemaining");
+    const feedStockAction = document.getElementById("feedStockAction");
+    const vitaminStockAction = document.getElementById("vitaminStockAction");
 
-    const addFeedName = document.getElementById("addFeedName");
-    const addVitaminName = document.getElementById("addVitaminName");
+    const feedStockQuantity = document.getElementById("feedStockQuantity");
+    const vitaminStockQuantity = document.getElementById("vitaminStockQuantity");
 
-    const addFeedUnit = document.getElementById("addFeedUnit");
-    const addVitaminUnit = document.getElementById("addVitaminUnit");
+    const feedCurrentStock = document.getElementById("feedCurrentStock");
+    const vitaminCurrentStock = document.getElementById("vitaminCurrentStock");
 
-    const addFeedStockToAdd = document.getElementById("addFeedStockToAdd");
-    const addVitaminStockToAdd = document.getElementById("addVitaminStockToAdd");
+    const feedForm = document.getElementById("feedEditStockForm");
+    const vitaminForm = document.getElementById("vitaminEditStockForm");
 
-    const addFeedPurchaseDate = document.getElementById("addFeedPurchaseDate");
-    const addVitaminPurchaseDate = document.getElementById("addVitaminPurchaseDate");
+    const feedModalTitle = document.getElementById("feedModalTitle");
+    const vitaminModalTitle = document.getElementById("vitaminModalTitle");
 
-    const feedForm = document.getElementById("feedEditForm");
-    const vitaminForm = document.getElementById("vitaminEditForm");
-    const feedAddForm = document.getElementById("feedAddForm");
-    const vitaminAddForm = document.getElementById("vitaminAddForm");
+    const feedQuantityLabel = document.getElementById("feedQuantityLabel");
+    const vitaminQuantityLabel = document.getElementById("vitaminQuantityLabel");
+
+    const feedCurrentStockGroup = document.getElementById("feedCurrentStockGroup");
+    const vitaminCurrentStockGroup = document.getElementById("vitaminCurrentStockGroup");
+
+    const feedStockPurchaseDate = document.getElementById("feedStockPurchaseDate");
+    const vitaminStockPurchaseDate = document.getElementById("vitaminStockPurchaseDate");
+    const feedPurchaseDateLabel = document.getElementById("feedPurchaseDateLabel");
+    const vitaminPurchaseDateLabel = document.getElementById("vitaminPurchaseDateLabel");
 
     let selectedFeedEntry = null;
     let selectedVitaminEntry = null;
+    let currentFeedAction = "";
+    let currentVitaminAction = "";
 
     function getEntriesByType(type) {
         if (type === "feed") {
             return Array.from(document.querySelectorAll(".inventory-feed-entry"));
         }
-
         return Array.from(document.querySelectorAll(".inventory-vitamin-entry"));
     }
 
     function populateDropdown(type) {
-        const select = type === "feed" ? feedEditSelect : vitaminEditSelect;
+        const select = type === "feed" ? feedEditStockSelect : vitaminEditStockSelect;
         const entries = getEntriesByType(type);
 
         if (!select) return;
@@ -246,104 +285,189 @@ function setupInventoryModals() {
         });
     }
 
+    function updateFormForAction(type, action) {
+        if (type === "feed") {
+            currentFeedAction = action;
+            if (feedStockAction) feedStockAction.value = action;
+            feedModalTitle.textContent = action === "add" ? "Add Feed Stock" : "Reduce Feed Stock";
+            feedQuantityLabel.textContent = action === "add" ? "Stock to Add" : "Stock to Reduce";
+            feedPurchaseDateLabel.textContent = action === "add" ? "Recent Purchase Date" : "Date Reduced";
+            feedCurrentStockGroup.style.display = "flex";
+        } else {
+            currentVitaminAction = action;
+            if (vitaminStockAction) vitaminStockAction.value = action;
+            vitaminModalTitle.textContent = action === "add" ? "Add Vitamin Stock" : "Reduce Vitamin Stock";
+            vitaminQuantityLabel.textContent = action === "add" ? "Stock to Add" : "Stock to Reduce";
+            vitaminPurchaseDateLabel.textContent = action === "add" ? "Recent Purchase Date" : "Date Reduced";
+            vitaminCurrentStockGroup.style.display = "flex";
+        }
+    }
+
+    function openUnifiedEditModal(type) {
+        if (type === "feed") {
+            vitaminModal?.classList.remove("show");
+            populateDropdown("feed");
+            if (feedActionDropdown) feedActionDropdown.value = "";
+            if (feedEditStockSelect) feedEditStockSelect.value = "";
+            if (feedInventoryIdUnified) feedInventoryIdUnified.value = "";
+            if (feedStockAction) feedStockAction.value = "";
+            if (feedStockQuantity) feedStockQuantity.value = "";
+            if (feedCurrentStock) feedCurrentStock.value = "";
+            if (feedStockPurchaseDate) feedStockPurchaseDate.value = "";
+            feedCurrentStockGroup.style.display = "none";
+            if (feedQuantityLabel) feedQuantityLabel.textContent = "Quantity";
+            if (feedPurchaseDateLabel) feedPurchaseDateLabel.textContent = "Recent Purchase Date";
+            if (feedModalTitle) feedModalTitle.textContent = "Edit Feed Stock";
+            if (feedModalTypeSelect) feedModalTypeSelect.value = "feed";
+            selectedFeedEntry = null;
+            currentFeedAction = "";
+            feedModal?.classList.add("show");
+        } else {
+            feedModal?.classList.remove("show");
+            populateDropdown("vitamin");
+            if (vitaminActionDropdown) vitaminActionDropdown.value = "";
+            if (vitaminEditStockSelect) vitaminEditStockSelect.value = "";
+            if (vitaminInventoryIdUnified) vitaminInventoryIdUnified.value = "";
+            if (vitaminStockAction) vitaminStockAction.value = "";
+            if (vitaminStockQuantity) vitaminStockQuantity.value = "";
+            if (vitaminCurrentStock) vitaminCurrentStock.value = "";
+            if (vitaminStockPurchaseDate) vitaminStockPurchaseDate.value = "";
+            vitaminCurrentStockGroup.style.display = "none";
+            if (vitaminQuantityLabel) vitaminQuantityLabel.textContent = "Quantity";
+            if (vitaminPurchaseDateLabel) vitaminPurchaseDateLabel.textContent = "Recent Purchase Date";
+            if (vitaminModalTitle) vitaminModalTitle.textContent = "Edit Vitamin Stock";
+            if (vitaminModalTypeSelect) vitaminModalTypeSelect.value = "vitamin";
+            selectedVitaminEntry = null;
+            currentVitaminAction = "";
+            vitaminModal?.classList.add("show");
+        }
+    }
+
     function fillFeedForm(entry) {
         if (!entry) return;
-
         selectedFeedEntry = entry;
 
-        if (feedInventoryId) {
-            feedInventoryId.value = entry.dataset.id;
+        if (feedInventoryIdUnified) {
+            feedInventoryIdUnified.value = entry.dataset.id;
         }
 
-        if (feedCurrentRemaining) {
-            feedCurrentRemaining.value = entry.dataset.remainingStock;
+        if (feedCurrentStock) {
+            feedCurrentStock.value = entry.dataset.remainingStock;
         }
 
-        if (feedStockToReduce) {
-            feedStockToReduce.value = "";
+        if (feedStockQuantity) {
+            feedStockQuantity.value = "";
         }
     }
 
     function fillVitaminForm(entry) {
         if (!entry) return;
-
         selectedVitaminEntry = entry;
 
-        if (vitaminInventoryId) {
-            vitaminInventoryId.value = entry.dataset.id;
+        if (vitaminInventoryIdUnified) {
+            vitaminInventoryIdUnified.value = entry.dataset.id;
         }
 
-        if (vitaminCurrentRemaining) {
-            vitaminCurrentRemaining.value = entry.dataset.remainingStock;
+        if (vitaminCurrentStock) {
+            vitaminCurrentStock.value = entry.dataset.remainingStock;
         }
 
-        if (vitaminStockToReduce) {
-            vitaminStockToReduce.value = "";
+        if (vitaminStockQuantity) {
+            vitaminStockQuantity.value = "";
         }
     }
 
-    openFeedBtn?.addEventListener("click", () => {
-        populateDropdown("feed");
-
-        if (feedEditSelect) feedEditSelect.value = "";
-        if (feedInventoryId) feedInventoryId.value = "";
-        if (feedStockToReduce) feedStockToReduce.value = "";
-        if (feedCurrentRemaining) feedCurrentRemaining.value = "";
-
+    // Action dropdown change listener for feed
+    feedActionDropdown?.addEventListener("change", (e) => {
+        const action = e.target.value;
+        
+        if (!action) {
+            // If empty selection, just hide current stock and restore neutral labels
+            feedCurrentStockGroup.style.display = "none";
+            if (feedCurrentStock) feedCurrentStock.value = "";
+            if (feedEditStockSelect) feedEditStockSelect.value = "";
+            if (feedInventoryIdUnified) feedInventoryIdUnified.value = "";
+            if (feedStockAction) feedStockAction.value = "";
+            feedQuantityLabel.textContent = "Quantity";
+            feedPurchaseDateLabel.textContent = "Recent Purchase Date";
+            feedModalTitle.textContent = "Edit Feed Stock";
+            selectedFeedEntry = null;
+            return;
+        }
+        
+        updateFormForAction("feed", action);
+        
+        // Reset form fields
+        if (feedEditStockSelect) feedEditStockSelect.value = "";
+        if (feedInventoryIdUnified) feedInventoryIdUnified.value = "";
+        if (feedStockQuantity) feedStockQuantity.value = "";
+        if (feedCurrentStock) feedCurrentStock.value = "";
+        if (feedStockPurchaseDate) feedStockPurchaseDate.value = "";
         selectedFeedEntry = null;
-        feedModal?.classList.add("show");
     });
 
-    openVitaminBtn?.addEventListener("click", () => {
-        populateDropdown("vitamin");
-
-        if (vitaminEditSelect) vitaminEditSelect.value = "";
-        if (vitaminInventoryId) vitaminInventoryId.value = "";
-        if (vitaminStockToReduce) vitaminStockToReduce.value = "";
-        if (vitaminCurrentRemaining) vitaminCurrentRemaining.value = "";
-
+    // Action dropdown change listener for vitamin
+    vitaminActionDropdown?.addEventListener("change", (e) => {
+        const action = e.target.value;
+        
+        if (!action) {
+            // If empty selection, just hide current stock and restore neutral labels
+            vitaminCurrentStockGroup.style.display = "none";
+            if (vitaminCurrentStock) vitaminCurrentStock.value = "";
+            if (vitaminEditStockSelect) vitaminEditStockSelect.value = "";
+            if (vitaminInventoryIdUnified) vitaminInventoryIdUnified.value = "";
+            if (vitaminStockAction) vitaminStockAction.value = "";
+            vitaminQuantityLabel.textContent = "Quantity";
+            vitaminPurchaseDateLabel.textContent = "Recent Purchase Date";
+            vitaminModalTitle.textContent = "Edit Vitamin Stock";
+            selectedVitaminEntry = null;
+            return;
+        }
+        
+        updateFormForAction("vitamin", action);
+        
+        // Reset form fields
+        if (vitaminEditStockSelect) vitaminEditStockSelect.value = "";
+        if (vitaminInventoryIdUnified) vitaminInventoryIdUnified.value = "";
+        if (vitaminStockQuantity) vitaminStockQuantity.value = "";
+        if (vitaminCurrentStock) vitaminCurrentStock.value = "";
+        if (vitaminStockPurchaseDate) vitaminStockPurchaseDate.value = "";
         selectedVitaminEntry = null;
-        vitaminModal?.classList.add("show");
     });
 
-    feedEditSelect?.addEventListener("change", () => {
-        const selectedId = feedEditSelect.value;
+    // Open button listeners
+    openEditStockBtn?.addEventListener("click", () => {
+        openUnifiedEditModal("feed");
+    });
+
+    feedEditStockSelect?.addEventListener("change", () => {
+        const selectedId = feedEditStockSelect.value;
         const entry = document.querySelector(`.inventory-feed-entry[data-id="${selectedId}"]`);
         fillFeedForm(entry);
     });
 
-    vitaminEditSelect?.addEventListener("change", () => {
-        const selectedId = vitaminEditSelect.value;
+    vitaminEditStockSelect?.addEventListener("change", () => {
+        const selectedId = vitaminEditStockSelect.value;
         const entry = document.querySelector(`.inventory-vitamin-entry[data-id="${selectedId}"]`);
         fillVitaminForm(entry);
     });
 
-    openFeedAddBtn?.addEventListener("click", () => {
-        feedAddForm?.reset();
-
-        if (addFeedUnit) {
-            addFeedUnit.value = "kg";
+    feedModalTypeSelect?.addEventListener("change", (e) => {
+        if (e.target.value === "vitamin") {
+            openUnifiedEditModal("vitamin");
         }
-
-        feedAddModal?.classList.add("show");
     });
 
-    openVitaminAddBtn?.addEventListener("click", () => {
-        vitaminAddForm?.reset();
-
-        if (addVitaminUnit) {
-            addVitaminUnit.value = "bottle";
+    vitaminModalTypeSelect?.addEventListener("change", (e) => {
+        if (e.target.value === "feed") {
+            openUnifiedEditModal("feed");
         }
-
-        vitaminAddModal?.classList.add("show");
     });
 
     closeFeedBtn?.addEventListener("click", () => feedModal?.classList.remove("show"));
     closeVitaminBtn?.addEventListener("click", () => vitaminModal?.classList.remove("show"));
-    closeFeedAddBtn?.addEventListener("click", () => feedAddModal?.classList.remove("show"));
-    closeVitaminAddBtn?.addEventListener("click", () => vitaminAddModal?.classList.remove("show"));
 
-    [feedModal, vitaminModal, feedAddModal, vitaminAddModal].forEach((modal) => {
+    [feedModal, vitaminModal].forEach((modal) => {
         modal?.addEventListener("click", (e) => {
             if (e.target === modal) {
                 modal.classList.remove("show");
@@ -351,81 +475,70 @@ function setupInventoryModals() {
         });
     });
 
-    feedAddForm?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        try {
-            const payload = {
-                item_name: addFeedName.value.trim(),
-                type: "feed",
-                stock_to_add: Number(addFeedStockToAdd.value),
-                purchase_date: addFeedPurchaseDate.value
-            };
-
-            const res = await apiRequest("/api/manager/inventory", "POST", payload);
-
-            if (res.success) {
-                showPopup(res.message || "Feed stock added successfully.", "success", () => {
-                    location.reload();
-                });
-            } else {
-                showPopup(res.error || res.message || "Failed to save feed stock.", "error");
-            }
-        } catch (error) {
-            console.error(error);
-            showPopup("Something went wrong while saving feed stock.", "error");
-        }
-    });
-
-    vitaminAddForm?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        try {
-            const payload = {
-                item_name: addVitaminName.value.trim(),
-                type: "vitamin",
-                stock_to_add: Number(addVitaminStockToAdd.value),
-                purchase_date: addVitaminPurchaseDate.value
-            };
-
-            const res = await apiRequest("/api/manager/inventory", "POST", payload);
-
-            if (res.success) {
-                showPopup(res.message || "Vitamin stock added successfully.", "success", () => {
-                    location.reload();
-                });
-            } else {
-                showPopup(res.error || res.message || "Failed to save vitamin stock.", "error");
-            }
-        } catch (error) {
-            console.error(error);
-            showPopup("Something went wrong while saving vitamin stock.", "error");
-        }
-    });
-
     feedForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        if (!selectedFeedEntry) {
+        if (!currentFeedAction) {
+            showPopup("Please select an action (Add or Reduce).", "error");
+            return;
+        }
+
+        if (!feedEditStockSelect.value) {
+            showPopup("Please select a feed item.", "error");
+            return;
+        }
+
+        if (currentFeedAction === "reduce" && !selectedFeedEntry) {
             showPopup("Please select a feed item.", "error");
             return;
         }
 
         try {
-            const id = selectedFeedEntry.dataset.id;
+            let payload;
 
-            const payload = {
-                stock_to_reduce: Number(feedStockToReduce.value)
-            };
+            if (currentFeedAction === "add") {
+                payload = {
+                    item_name: selectedFeedEntry
+                        ? selectedFeedEntry.dataset.itemName
+                        : feedEditStockSelect.options[feedEditStockSelect.selectedIndex]?.text || feedEditStockSelect.value,
+                    type: "feed",
+                    stock_to_add: Number(feedStockQuantity.value),
+                    purchase_date: feedStockPurchaseDate.value
+                };
 
-            const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
+                const res = await apiRequest("/api/manager/inventory", "POST", payload);
 
-            if (res.success) {
-                showPopup(res.message || "Feed stock reduced successfully.", "success", () => {
-                    location.reload();
-                });
+                if (res.success) {
+                    showPopup(res.message || "Feed stock added successfully.", "success", () => {
+                        location.reload();
+                    });
+                } else {
+                    showPopup(res.error || res.message || "Failed to save feed stock.", "error");
+                }
             } else {
-                showPopup(res.error || res.message || "Failed to reduce feed stock.", "error");
+                const id = selectedFeedEntry.dataset.id;
+                const stockToReduce = Number(feedStockQuantity.value);
+                const remainingStock = Number(selectedFeedEntry.dataset.remainingStock);
+
+                if (stockToReduce > remainingStock) {
+                    showPopup("Stock to reduce cannot be higher than the remaining feed stock.", "error");
+                    return;
+                }
+
+                payload = {
+                    stock_to_reduce: stockToReduce,
+                    reduced_date: feedStockPurchaseDate.value
+                };
+
+                const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
+
+                if (res.success) {
+                    showPopup(res.message || "Feed stock reduced successfully.", "success", () => {
+                        location.reload();
+                    });
+                } else {
+                    showPopup(res.error || res.message || "Failed to reduce feed stock.", "error");
+                }
             }
         } catch (error) {
             console.error(error);
@@ -436,26 +549,67 @@ function setupInventoryModals() {
     vitaminForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        if (!selectedVitaminEntry) {
+        if (!currentVitaminAction) {
+            showPopup("Please select an action (Add or Reduce).", "error");
+            return;
+        }
+
+        if (!vitaminEditStockSelect.value) {
+            showPopup("Please select a vitamin item.", "error");
+            return;
+        }
+
+        if (currentVitaminAction === "reduce" && !selectedVitaminEntry) {
             showPopup("Please select a vitamin item.", "error");
             return;
         }
 
         try {
-            const id = selectedVitaminEntry.dataset.id;
+            let payload;
 
-            const payload = {
-                stock_to_reduce: Number(vitaminStockToReduce.value)
-            };
+            if (currentVitaminAction === "add") {
+                payload = {
+                    item_name: selectedVitaminEntry
+                        ? selectedVitaminEntry.dataset.itemName
+                        : vitaminEditStockSelect.options[vitaminEditStockSelect.selectedIndex]?.text || vitaminEditStockSelect.value,
+                    type: "vitamin",
+                    stock_to_add: Number(vitaminStockQuantity.value),
+                    purchase_date: vitaminStockPurchaseDate.value
+                };
 
-            const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
+                const res = await apiRequest("/api/manager/inventory", "POST", payload);
 
-            if (res.success) {
-                showPopup(res.message || "Vitamin stock reduced successfully.", "success", () => {
-                    location.reload();
-                });
+                if (res.success) {
+                    showPopup(res.message || "Vitamin stock added successfully.", "success", () => {
+                        location.reload();
+                    });
+                } else {
+                    showPopup(res.error || res.message || "Failed to save vitamin stock.", "error");
+                }
             } else {
-                showPopup(res.error || res.message || "Failed to reduce vitamin stock.", "error");
+                const id = selectedVitaminEntry.dataset.id;
+                const stockToReduce = Number(vitaminStockQuantity.value);
+                const remainingStock = Number(selectedVitaminEntry.dataset.remainingStock);
+
+                if (stockToReduce > remainingStock) {
+                    showPopup("Stock to reduce cannot be higher than the remaining vitamin stock.", "error");
+                    return;
+                }
+
+                payload = {
+                    stock_to_reduce: stockToReduce,
+                    reduced_date: vitaminStockPurchaseDate.value
+                };
+
+                const res = await apiRequest(`/api/manager/inventory/${id}`, "PUT", payload);
+
+                if (res.success) {
+                    showPopup(res.message || "Vitamin stock reduced successfully.", "success", () => {
+                        location.reload();
+                    });
+                } else {
+                    showPopup(res.error || res.message || "Failed to reduce vitamin stock.", "error");
+                }
             }
         } catch (error) {
             console.error(error);

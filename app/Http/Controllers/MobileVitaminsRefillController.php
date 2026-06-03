@@ -82,7 +82,8 @@ class MobileVitaminsRefillController extends Controller
     public function getVitaminInventoryOptions()
     {
         $items = DB::table('inventories')
-            ->where('type', 'vitamin')
+            ->whereIn(DB::raw('LOWER(TRIM(type))'), ['vitamin', 'vitamins'])
+            ->whereNull('archived_at')
             ->orderBy('item_name')
             ->get([
                 'id',
@@ -144,17 +145,6 @@ class MobileVitaminsRefillController extends Controller
             ], 403);
         }
 
-        $inventory = DB::table('inventories')
-            ->where('id', $validated['inventory_id'])
-            ->where('type', 'vitamin')
-            ->first();
-
-        if (!$inventory) {
-            return response()->json([
-                'message' => 'Selected vitamin inventory was not found.',
-            ], 404);
-        }
-
         $pen = Pen::where('id', $validated['pen_id'])
             ->where('house_id', $validated['house_id'])
             ->first();
@@ -165,24 +155,37 @@ class MobileVitaminsRefillController extends Controller
             ], 422);
         }
 
-        $remainingStock = (int) $inventory->remaining_stock;
-        $initialStock = (int) $inventory->initial_stock;
-        $bottles = (int) $validated['bottles'];
+        return DB::transaction(function () use ($validated) {
+            $inventory = DB::table('inventories')
+                ->where('id', $validated['inventory_id'])
+                ->whereIn(DB::raw('LOWER(TRIM(type))'), ['vitamin', 'vitamins'])
+                ->whereNull('archived_at')
+                ->lockForUpdate()
+                ->first();
 
-        if ($remainingStock < $bottles) {
-            return response()->json([
-                'message' => 'Not enough remaining vitamin stock.',
-            ], 422);
-        }
+            if (!$inventory) {
+                return response()->json([
+                    'message' => 'Selected vitamin is no longer active. Please choose another vitamin type.',
+                ], 422);
+            }
 
-        $newRemaining = $remainingStock - $bottles;
+            $remainingStock = (int) $inventory->remaining_stock;
+            $initialStock = (int) $inventory->initial_stock;
+            $bottles = (int) $validated['bottles'];
 
-        DB::transaction(function () use ($validated, $initialStock, $newRemaining) {
+            if ($remainingStock < $bottles) {
+                return response()->json([
+                    'message' => 'Not enough remaining vitamin stock.',
+                ], 422);
+            }
+
+            $newRemaining = $remainingStock - $bottles;
+
             DB::table('vitamin_refill_records')->insert([
                 'inventory_id' => $validated['inventory_id'],
                 'house_id' => $validated['house_id'],
                 'pen_id' => $validated['pen_id'],
-                'bottles_used' => $validated['bottles'],
+                'bottles_used' => $bottles,
                 'recorded_at' => $validated['recorded_at'],
             ]);
 
@@ -199,11 +202,11 @@ class MobileVitaminsRefillController extends Controller
                 'remaining_stock' => $newRemaining,
                 'monitoring_date' => $validated['recorded_at'],
             ]);
-        });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Vitamins refill submitted successfully.',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Vitamins refill submitted successfully.',
+            ]);
+        });
     }
 }

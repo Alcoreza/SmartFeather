@@ -82,7 +82,8 @@ class MobileFeedsRefillController extends Controller
     public function getFeedInventoryOptions()
     {
         $items = DB::table('inventories')
-            ->where('type', 'feed')
+            ->whereIn(DB::raw('LOWER(TRIM(type))'), ['feed', 'feeds'])
+            ->whereNull('archived_at')
             ->orderBy('item_name')
             ->get([
                 'id',
@@ -145,17 +146,6 @@ class MobileFeedsRefillController extends Controller
             ], 403);
         }
 
-        $inventory = DB::table('inventories')
-            ->where('id', $validated['inventory_id'])
-            ->where('type', 'feed')
-            ->first();
-
-        if (!$inventory) {
-            return response()->json([
-                'message' => 'Selected feed inventory was not found.',
-            ], 404);
-        }
-
         $pen = Pen::where('id', $validated['pen_id'])
             ->where('house_id', $validated['house_id'])
             ->first();
@@ -166,42 +156,59 @@ class MobileFeedsRefillController extends Controller
             ], 422);
         }
 
-        $remainingStock = (int) $inventory->remaining_stock;
-        $initialStock = (int) $inventory->initial_stock;
-        $kilograms = (int) $validated['kilograms'];
+        try {
+            DB::transaction(function () use ($validated) {
+                $inventory = DB::table('inventories')
+                    ->where('id', $validated['inventory_id'])
+                    ->whereIn(DB::raw('LOWER(TRIM(type))'), ['feed', 'feeds'])
+                    ->whereNull('archived_at')
+                    ->lockForUpdate()
+                    ->first();
 
-        if ($remainingStock < $kilograms) {
-            return response()->json([
-                'message' => 'Not enough remaining feed stock.',
-            ], 422);
-        }
+                if (!$inventory) {
+                    abort(response()->json([
+                        'message' => 'Selected feed is no longer active. Please choose another feed type.',
+                    ], 422));
+                }
 
-        $newRemaining = $remainingStock - $kilograms;
+                $remainingStock = (int) $inventory->remaining_stock;
+                $initialStock = (int) $inventory->initial_stock;
+                $kilograms = (int) $validated['kilograms'];
 
-        DB::transaction(function () use ($validated, $initialStock, $newRemaining) {
-            DB::table('feed_refill_records')->insert([
-                'inventory_id' => $validated['inventory_id'],
-                'house_id' => $validated['house_id'],
-                'pen_id' => $validated['pen_id'],
-                'feeder_number' => $validated['feeder_number'],
-                'kilograms_used' => $validated['kilograms'],
-                'recorded_at' => $validated['recorded_at'],
-            ]);
+                if ($remainingStock < $kilograms) {
+                    abort(response()->json([
+                        'message' => 'Not enough remaining feed stock.',
+                    ], 422));
+                }
 
-            DB::table('inventories')
-                ->where('id', $validated['inventory_id'])
-                ->update([
-                    'remaining_stock' => $newRemaining,
-                    'updated_at' => now(),
+                $newRemaining = $remainingStock - $kilograms;
+
+                DB::table('feed_refill_records')->insert([
+                    'inventory_id' => $validated['inventory_id'],
+                    'house_id' => $validated['house_id'],
+                    'pen_id' => $validated['pen_id'],
+                    'feeder_number' => $validated['feeder_number'],
+                    'kilograms_used' => $kilograms,
+                    'recorded_at' => $validated['recorded_at'],
                 ]);
 
-            DB::table('inventory_records')->insert([
-                'inventory_id' => $validated['inventory_id'],
-                'initial_stock' => $initialStock,
-                'remaining_stock' => $newRemaining,
-                'monitoring_date' => $validated['recorded_at'],
-            ]);
-        });
+                DB::table('inventories')
+                    ->where('id', $validated['inventory_id'])
+                    ->update([
+                        'remaining_stock' => $newRemaining,
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('inventory_records')->insert([
+                    'inventory_id' => $validated['inventory_id'],
+                    'initial_stock' => $initialStock,
+                    'remaining_stock' => $newRemaining,
+                    'monitoring_date' => $validated['recorded_at'],
+                ]);
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            throw $exception;
+        }
 
         return response()->json([
             'success' => true,

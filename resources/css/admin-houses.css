@@ -580,6 +580,34 @@
     box-shadow: 0 0 0 3px rgba(31, 107, 45, 0.12);
 }
 
+.modal-group.has-error label {
+    color: #b42318;
+}
+
+.modal-group.has-error input,
+.modal-group.has-error select {
+    border-color: #d92d20;
+    background: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
+}
+
+.house-form-error {
+    display: none;
+    margin-bottom: 16px;
+    border: 1.5px solid rgba(199, 54, 45, 0.35);
+    border-radius: 16px;
+    padding: 11px 13px;
+    background: rgba(217, 63, 50, 0.08);
+    color: #b42318;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.house-form-error.show {
+    display: block;
+}
+
 .modal-actions {
     display: flex;
     justify-content: center;
@@ -615,6 +643,41 @@
 
 .save-btn:hover {
     background: #185423;
+}
+
+.house-required-card {
+    max-width: 400px;
+    border: 2px solid #b42318;
+    background: #fff8f7;
+    box-shadow: 0 8px 32px rgba(180, 35, 24, 0.12);
+}
+
+.house-required-card .modal-header h2 {
+    color: #b42318;
+}
+
+.house-required-card .save-btn {
+    background: #b42318;
+}
+
+.house-required-card .save-btn:hover {
+    background: #8a1a12;
+}
+
+.house-required-body {
+    text-align: left;
+}
+
+.house-required-text {
+    margin: 0;
+    color: #b42318;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+.house-required-actions {
+    justify-content: flex-end;
+    margin-top: 18px;
 }
 
 .edit-data-modal {

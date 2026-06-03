@@ -38,6 +38,10 @@ body {
 .admin-sidebar {
     width: 220px;
     min-height: 100vh;
+    height: max-content;
+    max-height: none;
+    flex: 0 0 220px;
+    align-self: flex-start;
     padding: 28px 20px;
     background: linear-gradient(
         180deg,
@@ -67,6 +71,9 @@ body {
     border-radius: 26px;
     display: grid;
     place-items: center;
+    padding: 6px;
+    box-sizing: border-box;
+    overflow: hidden;
     font-size: 2.3rem;
     font-weight: 800;
     color: #f3fff6;
@@ -77,6 +84,14 @@ body {
     );
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 18px 35px rgba(0, 0, 0, 0.18);
+}
+
+.admin-sidebar-logo img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    border-radius: 20px;
 }
 
 .admin-sidebar-divider {
@@ -295,6 +310,10 @@ body {
 
     .admin-sidebar {
         width: 100%;
+        height: auto;
+        max-height: none;
+        flex: none;
+        align-self: stretch;
         min-height: auto;
         position: relative;
     }

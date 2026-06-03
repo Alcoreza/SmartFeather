@@ -99,13 +99,50 @@ function showPopup(message, type = "success", callback = null) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
+    overlay.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 180, easing: "ease-out" }
+    );
+
+    box.animate(
+        type === "error"
+            ? [
+                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
+                { opacity: 1, transform: "translateY(0) scale(1.02)" },
+                { opacity: 1, transform: "translateX(-6px) scale(1)" },
+                { opacity: 1, transform: "translateX(6px) scale(1)" },
+                { opacity: 1, transform: "translateX(0) scale(1)" }
+            ]
+            : [
+                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
+                { opacity: 1, transform: "translateY(0) scale(1.02)" },
+                { opacity: 1, transform: "translateY(0) scale(1)" }
+            ],
+        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
+    );
+
     document.getElementById("managementPopupOkBtn")
         .addEventListener("click", () => {
-            overlay.remove();
+            const fadeOut = overlay.animate(
+                [{ opacity: 1 }, { opacity: 0 }],
+                { duration: 140, easing: "ease-in" }
+            );
 
-            if (typeof callback === "function") {
-                callback();
-            }
+            box.animate(
+                [
+                    { opacity: 1, transform: "translateY(0) scale(1)" },
+                    { opacity: 0, transform: "translateY(10px) scale(0.96)" }
+                ],
+                { duration: 140, easing: "ease-in" }
+            );
+
+            fadeOut.onfinish = () => {
+                overlay.remove();
+
+                if (typeof callback === "function") {
+                    callback();
+                }
+            };
         });
 }
 
@@ -148,7 +185,7 @@ async function handleCreateInventoryTypeSubmit(event) {
                 const firstError = Object.values(data.errors)[0]?.[0];
 
                 showPopup(
-                    firstError || "Unable to save inventory type.",
+                    firstError || "Unable to save inventory item.",
                     "error"
                 );
 
@@ -156,7 +193,7 @@ async function handleCreateInventoryTypeSubmit(event) {
             }
 
             showPopup(
-                data.error || data.message || "Unable to save inventory type.",
+                data.error || data.message || "Unable to save inventory item.",
                 "error"
             );
 
@@ -178,7 +215,7 @@ async function handleCreateInventoryTypeSubmit(event) {
         console.error(error);
 
         showPopup(
-            error.message || "Unable to save inventory type.",
+            error.message || "Unable to save inventory item.",
             "error"
         );
     }

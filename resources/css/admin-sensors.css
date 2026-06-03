@@ -522,6 +522,23 @@ body {
     margin-top: 18px;
 }
 
+.admin-sensor-form-error {
+    display: none;
+    margin-bottom: 16px;
+    border: 1.5px solid rgba(199, 54, 45, 0.35);
+    border-radius: 16px;
+    padding: 11px 13px;
+    background: rgba(217, 63, 50, 0.08);
+    color: #b42318;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.admin-sensor-form-error.show {
+    display: block;
+}
+
 .admin-sensor-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -568,6 +585,22 @@ body {
     transform: translateY(-1px);
 }
 
+.admin-sensor-form-field.has-error label {
+    color: #b42318;
+}
+
+.admin-sensor-form-field.has-error input {
+    border-color: #d92d20;
+    background: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
+}
+
+.admin-sensor-form-field.has-error select {
+    border-color: #d92d20;
+    background-color: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
+}
+
 .admin-sensor-form-field select {
     appearance: none;
     background-image:
@@ -599,6 +632,27 @@ body {
     select.admin-sensor-select-placeholder
     option[value=""] {
     color: #8f8f8f;
+}
+
+.admin-sensor-required-card {
+    border: 2px solid #b42318;
+    background: #fff8f7;
+    box-shadow: 0 8px 32px rgba(180, 35, 24, 0.12);
+}
+
+.admin-sensor-required-card h2 {
+    color: #b42318;
+}
+
+.admin-sensor-required-card .admin-sensor-btn.save {
+    background: linear-gradient(180deg, #b42318, #8a1a12);
+}
+
+.admin-sensor-required-text {
+    margin: 0 0 18px;
+    color: #b42318;
+    font-size: 1.1rem;
+    line-height: 1.5;
 }
 
 .profile-modal-backdrop {

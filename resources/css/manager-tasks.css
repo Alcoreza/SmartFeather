@@ -244,9 +244,10 @@ body {
 
 .manager-task-table-wrap {
     width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: hidden;
     scrollbar-width: thin;
+    height: 380px;
+    flex: 1;
 }
 
 .manager-task-table {
@@ -306,6 +307,69 @@ body {
 .manager-task-table td:last-child {
     border-top-right-radius: 16px;
     border-bottom-right-radius: 16px;
+}
+
+.manager-task-row-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(10, 51, 27, 0.08);
+}
+
+.manager-task-page-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.manager-task-page-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    color: #062c17;
+    border-color: rgba(87, 196, 81, 0.6);
+    box-shadow: 0 4px 12px rgba(87, 196, 81, 0.15);
+}
+
+.manager-task-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.manager-task-page-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.manager-task-page-dot {
+    width: 10px;
+    height: 10px;
+    border: 1px solid rgba(87, 196, 81, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.manager-task-page-dot:hover {
+    background: rgba(87, 196, 81, 0.2);
+    border-color: rgba(87, 196, 81, 0.6);
+}
+
+.manager-task-page-dot.active {
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    border-color: rgba(87, 196, 81, 0.6);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
 }
 
 .manager-task-photo-link {
@@ -580,11 +644,16 @@ body {
     transform: translateY(-1px);
 }
 
+.manager-task-form-field.has-error label {
+    color: #b42318;
+}
+
 .manager-task-form-field.has-error input,
 .manager-task-form-field.has-error select,
 .manager-task-form-field.has-error textarea {
-    border-color: #c7362d;
-    box-shadow: 0 0 0 4px rgba(199, 54, 45, 0.1);
+    border-color: #d92d20;
+    background: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
 }
 
 .manager-task-form-field select {
@@ -684,5 +753,9 @@ body {
 
     .manager-task-confirm-actions {
         flex-direction: column;
+    }
+
+    .manager-task-row-pagination {
+        flex-wrap: wrap;
     }
 }

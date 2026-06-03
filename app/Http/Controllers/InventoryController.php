@@ -11,6 +11,7 @@ class InventoryController extends Controller
     {
         $items = DB::table('inventories')
             ->whereNull('archived_at')
+            ->orderBy('id', 'asc')
             ->get();
 
         $feedItems = $items->where('type', 'feed')
@@ -19,16 +20,18 @@ class InventoryController extends Controller
         $vitaminItems = $items->where('type', 'vitamin')
             ->map(fn ($item) => $this->formatItem($item));
 
-        $feedTypeOptions = DB::table('inventory_types')
-            ->where('category', 'feed')
+        $feedTypeOptions = DB::table('inventories')
+            ->select('item_name as name')
+            ->where('type', 'feed')
             ->whereNull('archived_at')
-            ->orderBy('name')
+            ->orderBy('item_name')
             ->get();
 
-        $vitaminTypeOptions = DB::table('inventory_types')
-            ->where('category', 'vitamin')
+        $vitaminTypeOptions = DB::table('inventories')
+            ->select('item_name as name')
+            ->where('type', 'vitamin')
             ->whereNull('archived_at')
-            ->orderBy('name')
+            ->orderBy('item_name')
             ->get();
 
         return view('manager.inventory', compact(
@@ -49,77 +52,49 @@ class InventoryController extends Controller
                 'purchase_date' => 'required|date',
             ]);
 
-            $inventoryType = DB::table('inventory_types')
-                ->where('category', $validated['type'])
-                ->where('name', $validated['item_name'])
-                ->whereNull('archived_at')
-                ->first();
+            $itemName = trim($validated['item_name']);
+            $itemType = $validated['type'];
 
-            if (!$inventoryType) {
-                return response()->json([
-                    'error' => 'Inventory type not found or already archived.',
-                ], 404);
-            }
-
-            $unit = $validated['type'] === 'vitamin' ? 'bottle' : 'kg';
+            $unit = $itemType === 'vitamin' ? 'bottle' : 'kg';
             $stockToAdd = (float) $validated['stock_to_add'];
 
             $existingInventory = DB::table('inventories')
-                ->where('item_name', $validated['item_name'])
-                ->where('type', $validated['type'])
+                ->whereRaw('LOWER(item_name) = ?', [strtolower($itemName)])
+                ->where('type', $itemType)
                 ->whereNull('archived_at')
                 ->first();
 
-            if ($existingInventory) {
-                $newRemainingStock = (float) $existingInventory->remaining_stock + $stockToAdd;
-
-                DB::table('inventories')
-                    ->where('id', $existingInventory->id)
-                    ->update([
-                        'unit' => $unit,
-                        'remaining_stock' => $newRemainingStock,
-                        'purchase_date' => $validated['purchase_date'],
-                        'updated_at' => now(),
-                    ]);
-
-                DB::table('inventory_records')->insert([
-                    'inventory_id' => $existingInventory->id,
-                    'initial_stock' => $existingInventory->initial_stock,
-                    'remaining_stock' => $newRemainingStock,
-                    'deducted' => 0,
-                    'monitoring_date' => now(),
-                ]);
-
+            if (!$existingInventory) {
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Stock added successfully.',
-                ]);
+                    'error' => 'Inventory item not found or already archived.',
+                ], 404);
             }
 
-            $inventoryId = DB::table('inventories')->insertGetId([
-                'item_name' => $validated['item_name'],
-                'type' => $validated['type'],
-                'unit' => $unit,
-                'initial_stock' => $inventoryType->initial_stock,
-                'remaining_stock' => $stockToAdd,
-                'critical' => $inventoryType->critical,
-                'purchase_date' => $validated['purchase_date'],
-                'archived_at' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $newRemainingStock = (float) $existingInventory->remaining_stock + $stockToAdd;
+
+            DB::table('inventories')
+                ->where('id', $existingInventory->id)
+                ->update([
+                    'unit' => $unit,
+                    'remaining_stock' => $newRemainingStock,
+                    'purchase_date' => $validated['purchase_date'],
+                    'updated_at' => now(),
+                ]);
 
             DB::table('inventory_records')->insert([
-                'inventory_id' => $inventoryId,
-                'initial_stock' => $inventoryType->initial_stock,
-                'remaining_stock' => $stockToAdd,
+                'inventory_id' => $existingInventory->id,
+                'initial_stock' => $existingInventory->initial_stock,
+                'remaining_stock' => $newRemainingStock,
                 'deducted' => 0,
+                'added' => $stockToAdd,
+                'initial_purchase_date' => $this->initialPurchaseDate($existingInventory->id, $existingInventory->purchase_date),
+                'recent_purchase_date' => $validated['purchase_date'],
                 'monitoring_date' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Inventory added successfully.',
+                'message' => 'Stock added successfully.',
             ]);
 
         } catch (\Exception $e) {
@@ -134,6 +109,7 @@ class InventoryController extends Controller
         try {
             $validated = $request->validate([
                 'stock_to_reduce' => 'required|numeric|min:0',
+                'reduced_date' => 'required|date',
             ]);
 
             $inventory = DB::table('inventories')
@@ -148,12 +124,15 @@ class InventoryController extends Controller
             }
 
             $stockToReduce = (float) $validated['stock_to_reduce'];
-            $newRemainingStock = (float) $inventory->remaining_stock - $stockToReduce;
+            $remainingStock = (float) $inventory->remaining_stock;
 
-            if ($newRemainingStock < 0) {
-                $stockToReduce = (float) $inventory->remaining_stock;
-                $newRemainingStock = 0;
+            if ($stockToReduce > $remainingStock) {
+                return response()->json([
+                    'error' => 'Stock to reduce cannot be higher than the remaining stock.',
+                ], 422);
             }
+
+            $newRemainingStock = $remainingStock - $stockToReduce;
 
             DB::table('inventories')
                 ->where('id', $id)
@@ -167,6 +146,9 @@ class InventoryController extends Controller
                 'initial_stock' => $inventory->initial_stock,
                 'remaining_stock' => $newRemainingStock,
                 'deducted' => $stockToReduce,
+                'added' => 0,
+                'initial_purchase_date' => $this->initialPurchaseDate($id, $inventory->purchase_date),
+                'reduced_date' => $validated['reduced_date'],
                 'monitoring_date' => now(),
             ]);
 
@@ -207,15 +189,6 @@ class InventoryController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            DB::table('inventory_types')
-                ->where('category', $inventory->type)
-                ->where('name', $inventory->item_name)
-                ->whereNull('archived_at')
-                ->update([
-                    'archived_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
             DB::commit();
 
             return response()->json([
@@ -247,6 +220,10 @@ class InventoryController extends Controller
                 'r.initial_stock',
                 'r.remaining_stock',
                 'r.deducted',
+                'r.added',
+                'r.initial_purchase_date',
+                'r.recent_purchase_date',
+                'r.reduced_date',
                 'r.monitoring_date'
             )
             ->orderBy('r.monitoring_date', 'desc')
@@ -293,6 +270,15 @@ class InventoryController extends Controller
             'status' => $status[0],
             'status_class' => $status[1],
         ];
+    }
+
+    private function initialPurchaseDate($inventoryId, $fallback = null)
+    {
+        return DB::table('inventory_records')
+            ->where('inventory_id', $inventoryId)
+            ->whereNotNull('initial_purchase_date')
+            ->orderBy('id')
+            ->value('initial_purchase_date') ?? $fallback;
     }
 
     public function items(Request $request)

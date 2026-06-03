@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([renderManagerTasks(), loadTaskFormOptions()]);
 
     setupTaskFilters();
+    setupTaskRowPaginationControls();
     setupTaskSelectPlaceholderState();
     setupManagerTaskModals();
     setupAddTaskModal();
@@ -12,6 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 const ALL_HOUSES_OPTION = "All houses";
 const ALL_PRIORITY_OPTION = "All priority";
 const PRIORITY_ORDER = ["Low", "Medium", "High"];
+const TASK_ROWS_PER_PAGE = 5;
 
 let taskPendingVerify = null;
 let taskDataCache = {
@@ -19,7 +21,22 @@ let taskDataCache = {
     for_approval: [],
     completed: [],
 };
+let taskRowPages = {
+    pending: 0,
+    for_approval: 0,
+    completed: 0,
+};
 let availableHouseOptions = [];
+const addTaskRequiredFields = [
+    { name: "worker_name", label: "Assign Flockman" },
+    { name: "task_category", label: "Task" },
+    { name: "priority_level", label: "Priority Level" },
+    { name: "house_number", label: "House Number" },
+    { name: "pen_number", label: "Pen Number" },
+    { name: "time_assigned", label: "Time to finish" },
+    { name: "date_assigned", label: "Date to finish" },
+];
+let shouldTrackAddTaskRequiredHighlights = false;
 let taskFilters = {
     pending: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
     for_approval: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
@@ -142,6 +159,39 @@ function setupTaskFilters() {
     });
 }
 
+function setupTaskRowPaginationControls() {
+    const sections = ["pending", "for_approval", "completed"];
+
+    sections.forEach((section) => {
+        const prevBtn = document.querySelector(`[data-task-row-prev="${section}"]`);
+        const nextBtn = document.querySelector(`[data-task-row-next="${section}"]`);
+        const dotsContainer = document.querySelector(`[data-task-row-dots="${section}"]`);
+
+        if (prevBtn) {
+            prevBtn.addEventListener("click", () => {
+                taskRowPages[section] = Math.max(0, taskRowPages[section] - 1);
+                renderTaskSection(section);
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener("click", () => {
+                taskRowPages[section] += 1;
+                renderTaskSection(section);
+            });
+        }
+
+        if (dotsContainer) {
+            dotsContainer.addEventListener("click", (event) => {
+                const dot = event.target.closest("[data-task-row-page]");
+                if (!dot) return;
+                taskRowPages[section] = Number(dot.dataset.taskRowPage || 0);
+                renderTaskSection(section);
+            });
+        }
+    });
+}
+
 function renderTaskSection(section) {
     if (section === "pending") {
         renderPendingTasks(taskDataCache.pending);
@@ -155,6 +205,40 @@ function renderTaskSection(section) {
 
     if (section === "completed") {
         renderCompletedTasks(taskDataCache.completed);
+    }
+}
+
+function updateTaskRowPagination(section, totalItems) {
+    const filteredItems = section === "pending" 
+        ? applyTaskFilters(totalItems, taskFilters.pending)
+        : section === "for_approval"
+        ? applyTaskFilters(totalItems, taskFilters.for_approval)
+        : applyTaskFilters(totalItems, taskFilters.completed);
+
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
+    taskRowPages[section] = Math.min(taskRowPages[section], totalPages - 1);
+
+    const prevBtn = document.querySelector(`[data-task-row-prev="${section}"]`);
+    const nextBtn = document.querySelector(`[data-task-row-next="${section}"]`);
+    const dotsContainer = document.querySelector(`[data-task-row-dots="${section}"]`);
+
+    if (prevBtn) {
+        prevBtn.disabled = taskRowPages[section] === 0;
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = taskRowPages[section] >= totalPages - 1;
+    }
+
+    if (dotsContainer) {
+        dotsContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="manager-task-page-dot ${index === taskRowPages[section] ? 'active' : ''}"
+                data-task-row-page="${index}"
+                aria-label="Go to page ${index + 1}"
+            ></button>
+        `).join("");
     }
 }
 
@@ -210,14 +294,20 @@ function renderPendingTasks(items) {
     if (!tbody) return;
 
     const filteredItems = applyTaskFilters(items, taskFilters.pending);
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
+    taskRowPages.pending = Math.min(taskRowPages.pending, totalPages - 1);
 
     if (!filteredItems.length) {
         tbody.innerHTML = `<tr><td colspan="8">No tasks match the selected filters.</td></tr>`;
         animateTaskRows();
+        updateTaskRowPagination("pending", items);
         return;
     }
 
-    tbody.innerHTML = filteredItems
+    const start = taskRowPages.pending * TASK_ROWS_PER_PAGE;
+    const pageItems = filteredItems.slice(start, start + TASK_ROWS_PER_PAGE);
+
+    tbody.innerHTML = pageItems
         .map(
             (item) => `
         <tr>
@@ -234,6 +324,7 @@ function renderPendingTasks(items) {
         )
         .join("");
 
+    updateTaskRowPagination("pending", items);
     animateTaskRows();
 }
 
@@ -242,14 +333,20 @@ function renderApprovalTasks(items) {
     if (!tbody) return;
 
     const filteredItems = applyTaskFilters(items, taskFilters.for_approval);
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
+    taskRowPages.for_approval = Math.min(taskRowPages.for_approval, totalPages - 1);
 
     if (!filteredItems.length) {
         tbody.innerHTML = `<tr><td colspan="10">No tasks match the selected filters.</td></tr>`;
         animateTaskRows();
+        updateTaskRowPagination("for_approval", items);
         return;
     }
 
-    tbody.innerHTML = filteredItems
+    const start = taskRowPages.for_approval * TASK_ROWS_PER_PAGE;
+    const pageItems = filteredItems.slice(start, start + TASK_ROWS_PER_PAGE);
+
+    tbody.innerHTML = pageItems
         .map(
             (item) => `
         <tr>
@@ -287,6 +384,7 @@ function renderApprovalTasks(items) {
         )
         .join("");
 
+    updateTaskRowPagination("for_approval", items);
     bindPhotoButtons();
     bindVerifyButtons();
     animateTaskRows();
@@ -297,14 +395,20 @@ function renderCompletedTasks(items) {
     if (!tbody) return;
 
     const filteredItems = applyTaskFilters(items, taskFilters.completed);
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
+    taskRowPages.completed = Math.min(taskRowPages.completed, totalPages - 1);
 
     if (!filteredItems.length) {
         tbody.innerHTML = `<tr><td colspan="11">No tasks match the selected filters.</td></tr>`;
         animateTaskRows();
+        updateTaskRowPagination("completed", items);
         return;
     }
 
-    tbody.innerHTML = filteredItems
+    const start = taskRowPages.completed * TASK_ROWS_PER_PAGE;
+    const pageItems = filteredItems.slice(start, start + TASK_ROWS_PER_PAGE);
+
+    tbody.innerHTML = pageItems
         .map(
             (item) => `
         <tr>
@@ -335,6 +439,7 @@ function renderCompletedTasks(items) {
         )
         .join("");
 
+    updateTaskRowPagination("completed", items);
     bindPhotoButtons();
     animateTaskRows();
 }
@@ -521,23 +626,11 @@ function setupAddTaskModal() {
 }
 
 function validateAddTaskRequiredFields(form, payload) {
-    const requiredFields = [
-        { name: "worker_name", label: "Assign Flockman" },
-        { name: "task_category", label: "Task" },
-        { name: "priority_level", label: "Priority Level" },
-        { name: "house_number", label: "House Number" },
-        { name: "pen_number", label: "Pen Number" },
-        { name: "time_assigned", label: "Time to finish" },
-        { name: "date_assigned", label: "Date to finish" },
-    ];
-
-    const missingFields = requiredFields.filter(({ name }) => {
+    const missingFields = addTaskRequiredFields.filter(({ name }) => {
         return !String(payload[name] ?? "").trim();
     });
 
-    form.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
-        field.classList.remove("has-error");
-    });
+    clearAddTaskRequiredFieldHighlights(false);
 
     missingFields.forEach(({ name }) => {
         const field = form.elements[name];
@@ -545,19 +638,20 @@ function validateAddTaskRequiredFields(form, payload) {
     });
 
     if (missingFields.length) {
+        shouldTrackAddTaskRequiredHighlights = true;
         form.elements[missingFields[0].name]?.focus();
+    } else {
+        shouldTrackAddTaskRequiredHighlights = false;
     }
 
-    return missingFields.map(({ label }) => label);
+    return missingFields;
 }
 
 function showAddTaskFormError(formError, messageOrFields) {
     if (!formError) return;
 
     if (Array.isArray(messageOrFields)) {
-        formError.textContent = messageOrFields.length === 1
-            ? `${messageOrFields[0]} is required.`
-            : `Please complete all required fields: ${messageOrFields.join(", ")}.`;
+        formError.textContent = "Please fill in the required fields.";
     } else {
         formError.textContent = messageOrFields;
     }
@@ -575,19 +669,48 @@ function clearAddTaskFormError() {
         formError.textContent = "";
     }
 
+    clearAddTaskRequiredFieldHighlights();
+}
+
+function clearAddTaskRequiredFieldHighlights(resetTracking = true) {
+    const form = document.getElementById("addTaskForm");
+
+    if (resetTracking) {
+        shouldTrackAddTaskRequiredHighlights = false;
+    }
+
     form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
         field.classList.remove("has-error");
     });
 }
 
 function clearTaskFieldError(field) {
-    field.closest(".manager-task-form-field")?.classList.remove("has-error");
+    syncAddTaskRequiredFieldHighlight(field);
 
     const form = document.getElementById("addTaskForm");
     const hasErrors = form?.querySelector(".manager-task-form-field.has-error");
     if (!hasErrors) {
         clearAddTaskFormError();
     }
+}
+
+function syncAddTaskRequiredFieldHighlight(field) {
+    const fieldWrapper = field.closest(".manager-task-form-field");
+    const isRequiredField = addTaskRequiredFields.some(({ name }) => name === field.name);
+
+    if (!isRequiredField) {
+        fieldWrapper?.classList.remove("has-error");
+        return;
+    }
+
+    const isMissing = !String(field.value ?? "").trim();
+
+    if (shouldTrackAddTaskRequiredHighlights && isMissing) {
+        fieldWrapper?.classList.add("has-error");
+        return;
+    }
+
+    fieldWrapper?.classList.remove("has-error");
 }
 
 function openTaskModal(id) {

@@ -114,7 +114,7 @@
                                 </div>
 
                                 <div class="inventory-stock-progress">
-                                    <div class="inventory-progress-track" style="--percent: {{ $item['percentage'] }};">
+                                    <div class="inventory-progress-track {{ $item['status_class'] }}" style="--percent: {{ $item['percentage'] }};">
                                         <div class="inventory-progress-fill"></div>
                                     </div>
                                 </div>
@@ -190,7 +190,7 @@
                                 </div>
 
                                 <div class="inventory-stock-progress">
-                                    <div class="inventory-progress-track" style="--percent: {{ $item['percentage'] }};">
+                                    <div class="inventory-progress-track {{ $item['status_class'] }}" style="--percent: {{ $item['percentage'] }};">
                                         <div class="inventory-progress-fill"></div>
                                     </div>
                                 </div>

@@ -209,6 +209,101 @@ body {
     pointer-events: none;
 }
 
+.bio-filters-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(99, 209, 95, 0.08), rgba(99, 209, 95, 0.04));
+    padding: 12px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(99, 209, 95, 0.15);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.bio-search-wrap {
+    display: flex;
+    align-items: center;
+    position: relative;
+    flex: 1;
+    min-width: 220px;
+}
+
+.bio-search-icon {
+    position: absolute;
+    left: 14px;
+    width: 18px;
+    height: 18px;
+    color: #558b5a;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.bio-search-input {
+    width: 100%;
+    height: 42px;
+    padding: 0 16px 0 42px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.bio-search-input::placeholder {
+    color: #9db59f;
+    font-weight: 400;
+}
+
+.bio-search-input:focus {
+    outline: none;
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
+.bio-date-filter-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bio-date-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bio-date-label {
+    color: #1b5e20;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.bio-date-input {
+    height: 42px;
+    min-width: 130px;
+    padding: 0 12px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.bio-date-input:focus {
+    outline: none;
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
 .bio-table-card {
     min-height: 440px;
     padding: 18px 18px 20px;
@@ -503,10 +598,37 @@ body {
     .bio-toolbar {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
 
     .bio-toolbar-left {
-        justify-content: space-between;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .bio-filters-container {
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .bio-search-wrap {
+        width: 100%;
+    }
+
+    .bio-date-filter-wrap {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .bio-date-group {
+        width: 100%;
+    }
+
+    .bio-date-input {
+        width: 100%;
+        min-width: auto;
     }
 
     .bio-circle-btn.add {
@@ -540,7 +662,58 @@ body {
     }
 
     .bio-filter-select {
-        min-width: 145px;
+        min-width: 100%;
+        width: auto;
+    }
+
+    .bio-toolbar-left {
+        flex-direction: column;
+    }
+
+    .bio-filters-container {
+        flex-direction: column;
+        padding: 12px;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .bio-search-wrap {
+        width: 100%;
+    }
+
+    .bio-search-input {
+        height: 40px;
+        font-size: 0.88rem;
+        padding: 0 14px 0 38px;
+    }
+
+    .bio-search-icon {
+        width: 16px;
+        height: 16px;
+        left: 12px;
+    }
+
+    .bio-date-filter-wrap {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .bio-date-group {
+        width: 100%;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .bio-date-label {
+        font-size: 0.8rem;
+    }
+
+    .bio-date-input {
+        width: 100%;
+        height: 40px;
+        min-width: auto;
+        font-size: 0.88rem;
     }
 
     .bio-modal,

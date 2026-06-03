@@ -5,6 +5,9 @@ const state = {
     workers: [],
     pens: [],
     allWorkers: [],
+    nameSearch: '',
+    dateFrom: '',
+    dateTo: '',
 };
 
 let visitorCameraStream = null;
@@ -159,6 +162,19 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function formatDateForDisplay(isoDate) {
+    if (!isoDate) return '';
+    
+    // Convert YYYY-MM-DD to MM-DD-YY for display
+    const match = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return isoDate; // Return as-is if format doesn't match
+    
+    const [, year, month, day] = match;
+    const shortYear = String(year).slice(-2);
+    
+    return `${month}-${day}-${shortYear}`;
+}
+
 function setOverview(overview) {
     const violations = document.getElementById('bioViolations');
     const visitors = document.getElementById('bioVisitors');
@@ -169,7 +185,7 @@ function setOverview(overview) {
     if (violations) violations.textContent = overview?.violations ?? 0;
     if (visitors) visitors.textContent = overview?.visitors ?? 0;
     if (mortalities) mortalities.textContent = overview?.mortalities ?? 0;
-    if (disinfectionDate) disinfectionDate.textContent = overview?.last_disinfection?.date ?? '--';
+    if (disinfectionDate) disinfectionDate.textContent = formatDateForDisplay(overview?.last_disinfection?.date) ?? '--';
     if (disinfectionTime) disinfectionTime.textContent = overview?.last_disinfection?.time ?? '--';
 }
 
@@ -195,6 +211,38 @@ function getBioColumnClass(type, key) {
     }
 
     return '';
+}
+
+function filterBiosecurityLogs(type, logs) {
+    let filtered = logs || [];
+
+    // Filter by name
+    if (state.nameSearch.trim()) {
+        const searchTerm = state.nameSearch.trim().toLowerCase();
+        filtered = filtered.filter((log) => {
+            const name = String(log.name || '').toLowerCase();
+            return name.includes(searchTerm);
+        });
+    }
+
+    // Filter by date range
+    if (state.dateFrom || state.dateTo) {
+        filtered = filtered.filter((log) => {
+            const logDate = String(log.date || '');
+            
+            if (state.dateFrom && logDate < state.dateFrom) {
+                return false;
+            }
+            
+            if (state.dateTo && logDate > state.dateTo) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+
+    return filtered;
 }
 
 function renderTableRows(type, rows) {
@@ -223,8 +271,15 @@ function renderTableRows(type, rows) {
                     </td>
                 `;
             }
+            
+            // Format date for display if it's a date column
+            let cellValue = row[col.key];
+            if (col.key === 'date' && cellValue) {
+                cellValue = formatDateForDisplay(cellValue);
+            }
+            
             return `
-                <td class="${columnClass}">${escapeHtml(row[col.key])}</td>
+                <td class="${columnClass}">${escapeHtml(cellValue)}</td>
             `;
         }).join('');
 
@@ -253,10 +308,11 @@ function renderTableRows(type, rows) {
 
 function renderCurrentTable() {
     const type = state.selectedCategory;
-    const rows = state.logs[type] || [];
+    const allRows = state.logs[type] || [];
+    const filteredRows = filterBiosecurityLogs(type, allRows);
 
     renderTableHead(type);
-    renderTableRows(type, rows);
+    renderTableRows(type, filteredRows);
 }
 
 function normalizeFieldValueForInput(field, value = '') {
@@ -945,6 +1001,32 @@ function bindEvents() {
         state.selectedCategory = event.target.value;
         renderCurrentTable();
     });
+
+    // Add event listeners for search and date filters
+    const nameSearchInput = document.getElementById('bioNameSearch');
+    const dateFromInput = document.getElementById('bioDateFrom');
+    const dateToInput = document.getElementById('bioDateTo');
+
+    if (nameSearchInput) {
+        nameSearchInput.addEventListener('input', (event) => {
+            state.nameSearch = event.target.value;
+            renderCurrentTable();
+        });
+    }
+
+    if (dateFromInput) {
+        dateFromInput.addEventListener('change', (event) => {
+            state.dateFrom = event.target.value;
+            renderCurrentTable();
+        });
+    }
+
+    if (dateToInput) {
+        dateToInput.addEventListener('change', (event) => {
+            state.dateTo = event.target.value;
+            renderCurrentTable();
+        });
+    }
 }
 
 async function loadBiosecurityLogs() {

@@ -82,9 +82,45 @@
                 <div class="bio-toolbar-left">
                     <div class="bio-filter-wrap">
                         <select id="bioCategoryFilter" class="bio-filter-select">
-                            <option value="Personnel Biosecurity Logs">Personnel Logs</option>
+                            <option value="Personnel Biosecurity Logs">Personnel</option>
                             <option value="Visitors">Visitors</option>
                         </select>
+                    </div>
+
+                    <div class="bio-filters-container">
+                        <div class="bio-search-wrap">
+                            <svg class="bio-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input 
+                                type="text" 
+                                id="bioNameSearch" 
+                                class="bio-search-input" 
+                                placeholder="Search by name..."
+                            >
+                        </div>
+
+                        <div class="bio-date-filter-wrap">
+                            <div class="bio-date-group">
+                                <label class="bio-date-label">From:</label>
+                                <input 
+                                    type="date" 
+                                    id="bioDateFrom" 
+                                    class="bio-date-input" 
+                                    title="Start date"
+                                >
+                            </div>
+                            <div class="bio-date-group">
+                                <label class="bio-date-label">To:</label>
+                                <input 
+                                    type="date" 
+                                    id="bioDateTo" 
+                                    class="bio-date-input" 
+                                    title="End date"
+                                >
+                            </div>
+                        </div>
                     </div>
                 </div>
 

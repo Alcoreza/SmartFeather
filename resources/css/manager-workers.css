@@ -2,7 +2,6 @@
     padding: 24px 34px 34px;
 }
 
-/* Top Bar */
 .workers-topbar {
     display: flex;
     align-items: center;
@@ -30,7 +29,6 @@
     );
 }
 
-/* Toolbar */
 .workers-toolbar {
     display: flex;
     justify-content: space-between;
@@ -55,7 +53,7 @@
 
 /* Card */
 .workers-card {
-    height: 704px;
+    height: 585px;
     padding: 18px 18px 28px;
     border: 1px solid var(--manager-panel-border);
     border-radius: 34px;
@@ -69,6 +67,7 @@
 /* Table */
 .workers-table-wrap {
     overflow-x: auto;
+    overflow-y: hidden;
     flex: 1;
     min-height: 0;
 }
@@ -91,14 +90,10 @@
 }
 
 .workers-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
     padding: 6px 12px;
     color: var(--manager-green-700);
     font-size: 1rem;
     font-weight: 800;
-    background: var(--manager-panel-bg);
 }
 
 .workers-table tbody td {
@@ -120,7 +115,9 @@
 }
 
 .workers-placeholder-row td {
+    background: transparent;
     color: transparent;
+    box-shadow: none;
     pointer-events: none;
 }
 
@@ -351,11 +348,6 @@
 
     .workers-filter {
         width: 100%;
-    }
-
-    .workers-card {
-        height: auto;
-        min-height: 704px;
     }
 
     .workers-pagination {

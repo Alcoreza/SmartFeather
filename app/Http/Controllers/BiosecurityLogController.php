@@ -340,7 +340,7 @@ class BiosecurityLogController extends Controller
             'activity' => $log->activity,
             'disinfectant_used' => $log->disinfectant_used,
             'performed_by' => $log->performed_by,
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
         ];
     }
@@ -352,7 +352,7 @@ class BiosecurityLogController extends Controller
             'type' => 'Personnel Biosecurity Logs',
             'name' => $log->name,
             'role' => $log->role,
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
             'time_in' => strtoupper((string) $log->status) === 'IN' && $log->time
                 ? \Carbon\Carbon::parse($log->time)->format('h:i A')
@@ -381,7 +381,7 @@ class BiosecurityLogController extends Controller
                     'type' => 'Personnel Biosecurity Logs',
                     'name' => $log->name,
                     'role' => $log->role,
-                    'date' => $log->date ? $log->date->format('m-d-y') : '',
+                    'date' => $log->date ? $log->date->format('Y-m-d') : '',
                     'time' => $time,
                     'time_in' => $time,
                     'time_out' => '',
@@ -411,7 +411,7 @@ class BiosecurityLogController extends Controller
                     'type' => 'Personnel Biosecurity Logs',
                     'name' => $log->name,
                     'role' => $log->role,
-                    'date' => $log->date ? $log->date->format('m-d-y') : '',
+                    'date' => $log->date ? $log->date->format('Y-m-d') : '',
                     'time' => $time,
                     'time_in' => '',
                     'time_out' => $time,
@@ -458,7 +458,7 @@ class BiosecurityLogController extends Controller
         return [
             'id' => $log->id,
             'type' => 'Visitors',
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time_in' => $log->time_in ? \Carbon\Carbon::parse($log->time_in)->format('h:i A') : '',
             'time_out' => $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('h:i A') : '',
             'name' => $log->name,
@@ -497,7 +497,7 @@ class BiosecurityLogController extends Controller
             'name' => $log->name,
             'role' => $log->role,
             'house' => $log->house,
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
         ];
     }
@@ -507,7 +507,7 @@ class BiosecurityLogController extends Controller
         return [
             'id' => $log->id,
             'type' => 'Weight Sampling',
-            'date' => $log->date ? $log->date->format('m-d-y') : '',
+            'date' => $log->date ? $log->date->format('Y-m-d') : '',
             'time' => $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '',
             'house' => $log->house,
             'pen' => $log->pen,
@@ -538,7 +538,7 @@ class BiosecurityLogController extends Controller
         return [
             'violations' => $violations,
             'last_disinfection' => $lastDisinfection ? [
-                'date' => $lastDisinfection->date ? $lastDisinfection->date->format('m-d-y') : '--',
+                'date' => $lastDisinfection->date ? $lastDisinfection->date->format('Y-m-d') : '--',
                 'time' => $lastDisinfection->time ? \Carbon\Carbon::parse($lastDisinfection->time)->format('h:i A') : '--',
             ] : ['date' => '--', 'time' => '--'],
             'visitors' => $visitors,

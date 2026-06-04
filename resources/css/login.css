@@ -18,25 +18,74 @@
 }
 
 .login-page-bg {
+    position: relative;
     min-height: 100vh;
     background:
-        radial-gradient(
-            circle at top,
-            rgba(34, 197, 94, 0.12),
-            transparent 30%
-        ),
         linear-gradient(
             135deg,
             var(--login-bg-start) 0%,
             var(--login-bg-main) 60%,
             var(--login-bg-end) 100%
         );
+    overflow: hidden;
+}
+
+.login-page-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(135deg, rgba(0, 31, 20, 0.78), rgba(1, 59, 36, 0.58)),
+        radial-gradient(
+            circle at 20% 15%,
+            rgba(34, 197, 94, 0.16),
+            transparent 30%
+        ),
+        url("/images/backgrounds/poultry-login-bg.jpg"),
+        linear-gradient(
+            135deg,
+            var(--login-bg-start) 0%,
+            var(--login-bg-main) 60%,
+            var(--login-bg-end) 100%
+        );
+    background-position: center, top left, center, center;
+    background-size: auto, auto, cover, auto;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transform: scale(1.018);
+    animation:
+        login-bg-reveal 0.75s ease-out forwards,
+        login-bg-drift 30s ease-in-out 0.75s infinite alternate;
+    will-change: opacity, transform;
 }
 
 .login-wrapper {
     position: relative;
+    z-index: 1;
     min-height: 100vh;
     overflow: hidden;
+}
+
+@keyframes login-bg-reveal {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes login-bg-drift {
+    from {
+        transform: scale(1.018) translate3d(-0.25%, -0.2%, 0);
+    }
+
+    to {
+        transform: scale(1.026) translate3d(0.25%, 0.2%, 0);
+    }
 }
 
 .bg-orb {
@@ -52,7 +101,7 @@
     left: 8%;
     width: 260px;
     height: 260px;
-    background: rgba(34, 197, 94, 0.14);
+    background: rgba(34, 197, 94, 0.08);
 }
 
 .orb-two {
@@ -60,7 +109,7 @@
     bottom: 8%;
     width: 320px;
     height: 320px;
-    background: rgba(74, 222, 128, 0.1);
+    background: rgba(74, 222, 128, 0.07);
 }
 
 .login-card {

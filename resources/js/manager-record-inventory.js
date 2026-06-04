@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setupInventoryRecordTabs();
 });
 
+const RECORD_ROWS_PER_PAGE = 15;
+
 /* ================= PROFILE MODAL ================= */
 async function populateProfileModal() {
     try {
@@ -59,9 +61,15 @@ function setupInventoryRecordTabs() {
     const recordFilter = document.getElementById("recordFilter");
     const tableHead = document.getElementById("recordTableHead");
     const tableBody = document.getElementById("recordTableBody");
+    const pagination = document.querySelector("[data-record-pagination]");
+    const prevButton = document.querySelector("[data-record-prev]");
+    const nextButton = document.querySelector("[data-record-next]");
+    const dots = document.querySelector("[data-record-dots]");
 
     let currentType = "feed";
     let renderVersion = 0;
+    let currentPage = 0;
+    let currentRows = [];
 
     /* ===== FETCH ITEMS (for dropdown) ===== */
     async function fetchItems(type) {
@@ -109,15 +117,25 @@ function setupInventoryRecordTabs() {
     /* ===== RENDER TABLE ===== */
     function renderLoading() {
         tableBody.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+        updatePagination(0);
     }
 
     function renderRows(data) {
+        currentRows = Array.isArray(data) ? data : [];
+        const totalPages = Math.max(1, Math.ceil(currentRows.length / RECORD_ROWS_PER_PAGE));
+        currentPage = Math.min(currentPage, totalPages - 1);
+
         if (!data.length) {
             tableBody.innerHTML = `<tr><td colspan="6">No records found</td></tr>`;
+            updatePagination(0);
             return;
         }
 
-        tableBody.innerHTML = data.map((row, index) => {
+        const start = currentPage * RECORD_ROWS_PER_PAGE;
+        const pageRows = currentRows.slice(start, start + RECORD_ROWS_PER_PAGE);
+        const placeholderRows = RECORD_ROWS_PER_PAGE - pageRows.length;
+
+        tableBody.innerHTML = pageRows.map((row, index) => {
             const movement = getMovement(row);
 
             return `
@@ -137,6 +155,16 @@ function setupInventoryRecordTabs() {
                 </tr>
             `;
         }).join("");
+
+        if (placeholderRows > 0) {
+            tableBody.innerHTML += Array.from({ length: placeholderRows }, () => `
+                <tr class="record-placeholder-row" aria-hidden="true">
+                    <td colspan="6">&nbsp;</td>
+                </tr>
+            `).join("");
+        }
+
+        updatePagination(currentRows.length);
     }
 
     async function renderTable() {
@@ -155,6 +183,7 @@ function setupInventoryRecordTabs() {
     /* ===== FEED TAB ===== */
     async function renderFeed() {
         currentType = "feed";
+        currentPage = 0;
         const version = ++renderVersion;
 
         // UPDATED CLASSES
@@ -166,9 +195,9 @@ function setupInventoryRecordTabs() {
         tableHead.innerHTML = `
             <tr>
                 <th>Item</th>
-                <th>Movement</th>
+                <th>Transaction</th>
                 <th>Quantity</th>
-                <th>Movement Date</th>
+                <th>Transaction Date</th>
                 <th>Initial Purchase Date</th>
                 <th>Remaining (kg)</th>
             </tr>
@@ -190,6 +219,7 @@ function setupInventoryRecordTabs() {
     /* ===== VITAMIN TAB ===== */
     async function renderVitamins() {
         currentType = "vitamin";
+        currentPage = 0;
         const version = ++renderVersion;
 
         // UPDATED CLASSES
@@ -201,9 +231,9 @@ function setupInventoryRecordTabs() {
         tableHead.innerHTML = `
             <tr>
                 <th>Item</th>
-                <th>Movement</th>
+                <th>Transaction</th>
                 <th>Quantity</th>
-                <th>Movement Date</th>
+                <th>Transaction Date</th>
                 <th>Initial Purchase Date</th>
                 <th>Remaining (bottles)</th>
             </tr>
@@ -225,7 +255,14 @@ function setupInventoryRecordTabs() {
     /* ===== EVENTS ===== */
     if (feedTab) feedTab.addEventListener("click", renderFeed);
     if (vitaminsTab) vitaminsTab.addEventListener("click", renderVitamins);
-    if (recordFilter) recordFilter.addEventListener("change", renderTable);
+    if (recordFilter) {
+        recordFilter.addEventListener("change", () => {
+            currentPage = 0;
+            renderTable();
+        });
+    }
+
+    setupPagination();
 
     /* ===== DEFAULT LOAD ===== */
     renderFeed();
@@ -281,5 +318,58 @@ function setupInventoryRecordTabs() {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    function updatePagination(totalRows) {
+        const totalPages = Math.max(1, Math.ceil(totalRows / RECORD_ROWS_PER_PAGE));
+
+        if (pagination) {
+            pagination.classList.toggle("is-hidden", totalRows <= RECORD_ROWS_PER_PAGE);
+        }
+
+        if (prevButton) {
+            prevButton.disabled = currentPage === 0;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = currentPage >= totalPages - 1;
+        }
+
+        if (dots) {
+            dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+                <button
+                    type="button"
+                    class="record-page-dot ${index === currentPage ? "active" : ""}"
+                    data-record-page="${index}"
+                    aria-label="Go to page ${index + 1}"
+                    aria-current="${index === currentPage ? "page" : "false"}"
+                ></button>
+            `).join("");
+        }
+    }
+
+    function renderCurrentPage() {
+        renderRows(currentRows);
+    }
+
+    function setupPagination() {
+        prevButton?.addEventListener("click", () => {
+            currentPage = Math.max(0, currentPage - 1);
+            renderCurrentPage();
+        });
+
+        nextButton?.addEventListener("click", () => {
+            const totalPages = Math.max(1, Math.ceil(currentRows.length / RECORD_ROWS_PER_PAGE));
+            currentPage = Math.min(totalPages - 1, currentPage + 1);
+            renderCurrentPage();
+        });
+
+        dots?.addEventListener("click", (event) => {
+            const dot = event.target.closest("[data-record-page]");
+            if (!dot) return;
+
+            currentPage = Number(dot.dataset.recordPage || 0);
+            renderCurrentPage();
+        });
     }
 }

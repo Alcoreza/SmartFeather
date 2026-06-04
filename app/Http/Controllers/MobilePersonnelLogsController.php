@@ -66,7 +66,9 @@ class MobilePersonnelLogsController extends Controller
         $validated = $request->validate([
             'employee_id' => 'required|integer|exists:user,EmployeeId',
             'personnel_entry_log_id' => 'required|integer|exists:personnel_entry_logs,id',
+            'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
+            'pen_id' => 'nullable|integer|exists:pen,id',
             'foot_bath' => 'required|boolean',
             'boots_changed' => 'required|boolean',
             'protective_clothing' => 'required|boolean',
@@ -95,17 +97,6 @@ class MobilePersonnelLogsController extends Controller
             ], 403);
         }
 
-        $alreadySubmitted = DB::table('personnel_biosecurity_logs')
-            ->where('personnel_entry_log_id', $latestEntry->id)
-            ->exists();
-
-        if ($alreadySubmitted) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Personnel biosecurity log already submitted for this scan.',
-            ]);
-        }
-
         $selectedHouse = DB::table('house')
             ->where('id', $validated['house_id'])
             ->first();
@@ -116,12 +107,77 @@ class MobilePersonnelLogsController extends Controller
             ], 404);
         }
 
+        $selectedPen = null;
+
+        if (!empty($validated['pen_id'])) {
+            $selectedPen = DB::table('pen')
+                ->where('id', $validated['pen_id'])
+                ->where('house_id', $validated['house_id'])
+                ->first();
+
+            if (!$selectedPen) {
+                return response()->json([
+                    'message' => 'Selected pen does not belong to the assigned house.',
+                ], 422);
+            }
+        }
+
+        $task = null;
+
+        if (!empty($validated['task_id'])) {
+            $task = DB::table('tasks')
+                ->where('taskid', $validated['task_id'])
+                ->where('user_employeeid', $validated['employee_id'])
+                ->where('status', 'Pending')
+                ->first();
+
+            if (!$task) {
+                return response()->json([
+                    'message' => 'Pending task not found for this worker.',
+                ], 404);
+            }
+
+            if ((int) $task->house_houseid !== (int) $validated['house_id']) {
+                return response()->json([
+                    'message' => 'This biosecurity log must use the task assigned house.',
+                ], 422);
+            }
+
+            if (!empty($task->pennumber) && (int) $task->pennumber !== (int) ($validated['pen_id'] ?? 0)) {
+                return response()->json([
+                    'message' => 'This biosecurity log must use the task assigned pen.',
+                ], 422);
+            }
+        }
+
+        $alreadySubmittedQuery = DB::table('personnel_biosecurity_logs')
+            ->where('personnel_entry_log_id', $latestEntry->id);
+
+        if (!empty($validated['task_id'])) {
+            $alreadySubmittedQuery->where('task_id', $validated['task_id']);
+        } else {
+            $alreadySubmittedQuery->whereNull('task_id');
+        }
+
+        $alreadySubmitted = $alreadySubmittedQuery->exists();
+
+        if ($alreadySubmitted) {
+            return response()->json([
+                'success' => true,
+                'message' => !empty($validated['task_id'])
+                    ? 'Biosecurity already completed for this task.'
+                    : 'Personnel biosecurity log already submitted for this scan.',
+            ]);
+        }
+
         DB::table('personnel_biosecurity_logs')->insert([
             'employee_id' => $validated['employee_id'],
             'personnel_entry_log_id' => $latestEntry->id,
+            'task_id' => $validated['task_id'] ?? null,
             'name' => $latestEntry->name,
             'role' => $latestEntry->role,
             'house_id' => $selectedHouse->id,
+            'pen_id' => $validated['pen_id'] ?? null,
             'house' => $selectedHouse->house_number,
             'date' => $latestEntry->date,
             'time' => $latestEntry->time,
@@ -134,7 +190,9 @@ class MobilePersonnelLogsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Personnel biosecurity log submitted successfully.',
+            'message' => !empty($validated['task_id'])
+                ? 'Biosecurity completed. You may now continue with the assigned task.'
+                : 'Personnel biosecurity log submitted successfully.',
         ]);
     }
 }

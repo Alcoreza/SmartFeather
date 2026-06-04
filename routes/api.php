@@ -63,6 +63,7 @@ Route::get('/mobile/new-batch/houses/{houseId}/pens', [MobileNewBatchController:
 Route::post('/mobile/new-batch', [MobileNewBatchController::class, 'submit']);
 
 Route::post('/mobile/tasks/photo-upload-url', [MobileTaskController::class, 'createTaskPhotoUploadUrl']);
+Route::post('/mobile/tasks/access-check', [MobileTaskController::class, 'checkTaskAccess']);
 
 Route::get('/mobile/dashboard', [MobileDashboardController::class, 'show']);
 

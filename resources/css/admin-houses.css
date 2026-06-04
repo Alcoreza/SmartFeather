@@ -227,6 +227,9 @@
 }
 
 .semi-gauge {
+    --gauge-value: 0deg;
+    --gauge-color: #7cc54f;
+    --gauge-track: #e7e7e7;
     width: 130px;
     height: 72px;
     position: relative;
@@ -245,11 +248,8 @@
     background:
         conic-gradient(
             from 180deg,
-            #7cc54f 0deg 45deg,
-            #b3cf41 45deg 75deg,
-            #f2ca42 75deg 110deg,
-            #f19737 110deg 140deg,
-            #df4d45 140deg 180deg,
+            var(--gauge-color) 0deg var(--gauge-value),
+            var(--gauge-track) var(--gauge-value) 180deg,
             transparent 180deg 360deg
         );
     top: 8px;
@@ -275,6 +275,22 @@
     font-weight: 700;
     color: #397c34;
     margin-bottom: 8px;
+}
+
+.semi-gauge.safe {
+    --gauge-color: #41a45d;
+}
+
+.semi-gauge.warning {
+    --gauge-color: #f2ca42;
+}
+
+.semi-gauge.danger {
+    --gauge-color: #df4d45;
+}
+
+.semi-gauge.no-data {
+    --gauge-color: #a7adb3;
 }
 
 .info-grid {

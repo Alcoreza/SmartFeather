@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const housePen = document.getElementById("housePen");
     const houseTemperature = document.getElementById("houseTemperature");
     const houseAmmonia = document.getElementById("houseAmmonia");
+    const temperatureGauge = houseTemperature?.closest(".semi-gauge");
+    const ammoniaGauge = houseAmmonia?.closest(".semi-gauge");
     const infoGrid = document.getElementById("infoGrid");
     const feedRow = document.getElementById("feedRow");
     const waterRow = document.getElementById("waterRow");
@@ -248,6 +250,45 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    function getSensorReadingDisplay(readings, type, fallback) {
+        return readings?.[type]?.formatted_value || fallback;
+    }
+
+    function getSensorReadingValue(readings, type) {
+        const value = readings?.[type]?.value;
+        const numberValue = Number(value);
+
+        return Number.isFinite(numberValue) ? numberValue : null;
+    }
+
+    function getGaugeState(type, value) {
+        if (value === null) {
+            return "no-data";
+        }
+
+        if (type === "temperature") {
+            if (value >= 35) return "danger";
+            if (value >= 30) return "warning";
+            return "safe";
+        }
+
+        if (value >= 25) return "danger";
+        if (value >= 10) return "warning";
+        return "safe";
+    }
+
+    function updateGauge(gauge, type, value) {
+        if (!gauge) return;
+
+        const maxValue = type === "temperature" ? 40 : 40;
+        const safeValue = value ?? 0;
+        const degrees = Math.max(0, Math.min(180, (safeValue / maxValue) * 180));
+
+        gauge.style.setProperty("--gauge-value", `${degrees}deg`);
+        gauge.classList.remove("safe", "warning", "danger", "no-data");
+        gauge.classList.add(getGaugeState(type, value));
+    }
+
     function populatePenOptions(house) {
         if (!housePen) return;
 
@@ -270,6 +311,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .map((house) => {
                     const sortedPens = sortPensById((house.pens || []).map((pen) => {
                         const flockBatch = pen.running_batch || pen.current_batch || null;
+                        const sensorReadings = pen.sensor_readings;
 
                         return {
                             id: pen.id,
@@ -277,8 +319,24 @@ document.addEventListener("DOMContentLoaded", async () => {
                             pen_name: pen.pen_name,
                             batch: flockBatch?.batch_code || null,
                             status: flockBatch?.status || "Inactive",
-                            temperature: "0 deg",
-                            ammonia: "0 ppm",
+                            temperature: getSensorReadingDisplay(
+                                sensorReadings,
+                                "temperature",
+                                "0 deg",
+                            ),
+                            ammonia: getSensorReadingDisplay(
+                                sensorReadings,
+                                "ammonia",
+                                "0 ppm",
+                            ),
+                            temperatureValue: getSensorReadingValue(
+                                sensorReadings,
+                                "temperature",
+                            ),
+                            ammoniaValue: getSensorReadingValue(
+                                sensorReadings,
+                                "ammonia",
+                            ),
                             capacity: pen.capacity || 0,
                             population: pen.population || 0,
                             eggs_hatched: pen.eggs_hatched || 0,
@@ -385,6 +443,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
         if (houseTemperature) houseTemperature.textContent = pen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
+        updateGauge(temperatureGauge, "temperature", pen.temperatureValue);
+        updateGauge(ammoniaGauge, "ammonia", pen.ammoniaValue);
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
         if (feedRow) feedRow.innerHTML = buildResourceRow(pen.feeders, "feed");

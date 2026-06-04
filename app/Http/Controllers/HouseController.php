@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\House;
 use App\Models\Pen;
+use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +23,8 @@ class HouseController extends Controller
             ])
                 ->orderBy('id', 'asc')
                 ->get();
+
+            $this->attachLatestSensorReadings($houses);
 
             return response()->json([
                 'success' => true,
@@ -109,6 +112,8 @@ class HouseController extends Controller
                     'message' => 'House not found'
                 ], 404);
             }
+
+            $this->attachLatestSensorReadings(collect([$house]));
 
             return response()->json([
                 'success' => true,
@@ -443,6 +448,116 @@ class HouseController extends Controller
                 'message' => 'Error updating pen: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function attachLatestSensorReadings($houses): void
+    {
+        $houseIds = $houses
+            ->pluck('id')
+            ->filter()
+            ->values();
+
+        if ($houseIds->isEmpty()) {
+            return;
+        }
+
+        $sensors = Sensor::with('latestReading')
+            ->whereIn('house_houseid', $houseIds)
+            ->whereRaw("LOWER(TRIM(status)) = 'active'")
+            ->get();
+
+        $readingsByHouse = [];
+        $readingsByPen = [];
+
+        foreach ($sensors as $sensor) {
+            $reading = $sensor->latestReading;
+            $sensorType = $this->normalizeSensorReadingType($sensor->sensortype);
+
+            if (!$reading || !$sensorType || $sensor->house_houseid === null) {
+                continue;
+            }
+
+            $readingData = [
+                'sensor_id' => $sensor->sensorid,
+                'sensor_name' => $sensor->sensorname,
+                'sensor_type' => $sensorType,
+                'value' => (float) $reading->value,
+                'formatted_value' => $this->formatSensorReadingValue($sensorType, $reading->value),
+                'recorded_at' => $reading->recorded_at,
+            ];
+
+            $houseId = (int) $sensor->house_houseid;
+            $penId = $sensor->pen_penid !== null ? (int) $sensor->pen_penid : null;
+
+            $readingsByHouse[$houseId][$sensorType] = $this->newerSensorReading(
+                $readingsByHouse[$houseId][$sensorType] ?? null,
+                $readingData
+            );
+
+            if ($penId !== null) {
+                $readingsByPen[$penId][$sensorType] = $this->newerSensorReading(
+                    $readingsByPen[$penId][$sensorType] ?? null,
+                    $readingData
+                );
+            }
+        }
+
+        foreach ($houses as $house) {
+            $houseReadings = $this->sensorReadingDefaults($readingsByHouse[(int) $house->id] ?? []);
+            $house->setAttribute('sensor_readings', $houseReadings);
+
+            foreach ($house->pens as $pen) {
+                $penReadings = $this->sensorReadingDefaults($readingsByPen[(int) $pen->id] ?? []);
+                $pen->setAttribute('sensor_readings', $penReadings);
+            }
+        }
+    }
+
+    private function sensorReadingDefaults(array $readings): array
+    {
+        return [
+            'temperature' => $readings['temperature'] ?? null,
+            'ammonia' => $readings['ammonia'] ?? null,
+        ];
+    }
+
+    private function normalizeSensorReadingType(?string $type): ?string
+    {
+        $type = strtolower(trim((string) $type));
+
+        if (str_contains($type, 'temp')) {
+            return 'temperature';
+        }
+
+        if (str_contains($type, 'ammonia') || str_contains($type, 'nh3')) {
+            return 'ammonia';
+        }
+
+        return null;
+    }
+
+    private function formatSensorReadingValue(string $type, $value): string
+    {
+        if ($value === null) {
+            return $type === 'temperature' ? '0 deg' : '0 ppm';
+        }
+
+        if ($type === 'temperature') {
+            return number_format((float) $value, 1) . ' deg';
+        }
+
+        return number_format((float) $value, 1) . ' ppm';
+    }
+
+    private function newerSensorReading(?array $current, array $candidate): array
+    {
+        if (!$current) {
+            return $candidate;
+        }
+
+        return strcmp((string) ($candidate['recorded_at'] ?? ''), (string) ($current['recorded_at'] ?? '')) >= 0
+            ? $candidate
+            : $current;
     }
 
 }

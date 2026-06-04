@@ -144,12 +144,23 @@
     height: 42px;
     border-radius: 999px;
     border: 1px solid rgba(15, 23, 36, 0.12);
-    padding: 0 16px;
+    padding: 0 44px 0 16px;
     background: #ffffff;
     color: #111111;
     font-size: 0.95rem;
     font-weight: 600;
     min-width: 140px;
+    appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
+    background-position:
+        calc(100% - 22px) calc(50% - 3px),
+        calc(100% - 10px) calc(50% - 3px);
+    background-size:
+        12px 12px,
+        12px 12px;
+    background-repeat: no-repeat;
 }
 
 .add-btn {
@@ -552,6 +563,21 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.inventory-form-group select {
+    appearance: none;
+    padding-right: 44px;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
+    background-position:
+        calc(100% - 22px) calc(50% - 3px),
+        calc(100% - 10px) calc(50% - 3px);
+    background-size:
+        12px 12px,
+        12px 12px;
+    background-repeat: no-repeat;
+}
+
 .inventory-form-group input:focus,
 .inventory-form-group select:focus {
     border-color: #1f6b2b;
@@ -740,6 +766,13 @@
 .inventory-form-group select {
     min-height: 42px;
     height: 42px;
-    padding: 0 14px;
     line-height: 42px;
+}
+
+.inventory-form-group input {
+    padding: 0 14px;
+}
+
+.inventory-form-group select {
+    padding: 0 44px 0 14px;
 }

@@ -32,9 +32,10 @@
 }
 
 .record-inventory-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(170px, 0.75fr) minmax(170px, 0.85fr) minmax(430px, 1.55fr);
     align-items: center;
-    gap: 14px;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
@@ -62,40 +63,74 @@
 .record-tabs {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    min-width: 0;
+    border: 1px solid rgba(99, 209, 95, 0.15);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(99, 209, 95, 0.08), rgba(99, 209, 95, 0.04));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .record-tab {
-    min-width: 92px;
-    height: 36px;
-    padding: 0 18px;
-    border-radius: 999px;
-    border: 1px solid #9d9d9d;
-    background: #ffffff;
-    color: #222222;
-    font-size: 1rem;
-    font-weight: 700;
+    flex: 1;
+    min-width: 0;
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #558b5a;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 650;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.record-tab:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(87, 196, 81, 0.2);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.1);
 }
 
 .record-tab.active.feed-active {
-    background: #9b6420;
+    background: linear-gradient(135deg, #a66c25, #9b6420);
     color: #ffffff;
-    border-color: #9b6420;
+    border-color: rgba(155, 100, 32, 0.42);
+    box-shadow: 0 6px 16px rgba(155, 100, 32, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.24);
+}
+
+.record-tab.active.feed-active:hover {
+    background: linear-gradient(135deg, #9b6420, #875619);
+    box-shadow: 0 8px 20px rgba(155, 100, 32, 0.26), inset 0 1px 2px rgba(255, 255, 255, 0.24);
 }
 
 .record-tab.active.vitamins-active {
-    background: #5b9999;
+    background: linear-gradient(135deg, #66a7a7, #5b9999);
     color: #ffffff;
-    border-color: #5b9999;
+    border-color: rgba(91, 153, 153, 0.42);
+    box-shadow: 0 6px 16px rgba(91, 153, 153, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.24);
+}
+
+.record-tab.active.vitamins-active:hover {
+    background: linear-gradient(135deg, #5b9999, #4c8585);
+    box-shadow: 0 8px 20px rgba(91, 153, 153, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.24);
 }
 
 .record-filter-wrap {
-    margin-left: auto;
+    margin-left: 0;
+    padding: 7px 10px;
+    min-width: 0;
+    border: 1px solid rgba(99, 209, 95, 0.15);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(99, 209, 95, 0.08), rgba(99, 209, 95, 0.04));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .record-filter-wrap.hidden {
@@ -103,26 +138,113 @@
 }
 
 .record-filter-select {
-    min-width: 150px;
+    width: 100%;
+    min-width: 0;
     height: 36px;
-    padding: 0 38px 0 16px;
-    border-radius: 999px;
-    border: 1.5px solid #5b8f59;
-    background: #f8f8f8;
-    color: #111111;
-    font-size: 0.96rem;
-    font-weight: 500;
+    padding: 0 36px 0 12px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
     outline: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     appearance: none;
     cursor: pointer;
     background-image:
-        linear-gradient(45deg, transparent 50%, #333 50%),
-        linear-gradient(135deg, #333 50%, transparent 50%);
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
     background-position:
-        calc(100% - 18px) 14px,
-        calc(100% - 12px) 14px;
-    background-size: 6px 6px, 6px 6px;
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 8px) calc(50% - 3px);
+    background-size:
+        12px 12px,
+        12px 12px;
     background-repeat: no-repeat;
+    transition: all 0.3s ease;
+}
+
+.record-filter-select:focus {
+    border-color: rgba(87, 196, 81, 0.6);
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
+.record-date-filters {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: nowrap;
+    padding: 7px 10px;
+    min-width: 0;
+    border: 1px solid rgba(99, 209, 95, 0.15);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(99, 209, 95, 0.08), rgba(99, 209, 95, 0.04));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.record-date-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.record-date-filter span {
+    color: #1b5e20;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.record-date-filter input {
+    width: 100%;
+    min-width: 112px;
+    max-width: 124px;
+    height: 36px;
+    padding: 0 8px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.82rem;
+    outline: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.record-date-filter input:focus {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
+.record-clear-filters-btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.record-clear-filters-btn:hover {
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    color: #062c17;
+    border-color: rgba(87, 196, 81, 0.6);
+    box-shadow: 0 4px 12px rgba(87, 196, 81, 0.15);
 }
 
 .record-table-card {
@@ -326,11 +448,19 @@
     }
 
     .record-inventory-controls {
-        flex-wrap: wrap;
+        grid-template-columns: auto 1fr;
+    }
+
+    .record-date-filters {
+        grid-column: 1 / -1;
     }
 
     .record-filter-wrap {
         margin-left: 0;
+    }
+
+    .record-date-filters {
+        flex-wrap: nowrap;
     }
 
     .record-table-card {

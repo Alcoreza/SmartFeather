@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupInventoryRecordTabs();
 });
 
-const RECORD_ROWS_PER_PAGE = 15;
+const RECORD_ROWS_PER_PAGE = 10;
 
 /* ================= PROFILE MODAL ================= */
 async function populateProfileModal() {
@@ -59,6 +59,9 @@ function setupInventoryRecordTabs() {
     const vitaminsTab = document.getElementById("vitaminsTab");
     const filterWrap = document.getElementById("filterWrap");
     const recordFilter = document.getElementById("recordFilter");
+    const transactionDateFilter = document.getElementById("transactionDateFilter");
+    const initialStockDateFilter = document.getElementById("initialStockDateFilter");
+    const clearRecordDateFilters = document.getElementById("clearRecordDateFilters");
     const tableHead = document.getElementById("recordTableHead");
     const tableBody = document.getElementById("recordTableBody");
     const pagination = document.querySelector("[data-record-pagination]");
@@ -69,6 +72,7 @@ function setupInventoryRecordTabs() {
     let currentType = "feed";
     let renderVersion = 0;
     let currentPage = 0;
+    let allRows = [];
     let currentRows = [];
 
     /* ===== FETCH ITEMS (for dropdown) ===== */
@@ -120,13 +124,13 @@ function setupInventoryRecordTabs() {
         updatePagination(0);
     }
 
-    function renderRows(data) {
-        currentRows = Array.isArray(data) ? data : [];
+    function renderRows(rows, emptyMessage = "No records found") {
+        currentRows = Array.isArray(rows) ? rows : [];
         const totalPages = Math.max(1, Math.ceil(currentRows.length / RECORD_ROWS_PER_PAGE));
         currentPage = Math.min(currentPage, totalPages - 1);
 
-        if (!data.length) {
-            tableBody.innerHTML = `<tr><td colspan="6">No records found</td></tr>`;
+        if (!currentRows.length) {
+            tableBody.innerHTML = `<tr><td colspan="6">${emptyMessage}</td></tr>`;
             updatePagination(0);
             return;
         }
@@ -167,6 +171,16 @@ function setupInventoryRecordTabs() {
         updatePagination(currentRows.length);
     }
 
+    function applyFiltersAndRender() {
+        const filteredRows = applyDateFilters(allRows);
+        const hasDateFilter = Boolean(transactionDateFilter?.value || initialStockDateFilter?.value);
+
+        renderRows(
+            filteredRows,
+            hasDateFilter ? "No records match the selected dates" : "No records found"
+        );
+    }
+
     async function renderTable() {
         const version = ++renderVersion;
         const selectedItem = recordFilter.value;
@@ -177,7 +191,8 @@ function setupInventoryRecordTabs() {
 
         if (version !== renderVersion) return;
 
-        renderRows(data);
+        allRows = Array.isArray(data) ? data : [];
+        applyFiltersAndRender();
     }
 
     /* ===== FEED TAB ===== */
@@ -213,7 +228,9 @@ function setupInventoryRecordTabs() {
         if (version !== renderVersion) return;
 
         await populateFilter("feed", items);
-        renderRows(data);
+        resetDateFilters();
+        allRows = Array.isArray(data) ? data : [];
+        applyFiltersAndRender();
     }
 
     /* ===== VITAMIN TAB ===== */
@@ -249,7 +266,9 @@ function setupInventoryRecordTabs() {
         if (version !== renderVersion) return;
 
         await populateFilter("vitamin", items);
-        renderRows(data);
+        resetDateFilters();
+        allRows = Array.isArray(data) ? data : [];
+        applyFiltersAndRender();
     }
 
     /* ===== EVENTS ===== */
@@ -261,6 +280,17 @@ function setupInventoryRecordTabs() {
             renderTable();
         });
     }
+    [transactionDateFilter, initialStockDateFilter].forEach((filter) => {
+        filter?.addEventListener("change", () => {
+            currentPage = 0;
+            applyFiltersAndRender();
+        });
+    });
+    clearRecordDateFilters?.addEventListener("click", () => {
+        resetDateFilters();
+        currentPage = 0;
+        applyFiltersAndRender();
+    });
 
     setupPagination();
 
@@ -309,6 +339,48 @@ function setupInventoryRecordTabs() {
             quantity: formatNumber(row.initial_stock),
             date: row.initial_purchase_date || row.monitoring_date,
         };
+    }
+
+    function applyDateFilters(rows) {
+        const transactionDate = transactionDateFilter?.value || "";
+        const initialStockDate = initialStockDateFilter?.value || "";
+
+        if (!transactionDate && !initialStockDate) {
+            return rows;
+        }
+
+        return rows.filter((row) => {
+            const movement = getMovement(row);
+            const rowTransactionDate = getDateFilterValue(movement.date);
+            const rowInitialStockDate = getDateFilterValue(row.initial_purchase_date);
+
+            return (!transactionDate || rowTransactionDate === transactionDate)
+                && (!initialStockDate || rowInitialStockDate === initialStockDate);
+        });
+    }
+
+    function getDateFilterValue(dateString) {
+        if (!dateString) return "";
+
+        const stringValue = String(dateString);
+        const simpleDateMatch = stringValue.match(/^\d{4}-\d{2}-\d{2}/);
+
+        if (simpleDateMatch) {
+            return simpleDateMatch[0];
+        }
+
+        const parsedDate = new Date(stringValue);
+
+        if (Number.isNaN(parsedDate.getTime())) {
+            return "";
+        }
+
+        return parsedDate.toISOString().slice(0, 10);
+    }
+
+    function resetDateFilters() {
+        if (transactionDateFilter) transactionDateFilter.value = "";
+        if (initialStockDateFilter) initialStockDateFilter.value = "";
     }
 
     function escapeHtml(value) {

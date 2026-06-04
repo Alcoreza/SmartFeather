@@ -42,6 +42,22 @@
                 <div class="record-filter-wrap hidden" id="filterWrap">
                     <select class="record-filter-select" id="recordFilter"></select>
                 </div>
+
+                <div class="record-date-filters" aria-label="Record date filters">
+                    <label class="record-date-filter">
+                        <span>Transaction Date</span>
+                        <input type="date" id="transactionDateFilter">
+                    </label>
+
+                    <label class="record-date-filter">
+                        <span>Initial Stock Date</span>
+                        <input type="date" id="initialStockDateFilter">
+                    </label>
+
+                    <button type="button" class="record-clear-filters-btn" id="clearRecordDateFilters">
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <div class="record-table-card">

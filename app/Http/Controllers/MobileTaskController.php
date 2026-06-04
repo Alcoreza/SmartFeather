@@ -43,6 +43,8 @@ class MobileTaskController extends Controller
                 'pen.pen_name as pen_name',
             ])
             ->map(function ($task) use ($validated) {
+                $assignedPenId = $task->pennumber;
+
                 return [
                     'taskid' => $task->taskid,
                     'tasktype' => $task->tasktype,
@@ -63,7 +65,7 @@ class MobileTaskController extends Controller
                         employeeId: (int) $validated['employee_id'],
                         taskId: (int) $task->taskid,
                         houseId: $task->house_houseid,
-                        penId: $task->pennumber
+                        penId: $assignedPenId
                     ),
                 ];
             })
@@ -95,6 +97,8 @@ class MobileTaskController extends Controller
             ], 403);
         }
 
+        $assignedPenId = $task->pennumber;
+
         $latestEntry = DB::table('personnel_entry_logs')
             ->where('employee_id', $validated['employee_id'])
             ->orderByDesc('date')
@@ -113,8 +117,8 @@ class MobileTaskController extends Controller
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)
-            ->when(!empty($task->pennumber), function ($query) use ($task) {
-                $query->where('pen_id', $task->pennumber);
+            ->when(!empty($assignedPenId), function ($query) use ($assignedPenId) {
+                $query->where('pen_id', $assignedPenId);
             })
             ->exists();
 
@@ -239,6 +243,8 @@ class MobileTaskController extends Controller
             ], 422);
         }
 
+        $assignedPenId = $task->pennumber;
+
         $latestEntry = DB::table('personnel_entry_logs')
             ->where('employee_id', $validated['employee_id'])
             ->orderByDesc('date')
@@ -257,8 +263,8 @@ class MobileTaskController extends Controller
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)
-            ->when(!empty($task->pennumber), function ($query) use ($task) {
-                $query->where('pen_id', $task->pennumber);
+            ->when(!empty($assignedPenId), function ($query) use ($assignedPenId) {
+                $query->where('pen_id', $assignedPenId);
             })
             ->orderByDesc('id')
             ->first();

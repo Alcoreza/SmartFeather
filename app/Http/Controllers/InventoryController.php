@@ -252,10 +252,8 @@ class InventoryController extends Controller
 
         if ($remainingStock <= $critical) {
             $status = ['Critical', 'critical'];
-        } elseif ($percentage >= 70) {
-            $status = ['High', 'high'];
         } else {
-            $status = ['Moderate', 'moderate'];
+            $status = ['Normal', 'high'];
         }
 
         return [

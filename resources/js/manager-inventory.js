@@ -205,9 +205,134 @@ async function apiRequest(url, method, data = null) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    setupCreateInventoryTypeModal();
     setupInventoryModals();
     setupProfileModal();
 });
+
+function setupCreateInventoryTypeModal() {
+    const createInventoryTypeModal = document.getElementById("createInventoryTypeModal");
+    const openCreateInventoryTypeModalBtn = document.getElementById("openCreateInventoryTypeModal");
+    const closeCreateInventoryTypeModalBtn = document.getElementById("closeCreateInventoryTypeModal");
+    const cancelCreateInventoryTypeModalBtn = document.getElementById("cancelCreateInventoryTypeModal");
+    const createInventoryTypeForm = document.getElementById("createInventoryTypeForm");
+    const inventoryCategory = document.getElementById("inventoryCategory");
+    const newInventoryTypeName = document.getElementById("newInventoryTypeName");
+    const newInventoryInitialStock = document.getElementById("newInventoryInitialStock");
+    const newInventoryCritical = document.getElementById("newInventoryCritical");
+    const inventoryTypeNameLabel = document.getElementById("inventoryTypeNameLabel");
+    const createInventoryTypeMessage = document.getElementById("createInventoryTypeMessage");
+
+    function setInventoryMessage(message, type = "error") {
+        if (!createInventoryTypeMessage) return;
+
+        createInventoryTypeMessage.textContent = message || "";
+        createInventoryTypeMessage.className = message
+            ? `inventory-modal-message ${type}`
+            : "inventory-modal-message";
+    }
+
+    function resetCreateInventoryTypeModal() {
+        if (inventoryCategory) inventoryCategory.value = "";
+        if (newInventoryTypeName) {
+            newInventoryTypeName.value = "";
+            newInventoryTypeName.placeholder = "Enter inventory item";
+        }
+        if (newInventoryInitialStock) newInventoryInitialStock.value = "";
+        if (newInventoryCritical) newInventoryCritical.value = "";
+        if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Vitamins";
+
+        setInventoryMessage("");
+    }
+
+    function openCreateInventoryTypeModal() {
+        resetCreateInventoryTypeModal();
+        createInventoryTypeModal?.classList.add("show");
+
+        setTimeout(() => {
+            inventoryCategory?.focus();
+        }, 60);
+    }
+
+    function closeCreateInventoryTypeModal() {
+        resetCreateInventoryTypeModal();
+        createInventoryTypeModal?.classList.remove("show");
+    }
+
+    inventoryCategory?.addEventListener("change", () => {
+        if (inventoryCategory.value === "feed") {
+            if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Feed";
+            if (newInventoryTypeName) newInventoryTypeName.placeholder = "Enter feed type";
+            return;
+        }
+
+        if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Vitamins";
+        if (newInventoryTypeName) newInventoryTypeName.placeholder = "Enter vitamin type";
+    });
+
+    openCreateInventoryTypeModalBtn?.addEventListener("click", openCreateInventoryTypeModal);
+    closeCreateInventoryTypeModalBtn?.addEventListener("click", closeCreateInventoryTypeModal);
+    cancelCreateInventoryTypeModalBtn?.addEventListener("click", closeCreateInventoryTypeModal);
+
+    createInventoryTypeModal?.addEventListener("click", (event) => {
+        if (event.target === createInventoryTypeModal) {
+            closeCreateInventoryTypeModal();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && createInventoryTypeModal?.classList.contains("show")) {
+            closeCreateInventoryTypeModal();
+        }
+    });
+
+    createInventoryTypeForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const category = inventoryCategory?.value || "";
+        const name = newInventoryTypeName?.value.trim() || "";
+        const initialStock = newInventoryInitialStock?.value || "";
+        const critical = newInventoryCritical?.value || "";
+
+        if (!category || !name || initialStock === "" || critical === "") {
+            showPopup("Please complete all fields.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/manager/inventory/types", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+                },
+                body: JSON.stringify({
+                    category,
+                    name,
+                    initial_stock: Number(initialStock),
+                    critical: Number(critical),
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const firstError = data.errors ? Object.values(data.errors)[0]?.[0] : "";
+                showPopup(firstError || data.error || data.message || "Unable to save inventory item.", "error");
+                return;
+            }
+
+            showPopup(`Added "${data.name || name}" successfully.`, "success", () => {
+                closeCreateInventoryTypeModal();
+                location.reload();
+            });
+        } catch (error) {
+            console.error(error);
+            showPopup(error.message || "Unable to save inventory item.", "error");
+        }
+    });
+}
 
 function setupInventoryModals() {
     const feedModal = document.getElementById("feedEditStockModal");

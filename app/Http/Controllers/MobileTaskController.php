@@ -42,7 +42,7 @@ class MobileTaskController extends Controller
                 'house.house_number as house_number',
                 'pen.pen_name as pen_name',
             ])
-            ->map(function ($task) {
+            ->map(function ($task) use ($validated) {
                 return [
                     'taskid' => $task->taskid,
                     'tasktype' => $task->tasktype,
@@ -59,11 +59,76 @@ class MobileTaskController extends Controller
                     'photourl' => $this->buildTaskPhotoUrl($task->photourl),
                     'house_number' => $task->house_number,
                     'pen_name' => $task->pen_name,
+                    'biosecurity_cleared' => $this->taskBiosecurityCleared(
+                        employeeId: (int) $validated['employee_id'],
+                        taskId: (int) $task->taskid,
+                        houseId: $task->house_houseid,
+                        penId: $task->pennumber
+                    ),
                 ];
             })
             ->values();
 
         return response()->json($tasks);
+    }
+
+    public function checkTaskAccess(Request $request)
+    {
+        $validated = $request->validate([
+            'task_id' => 'required|integer|exists:tasks,taskid',
+            'employee_id' => 'required|integer',
+        ]);
+
+        $task = Task::where('taskid', $validated['task_id'])
+            ->where('user_employeeid', $validated['employee_id'])
+            ->first();
+
+        if (!$task) {
+            return response()->json([
+                'message' => 'Task not found for this employee.'
+            ], 404);
+        }
+
+        if ($task->status !== 'Pending') {
+            return response()->json([
+                'message' => 'This task is no longer pending.'
+            ], 403);
+        }
+
+        $latestEntry = DB::table('personnel_entry_logs')
+            ->where('employee_id', $validated['employee_id'])
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
+            return response()->json([
+                'message' => 'Please scan IN and complete biosecurity before opening this task.'
+            ], 403);
+        }
+
+        $hasBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $validated['employee_id'])
+            ->where('personnel_entry_log_id', $latestEntry->id)
+            ->where('task_id', $task->taskid)
+            ->where('house_id', $task->house_houseid)
+            ->when(!empty($task->pennumber), function ($query) use ($task) {
+                $query->where('pen_id', $task->pennumber);
+            })
+            ->exists();
+
+        if (!$hasBiosecurity) {
+            return response()->json([
+                'message' => 'Complete biosecurity again before opening this task.'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'access_granted' => true,
+            'message' => 'Task access granted.'
+        ]);
     }
 
     public function createTaskPhotoUploadUrl(Request $request)
@@ -168,6 +233,12 @@ class MobileTaskController extends Controller
             ], 404);
         }
 
+        if ($task->status !== 'Pending') {
+            return response()->json([
+                'message' => 'Only pending tasks can be submitted for approval.'
+            ], 422);
+        }
+
         $latestEntry = DB::table('personnel_entry_logs')
             ->where('employee_id', $validated['employee_id'])
             ->orderByDesc('date')
@@ -181,23 +252,20 @@ class MobileTaskController extends Controller
             ], 403);
         }
 
-        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+        $taskBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $validated['employee_id'])
             ->where('personnel_entry_log_id', $latestEntry->id)
+            ->where('task_id', $task->taskid)
+            ->where('house_id', $task->house_houseid)
+            ->when(!empty($task->pennumber), function ($query) use ($task) {
+                $query->where('pen_id', $task->pennumber);
+            })
             ->orderByDesc('id')
             ->first();
 
-        if (!$latestBiosecurity) {
+        if (!$taskBiosecurity) {
             return response()->json([
-                'message' => 'Please submit the personnel biosecurity form first before submitting this task.'
-            ], 403);
-        }
-
-        if (
-            !empty($task->house_houseid) &&
-            (int) $task->house_houseid !== (int) $latestBiosecurity->house_id
-        ) {
-            return response()->json([
-                'message' => 'This task is assigned to a different house. Please select the correct house in Personnel Logs first.'
+                'message' => 'Please complete personnel biosecurity for this assigned task before submitting.'
             ], 403);
         }
 
@@ -212,6 +280,35 @@ class MobileTaskController extends Controller
             'message' => 'Task submitted for approval.',
             'photo_url' => $this->buildTaskPhotoUrl($task->photourl),
         ]);
+    }
+
+    private function taskBiosecurityCleared(
+        int $employeeId,
+        int $taskId,
+        $houseId,
+        $penId
+    ): bool {
+        $latestEntry = DB::table('personnel_entry_logs')
+            ->where('employee_id', $employeeId)
+            ->whereRaw('UPPER(status) = ?', ['IN'])
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$latestEntry) {
+            return false;
+        }
+
+        return DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
+            ->where('personnel_entry_log_id', $latestEntry->id)
+            ->where('task_id', $taskId)
+            ->where('house_id', $houseId)
+            ->when(!empty($penId), function ($query) use ($penId) {
+                $query->where('pen_id', $penId);
+            })
+            ->exists();
     }
 
     private function buildTaskPhotoUrl(?string $path): ?string

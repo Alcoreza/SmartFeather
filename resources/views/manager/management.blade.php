@@ -32,15 +32,10 @@
                         <span class="management-action-label">Create Task</span>
                     </button>
 
-                    <button type="button" class="management-action-card" id="openCreateInventoryTypeModal">
-                        <span class="management-action-icon">▣</span>
-                        <span class="management-action-label">Add Inventory</span>
-                    </button>
                 </div>
             </section>
 
             @include('includes.manager-create-task-modal')
-            @include('includes.manager-create-inventory-modal')
         </main>
     </div>
 @endsection

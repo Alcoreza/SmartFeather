@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Inventory Records')
+@section('title', 'Stock Transaction History')
 
 @push('styles')
     @vite([
@@ -20,7 +20,7 @@
 
         <main class="manager-main record-inventory-main">
             <div class="record-inventory-topbar">
-                <h1 class="record-inventory-title">Inventory Records</h1>
+                <h1 class="record-inventory-title">Stock Transaction History</h1>
 
                 <div class="record-inventory-topbar-actions">
                 </div>
@@ -49,6 +49,16 @@
                     <thead id="recordTableHead"></thead>
                     <tbody id="recordTableBody"></tbody>
                 </table>
+
+                <div class="record-pagination" data-record-pagination>
+                    <button type="button" class="record-page-btn" data-record-prev>
+                        Previous
+                    </button>
+                    <div class="record-page-dots" data-record-dots></div>
+                    <button type="button" class="record-page-btn" data-record-next>
+                        Next
+                    </button>
+                </div>
             </div>
         </main>
     </div>

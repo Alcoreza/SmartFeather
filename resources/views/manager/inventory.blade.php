@@ -39,9 +39,9 @@
                     <a
                         href="{{ route('manager.inventory.records') }}"
                         class="inventory-rec-btn"
-                        aria-label="Records"
+                        aria-label="Stock Transaction History"
                     >
-                        Records
+                        Stock Transaction History
                     </a>
 
                     <button
@@ -59,6 +59,19 @@
                         aria-label="Edit Stock"
                     >
                         ✎ Edit Stock
+                    </button>
+
+                    <button
+                        type="button"
+                        class="inventory-icon-btn add-btn"
+                        id="openCreateInventoryTypeModal"
+                        aria-label="Add Inventory"
+                        title="Add Inventory"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                            <path d="M12 5v14"></path>
+                            <path d="M5 12h14"></path>
+                        </svg>
                     </button>
 
                 </div>
@@ -99,11 +112,6 @@
                                 <div class="inventory-stock-details">
 
                                     <p>
-                                        <strong>Initial Stock:</strong>
-                                        <span class="inventory-stock-detail-value">{{ $item['initial_stock'] }} <span class="inventory-stock-detail-unit">{{ $item['unit'] === 'bottles' ? 'btls' : $item['unit'] }}</span></span>
-                                    </p>
-
-                                    <p>
                                         <strong>Critical Level:</strong>
                                         <span class="inventory-stock-detail-value">{{ number_format($item['critical'], 0, '.', '') }} <span class="inventory-stock-detail-unit">{{ $item['unit'] === 'bottles' ? 'btls' : $item['unit'] }}</span></span>
                                     </p>
@@ -114,7 +122,7 @@
                                     <div class="inventory-progress-track {{ $item['status_class'] }}" style="--percent: {{ $item['percentage'] }};">
                                         <div class="inventory-progress-fill"></div>
                                         <div class="inventory-progress-label">
-                                            {{ $item['status'] }} · {{ $item['percentage'] }}%
+                                            {{ $item['status'] }}
                                         </div>
                                     </div>
                                 </div>
@@ -175,11 +183,6 @@
                                 <div class="inventory-stock-details">
 
                                     <p>
-                                        <strong>Initial Stock:</strong>
-                                        <span class="inventory-stock-detail-value">{{ $item['initial_stock'] }} <span class="inventory-stock-detail-unit">btls</span></span>
-                                    </p>
-
-                                    <p>
                                         <strong>Critical Level:</strong>
                                         <span class="inventory-stock-detail-value">{{ number_format($item['critical'], 0, '.', '') }} <span class="inventory-stock-detail-unit">btls</span></span>
                                     </p>
@@ -190,7 +193,7 @@
                                     <div class="inventory-progress-track {{ $item['status_class'] }}" style="--percent: {{ $item['percentage'] }};">
                                         <div class="inventory-progress-fill"></div>
                                         <div class="inventory-progress-label">
-                                            {{ $item['status'] }} · {{ $item['percentage'] }}%
+                                            {{ $item['status'] }}
                                         </div>
                                     </div>
                                 </div>
@@ -213,6 +216,7 @@
 
 @include('includes.manager-edit-stock-modal')
 @include('includes.manager-archive-inventory-modal')
+@include('includes.manager-create-inventory-modal')
 @include('includes.manager-profile-modal')
 
 @endsection

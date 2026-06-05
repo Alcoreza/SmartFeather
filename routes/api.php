@@ -13,6 +13,8 @@ use App\Http\Controllers\MobileWeightSamplingController;
 use App\Http\Controllers\MobileNewBatchController;
 use App\Http\Controllers\MobileDashboardController;
 use App\Http\Controllers\MobilePersonnelLogsController;
+use App\Http\Controllers\MobilePenCleaningController;
+use App\Http\Controllers\MobileSensorInspectionController;
 
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
@@ -69,5 +71,10 @@ Route::get('/mobile/dashboard', [MobileDashboardController::class, 'show']);
 
 Route::get('/mobile/personnel-logs/context', [MobilePersonnelLogsController::class, 'context']);
 Route::post('/mobile/personnel-logs', [MobilePersonnelLogsController::class, 'submit']);
+
+Route::get('/mobile/pen-cleaning/context', [MobilePenCleaningController::class, 'getContext']);
+Route::post('/mobile/pen-cleaning', [MobilePenCleaningController::class, 'submit']);
+
+Route::post('/mobile/sensor-inspection', [MobileSensorInspectionController::class, 'submit']);
 
 

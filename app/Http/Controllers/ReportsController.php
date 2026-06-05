@@ -25,12 +25,76 @@ class ReportsController extends Controller
             'filters' => array_merge($filters, [
                 'options' => $this->getReportFilterOptions(),
             ]),
+            'summary' => $this->getSummaryStatistics($filters),
             'reports' => [
                 'farm_status' => $this->getFarmStatusReport($filters),
                 'feed_consumption' => $this->getFeedConsumptionReport($filters),
                 'mortality' => $this->getMortalityReport($filters),
             ],
         ]);
+    }
+
+    private function getSummaryStatistics(array $filters): array
+    {
+        $totalFeedConsumed = 0;
+        $totalMortalities = 0;
+        $weightStatus = ['overweight' => 0, 'normal' => 0, 'underweight' => 0];
+
+        // Total Feed Consumed
+        if (Schema::hasTable('feed_refill_records')) {
+            $query = FeedRefillRecord::query();
+            $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+            if (!empty($filters['house'])) {
+                $query->whereHas('house', function ($houseQuery) use ($filters) {
+                    $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
+                });
+            }
+
+            $totalFeedConsumed = $query->sum('kilograms_used') ?? 0;
+        }
+
+        // Total Mortalities
+        if (Schema::hasTable('pen')) {
+            $query = Pen::query()->whereNull('archived_at');
+            $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+            if (!empty($filters['house'])) {
+                $query->whereHas('house', function ($houseQuery) use ($filters) {
+                    $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
+                });
+            }
+
+            $totalMortalities = $query->sum('mortality') ?? 0;
+        }
+
+        // Weight Status Breakdown
+        if (Schema::hasTable('weight_sampling_logs')) {
+            $query = WeightSamplingLog::query();
+            $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+            if (!empty($filters['house'])) {
+                $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
+            }
+
+            $statuses = $query->pluck('status')->toArray();
+            foreach ($statuses as $status) {
+                $status = strtolower(trim($status));
+                if ($status === 'overweight') {
+                    $weightStatus['overweight']++;
+                } elseif ($status === 'underweight') {
+                    $weightStatus['underweight']++;
+                } else {
+                    $weightStatus['normal']++;
+                }
+            }
+        }
+
+        return [
+            'total_feed_consumed' => $totalFeedConsumed,
+            'total_mortalities' => $totalMortalities,
+            'weight_status' => $weightStatus,
+        ];
     }
 
     private function getReportFilterOptions(): array

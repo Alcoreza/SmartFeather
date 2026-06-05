@@ -121,6 +121,46 @@ body {
     transform: translateY(-1px);
 }
 
+.reports-summary-card {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin: 0 0 22px;
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid rgba(29, 111, 36, 0.15);
+    box-shadow: 0 8px 24px rgba(12, 35, 22, 0.06);
+}
+
+.reports-summary-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
+}
+
+.reports-summary-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0b2d4a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reports-summary-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #1d6f24;
+}
+
+.reports-summary-breakdown {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d5a35;
+    line-height: 1.5;
+}
+
 .reports-toolbar {
     display: flex;
     align-items: center;

@@ -48,6 +48,21 @@
                 <button type="submit" class="reports-filter-submit">Generate Report</button>
             </form>
 
+            <div class="reports-summary-card">
+                <div class="reports-summary-stat">
+                    <div class="reports-summary-label">Total Feed Consumed</div>
+                    <div class="reports-summary-value" id="summaryFeedConsumed">-- kg</div>
+                </div>
+                <div class="reports-summary-stat">
+                    <div class="reports-summary-label">Total Mortalities</div>
+                    <div class="reports-summary-value" id="summaryMortalities">--</div>
+                </div>
+                <div class="reports-summary-stat">
+                    <div class="reports-summary-label">Overall Farm Weight Status</div>
+                    <div class="reports-summary-breakdown" id="summaryWeightStatus">--</div>
+                </div>
+            </div>
+
             <section class="reports-content-shell">
                 <div id="reportContent"></div>
             </section>

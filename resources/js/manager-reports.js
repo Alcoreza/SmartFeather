@@ -159,6 +159,7 @@ async function loadReportsData() {
     try {
         const result = await fetchJson(buildReportsUrl());
         applyFilterState(result.filters);
+        updateSummaryCard(result.summary);
 
         reportCards.forEach((card) => {
             const rows = Array.isArray(result.reports?.[card.key])
@@ -176,6 +177,34 @@ async function loadReportsData() {
                 body.innerHTML = '<div class="reports-empty">Unable to load records.</div>';
             }
         });
+    }
+}
+
+function updateSummaryCard(summary) {
+    if (!summary) return;
+
+    const feedConsumedEl = document.getElementById('summaryFeedConsumed');
+    const mortalitiesEl = document.getElementById('summaryMortalities');
+    const weightStatusEl = document.getElementById('summaryWeightStatus');
+
+    if (feedConsumedEl) {
+        feedConsumedEl.textContent = summary.total_feed_consumed
+            ? `${Number(summary.total_feed_consumed).toFixed(2)} kg`
+            : '-- kg';
+    }
+
+    if (mortalitiesEl) {
+        mortalitiesEl.textContent = summary.total_mortalities ?? '--';
+    }
+
+    if (weightStatusEl) {
+        const weight = summary.weight_status || {};
+        const breakdown = [
+            `Overweight: ${weight.overweight || 0}`,
+            `Normal: ${weight.normal || 0}`,
+            `Underweight: ${weight.underweight || 0}`,
+        ].join(' | ');
+        weightStatusEl.textContent = breakdown || '--';
     }
 }
 

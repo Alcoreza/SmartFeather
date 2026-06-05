@@ -22,7 +22,7 @@
                 <span class="sidebar-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-7h6v7"></path></svg>
                 </span>
-                <span>Houses</span>
+                <span>Farm Management</span>
             </a>
 
             <a href="{{ route('manager.workers') }}"

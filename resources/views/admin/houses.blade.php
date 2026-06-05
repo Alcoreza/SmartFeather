@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Admin House Data')
+@section('title', 'Admin Farm Management')
 
 @push('styles')
     @vite([
@@ -24,7 +24,11 @@
 
             <section class="houses-page">
                 <div class="houses-header">
-                    <h1>House Data</h1>
+                    <div>
+                        <p class="houses-eyebrow">Farm Structure</p>
+                        <h1>Farm Management</h1>
+                        <p class="houses-subtitle">Manage each poultry house, select its pens, and update flock capacity, population, batch dates, hatch counts, and mortality.</p>
+                    </div>
                 </div>
 
                 <div class="houses-tabs">
@@ -33,63 +37,97 @@
 
                 <div class="houses-divider"></div>
 
-                <div class="houses-toolbar">
-                    <div class="toolbar-left">
-                        <span class="chip chip-gray" id="houseStatus">Loading...</span>
-                        <span class="chip chip-yellow" id="houseBatch">Loading...</span>
-
-                        <select class="pen-select" id="housePen">
-                            <option value="">Loading pens...</option>
-                        </select>
-                    </div>
-
-                    <div class="toolbar-right">
-                        <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">✎ Edit</button>
-                        <a href="{{ route('admin.houses.record-house') }}"
-                        class="toolbar-btn btn-file"
-                        title="Flock Batch Records">
-                        Rec
-                        </a>
-                    </div>
-                </div>
-
-                <div class="houses-top-grid">
-                    <article class="monitor-card env-card">
-                        <h2>Environmental Monitoring</h2>
-
-                        <div class="gauge-group">
-                            <div class="gauge-item">
-                                <div class="semi-gauge">
-                                    <div class="semi-gauge-inner" id="houseTemperature">--</div>
-                                </div>
-                                <span class="gauge-label temperature-label">Temperature</span>
+                <div class="houses-workspace">
+                    <div class="houses-main-column">
+                        <article class="farm-panel info-panel">
+                            <div class="section-heading">
+                                <h2>Selected Pen Details</h2>
                             </div>
 
-                            <div class="inner-divider"></div>
+                            <div class="info-grid" id="infoGrid"></div>
+                        </article>
 
-                            <div class="gauge-item">
-                                <div class="semi-gauge">
-                                    <div class="semi-gauge-inner" id="houseAmmonia">--</div>
+                        <article class="farm-panel monitor-card env-card">
+                            <div class="section-heading">
+                                <h2>Environment Readings</h2>
+                            </div>
+
+                            <div class="sensor-chart-grid">
+                                <div class="sensor-chart-wrap temperature-chart">
+                                    <div class="sensor-chart-plot">
+                                        <canvas id="farmTemperatureChart"></canvas>
+                                    </div>
+
+                                    <div class="sensor-stat temperature-stat">
+                                        <span class="sensor-label">Temperature</span>
+                                        <span class="sensor-reading-value" id="houseTemperature">--</span>
+                                    </div>
                                 </div>
-                                <span class="gauge-label ammonia-label">Ammonia</span>
+
+                                <div class="sensor-chart-wrap ammonia-chart">
+                                    <div class="sensor-chart-plot">
+                                        <canvas id="farmAmmoniaChart"></canvas>
+                                    </div>
+
+                                    <div class="sensor-stat ammonia-stat">
+                                        <span class="sensor-label">Ammonia</span>
+                                        <span class="sensor-reading-value" id="houseAmmonia">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="resource-grid">
+                            <section class="resource-section">
+                                <h2>Feeder Levels</h2>
+
+                                <div class="resource-row" id="feedRow"></div>
+                            </section>
+
+                            <section class="resource-section">
+                                <h2>Drinker Levels</h2>
+
+                                <div class="resource-row" id="waterRow"></div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <aside class="houses-side-column">
+                    <article class="farm-panel cycle-panel">
+                        <div class="section-heading">
+                            <h2>Flock Batch</h2>
+                        </div>
+
+                        <div class="cycle-stack">
+                            <div class="status-card">
+                                <span class="status-label">Pen Status</span>
+                                <span class="chip chip-gray" id="houseStatus">Loading...</span>
+                            </div>
+
+                            <div class="status-card">
+                                <span class="status-label">Batch ID</span>
+                                <span class="chip chip-yellow" id="houseBatch">Loading...</span>
+                            </div>
+
+                            <div class="status-card">
+                                <span class="status-label">Selected Pen</span>
+                                <select class="pen-select" id="housePen">
+                                    <option value="">Loading pens...</option>
+                                </select>
                             </div>
                         </div>
+
+                        <div class="houses-actions">
+                            <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">Edit</button>
+                            <a href="{{ route('admin.houses.record-house') }}"
+                            class="toolbar-btn btn-file"
+                            title="Flock Batch Records">
+                            Records
+                            </a>
+                        </div>
                     </article>
-
-                    <div class="info-grid" id="infoGrid"></div>
+                    </aside>
                 </div>
-
-                <section class="resource-section">
-                    <h2>Feed Monitoring</h2>
-
-                    <div class="resource-row" id="feedRow"></div>
-                </section>
-
-                <section class="resource-section">
-                    <h2>Water Monitoring</h2>
-
-                    <div class="resource-row" id="waterRow"></div>
-                </section>
             </section>
         </main>
     </div>

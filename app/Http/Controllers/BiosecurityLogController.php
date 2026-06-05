@@ -18,23 +18,31 @@ class BiosecurityLogController extends Controller
      */
     public function index()
     {
-        $groupedLogs = [
-            'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
-            'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLogs(
-                PersonnelBiosecurityLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
-            ),
-            'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
-            'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
-            'Weight Sampling' => WeightSamplingLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatWeightSamplingLog($log)),
-        ];
+        try {
+            $groupedLogs = [
+                'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
+                'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLogs(
+                    PersonnelBiosecurityLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
+                ),
+                'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
+                'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
+                'Weight Sampling' => WeightSamplingLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatWeightSamplingLog($log)),
+            ];
 
-        // Get overview stats
-        $overview = $this->getOverview($groupedLogs);
+            // Get overview stats
+            $overview = $this->getOverview($groupedLogs);
 
-        return response()->json([
-            'overview' => $overview,
-            'logs' => $groupedLogs,
-        ]);
+            return response()->json([
+                'overview' => $overview,
+                'logs' => $groupedLogs,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'overview' => [],
+                'logs' => [],
+            ], 500);
+        }
     }
 
     /**

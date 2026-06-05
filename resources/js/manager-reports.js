@@ -405,8 +405,216 @@ function setupProfileModal() {
     });
 }
 
+function generateCsvExport() {
+    const fromDate = document.getElementById('reportsFromDate')?.value || 'All Dates';
+    const toDate = document.getElementById('reportsToDate')?.value || 'All Dates';
+    const house = document.getElementById('reportsHouse')?.value || 'All Houses';
+    const feedConsumed = document.getElementById('summaryFeedConsumed')?.textContent || '--';
+    const mortalities = document.getElementById('summaryMortalities')?.textContent || '--';
+    const weightStatus = document.getElementById('summaryWeightStatus')?.textContent || '--';
+
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += 'Farm Status Report\n';
+    csvContent += `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    csvContent += `Date Range: ${fromDate} to ${toDate}\n`;
+    csvContent += `House: ${house}\n\n`;
+
+    // Add summary statistics
+    csvContent += 'SUMMARY STATISTICS\n';
+    csvContent += '"Metric","Value"\n';
+    csvContent += `"Total Feed Consumed","${feedConsumed}"\n`;
+    csvContent += `"Total Mortalities","${mortalities}"\n`;
+    csvContent += `"Overall Farm Weight Status","${weightStatus}"\n\n`;
+
+    reportCards.forEach((card) => {
+        const rows = currentReportData[card.key] || [];
+        csvContent += `${card.title}\n`;
+
+        const headers = card.columns.map((col) => `"${col.label.replace(/<br>/g, ' ')}"`).join(',');
+        csvContent += headers + '\n';
+
+        rows.forEach((row) => {
+            const values = card.columns.map((col) => {
+                const value = row[col.key] ?? '';
+                const stringValue = String(value).replace(/"/g, '""');
+                return `"${stringValue}"`;
+            }).join(',');
+            csvContent += values + '\n';
+        });
+
+        csvContent += '\n';
+    });
+
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `farm-report-${new Date().getTime()}.csv`);
+    link.click();
+}
+
+function generatePdfExport() {
+    const fromDate = document.getElementById('reportsFromDate')?.value || 'All Dates';
+    const toDate = document.getElementById('reportsToDate')?.value || 'All Dates';
+    const house = document.getElementById('reportsHouse')?.value || 'All Houses';
+    const feedConsumed = document.getElementById('summaryFeedConsumed')?.textContent || '--';
+    const mortalities = document.getElementById('summaryMortalities')?.textContent || '--';
+    const weightStatus = document.getElementById('summaryWeightStatus')?.textContent || '--';
+
+    let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Farm Status Report</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                .header { margin-bottom: 30px; border-bottom: 2px solid #2f7446; padding-bottom: 20px; }
+                .header h1 { font-size: 24px; color: #000; margin-bottom: 10px; }
+                .header-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 13px; color: #666; }
+                .section { margin-bottom: 30px; page-break-inside: avoid; }
+                .section-title { font-size: 16px; font-weight: bold; color: #2f7446; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #ddd; }
+                .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+                .summary-item { padding: 15px; background: #f5f5f5; border-left: 4px solid #2f7446; border-radius: 4px; }
+                .summary-item-label { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; }
+                .summary-item-value { font-size: 16px; font-weight: bold; color: #1d6f24; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th { background: #f0f0f0; padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd; }
+                td { padding: 8px; border-bottom: 1px solid #eee; }
+                tr:nth-child(even) { background: #f9f9f9; }
+                .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; }
+                @media print {
+                    body { padding: 0; }
+                    .section { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>📊 Farm Status Report</h1>
+                <div class="header-info">
+                    <div><strong>Generated:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+                    <div><strong>Date Range:</strong> ${fromDate} to ${toDate}</div>
+                    <div><strong>House:</strong> ${house}</div>
+                    <div><strong>Report Type:</strong> Comprehensive</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Summary Statistics</div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-item-label">Total Feed Consumed</div>
+                        <div class="summary-item-value">${escapeHtml(feedConsumed)}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-item-label">Total Mortalities</div>
+                        <div class="summary-item-value">${escapeHtml(mortalities)}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-item-label">Overall Farm Weight Status</div>
+                        <div class="summary-item-value">${escapeHtml(weightStatus)}</div>
+                    </div>
+                </div>
+            </div>
+    `;
+
+    reportCards.forEach((card) => {
+        const rows = currentReportData[card.key] || [];
+        if (!rows.length) return;
+
+        htmlContent += `
+            <div class="section">
+                <div class="section-title">${card.title}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            ${card.columns.map((col) => `<th>${col.label.replace(/<br>/g, ' ')}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((row) => `
+                            <tr>
+                                ${card.columns.map((col) => `<td>${escapeHtml(row[col.key] ?? '')}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+
+    htmlContent += `
+            <div class="footer">
+                <p>This report was automatically generated by the Farm Management System.</p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', '', 'width=900,height=700');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function setupExportModal() {
+    const modal = document.getElementById('exportModal');
+    const openBtn = document.getElementById('openExportModal');
+    const closeBtn = document.getElementById('closeExportModal');
+    const cancelBtn = document.getElementById('cancelExportModal');
+    const pdfBtn = document.getElementById('exportPdfBtn');
+    const csvBtn = document.getElementById('exportCsvBtn');
+
+    if (!modal || !openBtn) return;
+
+    function closeModal() {
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', () => {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeModal);
+    }
+
+    if (pdfBtn) {
+        pdfBtn.addEventListener('click', () => {
+            generatePdfExport();
+            closeModal();
+        });
+    }
+
+    if (csvBtn) {
+        csvBtn.addEventListener('click', () => {
+            generateCsvExport();
+            closeModal();
+        });
+    }
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('show')) {
+            closeModal();
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     setupProfileModal();
+    setupExportModal();
     bindReportsFilter();
     loadReportsData();
 });

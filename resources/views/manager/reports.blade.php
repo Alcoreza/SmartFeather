@@ -17,6 +17,7 @@
     <div class="manager-shell">
         @include('includes.manager-sidebar')
         @include('includes.manager-profile-modal')
+        @include('includes.manager-export-modal')
 
         <main class="manager-main reports-page">
             <div class="reports-topbar">
@@ -46,6 +47,7 @@
                 </div>
 
                 <button type="submit" class="reports-filter-submit">Generate Report</button>
+                <button type="button" id="openExportModal" class="reports-export-btn" title="Export Report">💾 Export</button>
             </form>
 
             <div class="reports-summary-card">

@@ -55,7 +55,7 @@ body {
 
 .reports-filter-card {
     display: grid;
-    grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(150px, 1fr) auto;
+    grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(150px, 1fr) auto auto;
     align-items: end;
     gap: 16px;
     margin: 0 0 22px;
@@ -560,6 +560,175 @@ body {
     background: linear-gradient(135deg, #63d15f, #57c451);
     border-color: rgba(87, 196, 81, 0.6);
     box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+}
+
+/* Export Button */
+.reports-export-btn {
+    width: auto;
+    padding: 0 24px;
+    height: 42px;
+    border: 0;
+    border-radius: 8px;
+    background: #6db5e8;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.96rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.reports-export-btn:hover {
+    background: #5a9fcd;
+    transform: translateY(-1px);
+}
+
+.reports-export-btn:active {
+    transform: translateY(0);
+}
+
+/* Export Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    animation: modalSlide 0.3s ease;
+}
+
+@keyframes modalSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #000;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.export-modal-label {
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.export-format-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.export-format-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.export-format-btn:hover {
+    border-color: #2f7446;
+    background: rgba(47, 116, 70, 0.05);
+}
+
+.export-format-btn:active {
+    border-color: #1d6f24;
+    background: rgba(29, 111, 36, 0.1);
+}
+
+.export-format-icon {
+    font-size: 2.2rem;
+}
+
+.export-format-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 0 24px 24px;
+}
+
+.cancel-btn {
+    padding: 10px 24px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #333;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+    background: #f5f5f5;
 }
 
 @media (max-width: 900px) {

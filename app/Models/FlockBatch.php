@@ -27,4 +27,14 @@ class FlockBatch extends Model
     {
         return $this->belongsTo(Pen::class, 'pen_id');
     }
+
+    public function scopeRunning($query)
+    {
+        return $query->where('status', 'Running');
+    }
+
+    public function scopeByHouse($query, $houseId)
+    {
+        return $query->where('house_id', $houseId);
+    }
 }

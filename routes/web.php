@@ -11,6 +11,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ManagementCreateTaskController;
 use App\Http\Controllers\BiosecurityLogController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\FarmActivityController;
 use App\Http\Controllers\ReportsController;
 
 
@@ -307,57 +308,10 @@ Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
 Route::get('/api/manager/reports', [ReportsController::class, 'index']);
 Route::get('/manager/reports/generate', [ReportsController::class, 'generate'])->name('manager.reports.generate');
 
-Route::get('/api/manager/farm-activity/feed-replenishment', function () {
-    return response()->json([
-        'records' => DB::table('feed_refill_records as r')
-            ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
-            ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
-            ->leftJoin('pen as p', 'p.id', '=', 'r.pen_id')
-            ->select(
-                'i.item_name as feed',
-                'h.house_number',
-                'p.pen_name',
-                'r.feeder_number',
-                'r.kilograms_used',
-                'r.recorded_at'
-            )
-            ->orderByDesc('r.recorded_at')
-            ->get(),
-    ]);
-});
-
-Route::get('/api/manager/farm-activity/vitamin-supplementation', function () {
-    return response()->json([
-        'records' => DB::table('vitamin_refill_records as r')
-            ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
-            ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
-            ->leftJoin('pen as p', 'p.id', '=', 'r.pen_id')
-            ->select(
-                'i.item_name as vitamin',
-                'h.house_number',
-                'p.pen_name',
-                'r.bottles_used',
-                'r.recorded_at'
-            )
-            ->orderByDesc('r.recorded_at')
-            ->get(),
-    ]);
-});
-
-Route::get('/api/manager/farm-activity/chick-placement', function () {
-    return response()->json([
-        'records' => DB::table('flock_batches as b')
-            ->leftJoin('house as h', 'h.id', '=', 'b.house_id')
-            ->leftJoin('pen as p', 'p.id', '=', 'b.pen_id')
-            ->select(
-                'b.batch_code',
-                'h.house_number',
-                'p.pen_name',
-                'b.initial_population',
-                'b.started_at',
-                'b.status'
-            )
-            ->orderByDesc('b.started_at')
-            ->get(),
-    ]);
-});
+Route::get('/api/manager/farm-activity/pens', [FarmActivityController::class, 'pens']);
+Route::get('/api/manager/farm-activity/weight-sampling-logs', [FarmActivityController::class, 'weightSamplingLogs']);
+Route::get('/api/manager/farm-activity/feed-refill-records', [FarmActivityController::class, 'feedRefillRecords']);
+Route::get('/api/manager/farm-activity/vitamin-refill-records', [FarmActivityController::class, 'vitaminRefillRecords']);
+Route::get('/api/manager/farm-activity/cleaning-logs', [FarmActivityController::class, 'cleaningLogs']);
+Route::get('/api/manager/farm-activity/sensor-inspection-logs', [FarmActivityController::class, 'sensorInspectionLogs']);
+Route::get('/api/manager/farm-activity/flock-batches', [FarmActivityController::class, 'flockBatches']);

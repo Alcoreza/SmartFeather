@@ -1,0 +1,7 @@
+.farm-records-toolbar {
+    justify-content: flex-start;
+}
+
+.farm-records-page .reports-table {
+    min-width: 760px;
+}

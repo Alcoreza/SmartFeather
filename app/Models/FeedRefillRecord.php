@@ -4,23 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class CleaningLog extends Model
+class FeedRefillRecord extends Model
 {
-    protected $table = 'cleaning_logs';
+    protected $table = 'feed_refill_records';
 
     protected $fillable = [
-        'house',
-        'pen',
-        'activity',
-        'disinfectant_used',
-        'performed_by',
-        'date',
-        'time',
+        'inventory_id',
+        'house_id',
+        'pen_id',
+        'feeder_number',
+        'kilograms_used',
+        'recorded_at',
+        'task_id',
     ];
 
     protected $casts = [
-        'date' => 'date',
-        'time' => 'datetime:H:i:s',
+        'recorded_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -33,5 +32,10 @@ class CleaningLog extends Model
     public function pen()
     {
         return $this->belongsTo(Pen::class, 'pen_id');
+    }
+
+    public function inventory()
+    {
+        return $this->belongsTo(Inventory::class, 'inventory_id');
     }
 }

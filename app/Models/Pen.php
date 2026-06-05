@@ -18,12 +18,14 @@ class Pen extends Model
         'eggs_hatched',
         'mortality',
         'recorded_at',
+        'archived_at',
         'current_batch_id',
         'batch_started_at',
     ];
 
     protected $casts = [
         'recorded_at' => 'datetime',
+        'archived_at' => 'datetime',
         'batch_started_at' => 'datetime',
     ];
 

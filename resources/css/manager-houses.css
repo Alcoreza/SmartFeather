@@ -150,6 +150,24 @@
     box-shadow: none;
 }
 
+.btn-archive {
+    background: #7b4b14;
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(123, 75, 20, 0.18);
+}
+
+.btn-archive:hover {
+    background: #633c10;
+    box-shadow: 0 10px 20px rgba(99, 60, 16, 0.22);
+}
+
+.btn-archive:disabled {
+    background: #9aa0a6;
+    color: #f5f6f7;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .houses-top-grid {
     display: grid;
     grid-template-columns: 1.05fr 1.45fr;
@@ -746,6 +764,17 @@
 .house-required-actions {
     justify-content: flex-end;
     margin-top: 18px;
+}
+
+.archive-house-card {
+    max-width: 430px;
+}
+
+.archive-house-text {
+    margin: 0;
+    color: #333333;
+    font-size: 1rem;
+    line-height: 1.5;
 }
 
 .edit-data-modal {

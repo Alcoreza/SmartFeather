@@ -170,6 +170,7 @@ class TaskController extends Controller
             });
 
         $houses = House::query()
+            ->whereNull('archived_at')
             ->orderBy('house_number', 'asc')
             ->get()
             ->map(function (House $house) {
@@ -196,6 +197,7 @@ class TaskController extends Controller
     public function getPensForHouse($houseId)
     {
         $pens = Pen::where('house_id', $houseId)
+            ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get(['id', 'pen_name'])
             ->map(function (Pen $pen) {

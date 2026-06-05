@@ -22,6 +22,7 @@
             @include('includes.manager-add-house-modal')
             @include('includes.manager-edit-house-modal')
             @include('includes.manager-end-batch-modal')
+            @include('includes.manager-archive-house-modal')
 
             <section class="houses-page">
                 <div class="houses-header">
@@ -47,6 +48,7 @@
                     <div class="toolbar-right">
                         <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">✎ Edit</button>
                         <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
+                        <button type="button" class="toolbar-btn btn-archive" id="openArchiveHouseModal">Archive</button>
                         <a href="{{ route('manager.houses.record-house') }}" class="toolbar-btn btn-file" title="Records">
                             Records
                         </a>

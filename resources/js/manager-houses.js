@@ -44,6 +44,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const penSelectGroup = document.getElementById("penSelectGroup");
     const endAction = document.getElementById("endAction");
     const endPenSelect = document.getElementById("endPenSelect");
+    const archiveHouseButton = document.getElementById("openArchiveHouseModal");
+    const archiveHouseModal = document.getElementById("archiveHouseModal");
+    const closeArchiveHouseModal = document.getElementById("closeArchiveHouseModal");
+    const cancelArchiveHouseModal = document.getElementById("cancelArchiveHouseModal");
+    const archiveHouseForm = document.getElementById("archiveHouseForm");
+    const archiveHouseMessage = document.getElementById("archiveHouseMessage");
 
     console.log("Debug: Elements found - endBatchForm:", endBatchForm, "endAction:", endAction, "endPenSelect:", endPenSelect);
 
@@ -329,6 +335,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             : "No active batch to end";
     }
 
+    function updateHouseActionButtonState() {
+        const hasHouse = Boolean(houses[activeHouseIndex]);
+
+        [editHouseButton, archiveHouseButton].forEach((button) => {
+            if (!button) return;
+
+            button.disabled = !hasHouse;
+            button.setAttribute("aria-disabled", String(!hasHouse));
+        });
+
+        updateEndBatchButtonState();
+    }
+
     function openEndBatchModal() {
         const currentHouse = houses[activeHouseIndex];
         if (!currentHouse || !endBatchModal) return;
@@ -370,6 +389,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (endPenSelect) {
             endPenSelect.innerHTML = '<option value="">Select a pen...</option>';
+        }
+    }
+
+    function openArchiveModal() {
+        const currentHouse = houses[activeHouseIndex];
+        if (!currentHouse || !archiveHouseModal) return;
+
+        if (archiveHouseMessage) {
+            archiveHouseMessage.textContent = `Archive ${currentHouse.name}? It will be hidden from active house lists, but its data will remain saved.`;
+        }
+
+        archiveHouseModal.classList.add("show");
+    }
+
+    function closeArchiveModal() {
+        if (archiveHouseModal) {
+            archiveHouseModal.classList.remove("show");
+        }
+
+        if (archiveHouseForm) {
+            archiveHouseForm.reset();
         }
     }
 
@@ -564,11 +604,38 @@ document.addEventListener("DOMContentLoaded", async () => {
                 activeHouseIndex = 0;
                 rebuildHouseTabs();
                 renderHouse(0);
+            } else {
+                activeHouseIndex = 0;
+                activePenIndex = 0;
+                rebuildHouseTabs();
+                renderNoHouses();
             }
         } catch (error) {
             console.error("Error fetching houses:", error);
             alert("Error loading houses: " + error.message);
         }
+    }
+
+    function renderNoHouses() {
+        if (houseStatus) {
+            houseStatus.textContent = "No Houses";
+            houseStatus.classList.remove("chip-green");
+            houseStatus.classList.add("chip-gray");
+        }
+        if (houseBatch) houseBatch.textContent = "No Batch";
+        if (housePen) {
+            housePen.innerHTML = '<option value="">No pens</option>';
+            housePen.value = "";
+        }
+        if (houseTemperature) houseTemperature.textContent = "--";
+        if (houseAmmonia) houseAmmonia.textContent = "--";
+        if (infoGrid) infoGrid.innerHTML = "";
+        if (feedRow) feedRow.innerHTML = "";
+        if (waterRow) waterRow.innerHTML = "";
+
+        updateGauge(temperatureGauge, "temperature", null);
+        updateGauge(ammoniaGauge, "ammonia", null);
+        updateHouseActionButtonState();
     }
 
     function animateStats() {
@@ -625,7 +692,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             housePen.value = penIndex;
         }
 
-        updateEndBatchButtonState();
+        updateHouseActionButtonState();
         animateStats();
     }
 
@@ -672,6 +739,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         `,
             )
             .join("");
+
+        if (!housesTabsContainer) return;
 
         housesTabsContainer.innerHTML = tabsHtml + addButtonHtml;
 
@@ -771,7 +840,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
 
                 const result = await response.json();
-                alert("House created successfully!");
+                alert(
+                    result.message ||
+                        "House and pen capacities saved successfully.",
+                );
 
                 resetAddHouseForm();
                 clearAddHouseRequiredFieldHighlights();
@@ -919,6 +991,59 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (cancelEndBatchModal) {
         cancelEndBatchModal.addEventListener("click", closeEndModal);
+    }
+
+    if (archiveHouseButton) {
+        archiveHouseButton.addEventListener("click", openArchiveModal);
+    }
+
+    if (closeArchiveHouseModal) {
+        closeArchiveHouseModal.addEventListener("click", closeArchiveModal);
+    }
+
+    if (cancelArchiveHouseModal) {
+        cancelArchiveHouseModal.addEventListener("click", closeArchiveModal);
+    }
+
+    if (archiveHouseModal) {
+        archiveHouseModal.addEventListener("click", (event) => {
+            if (event.target === archiveHouseModal) {
+                closeArchiveModal();
+            }
+        });
+    }
+
+    if (archiveHouseForm) {
+        archiveHouseForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const currentHouse = houses[activeHouseIndex];
+            if (!currentHouse) return;
+
+            try {
+                const response = await fetch(`/api/houses/${currentHouse.id}/archive`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                    },
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Failed to archive house");
+                }
+
+                alert(result.message || "House archived successfully.");
+                closeArchiveModal();
+                await fetchHouses();
+            } catch (error) {
+                console.error("Error archiving house:", error);
+                alert("Error archiving house: " + error.message);
+            }
+        });
     }
 
     if (endBatchModal) {

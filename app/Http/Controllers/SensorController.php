@@ -86,7 +86,8 @@ class SensorController extends Controller
             ['value' => 'Water Sensor', 'label' => 'Water Sensor'],
         ];
 
-        $houses = House::orderBy('house_number')
+        $houses = House::whereNull('archived_at')
+            ->orderBy('house_number')
             ->get()
             ->map(function (House $house) {
                 return [
@@ -104,6 +105,7 @@ class SensorController extends Controller
     public function getPensForHouse($houseId)
     {
         $pens = Pen::where('house_id', $houseId)
+            ->whereNull('archived_at')
             ->orderBy('pen_name')
             ->get()
             ->map(function (Pen $pen) {

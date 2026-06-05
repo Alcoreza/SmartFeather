@@ -18,9 +18,13 @@ class HouseController extends Controller
     {
         try {
             $houses = House::with([
+                'pens' => function ($query) {
+                    $query->whereNull('archived_at');
+                },
                 'pens.currentBatch:id,batch_code,started_at,status',
                 'pens.runningBatch:id,batch_code,pen_id,started_at,status',
             ])
+                ->whereNull('archived_at')
                 ->orderBy('id', 'asc')
                 ->get();
 
@@ -87,7 +91,7 @@ class HouseController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $house,
-                'message' => 'House created successfully'
+                'message' => 'House and pen capacities saved successfully.'
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -110,9 +114,14 @@ class HouseController extends Controller
     {
         try {
             $house = House::with([
+                'pens' => function ($query) {
+                    $query->whereNull('archived_at');
+                },
                 'pens.currentBatch:id,batch_code,started_at,status',
                 'pens.runningBatch:id,batch_code,pen_id,started_at,status',
-            ])->find($id);
+            ])
+                ->whereNull('archived_at')
+                ->find($id);
 
             if (!$house) {
                 return response()->json([
@@ -142,7 +151,7 @@ class HouseController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $house = House::find($id);
+            $house = House::whereNull('archived_at')->find($id);
 
             if (!$house) {
                 return response()->json([
@@ -180,6 +189,47 @@ class HouseController extends Controller
     }
 
     /**
+     * Soft archive a house and its pens.
+     */
+    public function archive($id)
+    {
+        try {
+            $house = House::whereNull('archived_at')->find($id);
+
+            if (!$house) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'House not found or already archived'
+                ], 404);
+            }
+
+            DB::transaction(function () use ($house) {
+                $archivedAt = now();
+
+                $house->update([
+                    'archived_at' => $archivedAt,
+                ]);
+
+                Pen::where('house_id', $house->id)
+                    ->whereNull('archived_at')
+                    ->update([
+                        'archived_at' => $archivedAt,
+                    ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'House archived successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error archiving house: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * End all pens in a house by resetting their values instead of deleting the house
      */
     public function destroy($id)
@@ -187,7 +237,7 @@ class HouseController extends Controller
         \Log::info('HouseController@destroy called with id: ' . $id);
 
         try {
-            $house = House::find($id);
+            $house = House::whereNull('archived_at')->find($id);
 
             if (!$house) {
                 \Log::warning('House not found with id: ' . $id);
@@ -260,7 +310,7 @@ class HouseController extends Controller
     public function deletePen($penId)
     {
         try {
-            $pen = Pen::find($penId);
+            $pen = Pen::whereNull('archived_at')->find($penId);
 
             if (!$pen) {
                 return response()->json([
@@ -301,7 +351,7 @@ class HouseController extends Controller
     public function updatePen(Request $request, $penId)
     {
         try {
-            $pen = Pen::find($penId);
+            $pen = Pen::whereNull('archived_at')->find($penId);
 
             if (!$pen) {
                 return response()->json([
@@ -345,6 +395,11 @@ class HouseController extends Controller
             $houses = DB::table('house as h')
                 ->leftJoin('pen as p', 'p.house_id', '=', 'h.id')
                 ->leftJoin('population_record as pr', 'pr.pen_id', '=', 'p.id')
+                ->whereNull('h.archived_at')
+                ->where(function ($query) {
+                    $query->whereNull('p.id')
+                        ->orWhereNull('p.archived_at');
+                })
                 ->select(
                     'h.id as house_id',
                     'h.house_number',
@@ -418,7 +473,7 @@ class HouseController extends Controller
                 'mortality' => 'nullable|integer|min:0',
             ]);
 
-            $pen = Pen::find($penId);
+            $pen = Pen::whereNull('archived_at')->find($penId);
 
             if (!$pen) {
                 return response()->json([

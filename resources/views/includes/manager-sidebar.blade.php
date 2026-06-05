@@ -65,6 +65,14 @@
                 <span>Biosecurity Logs</span>
             </a>
 
+            <a href="{{ route('manager.farm-activity-records') }}"
+                class="sidebar-link {{ request()->routeIs('manager.farm-activity-records') ? 'active' : '' }}">
+                <span class="sidebar-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path></svg>
+                </span>
+                <span>Farm Activity Records</span>
+            </a>
+
             <a href="{{ route('manager.reports') }}"
                 class="sidebar-link {{ request()->routeIs('manager.reports') ? 'active' : '' }}">
                 <span class="sidebar-icon" aria-hidden="true">

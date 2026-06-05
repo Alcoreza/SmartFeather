@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
@@ -55,6 +56,7 @@ Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
 
 Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
 Route::view('/manager/management', 'manager.management')->name('manager.management');
+Route::view('/manager/farm-activity-records', 'manager.farm-activity-records')->name('manager.farm-activity-records');
 Route::get('/manager/profile', [ProfileController::class, 'managerProfile'])->name('manager.profile');
 Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
 
@@ -208,6 +210,7 @@ Route::prefix('api/houses')->group(function () {
     Route::get('/records/pens', [HouseController::class, 'getPenRecords']); // Get pen records for all houses
     Route::post('/', [HouseController::class, 'store']);             // Create new house
     Route::delete('/pen/{penId}', [HouseController::class, 'deletePen']); // Delete specific pen (must be before /{id})
+    Route::post('/{id}/archive', [HouseController::class, 'archive']); // Soft archive house
     Route::get('/{id}', [HouseController::class, 'show']);           // Get specific house
     Route::put('/{id}', [HouseController::class, 'update']);         // Update house
     Route::delete('/{id}', [HouseController::class, 'destroy']);     // Delete house
@@ -304,3 +307,57 @@ Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
 Route::get('/api/manager/reports', [ReportsController::class, 'index']);
 Route::get('/manager/reports/generate', [ReportsController::class, 'generate'])->name('manager.reports.generate');
 
+Route::get('/api/manager/farm-activity/feed-replenishment', function () {
+    return response()->json([
+        'records' => DB::table('feed_refill_records as r')
+            ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
+            ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
+            ->leftJoin('pen as p', 'p.id', '=', 'r.pen_id')
+            ->select(
+                'i.item_name as feed',
+                'h.house_number',
+                'p.pen_name',
+                'r.feeder_number',
+                'r.kilograms_used',
+                'r.recorded_at'
+            )
+            ->orderByDesc('r.recorded_at')
+            ->get(),
+    ]);
+});
+
+Route::get('/api/manager/farm-activity/vitamin-supplementation', function () {
+    return response()->json([
+        'records' => DB::table('vitamin_refill_records as r')
+            ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
+            ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
+            ->leftJoin('pen as p', 'p.id', '=', 'r.pen_id')
+            ->select(
+                'i.item_name as vitamin',
+                'h.house_number',
+                'p.pen_name',
+                'r.bottles_used',
+                'r.recorded_at'
+            )
+            ->orderByDesc('r.recorded_at')
+            ->get(),
+    ]);
+});
+
+Route::get('/api/manager/farm-activity/chick-placement', function () {
+    return response()->json([
+        'records' => DB::table('flock_batches as b')
+            ->leftJoin('house as h', 'h.id', '=', 'b.house_id')
+            ->leftJoin('pen as p', 'p.id', '=', 'b.pen_id')
+            ->select(
+                'b.batch_code',
+                'h.house_number',
+                'p.pen_name',
+                'b.initial_population',
+                'b.started_at',
+                'b.status'
+            )
+            ->orderByDesc('b.started_at')
+            ->get(),
+    ]);
+});

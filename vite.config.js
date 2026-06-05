@@ -20,6 +20,7 @@ export default defineConfig({
 
                 "resources/css/manager-biosecurity-logs.css",
                 "resources/css/manager-dashboard.css",
+                "resources/css/manager-farm-activity-records.css",
                 "resources/css/manager-houses.css",
                 "resources/css/manager-inventory.css",
                 "resources/css/manager-management.css",
@@ -46,6 +47,7 @@ export default defineConfig({
 
                 "resources/js/manager-biosecurity-logs.js",
                 "resources/js/manager-dashboard.js",
+                "resources/js/manager-farm-activity-records.js",
                 "resources/js/manager-houses.js",
                 "resources/js/manager-inventory.js",
                 "resources/js/manager-management.js",

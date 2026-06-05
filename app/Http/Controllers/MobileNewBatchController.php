@@ -294,6 +294,7 @@ class MobileNewBatchController extends Controller
 
             return DB::transaction(function () use ($validated, $startedAt) {
                 $batchId = DB::table('flock_batches')->insertGetId([
+                    'task_id' => $validated['task_id'] ?? null,
                     'batch_code' => $validated['batch_code'],
                     'house_id' => $validated['house_id'],
                     'pen_id' => $validated['pen_id'],

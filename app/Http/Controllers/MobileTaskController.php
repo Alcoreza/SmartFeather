@@ -59,6 +59,8 @@ class MobileTaskController extends Controller
                     'pennumber' => $task->pennumber,
                     'prioritylevel' => $task->prioritylevel,
                     'photourl' => $this->buildTaskPhotoUrl($task->photourl),
+                    'submitted_at' => $this->formatDateTimeForMobile($task->time_completed),
+                    'submitted_fields' => $this->getSubmittedTaskFields($task),
                     'house_number' => $task->house_number,
                     'pen_name' => $task->pen_name,
                     'biosecurity_cleared' => $this->taskBiosecurityCleared(
@@ -317,6 +319,222 @@ class MobileTaskController extends Controller
             ->exists();
     }
 
+    private function getSubmittedTaskFields($task): array
+    {
+        $taskType = strtolower(trim((string) $task->tasktype));
+        $taskId = (int) $task->taskid;
+
+        $baseFields = [
+            ['label' => 'House', 'value' => (string) ($task->house_number ?? '-')],
+            ['label' => 'Pen', 'value' => (string) ($task->pen_name ?? '-')],
+        ];
+
+        if ($this->isHatchTask($taskType)) {
+            $record = DB::table('population_record')
+                ->where('task_id', $taskId)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            return array_merge($baseFields, [
+                ['label' => 'Eggs Hatched', 'value' => (string) ($record->eggs_hatched ?? 0)],
+                ['label' => 'Mortality', 'value' => (string) ($record->mortality ?? 0)],
+                ['label' => 'Running Population', 'value' => (string) ($record->running_population ?? '-')],
+                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
+            ]);
+        }
+
+        if ($this->isWeightTask($taskType)) {
+            $record = DB::table('weight_sampling_logs')
+                ->where('task_id', $taskId)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            $fields = array_merge($baseFields, [
+                ['label' => 'Batch', 'value' => (string) ($record->batch ?? '-')],
+                ['label' => 'Age', 'value' => (string) ($record->age ?? '-')],
+                ['label' => 'Number of Flocks', 'value' => (string) ($record->number_of_flocks ?? '-')],
+                ['label' => 'Flocks With Cases', 'value' => (string) ($record->flocks_with_cases ?? '-')],
+                ['label' => 'Average Weight', 'value' => (string) ($record->average_weight ?? '-')],
+                ['label' => 'Target Weight', 'value' => (string) ($record->target ?? '-')],
+                ['label' => 'Status', 'value' => (string) ($record->status ?? '-')],
+                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateAndTime($record->date ?? null, $record->time ?? null)],
+            ]);
+
+            $entries = DB::table('weight_sampling_entries')
+                ->where('weight_sampling_log_id', $record->id)
+                ->orderBy('sequence_number')
+                ->get();
+
+            foreach ($entries as $entry) {
+                $fields[] = [
+                    'label' => 'Flock ' . $entry->sequence_number . ' Weight',
+                    'value' => (string) $entry->weight,
+                ];
+            }
+
+            return $fields;
+        }
+
+        if ($this->isFeedTask($taskType)) {
+            $record = DB::table('feed_refill_records')
+                ->leftJoin('inventories', 'feed_refill_records.inventory_id', '=', 'inventories.id')
+                ->where('feed_refill_records.task_id', $taskId)
+                ->orderByDesc('feed_refill_records.id')
+                ->first([
+                    'feed_refill_records.feeder_number',
+                    'feed_refill_records.kilograms_used',
+                    'feed_refill_records.recorded_at',
+                    'inventories.item_name',
+                    'inventories.unit',
+                ]);
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            return array_merge($baseFields, [
+                ['label' => 'Feed Type', 'value' => (string) ($record->item_name ?? '-')],
+                ['label' => 'Feeder Number', 'value' => (string) ($record->feeder_number ?? '-')],
+                ['label' => 'Kilograms Used', 'value' => (string) ($record->kilograms_used ?? '-') . ' ' . (string) ($record->unit ?? 'kg')],
+                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
+            ]);
+        }
+
+        if ($this->isVitaminTask($taskType)) {
+            $record = DB::table('vitamin_refill_records')
+                ->leftJoin('inventories', 'vitamin_refill_records.inventory_id', '=', 'inventories.id')
+                ->where('vitamin_refill_records.task_id', $taskId)
+                ->orderByDesc('vitamin_refill_records.id')
+                ->first([
+                    'vitamin_refill_records.bottles_used',
+                    'vitamin_refill_records.recorded_at',
+                    'inventories.item_name',
+                    'inventories.unit',
+                ]);
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            return array_merge($baseFields, [
+                ['label' => 'Vitamins Type', 'value' => (string) ($record->item_name ?? '-')],
+                ['label' => 'Bottles Used', 'value' => (string) ($record->bottles_used ?? '-') . ' ' . (string) ($record->unit ?? '')],
+                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
+            ]);
+        }
+
+        if ($this->isCleaningTask($taskType) || $this->isDisinfectionTask($taskType)) {
+            $record = DB::table('cleaning_logs')
+                ->where('task_id', $taskId)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            return array_merge($baseFields, [
+                ['label' => 'Activity', 'value' => (string) ($record->activity ?? '-')],
+                ['label' => 'Material Used', 'value' => (string) ($record->disinfectant_used ?? '-')],
+                ['label' => 'Performed By', 'value' => (string) ($record->performed_by ?? '-')],
+                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateAndTime($record->date ?? null, $record->time ?? null)],
+            ]);
+        }
+
+        if ($this->isSensorTask($taskType)) {
+            $record = DB::table('sensor_inspection_logs')
+                ->where('task_id', $taskId)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            return array_merge($baseFields, [
+                ['label' => 'Sensor Present', 'value' => $this->yesNo($record->sensor_present ?? false)],
+                ['label' => 'Sensor Clean / Unblocked', 'value' => $this->yesNo($record->sensor_clean_unblocked ?? false)],
+                ['label' => 'No Visible Damage or Loose Wiring', 'value' => $this->yesNo($record->no_visible_damage_or_loose_wiring ?? false)],
+                ['label' => 'Power Status On', 'value' => $this->yesNo($record->power_status_on ?? false)],
+                ['label' => 'Placement Secure', 'value' => $this->yesNo($record->placement_secure ?? false)],
+                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at ?? null)],
+            ]);
+        }
+
+        if ($this->isChickPlacementTask($taskType)) {
+            $record = DB::table('flock_batches')
+                ->where('task_id', $taskId)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$record) {
+                return $baseFields;
+            }
+
+            return array_merge($baseFields, [
+                ['label' => 'Batch Code', 'value' => (string) ($record->batch_code ?? '-')],
+                ['label' => 'Initial Population', 'value' => (string) ($record->initial_population ?? '-')],
+                ['label' => 'Batch Status', 'value' => (string) ($record->status ?? '-')],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->started_at)],
+            ]);
+        }
+
+        return $baseFields;
+    }
+
+    private function yesNo($value): string
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN) ? 'Yes' : 'No';
+    }
+
+    private function isHatchTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'hatch') || str_contains($taskType, 'mortality');
+    }
+
+    private function isWeightTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'weight');
+    }
+
+    private function isFeedTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'feed');
+    }
+
+    private function isVitaminTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'vitamin');
+    }
+
+    private function isDisinfectionTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'disinfection');
+    }
+
+    private function isCleaningTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'cleaning');
+    }
+
+    private function isSensorTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'sensor');
+    }
+
+    private function isChickPlacementTask(string $taskType): bool
+    {
+        return str_contains($taskType, 'chick') || str_contains($taskType, 'placement');
+    }
+
     private function buildTaskPhotoUrl(?string $path): ?string
     {
         if (blank($path)) {
@@ -341,5 +559,31 @@ class MobileTaskController extends Controller
         }
 
         return Carbon::parse($value)->format('Y-m-d\TH:i:s');
+    }
+
+    private function formatSubmittedFieldDateTime($value): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        return Carbon::parse($value)->format('M j, Y g:i A');
+    }
+
+    private function formatSubmittedFieldDateAndTime($date, $time): string
+    {
+        if (blank($date) && blank($time)) {
+            return '-';
+        }
+
+        if (blank($date)) {
+            return (string) $time;
+        }
+
+        if (blank($time)) {
+            return Carbon::parse($date)->format('M j, Y');
+        }
+
+        return Carbon::parse($date . ' ' . $time)->format('M j, Y g:i A');
     }
 }

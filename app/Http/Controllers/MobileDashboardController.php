@@ -197,22 +197,10 @@ class MobileDashboardController extends Controller
             ] : null,
             'quick_access' => [
                 [
-                    'title' => 'Population',
-                    'icon_key' => 'population',
-                    'tint' => '#D92C2C',
-                    'action_key' => 'population',
-                ],
-                [
-                    'title' => 'Feeds Refill',
-                    'icon_key' => 'feeds',
-                    'tint' => '#CC8A2D',
-                    'action_key' => 'feeds_refill',
-                ],
-                [
-                    'title' => 'Biosecurity',
-                    'icon_key' => 'biosecurity',
-                    'tint' => '#2F8F45',
-                    'action_key' => 'biosecurity',
+                    'title' => 'Visitor Log',
+                    'icon_key' => 'visitor',
+                    'tint' => '#2E7D6B',
+                    'action_key' => 'visitor',
                 ],
             ],
         ]);

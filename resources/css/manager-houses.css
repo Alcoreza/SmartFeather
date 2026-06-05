@@ -184,9 +184,27 @@
 }
 
 .gauge-item {
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: minmax(190px, 0.9fr) 1fr;
     align-items: center;
+    gap: 18px;
+}
+
+.gauge-label {
+    display: block;
+    min-width: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #202020;
+}
+
+.temperature-label {
+    color: #1f3323;
+}
+
+.ammonia-label {
+    color: #2b2b2b;
 }
 
 .inner-divider {
@@ -199,20 +217,20 @@
     --gauge-value: 0deg;
     --gauge-color: #7cc54f;
     --gauge-track: #e7e7e7;
-    width: 130px;
-    height: 72px;
+    width: 190px;
+    height: 88px;
     position: relative;
     overflow: hidden;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: flex-end;
 }
 
 .semi-gauge::before {
     content: "";
     position: absolute;
-    width: 130px;
-    height: 130px;
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
     background:
         conic-gradient(
@@ -221,29 +239,33 @@
             var(--gauge-track) var(--gauge-value) 180deg,
             transparent 180deg 360deg
         );
-    top: 8px;
+    top: 12px;
     left: 0;
 }
 
 .semi-gauge::after {
     content: "";
     position: absolute;
-    width: 88px;
-    height: 88px;
+    width: 102px;
+    height: 102px;
     border-radius: 50%;
     background: #ffffff;
-    top: 30px;
-    left: 21px;
+    top: 38px;
+    left: 24px;
     z-index: 1;
 }
 
 .semi-gauge-inner {
-    position: relative;
+    position: absolute;
+    left: 92px;
+    bottom: 13px;
     z-index: 2;
-    font-size: 1rem;
+    width: 142px;
+    font-size: 0.98rem;
     font-weight: 700;
     color: #397c34;
-    margin-bottom: 8px;
+    text-align: left;
+    white-space: nowrap;
 }
 
 .semi-gauge.safe {
@@ -414,6 +436,15 @@
         flex-direction: column;
         align-items: flex-start;
     }
+
+    .gauge-item {
+        grid-template-columns: minmax(160px, 1fr) auto;
+        gap: 12px;
+    }
+
+    .semi-gauge {
+        width: 170px;
+    }
 }
 
 .env-card,
@@ -499,6 +530,12 @@
     animation: modalPop 0.22s ease;
 }
 
+.modal-card.add-house-modal {
+    max-width: 620px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
 @keyframes modalPop {
     from {
         opacity: 0;
@@ -553,6 +590,23 @@
     display: flex;
     gap: 28px;
     align-items: flex-start;
+}
+
+.pen-capacity-section {
+    margin-top: 24px;
+}
+
+.pen-capacity-header {
+    margin-bottom: 12px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #000000;
+}
+
+.pen-capacity-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
 }
 
 .modal-group {
@@ -791,6 +845,18 @@
 }
 
 @media (max-width: 700px) {
+    .modal-card.add-house-modal {
+        max-width: 95%;
+        padding: 22px 22px 28px;
+    }
+
+    #addHouseForm .modal-row,
+    .pen-capacity-fields {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        gap: 14px;
+    }
+
     .edit-data-modal {
         max-width: 95%;
         padding: 22px 22px 28px;

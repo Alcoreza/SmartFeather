@@ -62,6 +62,7 @@
                                 <div class="semi-gauge">
                                     <div class="semi-gauge-inner" id="houseTemperature">--</div>
                                 </div>
+                                <span class="gauge-label temperature-label">Temperature</span>
                             </div>
 
                             <div class="inner-divider"></div>
@@ -70,6 +71,7 @@
                                 <div class="semi-gauge">
                                     <div class="semi-gauge-inner" id="houseAmmonia">--</div>
                                 </div>
+                                <span class="gauge-label ammonia-label">Ammonia</span>
                             </div>
                         </div>
                     </article>

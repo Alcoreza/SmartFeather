@@ -1,5 +1,5 @@
 <div class="modal-overlay" id="addHouseModal">
-    <div class="modal-card">
+    <div class="modal-card add-house-modal">
         <div class="modal-header">
             <h2>Add House</h2>
             <button type="button" class="modal-close" id="closeAddHouseModal">&times;</button>
@@ -16,8 +16,13 @@
 
                 <div class="modal-group">
                     <label for="housePenCount">Number of Pens*</label>
-                    <input type="number" id="housePenCount" min="0" value="0">
+                    <input type="number" id="housePenCount" min="0" step="1" value="0">
                 </div>
+            </div>
+
+            <div class="pen-capacity-section" id="penCapacitySection" hidden>
+                <div class="pen-capacity-header">Pen Capacities*</div>
+                <div class="pen-capacity-fields" id="penCapacityFields"></div>
             </div>
 
             <div class="modal-actions">

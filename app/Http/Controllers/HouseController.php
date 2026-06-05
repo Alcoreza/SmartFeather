@@ -50,28 +50,36 @@ class HouseController extends Controller
                 'number_of_pens' => 'required|integer|min:1|max:100',
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
+                'pen_capacities' => 'nullable|array',
+                'pen_capacities.*' => 'nullable|integer|min:0',
             ]);
 
-            // Create the house
-            $house = House::create([
-                'house_number' => $validated['house_number'],
-                'number_of_pens' => $validated['number_of_pens'],
-                'status' => $validated['status'] ?? 'active',
-                'start_date' => $validated['start_date'] ?? now()->format('Y-m-d'),
-            ]);
+            $penCapacities = $validated['pen_capacities'] ?? [];
 
-            // Create pens automatically with zero production values
-            for ($i = 1; $i <= $validated['number_of_pens']; $i++) {
-                Pen::create([
-                    'house_id' => $house->id,
-                    'pen_name' => "Pen $i",
-                    'capacity' => 0,
-                    'population' => 0,
-                    'eggs_hatched' => 0,
-                    'mortality' => 0,
-                    'recorded_at' => now(),
+            $house = DB::transaction(function () use ($validated, $penCapacities) {
+                // Create the house
+                $house = House::create([
+                    'house_number' => $validated['house_number'],
+                    'number_of_pens' => $validated['number_of_pens'],
+                    'status' => $validated['status'] ?? 'active',
+                    'start_date' => $validated['start_date'] ?? now()->format('Y-m-d'),
                 ]);
-            }
+
+                // Create pens automatically with the requested capacity values
+                for ($i = 1; $i <= $validated['number_of_pens']; $i++) {
+                    Pen::create([
+                        'house_id' => $house->id,
+                        'pen_name' => "Pen $i",
+                        'capacity' => $penCapacities[$i - 1] ?? 0,
+                        'population' => 0,
+                        'eggs_hatched' => 0,
+                        'mortality' => 0,
+                        'recorded_at' => now(),
+                    ]);
+                }
+
+                return $house;
+            });
 
             // Reload with relationships
             $house->load('pens');

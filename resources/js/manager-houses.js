@@ -25,6 +25,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const closeAddHouseModal = document.getElementById("closeAddHouseModal");
     const cancelAddHouseModal = document.getElementById("cancelAddHouseModal");
     const addHouseForm = document.getElementById("addHouseForm");
+    const penCapacitySection = document.getElementById("penCapacitySection");
+    const penCapacityFields = document.getElementById("penCapacityFields");
 
     const editHouseButton = document.getElementById("openEditHouseModal");
     const editHouseModal = document.getElementById("editHouseModal");
@@ -54,8 +56,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     let shouldTrackAddHouseRequiredHighlights = false;
 
     function isAddHouseRequiredFieldEmpty(field) {
+        if (field.capacityField) {
+            const value = document.getElementById(field.id)?.value;
+            const numberValue = Number(value);
+
+            return (
+                value === "" ||
+                numberValue < 0 ||
+                !Number.isInteger(numberValue)
+            );
+        }
+
         if (field.id === "housePenCount") {
-            return Number(document.getElementById(field.id)?.value || 0) <= 0;
+            const value = Number(document.getElementById(field.id)?.value || 0);
+            return value <= 0 || !Number.isInteger(value);
         }
 
         return !(document.getElementById(field.id)?.value || "").trim();
@@ -95,7 +109,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const formError = document.getElementById("addHouseFormError");
         if (!formError) return;
 
-        formError.textContent = "Please fill in the required fields.";
+        formError.textContent =
+            "Please fill in the required fields with valid whole numbers.";
         formError.classList.add("show");
         formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
@@ -116,10 +131,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const penCountInput = document.getElementById("housePenCount");
         if (penCountInput) penCountInput.value = "0";
+        renderPenCapacityFields(0);
     }
 
     function getMissingAddHouseRequiredFields() {
-        return addHouseRequiredFields.filter(isAddHouseRequiredFieldEmpty);
+        const capacityFields = Array.from(
+            document.querySelectorAll(".pen-capacity-input"),
+        ).map((input, index) => ({
+            id: input.id,
+            label: `Pen ${index + 1} Capacity`,
+            capacityField: true,
+        }));
+
+        return [...addHouseRequiredFields, ...capacityFields].filter(
+            isAddHouseRequiredFieldEmpty,
+        );
     }
 
     function showAddHouseRequiredFieldsError() {
@@ -145,6 +171,72 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => document.getElementById(missingFields[0].id)?.focus(), 250);
 
         return true;
+    }
+
+    function getCurrentPenCapacities() {
+        return Array.from(document.querySelectorAll(".pen-capacity-input")).map(
+            (input) => input.value,
+        );
+    }
+
+    function syncCapacityFieldHighlight(input) {
+        if (!input) return;
+
+        if (
+            shouldTrackAddHouseRequiredHighlights &&
+            ((input.value || "").trim() === "" ||
+                Number(input.value) < 0 ||
+                !Number.isInteger(Number(input.value)))
+        ) {
+            input.closest(".modal-group")?.classList.add("has-error");
+            return;
+        }
+
+        clearAddHouseRequiredFieldHighlight(input);
+
+        const hasErrors = addHouseForm?.querySelector(".modal-group.has-error");
+        if (!hasErrors) {
+            shouldTrackAddHouseRequiredHighlights = false;
+            clearAddHouseFormError();
+        }
+    }
+
+    function renderPenCapacityFields(count) {
+        if (!penCapacitySection || !penCapacityFields) return;
+
+        const safeCount = Math.max(0, Math.min(Math.floor(Number(count) || 0), 100));
+        const previousValues = getCurrentPenCapacities();
+
+        penCapacitySection.hidden = safeCount <= 0;
+        penCapacityFields.innerHTML = "";
+
+        for (let index = 0; index < safeCount; index++) {
+            const field = document.createElement("div");
+            field.className = "modal-group";
+
+            const label = document.createElement("label");
+            label.setAttribute("for", `penCapacity${index + 1}`);
+            label.textContent = `Pen ${index + 1} Capacity*`;
+
+            const input = document.createElement("input");
+            input.type = "number";
+            input.id = `penCapacity${index + 1}`;
+            input.className = "pen-capacity-input";
+            input.min = "0";
+            input.step = "1";
+            input.inputMode = "numeric";
+            input.value = previousValues[index] ?? "";
+
+            input.addEventListener("input", () =>
+                syncCapacityFieldHighlight(input),
+            );
+            input.addEventListener("change", () =>
+                syncCapacityFieldHighlight(input),
+            );
+
+            field.append(label, input);
+            penCapacityFields.appendChild(field);
+        }
     }
 
     function openAddModal() {
@@ -628,6 +720,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             input?.addEventListener("change", () => syncAddHouseRequiredFieldHighlight(field));
         });
 
+        const penCountInput = document.getElementById("housePenCount");
+        penCountInput?.addEventListener("input", (event) =>
+            renderPenCapacityFields(event.target.value),
+        );
+        penCountInput?.addEventListener("change", (event) =>
+            renderPenCapacityFields(event.target.value),
+        );
+
         addHouseForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
@@ -643,12 +743,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const houseName = houseNameInput?.value.trim();
             const houseStatusValue = houseStatusInput?.value || "Running";
             const penCountValue = Number(penCountInput?.value || 0);
+            const penCapacities = Array.from(
+                document.querySelectorAll(".pen-capacity-input"),
+            ).map((input) => Number(input.value || 0));
 
             try {
                 const payload = {
                     house_number: houseName,
                     status: houseStatusValue,
                     number_of_pens: penCountValue,
+                    pen_capacities: penCapacities,
                 };
 
                 const response = await fetch("/api/houses", {

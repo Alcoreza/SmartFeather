@@ -184,7 +184,6 @@ class ReportsController extends Controller
         return $query->get()->map(fn($record) => [
             'house_number' => $this->formatHouseNumber($record->house?->house_number),
             'pen_name' => $record->pen_name ?? '--',
-            'eggs_hatched' => $record->eggs_hatched ?? 0,
             'mortality' => $record->mortality ?? 0,
             'recorded_at' => $this->formatDate($record->recorded_at),
         ])->values()->all();

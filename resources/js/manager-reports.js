@@ -30,7 +30,6 @@ const reportCards = [
         columns: [
             { key: 'house_number', label: 'House' },
             { key: 'pen_name', label: 'Pen' },
-            { key: 'eggs_hatched', label: 'Eggs<br>Hatched' },
             { key: 'mortality', label: 'Mortality' },
             { key: 'recorded_at', label: 'Recorded At' },
         ],
@@ -40,6 +39,10 @@ const reportCards = [
 const reportContent = document.getElementById('reportContent');
 const reportsFilterForm = document.getElementById('reportsFilterForm');
 const reportsHouse = document.getElementById('reportsHouse');
+
+const REPORTS_ROWS_PER_PAGE = 5;
+const reportPagination = {};
+let currentReportData = {};
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -87,6 +90,15 @@ function renderReportCards() {
             <div class="reports-card-body">
                 <div class="reports-empty">Loading records...</div>
             </div>
+            <div class="reports-pagination" data-reports-pagination="${card.key}">
+                <button type="button" class="reports-page-btn" data-reports-prev="${card.key}">
+                    Previous
+                </button>
+                <div class="reports-page-dots" data-reports-dots="${card.key}"></div>
+                <button type="button" class="reports-page-btn" data-reports-next="${card.key}">
+                    Next
+                </button>
+            </div>
         </section>
     `).join('');
 }
@@ -111,7 +123,25 @@ function updateReportCard(card, rows) {
 
     if (!body) return;
 
-    body.innerHTML = renderReportTable(card.columns, rows);
+    // Initialize pagination for this card if not exists
+    if (!reportPagination[card.key]) {
+        reportPagination[card.key] = {
+            currentPage: 0,
+            totalRows: rows.length,
+        };
+    } else {
+        reportPagination[card.key].totalRows = rows.length;
+        reportPagination[card.key].currentPage = 0;
+    }
+
+    // Calculate pagination
+    const totalPages = Math.max(1, Math.ceil(rows.length / REPORTS_ROWS_PER_PAGE));
+    const currentPage = reportPagination[card.key].currentPage;
+    const start = currentPage * REPORTS_ROWS_PER_PAGE;
+    const pageRows = rows.slice(start, start + REPORTS_ROWS_PER_PAGE);
+
+    body.innerHTML = renderReportTable(card.columns, pageRows);
+    updateReportsPagination(card.key, rows.length);
 }
 
 function buildReportsUrl() {
@@ -161,12 +191,26 @@ async function loadReportsData() {
         applyFilterState(result.filters);
         updateSummaryCard(result.summary);
 
+        // Store report data for pagination
+        currentReportData = result.reports || {};
+
+        // Reset pagination for all cards
+        reportCards.forEach((card) => {
+            reportPagination[card.key] = {
+                currentPage: 0,
+                totalRows: 0,
+            };
+        });
+
         reportCards.forEach((card) => {
             const rows = Array.isArray(result.reports?.[card.key])
                 ? result.reports[card.key]
                 : [];
             updateReportCard(card, rows);
         });
+
+        // Setup pagination event listeners
+        setupReportsPagination();
     } catch (error) {
         console.error('Failed to load reports:', error);
 
@@ -213,6 +257,97 @@ function bindReportsFilter() {
         event.preventDefault();
         loadReportsData();
     });
+}
+
+function updateReportsPagination(cardKey, totalRows) {
+    const pagination = document.querySelector(`[data-reports-pagination="${cardKey}"]`);
+    const prevButton = document.querySelector(`[data-reports-prev="${cardKey}"]`);
+    const nextButton = document.querySelector(`[data-reports-next="${cardKey}"]`);
+    const dots = document.querySelector(`[data-reports-dots="${cardKey}"]`);
+    const totalPages = Math.max(1, Math.ceil(totalRows / REPORTS_ROWS_PER_PAGE));
+    const currentPage = reportPagination[cardKey]?.currentPage || 0;
+
+    if (pagination) {
+        pagination.classList.toggle('is-hidden', totalRows <= REPORTS_ROWS_PER_PAGE);
+    }
+
+    if (prevButton) {
+        prevButton.disabled = currentPage === 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = currentPage >= totalPages - 1;
+    }
+
+    if (dots) {
+        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="reports-page-dot ${index === currentPage ? 'active' : ''}"
+                data-reports-page="${cardKey}-${index}"
+                aria-label="Go to page ${index + 1}"
+                aria-current="${index === currentPage ? 'page' : 'false'}"
+            ></button>
+        `).join('');
+    }
+}
+
+function setupReportsPagination() {
+    reportContent?.addEventListener('click', (event) => {
+        // Previous button click
+        const prevBtn = event.target.closest('[data-reports-prev]');
+        if (prevBtn) {
+            const cardKey = prevBtn.dataset.reportsPrev;
+            if (reportPagination[cardKey]) {
+                reportPagination[cardKey].currentPage = Math.max(0, reportPagination[cardKey].currentPage - 1);
+                reRenderReportCard(cardKey);
+            }
+            return;
+        }
+
+        // Next button click
+        const nextBtn = event.target.closest('[data-reports-next]');
+        if (nextBtn) {
+            const cardKey = nextBtn.dataset.reportsNext;
+            if (reportPagination[cardKey]) {
+                const totalPages = Math.max(1, Math.ceil(reportPagination[cardKey].totalRows / REPORTS_ROWS_PER_PAGE));
+                reportPagination[cardKey].currentPage = Math.min(
+                    reportPagination[cardKey].currentPage + 1,
+                    totalPages - 1
+                );
+                reRenderReportCard(cardKey);
+            }
+            return;
+        }
+
+        // Page dot click
+        const dot = event.target.closest('[data-reports-page]');
+        if (dot) {
+            const [cardKey, pageIndex] = dot.dataset.reportsPage.split('-');
+            if (reportPagination[cardKey]) {
+                reportPagination[cardKey].currentPage = Number(pageIndex);
+                reRenderReportCard(cardKey);
+            }
+        }
+    });
+}
+
+function reRenderReportCard(cardKey) {
+    const card = reportCards.find(c => c.key === cardKey);
+    if (!card) return;
+
+    const cardElement = reportContent?.querySelector(`[data-report-card="${card.key}"]`);
+    const body = cardElement?.querySelector('.reports-card-body');
+    if (!body) return;
+
+    // Re-fetch data and re-render (simplified: use stored data)
+    const allRows = currentReportData?.[card.key] || [];
+    const currentPage = reportPagination[card.key]?.currentPage || 0;
+    const start = currentPage * REPORTS_ROWS_PER_PAGE;
+    const pageRows = allRows.slice(start, start + REPORTS_ROWS_PER_PAGE);
+
+    body.innerHTML = renderReportTable(card.columns, pageRows);
+    updateReportsPagination(card.key, allRows.length);
 }
 
 async function populateProfileModal() {

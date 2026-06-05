@@ -1,194 +1,45 @@
-const reportState = {
-    selectedReport: 'Population',
-    reports: {},
-};
-
-const REPORT_CONFIG = {
-    'Population': {
-        mode: 'single',
-        sections: [
-            {
-                title: '',
-                columns: [
-                    { key: 'batch_id', label: 'Batch ID' },
-                    { key: 'house_number', label: 'House Number' },
-                    { key: 'pen_no', label: 'Pen No.' },
-                    { key: 'start_date', label: 'Start Date' },
-                    { key: 'end_date', label: 'End Date' },
-                    { key: 'initial_population', label: 'Initial<br>Population' },
-                    { key: 'running_population', label: 'Running<br>Population' },
-                    { key: 'mortalities', label: 'Mortalities' },
-                    { key: 'eggs_hatched', label: 'Eggs<br>Hatched' },
-                    { key: 'reporting_date', label: 'Reporting Date' },
-                ],
-            },
+const reportCards = [
+    {
+        key: 'farm_status',
+        title: 'Farm Status',
+        columns: [
+            { key: 'house', label: 'House' },
+            { key: 'pen', label: 'Pen' },
+            { key: 'batch', label: 'Batch' },
+            { key: 'average_weight', label: 'Average<br>Weight' },
+            { key: 'target', label: 'Target' },
+            { key: 'status', label: 'Status' },
+            { key: 'date', label: 'Date' },
         ],
     },
-
-    'Environmental': {
-        mode: 'multi',
-        sections: [
-            {
-                title: 'Temperature',
-                key: 'temperature',
-                columns: [
-                    { key: 'batch', label: 'Batch' },
-                    { key: 'date', label: 'Date' },
-                    { key: 'lowest_reading', label: 'Lowest<br>Reading' },
-                    { key: 'highest_reading', label: 'Highest<br>Reading' },
-                    { key: 'average_reading', label: 'Average<br>Reading' },
-                    { key: 'threshold_violations', label: 'Threshold<br>Violations' },
-                    { key: 'house', label: 'House' },
-                ],
-            },
-            {
-                title: 'Ammonia',
-                key: 'ammonia',
-                columns: [
-                    { key: 'batch', label: 'Batch' },
-                    { key: 'date', label: 'Date' },
-                    { key: 'lowest_reading', label: 'Lowest<br>Reading' },
-                    { key: 'highest_reading', label: 'Highest<br>Reading' },
-                    { key: 'average_reading', label: 'Average<br>Reading' },
-                    { key: 'threshold_violations', label: 'Threshold<br>Violations' },
-                    { key: 'house', label: 'House' },
-                ],
-            },
-            {
-                title: 'Feeds',
-                key: 'feeds',
-                columns: [
-                    { key: 'batch', label: 'Batch' },
-                    { key: 'date', label: 'Date' },
-                    { key: 'feeds_level', label: 'Feeds<br>Level' },
-                    { key: 'house', label: 'House' },
-                    { key: 'pen', label: 'Pen' },
-                    { key: 'feeder_number', label: 'Feeder<br>Number' },
-                ],
-            },
-            {
-                title: 'Water',
-                key: 'water',
-                columns: [
-                    { key: 'batch', label: 'Batch' },
-                    { key: 'date', label: 'Date' },
-                    { key: 'water_level', label: 'Water<br>Level' },
-                    { key: 'house', label: 'House' },
-                    { key: 'pen', label: 'Pen' },
-                    { key: 'drinker_number', label: 'Drinker<br>Number' },
-                ],
-            },
+    {
+        key: 'feed_consumption',
+        title: 'Feed Consumption',
+        columns: [
+            { key: 'feed', label: 'Feed' },
+            { key: 'house_number', label: 'House<br>Number' },
+            { key: 'pen_name', label: 'Pen' },
+            { key: 'feeder_number', label: 'Feeder<br>Number' },
+            { key: 'kilograms_used', label: 'Kilograms<br>Used' },
+            { key: 'recorded_at', label: 'Recorded At' },
         ],
     },
-
-    'Inventory': {
-        mode: 'multi',
-        sections: [
-            {
-                title: 'Feeds',
-                key: 'feeds',
-                columns: [
-                    { key: 'purchase_date', label: 'Purchase<br>Date' },
-                    { key: 'date_of_monitoring', label: 'Date of<br>Monitoring' },
-                    { key: 'type_of_feed', label: 'Type of<br>Feed' }, // 🔥 NEW COLUMN
-                    { key: 'initial_stock', label: 'Initial<br>Stock (kg)' },
-                    { key: 'remaining_stock', label: 'Remaining<br>Stock (kg)' },
-                ],
-            },
-            {
-                title: 'Vitamins',
-                key: 'vitamins',
-                columns: [
-                    { key: 'purchase_date', label: 'Purchase<br>Date' },
-                    { key: 'date_of_monitoring', label: 'Date of<br>Monitoring' },
-                    { key: 'type_of_vitamin', label: 'Type of<br>Vitamin' },
-                    { key: 'initial_stock', label: 'Initial Stock<br>(bottles)' },
-                    { key: 'remaining_stock', label: 'Remaining<br>Stock (bottles)' },
-                ],
-            },
+    {
+        key: 'mortality',
+        title: 'Mortality',
+        columns: [
+            { key: 'house_number', label: 'House' },
+            { key: 'pen_name', label: 'Pen' },
+            { key: 'eggs_hatched', label: 'Eggs<br>Hatched' },
+            { key: 'mortality', label: 'Mortality' },
+            { key: 'recorded_at', label: 'Recorded At' },
         ],
     },
+];
 
-    'Biosecurity': {
-        mode: 'multi',
-        sections: [
-            {
-                title: 'Personnel Biosecurity Logs',
-                key: 'personnel_biosecurity_logs',
-                columns: [
-                    { key: 'name', label: 'Name' },
-                    { key: 'role', label: 'Role' },
-                    { key: 'date', label: 'Date' },
-                    { key: 'time', label: 'Time' },
-                    { key: 'status', label: 'Status' },
-                ],
-            },
-            {
-                title: 'Visitors',
-                key: 'visitors',
-                columns: [
-                    { key: 'date', label: 'Date' },
-                    { key: 'time_in', label: 'Time In' },
-                    { key: 'time_out', label: 'Time Out' },
-                    { key: 'name', label: 'Name' },
-                    { key: 'photo_url', label: 'Photo' },
-                    { key: 'purpose', label: 'Purpose' },
-                    { key: 'foot_bath', label: 'Foot Bath' },
-                    { key: 'sanitation', label: 'Sanitation' },
-                    { key: 'ppe', label: 'PPE' },
-                    { key: 'monitored_by', label: 'Monitored<br>By:' },
-                ],
-            },
-        ],
-    },
-
-    'Weight Sampling': {
-        mode: 'single',
-        sections: [
-            {
-                title: '',
-                columns: [
-                    { key: 'date', label: 'Date' },
-                    { key: 'time', label: 'Time' },
-                    { key: 'house', label: 'House' },
-                    { key: 'pen', label: 'Pen' },
-                    { key: 'batch', label: 'Batch' },
-                    { key: 'flocks_with_cases', label: 'Flocks with<br>Cases' },
-                    { key: 'age', label: 'Age' },
-                    { key: 'average_weight', label: 'Average<br>Weight' },
-                    { key: 'target', label: 'Target' },
-                    { key: 'status', label: 'Status' },
-                ],
-            },
-        ],
-    },
-
-    'Tasks': {
-        mode: 'single',
-        sections: [
-            {
-                title: '',
-                columns: [
-                    { key: 'name', label: 'Name' },
-                    { key: 'task_assigned', label: 'Task<br>Assigned' },
-                    { key: 'house_number', label: 'House<br>Number' },
-                    { key: 'pen_number', label: 'Pen<br>Number' },
-                    { key: 'detailed_task', label: 'Detailed<br>Task' },
-                    { key: 'photo', label: 'Photo' },
-                    { key: 'priority', label: 'Priority' },
-                    { key: 'notes', label: 'Notes' },
-                    { key: 'time_assigned', label: 'Time<br>Assigned' },
-                    { key: 'finish_by', label: 'Finish By' },
-                    { key: 'time_completed', label: 'Time<br>Completed' },
-                ],
-            },
-        ],
-    },
-};
-
-const reportFilterSelect = document.getElementById('reportTypeFilter');
 const reportContent = document.getElementById('reportContent');
-const generateReportBtn = document.getElementById('openGenerateReportModal');
+const reportsFilterForm = document.getElementById('reportsFilterForm');
+const reportsHouse = document.getElementById('reportsHouse');
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -201,22 +52,13 @@ function escapeHtml(value) {
 
 function renderReportTable(columns, rows) {
     if (!rows || !rows.length) {
-        return `
-            <div class="reports-empty">No data available.</div>
-        `;
+        return '<div class="reports-empty">No data available.</div>';
     }
 
     const headHtml = columns.map((column) => `<th>${column.label}</th>`).join('');
-
     const bodyHtml = rows.map((row) => {
         const cells = columns.map((column) => {
-            const value = row[column.key];
-
-            if (column.key === 'photo' && value) {
-                return `<td><a href="${escapeHtml(value)}" target="_blank" rel="noopener noreferrer">proof.jpg</a></td>`;
-            }
-
-            return `<td>${escapeHtml(value)}</td>`;
+            return `<td>${escapeHtml(row[column.key])}</td>`;
         }).join('');
 
         return `<tr>${cells}</tr>`;
@@ -228,133 +70,119 @@ function renderReportTable(columns, rows) {
                 <thead>
                     <tr>${headHtml}</tr>
                 </thead>
-                <tbody>
-                    ${bodyHtml}
-                </tbody>
+                <tbody>${bodyHtml}</tbody>
             </table>
         </div>
     `;
 }
 
-function renderSingleReport(reportType, reportData) {
-    const config = REPORT_CONFIG[reportType];
-    const section = config.sections[0];
-    const rows = Array.isArray(reportData) ? reportData : [];
+function renderReportCards() {
+    if (!reportContent) return;
 
-    reportContent.innerHTML = `
-        <section class="reports-card">
-            ${renderReportTable(section.columns, rows)}
+    reportContent.innerHTML = reportCards.map((card) => `
+        <section class="reports-card reports-data-card" data-report-card="${card.key}">
+            <div class="reports-card-header">
+                <h2>${escapeHtml(card.title)}</h2>
+            </div>
+            <div class="reports-card-body">
+                <div class="reports-empty">Loading records...</div>
+            </div>
         </section>
-    `;
+    `).join('');
 }
 
-function renderMultiReport(reportType, reportData) {
-    const config = REPORT_CONFIG[reportType];
+async function fetchJson(url) {
+    const response = await fetch(url, {
+        headers: {
+            Accept: 'application/json',
+        },
+    });
 
-    const sectionsHtml = config.sections.map((section) => {
-        const rows = Array.isArray(reportData?.[section.key]) ? reportData[section.key] : [];
-
-        return `
-            <section class="reports-section-block">
-                <h3 class="reports-section-title">${section.title}</h3>
-                <div class="reports-card">
-                    ${renderReportTable(section.columns, rows)}
-                </div>
-            </section>
-        `;
-    }).join('');
-
-    reportContent.innerHTML = `
-        <div class="reports-sections-scroll">
-            ${sectionsHtml}
-        </div>
-    `;
-}
-
-function renderCurrentReport() {
-    const reportType = reportState.selectedReport;
-    const config = REPORT_CONFIG[reportType];
-    const reportData = reportState.reports[reportType];
-
-    if (!config || !reportContent) return;
-
-    if (config.mode === 'multi') {
-        renderMultiReport(reportType, reportData);
-        return;
+    if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
     }
 
-    renderSingleReport(reportType, reportData);
+    return response.json();
 }
 
-function bindReportEvents() {
-    if (!reportFilterSelect) return;
+function updateReportCard(card, rows) {
+    const cardElement = reportContent?.querySelector(`[data-report-card="${card.key}"]`);
+    const body = cardElement?.querySelector('.reports-card-body');
 
-    reportFilterSelect.addEventListener('change', async (event) => {
-        reportState.selectedReport = event.target.value;
-        renderCurrentReport();
-    });
+    if (!body) return;
+
+    body.innerHTML = renderReportTable(card.columns, rows);
 }
 
-function setupGenerateReportModal() {
-    const modal = document.getElementById('generateReportModal');
-    const closeBtn = document.getElementById('closeGenerateReportModal');
-    const form = document.getElementById('generateReportForm');
-    const reportTypeInput = document.getElementById('generateReportType');
-    const fileTypeInput = document.getElementById('reportFileType');
-    const monthInput = document.getElementById('reportMonth');
-    const yearInput = document.getElementById('reportYear');
+function buildReportsUrl() {
+    const params = new URLSearchParams();
+    const fields = new FormData(reportsFilterForm);
 
-    if (!modal || !generateReportBtn) return;
-
-    generateReportBtn.addEventListener('click', () => {
-        if (reportTypeInput) {
-            reportTypeInput.value = reportState.selectedReport;
+    fields.forEach((value, key) => {
+        if (String(value || '').trim()) {
+            params.append(key, value);
         }
-
-        const now = new Date();
-
-        if (monthInput && !monthInput.value) {
-            monthInput.value = String(now.getMonth() + 1);
-        }
-
-        if (yearInput && !yearInput.value) {
-            yearInput.value = String(now.getFullYear());
-        }
-
-        modal.classList.add('show');
     });
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
+    return params.toString()
+        ? `/api/manager/reports?${params.toString()}`
+        : '/api/manager/reports';
+}
+
+function fillSelect(select, options, placeholder) {
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>`;
+
+    (options || []).forEach((option) => {
+        const element = document.createElement('option');
+        element.value = option.value;
+        element.textContent = option.label;
+        select.appendChild(element);
+    });
+
+    select.value = [...select.options].some((option) => option.value === currentValue)
+        ? currentValue
+        : '';
+}
+
+function applyFilterState(filters) {
+    if (!filters) return;
+
+    fillSelect(reportsHouse, filters.options?.houses || [], 'All Houses');
+}
+
+async function loadReportsData() {
+    renderReportCards();
+
+    try {
+        const result = await fetchJson(buildReportsUrl());
+        applyFilterState(result.filters);
+
+        reportCards.forEach((card) => {
+            const rows = Array.isArray(result.reports?.[card.key])
+                ? result.reports[card.key]
+                : [];
+            updateReportCard(card, rows);
+        });
+    } catch (error) {
+        console.error('Failed to load reports:', error);
+
+        reportCards.forEach((card) => {
+            const cardElement = reportContent?.querySelector(`[data-report-card="${card.key}"]`);
+            const body = cardElement?.querySelector('.reports-card-body');
+            if (body) {
+                body.innerHTML = '<div class="reports-empty">Unable to load records.</div>';
+            }
         });
     }
+}
 
-    form?.addEventListener('submit', (event) => {
+function bindReportsFilter() {
+    reportsFilterForm?.addEventListener('submit', (event) => {
         event.preventDefault();
-
-        const params = new URLSearchParams({
-            type: reportState.selectedReport,
-            format: fileTypeInput?.value || 'pdf',
-            month: monthInput?.value || String(new Date().getMonth() + 1),
-            year: yearInput?.value || String(new Date().getFullYear()),
-        });
-
-        const url = `/manager/reports/generate?${params.toString()}`;
-
-        modal.classList.remove('show');
-
-        if ((fileTypeInput?.value || 'pdf') === 'pdf') {
-            window.open(url, '_blank');
-        } else {
-            window.location.href = url;
-        }
-    });
-
-    modal.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.classList.remove('show');
-        }
+        loadReportsData();
     });
 }
 
@@ -374,7 +202,7 @@ async function populateProfileModal() {
         document.getElementById('profileGender').value = user.Gender || '';
         document.getElementById('profileAddress').value = user.Address || '';
     } catch (e) {
-        // Optionally show error
+        // Profile details are non-blocking for the reports page.
     }
 }
 
@@ -413,52 +241,8 @@ function setupProfileModal() {
     });
 }
 
-async function loadReportsData(startDate = '', endDate = '') {
-    try {
-        const params = new URLSearchParams();
-
-        if (startDate) {
-            params.append('start_date', startDate);
-        }
-
-        if (endDate) {
-            params.append('end_date', endDate);
-        }
-
-        const url = params.toString()
-            ? `/api/manager/reports?${params.toString()}`
-            : '/api/manager/reports';
-
-        const response = await fetch(url, {
-            headers: {
-                Accept: 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`Request failed with status ${response.status}`);
-        }
-
-        const data = await response.json();
-        reportState.reports = data.reports || {};
-
-        renderCurrentReport();
-    } catch (error) {
-        console.error('Failed to load reports:', error);
-
-        if (reportContent) {
-            reportContent.innerHTML = `
-                <section class="reports-card">
-                    <div class="reports-empty">Unable to load reports.</div>
-                </section>
-            `;
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-    bindReportEvents();
-    setupGenerateReportModal();
     setupProfileModal();
+    bindReportsFilter();
     loadReportsData();
 });

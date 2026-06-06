@@ -15,7 +15,49 @@ class MobileTaskController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|integer',
+            'status' => 'nullable|string|in:Pending,For Approval,Completed',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:20',
         ]);
+
+        $employeeId = (int) $validated['employee_id'];
+        $status = $validated['status'] ?? 'Pending';
+        $page = (int) ($validated['page'] ?? 1);
+        $perPage = (int) ($validated['per_page'] ?? 10);
+        $offset = ($page - 1) * $perPage;
+
+        $latestEntry = DB::table('personnel_entry_logs')
+            ->where('employee_id', $employeeId)
+            ->whereRaw('UPPER(status) = ?', ['IN'])
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+
+        $clearedTaskIds = collect();
+
+        if ($latestEntry) {
+            $clearedTaskIds = DB::table('personnel_biosecurity_logs')
+                ->where('employee_id', $employeeId)
+                ->where('personnel_entry_log_id', $latestEntry->id)
+                ->whereNotNull('task_id')
+                ->pluck('task_id')
+                ->map(fn($taskId) => (int) $taskId)
+                ->unique()
+                ->values();
+        }
+
+        $countRows = Task::query()
+            ->where('user_employeeid', $employeeId)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $counts = [
+            'pending' => (int) ($countRows['Pending'] ?? 0),
+            'for_approval' => (int) ($countRows['For Approval'] ?? 0),
+            'completed' => (int) ($countRows['Completed'] ?? 0),
+        ];
 
         $tasks = Task::query()
             ->leftJoin('house', 'tasks.house_houseid', '=', 'house.id')
@@ -23,8 +65,11 @@ class MobileTaskController extends Controller
                 $join->on('tasks.house_houseid', '=', 'pen.house_id')
                     ->on('tasks.pennumber', '=', 'pen.id');
             })
-            ->where('tasks.user_employeeid', $validated['employee_id'])
+            ->where('tasks.user_employeeid', $employeeId)
+            ->where('tasks.status', $status)
             ->orderByDesc('tasks.timeassigned')
+            ->offset($offset)
+            ->limit($perPage)
             ->get([
                 'tasks.taskid',
                 'tasks.tasktype',
@@ -42,9 +87,7 @@ class MobileTaskController extends Controller
                 'house.house_number as house_number',
                 'pen.pen_name as pen_name',
             ])
-            ->map(function ($task) use ($validated) {
-                $assignedPenId = $task->pennumber;
-
+            ->map(function ($task) use ($clearedTaskIds) {
                 return [
                     'taskid' => $task->taskid,
                     'tasktype' => $task->tasktype,
@@ -60,20 +103,66 @@ class MobileTaskController extends Controller
                     'prioritylevel' => $task->prioritylevel,
                     'photourl' => $this->buildTaskPhotoUrl($task->photourl),
                     'submitted_at' => $this->formatDateTimeForMobile($task->time_completed),
-                    'submitted_fields' => $this->getSubmittedTaskFields($task),
+                    'submitted_fields' => [],
                     'house_number' => $task->house_number,
                     'pen_name' => $task->pen_name,
-                    'biosecurity_cleared' => $this->taskBiosecurityCleared(
-                        employeeId: (int) $validated['employee_id'],
-                        taskId: (int) $task->taskid,
-                        houseId: $task->house_houseid,
-                        penId: $assignedPenId
-                    ),
+                    'biosecurity_cleared' => $clearedTaskIds->contains((int) $task->taskid),
                 ];
             })
             ->values();
 
-        return response()->json($tasks);
+        $totalForStatus = match ($status) {
+            'For Approval' => $counts['for_approval'],
+            'Completed' => $counts['completed'],
+            default => $counts['pending'],
+        };
+
+        return response()->json([
+            'success' => true,
+            'tasks' => $tasks,
+            'counts' => $counts,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'has_more' => ($page * $perPage) < $totalForStatus,
+            ],
+        ]);
+    }
+
+    public function getSubmittedTaskDetail(Request $request)
+    {
+        $validated = $request->validate([
+            'task_id' => 'required|integer|exists:tasks,taskid',
+            'employee_id' => 'required|integer',
+        ]);
+
+        $task = Task::query()
+            ->leftJoin('house', 'tasks.house_houseid', '=', 'house.id')
+            ->leftJoin('pen', function ($join) {
+                $join->on('tasks.house_houseid', '=', 'pen.house_id')
+                    ->on('tasks.pennumber', '=', 'pen.id');
+            })
+            ->where('tasks.taskid', $validated['task_id'])
+            ->where('tasks.user_employeeid', $validated['employee_id'])
+            ->first([
+                'tasks.taskid',
+                'tasks.tasktype',
+                'tasks.house_houseid',
+                'tasks.pennumber',
+                'house.house_number as house_number',
+                'pen.pen_name as pen_name',
+            ]);
+
+        if (!$task) {
+            return response()->json([
+                'message' => 'Task not found for this employee.'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'submitted_fields' => $this->getSubmittedTaskFields($task),
+        ]);
     }
 
     public function checkTaskAccess(Request $request)
@@ -290,35 +379,6 @@ class MobileTaskController extends Controller
         ]);
     }
 
-    private function taskBiosecurityCleared(
-        int $employeeId,
-        int $taskId,
-        $houseId,
-        $penId
-    ): bool {
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $employeeId)
-            ->whereRaw('UPPER(status) = ?', ['IN'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
-
-        if (!$latestEntry) {
-            return false;
-        }
-
-        return DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $employeeId)
-            ->where('personnel_entry_log_id', $latestEntry->id)
-            ->where('task_id', $taskId)
-            ->where('house_id', $houseId)
-            ->when(!empty($penId), function ($query) use ($penId) {
-                $query->where('pen_id', $penId);
-            })
-            ->exists();
-    }
-
     private function getSubmittedTaskFields($task): array
     {
         $taskType = strtolower(trim((string) $task->tasktype));
@@ -403,7 +463,7 @@ class MobileTaskController extends Controller
             return array_merge($baseFields, [
                 ['label' => 'Feed Type', 'value' => (string) ($record->item_name ?? '-')],
                 ['label' => 'Feeder Number', 'value' => (string) ($record->feeder_number ?? '-')],
-                ['label' => 'Kilograms Used', 'value' => (string) ($record->kilograms_used ?? '-') . ' ' . (string) ($record->unit ?? 'kg')],
+                ['label' => 'Kilograms Used', 'value' => trim((string) ($record->kilograms_used ?? '-') . ' ' . (string) ($record->unit ?? 'kg'))],
                 ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
@@ -426,7 +486,7 @@ class MobileTaskController extends Controller
 
             return array_merge($baseFields, [
                 ['label' => 'Vitamins Type', 'value' => (string) ($record->item_name ?? '-')],
-                ['label' => 'Bottles Used', 'value' => (string) ($record->bottles_used ?? '-') . ' ' . (string) ($record->unit ?? '')],
+                ['label' => 'Bottles Used', 'value' => trim((string) ($record->bottles_used ?? '-') . ' ' . (string) ($record->unit ?? ''))],
                 ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
@@ -471,7 +531,8 @@ class MobileTaskController extends Controller
 
         if ($this->isChickPlacementTask($taskType)) {
             $record = DB::table('flock_batches')
-                ->where('task_id', $taskId)
+                ->where('house_id', $task->house_houseid)
+                ->where('pen_id', $task->pennumber)
                 ->orderByDesc('id')
                 ->first();
 

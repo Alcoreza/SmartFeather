@@ -97,6 +97,7 @@ class MobilePopulationController extends Controller
 
         if (empty($validated['pen_id']) && empty($validated['pen_name'])) {
             return response()->json([
+                'success' => false,
                 'message' => 'A pen is required.'
             ], 422);
         }
@@ -110,6 +111,7 @@ class MobilePopulationController extends Controller
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
+                'success' => false,
                 'message' => 'Please scan IN and complete personnel biosecurity before recording population.'
             ], 403);
         }
@@ -125,18 +127,30 @@ class MobilePopulationController extends Controller
 
             if (!$task) {
                 return response()->json([
+                    'success' => false,
                     'message' => 'Pending task not found for this worker.'
                 ], 404);
             }
 
+            $taskType = strtolower(trim((string) $task->tasktype));
+
+            if (!str_contains($taskType, 'hatch') && !str_contains($taskType, 'mortality')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This task is not a hatch and mortality task.'
+                ], 422);
+            }
+
             if ((int) $task->house_houseid !== (int) $validated['house_id']) {
                 return response()->json([
+                    'success' => false,
                     'message' => 'This task must be recorded under its assigned house.'
                 ], 422);
             }
 
             if (!empty($task->pennumber) && (int) $task->pennumber !== (int) ($validated['pen_id'] ?? 0)) {
                 return response()->json([
+                    'success' => false,
                     'message' => 'This task must be recorded under its assigned pen.'
                 ], 422);
             }
@@ -161,6 +175,7 @@ class MobilePopulationController extends Controller
 
         if (!$latestBiosecurity) {
             return response()->json([
+                'success' => false,
                 'message' => 'Please complete personnel biosecurity for this assigned task before recording population.'
             ], 403);
         }
@@ -168,34 +183,72 @@ class MobilePopulationController extends Controller
         if (!empty($validated['pen_id'])) {
             $pen = Pen::where('house_id', $validated['house_id'])
                 ->where('id', $validated['pen_id'])
+                ->whereNull('archived_at')
                 ->first();
         } else {
             $pen = Pen::where('house_id', $validated['house_id'])
                 ->where('pen_name', $validated['pen_name'])
+                ->whereNull('archived_at')
                 ->first();
         }
 
         if (!$pen) {
             return response()->json([
+                'success' => false,
                 'message' => 'Pen not found.'
             ], 404);
         }
 
-        $currentPopulation = (int) ($pen->population ?? 0);
-        $newPopulation = max($currentPopulation - $validated['mortality'], 0);
+        $house = House::where('id', $validated['house_id'])
+            ->whereNull('archived_at')
+            ->first();
 
-        DB::transaction(function () use ($pen, $validated, $newPopulation) {
+        if (!$house) {
+            return response()->json([
+                'success' => false,
+                'message' => 'House not found or archived.'
+            ], 404);
+        }
+
+        $currentPopulation = (int) ($pen->population ?? 0);
+        $eggsHatched = (int) $validated['eggs_hatched'];
+        $mortality = (int) $validated['mortality'];
+
+        if ($currentPopulation <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This pen has no current population. Start a chick placement batch first.'
+            ], 422);
+        }
+
+        if ($mortality > $currentPopulation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mortality cannot be greater than the current pen population.'
+            ], 422);
+        }
+
+        $newPopulation = $currentPopulation - $mortality;
+
+        if ($newPopulation < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The resulting population cannot be negative.'
+            ], 422);
+        }
+
+        DB::transaction(function () use ($pen, $validated, $eggsHatched, $mortality, $newPopulation) {
             DB::table('population_record')->insert([
                 'task_id' => $validated['task_id'] ?? null,
                 'pen_id' => $pen->id,
-                'eggs_hatched' => $validated['eggs_hatched'],
-                'mortality' => $validated['mortality'],
+                'eggs_hatched' => $eggsHatched,
+                'mortality' => $mortality,
                 'running_population' => $newPopulation,
                 'recorded_at' => $validated['recorded_at'],
             ]);
 
-            $pen->eggs_hatched = $validated['eggs_hatched'];
-            $pen->mortality = $validated['mortality'];
+            $pen->eggs_hatched = $eggsHatched;
+            $pen->mortality = $mortality;
             $pen->population = $newPopulation;
             $pen->recorded_at = $validated['recorded_at'];
             $pen->save();

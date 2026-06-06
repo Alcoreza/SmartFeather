@@ -167,6 +167,18 @@ class MobileNewBatchController extends Controller
         $validated = $validator->validated();
 
         try {
+            $house = House::where('id', $validated['house_id'])
+                ->whereNull('archived_at')
+                ->first();
+
+            if (!$house) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected house was not found or has been archived.',
+                    'error_code' => 'HOUSE_NOT_AVAILABLE',
+                ], 422);
+            }
+
             if (!empty($validated['task_id'])) {
                 $task = DB::table('tasks')
                     ->where('taskid', $validated['task_id'])
@@ -257,14 +269,34 @@ class MobileNewBatchController extends Controller
 
             $pen = Pen::where('id', $validated['pen_id'])
                 ->where('house_id', $validated['house_id'])
+                ->whereNull('archived_at')
                 ->first();
 
             if (!$pen) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Selected pen does not belong to the selected house.',
+                    'message' => 'Selected pen does not belong to the selected house or has been archived.',
                     'error_code' => 'PEN_HOUSE_MISMATCH',
                 ], 422);
+            }
+
+            $initialPopulation = (int) $validated['initial_population'];
+            $penCapacity = $pen->capacity !== null ? (int) $pen->capacity : null;
+
+            if ($penCapacity !== null && $penCapacity > 0 && $initialPopulation > $penCapacity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Initial population cannot be greater than the selected pen capacity of ' . $penCapacity . '.',
+                    'error_code' => 'POPULATION_OVER_CAPACITY',
+                ], 422);
+            }
+
+            if ((int) ($pen->population ?? 0) > 0 && empty($pen->current_batch_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This pen already has an existing population. Clear or end the current flock record before placing new chicks.',
+                    'error_code' => 'PEN_HAS_POPULATION',
+                ], 409);
             }
 
             $startedAt = Carbon::parse($validated['date'] . ' ' . $validated['time']);
@@ -292,7 +324,7 @@ class MobileNewBatchController extends Controller
                 ], 409);
             }
 
-            return DB::transaction(function () use ($validated, $startedAt) {
+            return DB::transaction(function () use ($validated, $startedAt, $initialPopulation) {
                 $batchId = DB::table('flock_batches')->insertGetId([
                     'task_id' => $validated['task_id'] ?? null,
                     'batch_code' => $validated['batch_code'],
@@ -300,7 +332,7 @@ class MobileNewBatchController extends Controller
                     'pen_id' => $validated['pen_id'],
                     'started_at' => $startedAt,
                     'status' => 'Running',
-                    'initial_population' => $validated['initial_population'],
+                    'initial_population' => $initialPopulation,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -308,9 +340,12 @@ class MobileNewBatchController extends Controller
                 DB::table('pen')
                     ->where('id', $validated['pen_id'])
                     ->update([
-                        'population' => $validated['initial_population'],
+                        'population' => $initialPopulation,
                         'current_batch_id' => $batchId,
                         'batch_started_at' => $startedAt,
+                        'eggs_hatched' => 0,
+                        'mortality' => 0,
+                        'recorded_at' => now(),
                     ]);
 
                 return response()->json([
@@ -320,7 +355,7 @@ class MobileNewBatchController extends Controller
                         : 'New bird batch added successfully.',
                     'batch_code' => $validated['batch_code'],
                     'pen_id' => $validated['pen_id'],
-                    'initial_population' => $validated['initial_population'],
+                    'initial_population' => $initialPopulation,
                     'started_at' => $startedAt->toDateTimeString(),
                     'status' => 'Running',
                 ]);

@@ -1742,6 +1742,10 @@
     width: 100%;
 }
 
+.flock-batch-float-btn {
+    display: none;
+}
+
 .info-panel .info-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1769,10 +1773,16 @@
 }
 
 @media (max-width: 1180px) {
+    .houses-workspace {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
     .houses-side-column {
         position: static;
         max-height: none;
         overflow: visible;
+        margin-top: 2px;
     }
 
     .cycle-panel {
@@ -1785,6 +1795,115 @@
 }
 
 @media (max-width: 768px) {
+    .houses-workspace {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .houses-side-column {
+        position: fixed;
+        right: 18px;
+        bottom: 76px;
+        z-index: 1700;
+        width: min(340px, calc(100vw - 36px));
+        max-height: none;
+        margin-top: 0;
+        overflow: visible;
+        opacity: 0;
+        pointer-events: none;
+        transform-origin: bottom right;
+        transform: translateY(14px) scale(0.98);
+        transition:
+            opacity 0.18s ease,
+            transform 0.18s ease;
+    }
+
+    .houses-side-column.is-floating-open {
+        opacity: 1;
+        pointer-events: none;
+        transform: translateY(0) scale(1);
+    }
+
+    .cycle-panel {
+        padding: 14px;
+        pointer-events: auto;
+        box-shadow: 0 22px 48px rgba(4, 44, 24, 0.22);
+    }
+
+    .cycle-panel .section-heading {
+        margin-bottom: 10px;
+    }
+
+    .cycle-panel .section-heading h2 {
+        font-size: 1.05rem;
+    }
+
+    .cycle-stack {
+        gap: 7px;
+    }
+
+    .cycle-panel .status-card {
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 18px;
+    }
+
+    .cycle-panel .houses-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .cycle-panel .toolbar-btn {
+        min-height: 38px;
+        padding: 0 10px;
+        font-size: 0.86rem;
+    }
+
+    .flock-batch-float-btn {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 1750;
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 150px;
+        min-height: 58px;
+        padding: 0 18px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 999px;
+        background: #042b1a;
+        color: #ffffff;
+        box-shadow: 0 18px 36px rgba(4, 44, 24, 0.28);
+        cursor: pointer;
+    }
+
+    .flock-batch-float-icon {
+        width: 22px;
+        height: 22px;
+        flex: 0 0 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2.4;
+    }
+
+    .flock-batch-float-btn strong {
+        font-size: 0.88rem;
+        font-weight: 800;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .flock-batch-float-btn.is-active {
+        background: #105c34;
+    }
+
     .info-panel .info-grid {
         grid-template-columns: 1fr;
     }
@@ -1800,9 +1919,6 @@
         border-bottom: 0;
     }
 
-    .cycle-panel .houses-actions {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
 }
 
 .cycle-panel .toolbar-btn {

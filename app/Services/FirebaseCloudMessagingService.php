@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\AndroidConfig;
 use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
 use Throwable;
 
 class FirebaseCloudMessagingService
@@ -22,12 +22,17 @@ class FirebaseCloudMessagingService
                 ->withServiceAccount($credentials)
                 ->createMessaging();
 
+            $androidConfig = AndroidConfig::fromArray([
+                'priority' => 'high',
+            ]);
+
             $message = CloudMessage::withTarget('token', $token)
-                ->withNotification(Notification::create($title, $body))
                 ->withData(array_merge([
                     'title' => $title,
                     'body' => $body,
-                ], $data));
+                    'channel_id' => 'sensor_alerts',
+                ], $data))
+                ->withAndroidConfig($androidConfig);
 
             $messaging->send($message);
 

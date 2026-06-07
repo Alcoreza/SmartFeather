@@ -15,12 +15,7 @@ class MobileFeedsRefillController extends Controller
             'employee_id' => 'required|integer|exists:user,EmployeeId',
         ]);
 
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
+        $latestEntry = $this->latestEntryLog($validated['employee_id']);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -108,6 +103,7 @@ class MobileFeedsRefillController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|integer|exists:user,EmployeeId',
+            'task_id' => 'nullable|integer|exists:tasks,taskid',
             'inventory_id' => 'required|integer|exists:inventories,id',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
@@ -116,12 +112,44 @@ class MobileFeedsRefillController extends Controller
             'recorded_at' => 'required|date',
         ]);
 
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
+        if (!empty($validated['task_id'])) {
+            $task = DB::table('tasks')
+                ->where('taskid', $validated['task_id'])
+                ->where('user_employeeid', $validated['employee_id'])
+                ->first();
+
+            if (!$task) {
+                return response()->json([
+                    'message' => 'Selected task was not found for this employee.',
+                ], 404);
+            }
+
+            if (strtolower((string) $task->status) !== 'pending') {
+                return response()->json([
+                    'message' => 'This task is no longer pending.',
+                ], 422);
+            }
+
+            if (!$this->isFeedReplenishmentTask((string) $task->tasktype)) {
+                return response()->json([
+                    'message' => 'This task is not a feed replenishment task.',
+                ], 422);
+            }
+
+            if ((int) $task->house_houseid !== (int) $validated['house_id']) {
+                return response()->json([
+                    'message' => 'Selected house does not match the assigned task house.',
+                ], 403);
+            }
+
+            if ((int) $task->pennumber !== (int) $validated['pen_id']) {
+                return response()->json([
+                    'message' => 'Selected pen does not match the assigned task pen.',
+                ], 403);
+            }
+        }
+
+        $latestEntry = $this->latestEntryLog($validated['employee_id']);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -129,20 +157,25 @@ class MobileFeedsRefillController extends Controller
             ], 403);
         }
 
-        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+        $biosecurityQuery = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->orderByDesc('id')
-            ->first();
+            ->where('employee_id', $validated['employee_id'])
+            ->where('house_id', $validated['house_id'])
+            ->orderByDesc('id');
+
+        if (!empty($validated['task_id'])) {
+            $biosecurityQuery
+                ->where('task_id', $validated['task_id'])
+                ->where('pen_id', $validated['pen_id']);
+        }
+
+        $latestBiosecurity = $biosecurityQuery->first();
 
         if (!$latestBiosecurity) {
             return response()->json([
-                'message' => 'Please submit the personnel biosecurity form first before recording feeds refill.'
-            ], 403);
-        }
-
-        if ((int) $latestBiosecurity->house_id !== (int) $validated['house_id']) {
-            return response()->json([
-                'message' => 'You can only record feeds refill for the house selected in your personnel biosecurity form.'
+                'message' => !empty($validated['task_id'])
+                    ? 'Please complete personnel biosecurity for this assigned task before recording feed replenishment.'
+                    : 'Please submit the personnel biosecurity form first before recording feeds refill.'
             ], 403);
         }
 
@@ -184,6 +217,7 @@ class MobileFeedsRefillController extends Controller
                 $newRemaining = $remainingStock - $kilograms;
 
                 DB::table('feed_refill_records')->insert([
+                    'task_id' => $validated['task_id'] ?? null,
                     'inventory_id' => $validated['inventory_id'],
                     'house_id' => $validated['house_id'],
                     'pen_id' => $validated['pen_id'],
@@ -214,5 +248,26 @@ class MobileFeedsRefillController extends Controller
             'success' => true,
             'message' => 'Feeds refill submitted successfully.',
         ]);
+    }
+
+    private function latestEntryLog(int $employeeId)
+    {
+        return DB::table('personnel_entry_logs')
+            ->where('employee_id', $employeeId)
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function isFeedReplenishmentTask(string $taskType): bool
+    {
+        $normalized = strtolower(trim($taskType));
+
+        return $normalized === 'feed replenishment' ||
+            $normalized === 'feeds replenishment' ||
+            $normalized === 'feeds refill' ||
+            $normalized === 'feed refill' ||
+            str_contains($normalized, 'feed') && str_contains($normalized, 'replenishment');
     }
 }

@@ -152,7 +152,7 @@ class MobileDashboardController extends Controller
                     'value' => $environmentReadings['temperature']['value'],
                     'unit' => 'deg',
                     'min' => 0,
-                    'max' => 40,
+                    'max' => $environmentReadings['temperature']['highest_threshold'],
                     'color' => '#6ABF4B',
                     'recorded_at' => $environmentReadings['temperature']['recorded_at'],
                 ],
@@ -161,7 +161,7 @@ class MobileDashboardController extends Controller
                     'value' => $environmentReadings['ammonia']['value'],
                     'unit' => 'ppm',
                     'min' => 0,
-                    'max' => 40,
+                    'max' => $environmentReadings['ammonia']['highest_threshold'],
                     'color' => '#F4B43A',
                     'recorded_at' => $environmentReadings['ammonia']['recorded_at'],
                 ],
@@ -197,22 +197,10 @@ class MobileDashboardController extends Controller
             ] : null,
             'quick_access' => [
                 [
-                    'title' => 'Population',
-                    'icon_key' => 'population',
-                    'tint' => '#D92C2C',
-                    'action_key' => 'population',
-                ],
-                [
-                    'title' => 'Feeds Refill',
-                    'icon_key' => 'feeds',
-                    'tint' => '#CC8A2D',
-                    'action_key' => 'feeds_refill',
-                ],
-                [
-                    'title' => 'Biosecurity',
-                    'icon_key' => 'biosecurity',
-                    'tint' => '#2F8F45',
-                    'action_key' => 'biosecurity',
+                    'title' => 'Visitor Log',
+                    'icon_key' => 'visitor',
+                    'tint' => '#2E7D6B',
+                    'action_key' => 'visitor',
                 ],
             ],
         ]);
@@ -301,10 +289,12 @@ class MobileDashboardController extends Controller
     private function latestReadingsByType(array $sensorTypes, ?int $houseId, ?int $penId): array
     {
         $defaults = [];
+
         foreach ($sensorTypes as $type) {
             $defaults[$type] = [
                 'value' => 0,
                 'recorded_at' => null,
+                'highest_threshold' => 40,
             ];
         }
 
@@ -313,24 +303,26 @@ class MobileDashboardController extends Controller
         }
 
         $rows = DB::table('sensors as s')
-            ->join('sensor_readings as sr', 's.sensorid', '=', 'sr.sensorid')
+            ->leftJoin('sensorconfigurations as sc', 'sc.sensors_sensorid', '=', 's.sensorid')
+            ->leftJoin('sensor_readings as sr', 's.sensorid', '=', 'sr.sensorid')
             ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
             ->where('s.house_houseid', $houseId)
             ->where('s.pen_penid', $penId)
             ->select(
                 DB::raw("
-                    CASE
-                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%temp%' THEN 'temperature'
-                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%ammonia%' THEN 'ammonia'
-                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%nh3%' THEN 'ammonia'
-                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%feed%' THEN 'feed'
-                        WHEN LOWER(TRIM(s.sensortype)) LIKE '%water%' THEN 'water'
-                        ELSE LOWER(TRIM(s.sensortype))
-                    END as sensor_type
-                "),
+                CASE
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%temp%' THEN 'temperature'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%ammonia%' THEN 'ammonia'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%nh3%' THEN 'ammonia'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%feed%' THEN 'feed'
+                    WHEN LOWER(TRIM(s.sensortype)) LIKE '%water%' THEN 'water'
+                    ELSE LOWER(TRIM(s.sensortype))
+                END as sensor_type
+            "),
                 'sr.value',
                 'sr.recorded_at',
-                'sr.reading_id'
+                'sr.reading_id',
+                'sc.highestthreshold'
             )
             ->orderByDesc('sr.recorded_at')
             ->orderByDesc('sr.reading_id')
@@ -345,10 +337,11 @@ class MobileDashboardController extends Controller
 
             if ($latest) {
                 $defaults[$type] = [
-                    'value' => (float) $latest->value,
+                    'value' => (float) ($latest->value ?? 0),
                     'recorded_at' => $latest->recorded_at
                         ? Carbon::parse($latest->recorded_at)->toDateTimeString()
                         : null,
+                    'highest_threshold' => (float) ($latest->highestthreshold ?? 40),
                 ];
             }
         }

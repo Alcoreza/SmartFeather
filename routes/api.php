@@ -13,6 +13,10 @@ use App\Http\Controllers\MobileWeightSamplingController;
 use App\Http\Controllers\MobileNewBatchController;
 use App\Http\Controllers\MobileDashboardController;
 use App\Http\Controllers\MobilePersonnelLogsController;
+use App\Http\Controllers\MobilePenCleaningController;
+use App\Http\Controllers\MobileSensorInspectionController;
+use App\Http\Controllers\MobileDeviceTokenController;
+use App\Http\Controllers\SensorAlertWebhookController;
 
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
@@ -64,10 +68,20 @@ Route::post('/mobile/new-batch', [MobileNewBatchController::class, 'submit']);
 
 Route::post('/mobile/tasks/photo-upload-url', [MobileTaskController::class, 'createTaskPhotoUploadUrl']);
 Route::post('/mobile/tasks/access-check', [MobileTaskController::class, 'checkTaskAccess']);
+Route::post('/mobile/tasks/submitted-detail', [MobileTaskController::class, 'getSubmittedTaskDetail']);
 
 Route::get('/mobile/dashboard', [MobileDashboardController::class, 'show']);
 
 Route::get('/mobile/personnel-logs/context', [MobilePersonnelLogsController::class, 'context']);
 Route::post('/mobile/personnel-logs', [MobilePersonnelLogsController::class, 'submit']);
+
+Route::get('/mobile/pen-cleaning/context', [MobilePenCleaningController::class, 'getContext']);
+Route::post('/mobile/pen-cleaning', [MobilePenCleaningController::class, 'submit']);
+
+Route::post('/mobile/sensor-inspection', [MobileSensorInspectionController::class, 'submit']);
+
+Route::post('/mobile/device-token', [MobileDeviceTokenController::class, 'store']);
+
+Route::post('/sensor-alerts/reading-created', [SensorAlertWebhookController::class, 'readingCreated']);
 
 

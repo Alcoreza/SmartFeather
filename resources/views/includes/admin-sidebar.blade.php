@@ -4,6 +4,12 @@
             <div class="admin-sidebar-logo">
                 <img src="{{ asset('images/AppLogoSmartFeather.png') }}" alt="SmartFeather">
             </div>
+
+            <button type="button" class="admin-sidebar-menu-toggle" data-sidebar-toggle aria-label="Open navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
 
         <div class="admin-sidebar-divider"></div>

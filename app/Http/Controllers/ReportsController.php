@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FeedRefillRecord;
+use App\Models\House;
+use App\Models\Pen;
+use App\Models\WeightSamplingLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,19 +15,178 @@ class ReportsController extends Controller
 {
     public function index(Request $request)
     {
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
+        $filters = [
+            'from_date' => $request->query('from_date', $request->query('start_date', '')),
+            'to_date' => $request->query('to_date', $request->query('end_date', '')),
+            'house' => $request->query('house', ''),
+        ];
 
         return response()->json([
+            'filters' => array_merge($filters, [
+                'options' => $this->getReportFilterOptions(),
+            ]),
+            'summary' => $this->getSummaryStatistics($filters),
             'reports' => [
-                'Population' => $this->getPopulationReport($startDate, $endDate),
-                'Environmental' => $this->getEnvironmentalReport($startDate, $endDate),
-                'Inventory' => $this->getInventoryReport($startDate, $endDate),
-                'Biosecurity' => $this->getBiosecurityReport($startDate, $endDate),
-                'Weight Sampling' => $this->getWeightSamplingReport($startDate, $endDate),
-                'Tasks' => $this->getTasksReport($startDate, $endDate),
+                'farm_status' => $this->getFarmStatusReport($filters),
+                'feed_consumption' => $this->getFeedConsumptionReport($filters),
+                'mortality' => $this->getMortalityReport($filters),
             ],
         ]);
+    }
+
+    private function getSummaryStatistics(array $filters): array
+    {
+        $totalFeedConsumed = 0;
+        $totalMortalities = 0;
+        $weightStatus = ['overweight' => 0, 'normal' => 0, 'underweight' => 0];
+
+        // Total Feed Consumed
+        if (Schema::hasTable('feed_refill_records')) {
+            $query = FeedRefillRecord::query();
+            $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+            if (!empty($filters['house'])) {
+                $query->whereHas('house', function ($houseQuery) use ($filters) {
+                    $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
+                });
+            }
+
+            $totalFeedConsumed = $query->sum('kilograms_used') ?? 0;
+        }
+
+        // Total Mortalities
+        if (Schema::hasTable('pen')) {
+            $query = Pen::query()->whereNull('archived_at');
+            $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+            if (!empty($filters['house'])) {
+                $query->whereHas('house', function ($houseQuery) use ($filters) {
+                    $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
+                });
+            }
+
+            $totalMortalities = $query->sum('mortality') ?? 0;
+        }
+
+        // Weight Status Breakdown
+        if (Schema::hasTable('weight_sampling_logs')) {
+            $query = WeightSamplingLog::query();
+            $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+            if (!empty($filters['house'])) {
+                $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
+            }
+
+            $statuses = $query->pluck('status')->toArray();
+            foreach ($statuses as $status) {
+                $status = strtolower(trim($status));
+                if ($status === 'overweight') {
+                    $weightStatus['overweight']++;
+                } elseif ($status === 'underweight') {
+                    $weightStatus['underweight']++;
+                } else {
+                    $weightStatus['normal']++;
+                }
+            }
+        }
+
+        return [
+            'total_feed_consumed' => $totalFeedConsumed,
+            'total_mortalities' => $totalMortalities,
+            'weight_status' => $weightStatus,
+        ];
+    }
+
+    private function getReportFilterOptions(): array
+    {
+        $houses = House::query()
+            ->whereNull('archived_at')
+            ->whereNotNull('house_number')
+            ->orderBy('house_number')
+            ->pluck('house_number')
+            ->filter()
+            ->unique()
+            ->values()
+            ->map(fn($houseNumber) => [
+                'value' => $this->formatHouseNumber($houseNumber),
+                'label' => $this->formatHouseNumber($houseNumber),
+            ])
+            ->all();
+
+        return [
+            'houses' => $houses,
+        ];
+    }
+
+    private function getFarmStatusReport(array $filters): array
+    {
+        $query = WeightSamplingLog::query()
+            ->orderByDesc('date')
+            ->orderByDesc('id');
+
+        $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+        if (!empty($filters['house'])) {
+            $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
+        }
+
+        return $query->get()->map(fn($record) => [
+            'house' => $record->house ?? '--',
+            'pen' => $record->pen ?? '--',
+            'batch' => $record->batch ?? '--',
+            'average_weight' => $record->average_weight ?? '--',
+            'target' => $record->target ?? '--',
+            'status' => $record->status ?? '--',
+            'date' => $this->formatDate($record->date),
+        ])->values()->all();
+    }
+
+    private function getFeedConsumptionReport(array $filters): array
+    {
+        $query = FeedRefillRecord::query()
+            ->with(['inventory', 'house', 'pen.runningBatch'])
+            ->orderByDesc('recorded_at');
+
+        $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+        if (!empty($filters['house'])) {
+            $query->whereHas('house', function ($houseQuery) use ($filters) {
+                $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
+            });
+        }
+
+        return $query->get()->map(fn($record) => [
+            'feed' => $record->inventory?->item_name ?? '--',
+            'house_number' => $this->formatHouseNumber($record->house?->house_number),
+            'pen_name' => $record->pen?->pen_name ?? '--',
+            'feeder_number' => $record->feeder_number ?? '--',
+            'kilograms_used' => $this->formatNumber($record->kilograms_used),
+            'recorded_at' => $this->formatDate($record->recorded_at),
+        ])->values()->all();
+    }
+
+    private function getMortalityReport(array $filters): array
+    {
+        $query = Pen::query()
+            ->with(['house', 'currentBatch'])
+            ->whereNull('archived_at')
+            ->orderBy('house_id')
+            ->orderBy('id');
+
+        $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+
+        if (!empty($filters['house'])) {
+            $query->whereHas('house', function ($houseQuery) use ($filters) {
+                $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
+            });
+        }
+
+        return $query->get()->map(fn($record) => [
+            'house_number' => $this->formatHouseNumber($record->house?->house_number),
+            'pen_name' => $record->pen_name ?? '--',
+            'mortality' => $record->mortality ?? 0,
+            'recorded_at' => $this->formatDate($record->recorded_at),
+        ])->values()->all();
     }
 
     public function generate(Request $request)
@@ -489,5 +652,45 @@ class ReportsController extends Controller
         } catch (\Throwable $e) {
             return (string) $value;
         }
+    }
+
+    private function formatHouseNumber($value): string
+    {
+        if (empty($value)) {
+            return '--';
+        }
+
+        return str_starts_with((string) $value, 'House ')
+            ? (string) $value
+            : 'House ' . $value;
+    }
+
+    private function normalizeHouseNumber($value): string
+    {
+        return trim(preg_replace('/^House\s+/i', '', (string) $value));
+    }
+
+    private function getHouseFilterValues($value): array
+    {
+        $normalized = $this->normalizeHouseNumber($value);
+
+        return array_values(array_unique([
+            (string) $value,
+            $normalized,
+            $this->formatHouseNumber($normalized),
+        ]));
+    }
+
+    private function formatNumber($value): string
+    {
+        if ($value === null || $value === '') {
+            return '0';
+        }
+
+        $number = (float) $value;
+
+        return floor($number) === $number
+            ? (string) (int) $number
+            : number_format($number, 2, '.', '');
     }
 }

@@ -1,7 +1,12 @@
+const FARM_ACTIVITY_ROWS_PER_PAGE = 5;
+
 const farmRecordState = {
     selectedRecord: 'Hatch and Mortality Check',
     records: {},
 };
+
+let farmActivityPagination = {};
+let currentFarmActivityData = {};
 
 const FARM_RECORD_CONFIG = {
     'Hatch and Mortality Check': {
@@ -253,15 +258,158 @@ function renderRecordTable(columns, rows) {
     `;
 }
 
-function renderSingleRecord(recordType, recordData) {
-    const section = FARM_RECORD_CONFIG[recordType].sections[0];
-    const rows = Array.isArray(recordData) ? recordData : [];
+function renderFarmActivityPaginationControls(cardKey, totalRows) {
+    const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
+    const shouldHide = totalRows <= FARM_ACTIVITY_ROWS_PER_PAGE;
+    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
+
+    const dotsHtml = Array.from({ length: totalPages }, (_, index) => `
+        <button
+            type="button"
+            class="reports-page-dot ${index === currentPage ? 'active' : ''}"
+            data-farm-activity-page="${index}"
+            data-card-key="${cardKey}"
+            aria-label="Go to page ${index + 1}"
+        ></button>
+    `).join('');
+
+    return `
+        <div class="reports-pagination ${shouldHide ? 'is-hidden' : ''}" data-farm-activity-pagination="${cardKey}">
+            <button type="button" class="reports-page-btn" data-farm-activity-prev="${cardKey}">
+                Previous
+            </button>
+            <div class="reports-page-dots" data-farm-activity-dots="${cardKey}">
+                ${dotsHtml}
+            </div>
+            <button type="button" class="reports-page-btn" data-farm-activity-next="${cardKey}">
+                Next
+            </button>
+        </div>
+    `;
+}
+
+function updateFarmActivityCard(cardKey, rows) {
+    const totalRows = rows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
+
+    if (!farmActivityPagination[cardKey]) {
+        farmActivityPagination[cardKey] = { currentPage: 0 };
+    }
+
+    farmActivityPagination[cardKey].totalRows = totalRows;
+    currentFarmActivityData[cardKey] = rows;
+
+    const start = farmActivityPagination[cardKey].currentPage * FARM_ACTIVITY_ROWS_PER_PAGE;
+    const paginatedRows = rows.slice(start, start + FARM_ACTIVITY_ROWS_PER_PAGE);
+
+    return paginatedRows;
+}
+
+function updateFarmActivityPagination(cardKey, totalRows) {
+    const pagination = document.querySelector(`[data-farm-activity-pagination="${cardKey}"]`);
+    const prevButton = document.querySelector(`[data-farm-activity-prev="${cardKey}"]`);
+    const nextButton = document.querySelector(`[data-farm-activity-next="${cardKey}"]`);
+    const dotsContainer = document.querySelector(`[data-farm-activity-dots="${cardKey}"]`);
+    const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
+    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
+
+    if (pagination) {
+        pagination.classList.toggle('is-hidden', totalRows <= FARM_ACTIVITY_ROWS_PER_PAGE);
+    }
+
+    if (prevButton) {
+        prevButton.disabled = currentPage === 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = currentPage >= totalPages - 1;
+    }
+
+    if (dotsContainer) {
+        dotsContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="reports-page-dot ${index === currentPage ? 'active' : ''}"
+                data-farm-activity-page="${index}"
+                data-card-key="${cardKey}"
+                aria-label="Go to page ${index + 1}"
+            ></button>
+        `).join('');
+    }
+}
+
+function reRenderFarmActivityCard(cardKey) {
+    const recordType = farmRecordState.selectedRecord;
+    const config = FARM_RECORD_CONFIG[recordType];
+    const section = config.sections[0];
+    const allRows = currentFarmActivityData[cardKey] || [];
+
+    const start = farmActivityPagination[cardKey].currentPage * FARM_ACTIVITY_ROWS_PER_PAGE;
+    const paginatedRows = allRows.slice(start, start + FARM_ACTIVITY_ROWS_PER_PAGE);
+
+    const tableHtml = renderRecordTable(section.columns, paginatedRows);
+    const paginationHtml = renderFarmActivityPaginationControls(cardKey, allRows.length);
 
     farmRecordContent.innerHTML = `
         <section class="reports-card">
-            ${renderRecordTable(section.columns, rows)}
+            ${tableHtml}
+            ${paginationHtml}
         </section>
     `;
+
+    updateFarmActivityPagination(cardKey, allRows.length);
+}
+
+function setupFarmActivityPagination() {
+    farmRecordContent.addEventListener('click', (event) => {
+        const prevBtn = event.target.closest('[data-farm-activity-prev]');
+        const nextBtn = event.target.closest('[data-farm-activity-next]');
+        const dotBtn = event.target.closest('[data-farm-activity-page]');
+
+        if (prevBtn) {
+            const cardKey = prevBtn.getAttribute('data-farm-activity-prev');
+            const totalPages = Math.max(1, Math.ceil((farmActivityPagination[cardKey]?.totalRows || 0) / FARM_ACTIVITY_ROWS_PER_PAGE));
+            if (farmActivityPagination[cardKey].currentPage > 0) {
+                farmActivityPagination[cardKey].currentPage--;
+                reRenderFarmActivityCard(cardKey);
+            }
+        }
+
+        if (nextBtn) {
+            const cardKey = nextBtn.getAttribute('data-farm-activity-next');
+            const totalPages = Math.max(1, Math.ceil((farmActivityPagination[cardKey]?.totalRows || 0) / FARM_ACTIVITY_ROWS_PER_PAGE));
+            if (farmActivityPagination[cardKey].currentPage < totalPages - 1) {
+                farmActivityPagination[cardKey].currentPage++;
+                reRenderFarmActivityCard(cardKey);
+            }
+        }
+
+        if (dotBtn) {
+            const cardKey = dotBtn.getAttribute('data-card-key');
+            const pageNum = parseInt(dotBtn.getAttribute('data-farm-activity-page'), 10);
+            farmActivityPagination[cardKey].currentPage = pageNum;
+            reRenderFarmActivityCard(cardKey);
+        }
+    });
+}
+
+function renderSingleRecord(recordType, recordData) {
+    const section = FARM_RECORD_CONFIG[recordType].sections[0];
+    const rows = Array.isArray(recordData) ? recordData : [];
+    const cardKey = 'farm-activity-main';
+
+    const paginatedRows = updateFarmActivityCard(cardKey, rows);
+    const tableHtml = renderRecordTable(section.columns, paginatedRows);
+    const paginationHtml = renderFarmActivityPaginationControls(cardKey, rows.length);
+
+    farmRecordContent.innerHTML = `
+        <section class="reports-card">
+            ${tableHtml}
+            ${paginationHtml}
+        </section>
+    `;
+
+    updateFarmActivityPagination(cardKey, rows.length);
 }
 
 function renderMultiRecord(recordType, recordData) {
@@ -459,11 +607,14 @@ function bindFarmRecordEvents() {
 
     farmRecordFilterSelect.addEventListener('change', (event) => {
         farmRecordState.selectedRecord = event.target.value;
+        farmActivityPagination = {};
+        currentFarmActivityData = {};
         loadCurrentRecord();
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     bindFarmRecordEvents();
+    setupFarmActivityPagination();
     loadCurrentRecord();
 });

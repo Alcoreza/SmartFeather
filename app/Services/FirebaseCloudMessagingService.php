@@ -26,7 +26,8 @@ class FirebaseCloudMessagingService
                 'priority' => 'high',
             ]);
 
-            $message = CloudMessage::withTarget('token', $token)
+            $message = CloudMessage::new()
+                ->toToken($token)
                 ->withData(array_merge([
                     'title' => $title,
                     'body' => $body,

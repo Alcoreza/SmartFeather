@@ -214,8 +214,32 @@ class SensorAlertService
             'alert_type' => $alertType,
             'threshold_value' => $thresholdValue,
             'title' => "{$directionLabel} {$sensorLabel} Alert",
-            'message' => "{$sensorLabel} is {$valueWithUnit} at {$location}.",
+            'message' => "{$sensorLabel} is {$valueWithUnit} at {$location}. " .
+                $this->recommendedAction((string) $reading->sensortype, $alertType),
         ];
+    }
+
+    private function recommendedAction(string $sensorType, string $alertType): string
+    {
+        return match ($sensorType) {
+            'Temperature Sensor' => $alertType === 'above_threshold'
+            ? 'Inspect ventilation, fan operation, and nearby heat sources.'
+            : 'Check heater operation, openings, and possible cold air sources.',
+
+            'Ammonia Sensor' => $alertType === 'above_threshold'
+            ? 'Assess ventilation, litter condition, and waste buildup.'
+            : 'Verify that ventilation is balanced and operating properly.',
+
+            'Feed Sensor' => $alertType === 'below_threshold'
+            ? 'Check feeder supply and possible blockage.'
+            : 'Evaluate feeder level and adjust if needed.',
+
+            'Water Sensor' => $alertType === 'below_threshold'
+            ? 'Examine water supply, drinker lines, and possible blockage.'
+            : 'Monitor water level and adjust if needed.',
+
+            default => 'Inspect the affected area when available.',
+        };
     }
 
     private function flockmanTokens()

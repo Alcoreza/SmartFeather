@@ -94,7 +94,7 @@
                         </div>
                     </div>
 
-                    <aside class="houses-side-column">
+                    <aside class="houses-side-column" id="flockBatchPanel">
                         <article class="farm-panel cycle-panel">
                             <div class="section-heading">
                                 <h2>Flock Batch</h2>
@@ -130,6 +130,18 @@
                         </article>
                     </aside>
                 </div>
+
+                <button type="button" class="flock-batch-float-btn" data-flock-batch-toggle aria-controls="flockBatchPanel" aria-expanded="false">
+                    <svg class="flock-batch-float-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 5.5h8" />
+                        <path d="M8 12h8" />
+                        <path d="M8 18.5h8" />
+                        <path d="M4.5 5.5h.01" />
+                        <path d="M4.5 12h.01" />
+                        <path d="M4.5 18.5h.01" />
+                    </svg>
+                    <strong>Flock Batch</strong>
+                </button>
             </section>
         </main>
     </div>

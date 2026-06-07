@@ -738,7 +738,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function animateStats() {
         const animatedElements = document.querySelectorAll(
-            ".env-card, .resource-section, #houseStatus, #houseBatch, #housePen, #houseTemperature, #houseAmmonia, .info-card, .resource-item",
+            ".env-card, .resource-section, #houseStatus, #houseBatch, #houseTemperature, #houseAmmonia, .info-card, .resource-item",
         );
 
         animatedElements.forEach((element, index) => {

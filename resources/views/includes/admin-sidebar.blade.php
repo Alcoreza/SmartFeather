@@ -50,7 +50,7 @@
             </a>
 
             <div class="admin-sidebar-footer">
-                <a href="{{ route('logout') }}" class="admin-sidebar-link admin-sidebar-logout">
+                <a href="{{ route('logout') }}" class="admin-sidebar-link admin-sidebar-logout" data-logout-trigger>
                     <span class="admin-sidebar-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
                     </span>

@@ -3,6 +3,16 @@ const BASE_URL = '/api/login';
 const loginErrorModal = document.getElementById('loginErrorModal');
 const loginErrorMessage = document.getElementById('loginErrorMessage');
 const closeLoginErrorModal = document.getElementById('closeLoginErrorModal');
+const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+const loginSubmitLabel = loginSubmitBtn?.querySelector('.go-btn-label');
+
+function setLoginLoading(isLoading) {
+    if (!loginSubmitBtn || !loginSubmitLabel) return;
+
+    loginSubmitBtn.disabled = isLoading;
+    loginSubmitBtn.classList.toggle('is-loading', isLoading);
+    loginSubmitLabel.textContent = isLoading ? 'Logging in' : 'Go';
+}
 
 function showLoginError(message = 'Wrong username or password.') {
     if (!loginErrorModal || !loginErrorMessage) {
@@ -46,6 +56,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value;
 
     try {
+        setLoginLoading(true);
+
         const res = await fetch(BASE_URL, {
             method: 'POST',
             headers: {
@@ -62,6 +74,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
         if (!res.ok) {
             showLoginError(data.message || 'Wrong username or password.');
+            setLoginLoading(false);
             return;
         }
 
@@ -71,10 +84,12 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             window.location.href = '/manager/dashboard';
         } else {
             showLoginError('Unauthorized role.');
+            setLoginLoading(false);
         }
 
     } catch (err) {
         console.error(err);
         showLoginError('Network error. Please try again.');
+        setLoginLoading(false);
     }
 });

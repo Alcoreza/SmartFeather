@@ -36,31 +36,6 @@ body {
     box-sizing: border-box;
 }
 
-.admin-shell {
-    min-height: 100vh;
-    display: flex;
-}
-
-.admin-sidebar {
-    width: 220px;
-    min-height: 100vh;
-    padding: 28px 20px;
-    background: linear-gradient(
-        180deg,
-        #022713 0%,
-        var(--admin-green-950) 100%
-    );
-    color: #fff;
-    position: sticky;
-    top: 0;
-    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
-}
-
-.admin-main {
-    flex: 1;
-    padding: 28px 34px 34px;
-}
-
 .admin-profile {
     width: 62px;
     height: 62px;
@@ -897,16 +872,6 @@ body {
 }
 
 @media (max-width: 992px) {
-    .admin-shell {
-        flex-direction: column;
-    }
-
-    .admin-sidebar {
-        width: 100%;
-        min-height: auto;
-        position: relative;
-    }
-
     .admin-sensor-section-head {
         grid-template-columns: 1fr;
     }
@@ -925,10 +890,6 @@ body {
 }
 
 @media (max-width: 768px) {
-    .admin-main {
-        padding: 22px 16px 28px;
-    }
-
     .admin-sensors-title {
         text-align: left;
         font-size: 2.15rem;

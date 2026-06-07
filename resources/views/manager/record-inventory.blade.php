@@ -39,8 +39,10 @@
                 </div>
 
                 {{-- ✅ UPDATED: unified filter dropdown --}}
-                <div class="record-filter-wrap hidden" id="filterWrap">
-                    <select class="record-filter-select" id="recordFilter"></select>
+                <div class="record-filter-wrap" id="filterWrap">
+                    <select class="record-filter-select" id="recordFilter">
+                        <option value="">Loading feed...</option>
+                    </select>
                 </div>
 
                 <div class="record-date-filters" aria-label="Record date filters">

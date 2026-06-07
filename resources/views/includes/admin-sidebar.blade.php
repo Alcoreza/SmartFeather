@@ -4,6 +4,12 @@
             <div class="admin-sidebar-logo">
                 <img src="{{ asset('images/AppLogoSmartFeather.png') }}" alt="SmartFeather">
             </div>
+
+            <button type="button" class="admin-sidebar-menu-toggle" data-sidebar-toggle aria-label="Open navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
 
         <div class="admin-sidebar-divider"></div>
@@ -22,7 +28,7 @@
                 <span class="admin-sidebar-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-7h6v7"></path></svg>
                 </span>
-                <span>Houses</span>
+                <span>Farm Management</span>
             </a>
 
             <a href="{{ route('admin.workers') }}"
@@ -50,7 +56,7 @@
             </a>
 
             <div class="admin-sidebar-footer">
-                <a href="{{ route('logout') }}" class="admin-sidebar-link admin-sidebar-logout">
+                <a href="{{ route('logout') }}" class="admin-sidebar-link admin-sidebar-logout" data-logout-trigger>
                     <span class="admin-sidebar-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
                     </span>

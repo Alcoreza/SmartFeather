@@ -42,7 +42,9 @@
                                 </div>
 
                                 <div class="text-center mt-5">
-                                    <button type="submit" class="go-btn px-5">Go</button>
+                                    <button type="submit" class="go-btn px-5" id="loginSubmitBtn">
+                                        <span class="go-btn-label">Go</span>
+                                    </button>
                                 </div>
                             </form>
                         </div>

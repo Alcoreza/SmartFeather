@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const infoGrid = document.getElementById("infoGrid");
     const feedRow = document.getElementById("feedRow");
     const waterRow = document.getElementById("waterRow");
+    const temperatureChartCanvas = document.getElementById("farmTemperatureChart");
+    const ammoniaChartCanvas = document.getElementById("farmAmmoniaChart");
+    let temperatureChart = null;
+    let ammoniaChart = null;
 
     const housesTabsContainer = document.querySelector(".houses-tabs");
 
@@ -213,12 +217,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     function buildInfoCards(cards) {
         return cards.map((card) => `
             <article class="info-card card-animate">
-                <div class="info-icon ${card.accent}">
-                    <span>${card.icon}</span>
-                </div>
                 <div class="info-text">
-                    <div class="info-title">${card.title}</div>
-                    <div class="info-subtitle">${card.subtitle}</div>
+                    <div class="info-title">${card.label}</div>
+                    <div class="info-value">${card.value}</div>
+                    <div class="info-subtitle">${card.detail}</div>
                 </div>
             </article>
         `).join('');
@@ -289,6 +291,97 @@ document.addEventListener("DOMContentLoaded", async () => {
         gauge.classList.add(getGaugeState(type, value));
     }
 
+    function buildSnapshotSeries(value, fallback) {
+        const safeValue = Number.isFinite(Number(value)) ? Number(value) : fallback;
+        return Array(6).fill(safeValue);
+    }
+
+    function updateSingleSensorChart(chartCanvas, chartInstance, config) {
+        if (!chartCanvas || typeof Chart === "undefined") return chartInstance;
+
+        const hasValue = Number.isFinite(Number(config.value));
+        const labels = ["", "", "", "", "", ""];
+        const datasets = [{
+            label: config.label,
+            data: buildSnapshotSeries(config.value, 0),
+            borderColor: config.color,
+            backgroundColor: config.background,
+            fill: true,
+            tension: 0.35,
+            pointRadius: [0, 0, 0, 0, 0, hasValue ? 4 : 0],
+            pointHoverRadius: 5,
+            borderWidth: 2.5,
+        }];
+
+        if (chartInstance) {
+            chartInstance.data.labels = labels;
+            chartInstance.data.datasets = datasets;
+            chartInstance.options.scales.y.suggestedMax = config.max;
+            chartInstance.update();
+            return chartInstance;
+        }
+
+        return new Chart(chartCanvas, {
+            type: "line",
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 350 },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: "bottom",
+                        labels: {
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            usePointStyle: true,
+                            color: "#617064",
+                            font: { size: 11, weight: "700" },
+                        },
+                    },
+                    tooltip: { enabled: false },
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { display: false },
+                        border: { display: false },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: config.max,
+                        grid: { color: "rgba(90, 96, 90, 0.12)" },
+                        ticks: {
+                            color: "#7a857d",
+                            font: { size: 10 },
+                            maxTicksLimit: 4,
+                        },
+                        border: { display: false },
+                    },
+                },
+            },
+        });
+    }
+
+    function updateSensorChart(temperatureValue, ammoniaValue) {
+        temperatureChart = updateSingleSensorChart(temperatureChartCanvas, temperatureChart, {
+            label: "Temperature (°C)",
+            value: temperatureValue,
+            color: "#df4d45",
+            background: "rgba(223, 77, 69, 0.08)",
+            max: 35,
+        });
+
+        ammoniaChart = updateSingleSensorChart(ammoniaChartCanvas, ammoniaChart, {
+            label: "Ammonia (ppm)",
+            value: ammoniaValue,
+            color: "#41a45d",
+            background: "rgba(65, 164, 93, 0.08)",
+            max: 25,
+        });
+    }
+
     function populatePenOptions(house) {
         if (!housePen) return;
 
@@ -346,29 +439,33 @@ document.addEventListener("DOMContentLoaded", async () => {
                             cards: [
                                 {
                                     icon: "🏠",
-                                    title: `Capacity: ${pen.capacity || 0}`,
-                                    subtitle: `Population: ${pen.population || 0}`,
+                                    label: "Pen Capacity",
+                                    value: pen.capacity || 0,
+                                    detail: `${pen.population || 0} birds currently placed`,
                                     accent: "red",
                                 },
                                 {
                                     icon: "📅",
-                                    title: "Start Date",
-                                    subtitle:
+                                    label: "Batch ID",
+                                    value: flockBatch?.batch_code || "No active batch",
+                                    detail:
                                         flockBatch?.started_at ||
                                         pen.batch_started_at ||
-                                        "Not set",
+                                        "Start date not set",
                                     accent: "blue",
                                 },
                                 {
                                     icon: "💚",
-                                    title: "Current Condition",
-                                    subtitle: "Normal",
+                                    label: "Batch Status",
+                                    value: pen.status || "Unknown",
+                                    detail: flockBatch?.status || "Inactive",
                                     accent: "green",
                                 },
                                 {
                                     icon: "📊",
-                                    title: `Eggs Hatched: ${pen.eggs_hatched || 0}`,
-                                    subtitle: `Mortality: ${pen.mortality || 0}`,
+                                    label: "Hatch & Mortality",
+                                    value: pen.eggs_hatched || 0,
+                                    detail: `${pen.mortality || 0} mortality recorded`,
                                     accent: "orange",
                                 },
                             ],
@@ -419,7 +516,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         animatedElements.forEach((element, index) => {
             element.classList.remove('show-stat', 'show-card');
             void element.offsetWidth;
-            element.style.animationDelay = `${index * 0.07}s`;
+            element.style.animationDelay = `${index * 0.035}s`;
 
             if (
                 element.classList.contains('env-card') ||
@@ -445,6 +542,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
         updateGauge(temperatureGauge, "temperature", pen.temperatureValue);
         updateGauge(ammoniaGauge, "ammonia", pen.ammoniaValue);
+        updateSensorChart(pen.temperatureValue, pen.ammoniaValue);
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
         if (feedRow) feedRow.innerHTML = buildResourceRow(pen.feeders, "feed");

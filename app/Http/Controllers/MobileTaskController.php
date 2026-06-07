@@ -403,7 +403,7 @@ class MobileTaskController extends Controller
                 ['label' => 'Eggs Hatched', 'value' => (string) ($record->eggs_hatched ?? 0)],
                 ['label' => 'Mortality', 'value' => (string) ($record->mortality ?? 0)],
                 ['label' => 'Running Population', 'value' => (string) ($record->running_population ?? '-')],
-                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
 
@@ -425,7 +425,7 @@ class MobileTaskController extends Controller
                 ['label' => 'Average Weight', 'value' => (string) ($record->average_weight ?? '-')],
                 ['label' => 'Target Weight', 'value' => (string) ($record->target ?? '-')],
                 ['label' => 'Status', 'value' => (string) ($record->status ?? '-')],
-                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateAndTime($record->date ?? null, $record->time ?? null)],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateAndTime($record->date ?? null, $record->time ?? null)],
             ]);
 
             $entries = DB::table('weight_sampling_entries')
@@ -464,7 +464,7 @@ class MobileTaskController extends Controller
                 ['label' => 'Feed Type', 'value' => (string) ($record->item_name ?? '-')],
                 ['label' => 'Feeder Number', 'value' => (string) ($record->feeder_number ?? '-')],
                 ['label' => 'Kilograms Used', 'value' => trim((string) ($record->kilograms_used ?? '-') . ' ' . (string) ($record->unit ?? 'kg'))],
-                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
 
@@ -487,7 +487,7 @@ class MobileTaskController extends Controller
             return array_merge($baseFields, [
                 ['label' => 'Vitamins Type', 'value' => (string) ($record->item_name ?? '-')],
                 ['label' => 'Bottles Used', 'value' => trim((string) ($record->bottles_used ?? '-') . ' ' . (string) ($record->unit ?? ''))],
-                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
 
@@ -505,7 +505,7 @@ class MobileTaskController extends Controller
                 ['label' => 'Activity', 'value' => (string) ($record->activity ?? '-')],
                 ['label' => 'Material Used', 'value' => (string) ($record->disinfectant_used ?? '-')],
                 ['label' => 'Performed By', 'value' => (string) ($record->performed_by ?? '-')],
-                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateAndTime($record->date ?? null, $record->time ?? null)],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateAndTime($record->date ?? null, $record->time ?? null)],
             ]);
         }
 
@@ -525,7 +525,7 @@ class MobileTaskController extends Controller
                 ['label' => 'No Visible Damage or Loose Wiring', 'value' => $this->yesNo($record->no_visible_damage_or_loose_wiring ?? false)],
                 ['label' => 'Power Status On', 'value' => $this->yesNo($record->power_status_on ?? false)],
                 ['label' => 'Placement Secure', 'value' => $this->yesNo($record->placement_secure ?? false)],
-                ['label' => 'Recorded', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at ?? null)],
+                ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at ?? null)],
             ]);
         }
 

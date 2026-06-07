@@ -219,12 +219,16 @@ class MobileWeightSamplingController extends Controller
         $average = round(array_sum($weights) / count($weights), 2);
         $targetValue = round((float) $validated['target_weight'], 2);
 
+        $normalMarginPercent = 5;
+
+        $lowerNormalLimit = $targetValue * (1 - ($normalMarginPercent / 100));
+        $upperNormalLimit = $targetValue * (1 + ($normalMarginPercent / 100));
+
         $status = match (true) {
-            $average < $targetValue => 'Underweight',
-            $average > $targetValue => 'Overweight',
+            $average < $lowerNormalLimit => 'Underweight',
+            $average > $upperNormalLimit => 'Overweight',
             default => 'Normal',
         };
-
         DB::transaction(function () use ($validated, $weights, $average, $targetValue, $status, $house, $pen, $recordedAt, $ageDays) {
             $logId = DB::table('weight_sampling_logs')->insertGetId([
                 'task_id' => $validated['task_id'] ?? null,

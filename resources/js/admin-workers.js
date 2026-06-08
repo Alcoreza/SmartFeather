@@ -1,6 +1,10 @@
 const BASE_URL = '/api/admin/workers';
+const ADMIN_WORKERS_ROWS_PER_PAGE = 5;
+
 let deleteId = null;
 const employeesCache = new Map();
+let adminWorkersCurrentPage = 0;
+let adminWorkersCurrentRole = 'All';
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -251,11 +255,7 @@ function setupAdminProfileModal() {
 }
 
 // ================= LOAD EMPLOYEES =================
-// ================= LOAD EMPLOYEES =================
 async function loadEmployees() {
-    const table = document.getElementById('workersTableBody');
-    table.innerHTML = '';
-
     try {
         const res = await fetch(BASE_URL, {
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
@@ -269,54 +269,158 @@ async function loadEmployees() {
 
         sortedUsers.forEach(user => {
             employeesCache.set(String(user.EmployeeId), user);
-
-            const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
-
-            table.innerHTML += `
-                <tr data-id="${user.EmployeeId}">
-                    <td>${fullName}</td>
-                    <td>${user.EmployeeId}</td>
-                    <td>${user.Role}</td>
-                    <td class="text-center">
-                        <div class="admin-worker-action-group">
-                            
-                            <!-- VIEW -->
-                            <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${user.EmployeeId}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                            </button>
-
-                            <!-- EDIT -->
-                            <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${user.EmployeeId}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 20h9"></path>
-                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                                </svg>
-                            </button>
-
-                            <!-- DELETE -->
-                            <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${user.EmployeeId}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 6h18"></path>
-                                    <path d="M8 6V4h8v2"></path>
-                                    <path d="M10 11v6"></path>
-                                    <path d="M14 11v6"></path>
-                                    <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"></path>
-                                </svg>
-                            </button>
-
-                        </div>
-                    </td>
-                </tr>
-            `;
         });
+
+        adminWorkersCurrentPage = 0;
+        renderWorkersTable();
 
     } catch (err) {
         console.error(err);
         alert('Failed to load employees');
     }
+}
+
+function getFilteredAdminWorkers() {
+    const workers = Array.from(employeesCache.values());
+    return workers.filter(user => {
+        return adminWorkersCurrentRole === 'All' || user.Role === adminWorkersCurrentRole;
+    });
+}
+
+function renderWorkersTable() {
+    const table = document.getElementById('workersTableBody');
+    if (!table) return;
+
+    const filteredWorkers = getFilteredAdminWorkers();
+    const totalPages = Math.max(1, Math.ceil(filteredWorkers.length / ADMIN_WORKERS_ROWS_PER_PAGE));
+    adminWorkersCurrentPage = Math.min(adminWorkersCurrentPage, totalPages - 1);
+
+    if (!filteredWorkers.length) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="4" class="admin-workers-empty-row">No employees match the selected filter.</td>
+            </tr>
+            ${Array.from({ length: ADMIN_WORKERS_ROWS_PER_PAGE - 1 }, () => `
+                <tr class="admin-workers-placeholder-row" aria-hidden="true">
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+            `).join('')}
+        `;
+        updateAdminWorkersPagination(0);
+        return;
+    }
+
+    const start = adminWorkersCurrentPage * ADMIN_WORKERS_ROWS_PER_PAGE;
+    const pageWorkers = filteredWorkers.slice(start, start + ADMIN_WORKERS_ROWS_PER_PAGE);
+    const placeholderRows = ADMIN_WORKERS_ROWS_PER_PAGE - pageWorkers.length;
+
+    table.innerHTML = pageWorkers.map(user => {
+        const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+        return `
+            <tr data-id="${user.EmployeeId}">
+                <td>${fullName}</td>
+                <td>${user.EmployeeId}</td>
+                <td>${user.Role}</td>
+                <td class="text-center">
+                    <div class="admin-worker-action-group">
+                        
+                        <!-- VIEW -->
+                        <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${user.EmployeeId}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+
+                        <!-- EDIT -->
+                        <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${user.EmployeeId}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                        </button>
+
+                        <!-- DELETE -->
+                        <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${user.EmployeeId}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18"></path>
+                                <path d="M8 6V4h8v2"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"></path>
+                            </svg>
+                        </button>
+
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('') + Array.from({ length: placeholderRows }, () => `
+        <tr class="admin-workers-placeholder-row" aria-hidden="true">
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+    `).join('');
+
+    updateAdminWorkersPagination(filteredWorkers.length);
+}
+
+function updateAdminWorkersPagination(totalRows) {
+    const pagination = document.querySelector('[data-admin-workers-pagination]');
+    const prevButton = document.querySelector('[data-admin-workers-prev]');
+    const nextButton = document.querySelector('[data-admin-workers-next]');
+    const dots = document.querySelector('[data-admin-workers-dots]');
+    const totalPages = Math.max(1, Math.ceil(totalRows / ADMIN_WORKERS_ROWS_PER_PAGE));
+
+    if (pagination) {
+        pagination.classList.toggle('is-hidden', totalRows <= ADMIN_WORKERS_ROWS_PER_PAGE);
+    }
+
+    if (prevButton) {
+        prevButton.disabled = adminWorkersCurrentPage === 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = adminWorkersCurrentPage >= totalPages - 1;
+    }
+
+    if (dots) {
+        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            <button
+                type="button"
+                class="admin-workers-page-dot ${index === adminWorkersCurrentPage ? 'active' : ''}"
+                data-admin-workers-page="${index}"
+                aria-label="Go to page ${index + 1}"
+                aria-current="${index === adminWorkersCurrentPage ? 'page' : 'false'}"
+            ></button>
+        `).join('');
+    }
+}
+
+function setupAdminWorkersPagination() {
+    document.querySelector('[data-admin-workers-prev]')?.addEventListener('click', () => {
+        adminWorkersCurrentPage = Math.max(0, adminWorkersCurrentPage - 1);
+        renderWorkersTable();
+    });
+
+    document.querySelector('[data-admin-workers-next]')?.addEventListener('click', () => {
+        adminWorkersCurrentPage += 1;
+        renderWorkersTable();
+    });
+
+    document.querySelector('[data-admin-workers-dots]')?.addEventListener('click', event => {
+        const dot = event.target.closest('[data-admin-workers-page]');
+        if (!dot) return;
+
+        adminWorkersCurrentPage = Number(dot.dataset.adminWorkersPage || 0);
+        renderWorkersTable();
+    });
 }
 
 // ================= OPEN ADD/EDIT =================
@@ -584,8 +688,16 @@ document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
 
 // ================= INITIAL LOAD =================
 document.addEventListener('DOMContentLoaded', () => {
+    setupAdminWorkersPagination();
     loadEmployees();
     setupAdminProfileModal();
+});
+
+// ================= ROLE FILTER =================
+document.getElementById('roleFilter')?.addEventListener('change', e => {
+    adminWorkersCurrentRole = e.target.value;
+    adminWorkersCurrentPage = 0;
+    renderWorkersTable();
 });
 
 // =============== REMOVE NATIVE REQUIRED ATTRIBUTES ===============

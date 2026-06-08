@@ -48,6 +48,12 @@
         <section class="admin-workers-card">
             <div class="admin-workers-table-wrap">
                 <table class="admin-workers-table">
+                    <colgroup>
+                        <col class="admin-workers-name-col">
+                        <col class="admin-workers-id-col">
+                        <col class="admin-workers-role-col">
+                        <col class="admin-workers-actions-col">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -58,6 +64,16 @@
                     </thead>
                     <tbody id="workersTableBody"></tbody>
                 </table>
+            </div>
+
+            <div class="admin-workers-pagination" data-admin-workers-pagination>
+                <button type="button" class="admin-workers-page-btn" data-admin-workers-prev>
+                    Previous
+                </button>
+                <div class="admin-workers-page-dots" data-admin-workers-dots></div>
+                <button type="button" class="admin-workers-page-btn" data-admin-workers-next>
+                    Next
+                </button>
             </div>
         </section>
     </main>

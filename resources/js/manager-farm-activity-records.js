@@ -15,6 +15,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house_number', label: 'House' },
                     { key: 'pen_name', label: 'Pen' },
                     { key: 'eggs_hatched', label: 'Eggs<br>Hatched' },
@@ -30,6 +31,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house', label: 'House' },
                     { key: 'pen', label: 'Pen' },
                     { key: 'batch', label: 'Batch' },
@@ -47,6 +49,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'feed', label: 'Feed' },
                     { key: 'house_number', label: 'House<br>Number' },
                     { key: 'pen_name', label: 'Pen' },
@@ -63,6 +66,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'vitamin', label: 'Vitamin' },
                     { key: 'house_number', label: 'House<br>Number' },
                     { key: 'pen_name', label: 'Pen' },
@@ -78,10 +82,10 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house', label: 'House' },
                     { key: 'pen', label: 'Pen' },
                     { key: 'disinfectant_used', label: 'Disinfectant<br>Used' },
-                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'date', label: 'Date' },
                     { key: 'time', label: 'Time' },
                 ],
@@ -94,9 +98,9 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house', label: 'House' },
                     { key: 'pen', label: 'Pen' },
-                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'date', label: 'Date' },
                     { key: 'time', label: 'Time' },
                 ],
@@ -109,6 +113,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house_number', label: 'House' },
                     { key: 'pen_name', label: 'Pen' },
                     { key: 'sensor_present', label: 'Sensor<br>Present' },
@@ -118,7 +123,6 @@ const FARM_RECORD_CONFIG = {
                     { key: 'placement_secure', label: 'Placement<br>Secure' },
                     { key: 'date', label: 'Date' },
                     { key: 'time', label: 'Time' },
-                    { key: 'performed_by', label: 'Performed By' },
                 ],
             },
         ],
@@ -129,6 +133,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'batch_code', label: 'Batch' },
                     { key: 'house_number', label: 'House<br>Number' },
                     { key: 'pen_name', label: 'Pen' },

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FeedRefillRecord;
 use App\Models\House;
 use App\Models\Pen;
+use App\Models\PopulationRecord;
 use App\Models\WeightSamplingLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -54,18 +55,20 @@ class ReportsController extends Controller
             $totalFeedConsumed = $query->sum('kilograms_used') ?? 0;
         }
 
-        // Total Mortalities
-        if (Schema::hasTable('pen')) {
-            $query = Pen::query()->whereNull('archived_at');
-            $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        // Total Mortalities - Read from population_record table
+        if (Schema::hasTable('population_record')) {
+            $query = DB::table('population_record as pr')
+                ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
+                ->leftJoin('house as h', 'h.id', '=', 'p.house_id');
+
+            $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
 
             if (!empty($filters['house'])) {
-                $query->whereHas('house', function ($houseQuery) use ($filters) {
-                    $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
-                });
+                $houseNumbers = $this->getHouseFilterValues($filters['house']);
+                $query->whereIn('h.house_number', $houseNumbers);
             }
 
-            $totalMortalities = $query->sum('mortality') ?? 0;
+            $totalMortalities = $query->sum('pr.mortality') ?? 0;
         }
 
         // Weight Status Breakdown
@@ -167,22 +170,27 @@ class ReportsController extends Controller
 
     private function getMortalityReport(array $filters): array
     {
-        $query = Pen::query()
-            ->with(['house', 'currentBatch'])
-            ->whereNull('archived_at')
-            ->orderBy('house_id')
-            ->orderBy('id');
+        $query = DB::table('population_record as pr')
+            ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
+            ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
+            ->select(
+                'h.house_number',
+                'p.pen_name',
+                'pr.mortality',
+                'pr.recorded_at'
+            )
+            ->orderBy('h.id')
+            ->orderByDesc('pr.recorded_at');
 
-        $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
 
         if (!empty($filters['house'])) {
-            $query->whereHas('house', function ($houseQuery) use ($filters) {
-                $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
-            });
+            $houseNumbers = $this->getHouseFilterValues($filters['house']);
+            $query->whereIn('h.house_number', $houseNumbers);
         }
 
         return $query->get()->map(fn($record) => [
-            'house_number' => $this->formatHouseNumber($record->house?->house_number),
+            'house_number' => $this->formatHouseNumber($record->house_number),
             'pen_name' => $record->pen_name ?? '--',
             'mortality' => $record->mortality ?? 0,
             'recorded_at' => $this->formatDate($record->recorded_at),
@@ -237,31 +245,32 @@ class ReportsController extends Controller
 
     private function getPopulationReport(?string $startDate, ?string $endDate): array
     {
-        if (!Schema::hasTable('house') || !Schema::hasTable('pen')) {
+        if (!Schema::hasTable('house') || !Schema::hasTable('population_record')) {
             return [];
         }
 
-        $query = DB::table('pen')
-            ->leftJoin('house', 'pen.house_id', '=', 'house.id')
+        $query = DB::table('population_record as pr')
+            ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
+            ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
             ->leftJoin('flock_batches as fb', function ($join) {
-                $join->on('fb.pen_id', '=', 'pen.id')
+                $join->on('fb.pen_id', '=', 'p.id')
                      ->where('fb.status', 'Running');
             })
             ->select(
                 'fb.batch_code',
-                'house.start_date',
-                'house.house_number',
-                'pen.pen_name',
-                'pen.capacity',
-                'pen.population',
-                'pen.mortality',
-                'pen.eggs_hatched',
-                'pen.recorded_at'
+                'h.start_date',
+                'h.house_number',
+                'p.pen_name',
+                'p.capacity',
+                'pr.running_population',
+                'pr.mortality',
+                'pr.eggs_hatched',
+                'pr.recorded_at'
             )
-            ->orderBy('house.house_number')
-            ->orderBy('pen.pen_name');
+            ->orderBy('h.house_number')
+            ->orderBy('p.pen_name');
 
-        $this->applyDateRange($query, 'pen.recorded_at', $startDate, $endDate);
+        $this->applyDateRange($query, 'pr.recorded_at', $startDate, $endDate);
 
         return $query->get()->map(function ($row) {
             return [
@@ -271,7 +280,7 @@ class ReportsController extends Controller
                 'start_date' => $this->formatDate($row->start_date),
                 'end_date' => '--',
                 'initial_population' => $row->capacity ?? 0,
-                'running_population' => $row->population ?? 0,
+                'running_population' => $row->running_population ?? 0,
                 'mortalities' => $row->mortality ?? 0,
                 'eggs_hatched' => $row->eggs_hatched ?? 0,
                 'reporting_date' => $this->formatDate($row->recorded_at),

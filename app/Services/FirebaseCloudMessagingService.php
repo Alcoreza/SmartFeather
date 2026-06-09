@@ -13,7 +13,8 @@ class FirebaseCloudMessagingService
         string $token,
         string $title,
         string $body,
-        array $data = []
+        array $data = [],
+        string $channelId = 'sensor_alerts'
     ): bool {
         try {
             $credentials = base_path(env('FIREBASE_CREDENTIALS'));
@@ -31,7 +32,7 @@ class FirebaseCloudMessagingService
                 ->withData(array_merge([
                     'title' => $title,
                     'body' => $body,
-                    'channel_id' => 'sensor_alerts',
+                    'channel_id' => $channelId,
                 ], $data))
                 ->withAndroidConfig($androidConfig);
 

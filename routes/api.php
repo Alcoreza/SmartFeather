@@ -17,6 +17,7 @@ use App\Http\Controllers\MobilePenCleaningController;
 use App\Http\Controllers\MobileSensorInspectionController;
 use App\Http\Controllers\MobileDeviceTokenController;
 use App\Http\Controllers\SensorAlertWebhookController;
+use App\Http\Controllers\TaskOverdueWebhookController;
 
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
@@ -83,5 +84,9 @@ Route::post('/mobile/sensor-inspection', [MobileSensorInspectionController::clas
 Route::post('/mobile/device-token', [MobileDeviceTokenController::class, 'store']);
 
 Route::post('/sensor-alerts/reading-created', [SensorAlertWebhookController::class, 'readingCreated']);
+
+Route::post('/task-alerts/check-overdue', [TaskOverdueWebhookController::class, 'checkOverdue']);
+
+
 
 

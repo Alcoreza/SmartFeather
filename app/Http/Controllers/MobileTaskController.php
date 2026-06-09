@@ -37,10 +37,13 @@ class MobileTaskController extends Controller
         $clearedTaskIds = collect();
 
         if ($latestEntry) {
+            $validBiosecurityFrom = Carbon::now()->subHours(24);
+
             $clearedTaskIds = DB::table('personnel_biosecurity_logs')
                 ->where('employee_id', $employeeId)
                 ->where('personnel_entry_log_id', $latestEntry->id)
                 ->whereNotNull('task_id')
+                ->where('created_at', '>=', $validBiosecurityFrom)
                 ->pluck('task_id')
                 ->map(fn($taskId) => (int) $taskId)
                 ->unique()
@@ -203,11 +206,14 @@ class MobileTaskController extends Controller
             ], 403);
         }
 
+        $validBiosecurityFrom = Carbon::now()->subHours(24);
+
         $hasBiosecurity = DB::table('personnel_biosecurity_logs')
             ->where('employee_id', $validated['employee_id'])
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)
+            ->where('created_at', '>=', $validBiosecurityFrom)
             ->when(!empty($assignedPenId), function ($query) use ($assignedPenId) {
                 $query->where('pen_id', $assignedPenId);
             })
@@ -215,7 +221,7 @@ class MobileTaskController extends Controller
 
         if (!$hasBiosecurity) {
             return response()->json([
-                'message' => 'Complete biosecurity again before opening this task.'
+                'message' => 'Biosecurity for this task has expired. Please submit the form again before opening this task.'
             ], 403);
         }
 

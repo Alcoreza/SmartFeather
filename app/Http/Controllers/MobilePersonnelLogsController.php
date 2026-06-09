@@ -33,15 +33,19 @@ class MobilePersonnelLogsController extends Controller
             ], 403);
         }
 
+        $previousBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $validated['employee_id'])
+            ->where('personnel_entry_log_id', $latestEntry->id)
+            ->orderByDesc('id')
+            ->first();
+
         $houses = DB::table('house')
             ->orderBy('id', 'asc')
             ->get(['id', 'house_number'])
-            ->map(function ($house) {
-                return [
-                    'id' => (int) $house->id,
-                    'house_number' => $house->house_number,
-                ];
-            })
+            ->map(fn($house) => [
+                'id' => (int) $house->id,
+                'house_number' => $house->house_number,
+            ])
             ->values();
 
         return response()->json([
@@ -58,6 +62,13 @@ class MobilePersonnelLogsController extends Controller
                 ? Carbon::parse((string) $latestEntry->time)->format('H:i:s')
                 : '',
             'houses' => $houses,
+            'previous_biosecurity' => $previousBiosecurity ? [
+                'house_id' => $previousBiosecurity->house_id ? (int) $previousBiosecurity->house_id : null,
+                'pen_id' => $previousBiosecurity->pen_id ? (int) $previousBiosecurity->pen_id : null,
+                'foot_bath' => $this->isYes($previousBiosecurity->foot_bath ?? null),
+                'boots_changed' => $this->isYes($previousBiosecurity->boots_changed ?? null),
+                'protective_clothing' => $this->isYes($previousBiosecurity->protective_clothing ?? null),
+            ] : null,
         ]);
     }
 
@@ -107,8 +118,6 @@ class MobilePersonnelLogsController extends Controller
             ], 404);
         }
 
-        $selectedPen = null;
-
         if (!empty($validated['pen_id'])) {
             $selectedPen = DB::table('pen')
                 ->where('id', $validated['pen_id'])
@@ -121,8 +130,6 @@ class MobilePersonnelLogsController extends Controller
                 ], 422);
             }
         }
-
-        $task = null;
 
         if (!empty($validated['task_id'])) {
             $task = DB::table('tasks')
@@ -150,8 +157,11 @@ class MobilePersonnelLogsController extends Controller
             }
         }
 
+        $validBiosecurityFrom = now()->subHours(24);
+
         $alreadySubmittedQuery = DB::table('personnel_biosecurity_logs')
-            ->where('personnel_entry_log_id', $latestEntry->id);
+            ->where('personnel_entry_log_id', $latestEntry->id)
+            ->where('created_at', '>=', $validBiosecurityFrom);
 
         if (!empty($validated['task_id'])) {
             $alreadySubmittedQuery->where('task_id', $validated['task_id']);
@@ -159,9 +169,7 @@ class MobilePersonnelLogsController extends Controller
             $alreadySubmittedQuery->whereNull('task_id');
         }
 
-        $alreadySubmitted = $alreadySubmittedQuery->exists();
-
-        if ($alreadySubmitted) {
+        if ($alreadySubmittedQuery->exists()) {
             return response()->json([
                 'success' => true,
                 'message' => !empty($validated['task_id'])
@@ -194,5 +202,10 @@ class MobilePersonnelLogsController extends Controller
                 ? 'Biosecurity completed. You may now continue with the assigned task.'
                 : 'Personnel biosecurity log submitted successfully.',
         ]);
+    }
+
+    private function isYes($value): bool
+    {
+        return strtolower(trim((string) $value)) === 'yes' || $value === true || $value === 1;
     }
 }

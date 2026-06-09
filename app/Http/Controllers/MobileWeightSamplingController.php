@@ -219,7 +219,7 @@ class MobileWeightSamplingController extends Controller
         $average = round(array_sum($weights) / count($weights), 2);
         $targetValue = round((float) $validated['target_weight'], 2);
 
-        $normalMarginPercent = 5;
+        $normalMarginPercent = 3;
 
         $lowerNormalLimit = $targetValue * (1 - ($normalMarginPercent / 100));
         $upperNormalLimit = $targetValue * (1 + ($normalMarginPercent / 100));

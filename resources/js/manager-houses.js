@@ -492,6 +492,20 @@ document.addEventListener("DOMContentLoaded", async () => {
                         const flockBatch = pen.running_batch || pen.current_batch || null;
                         const sensorReadings = pen.sensor_readings;
 
+                        // Build feeders array from sensor readings
+                        const feeders = [
+                            { label: "Feeder 1", value: sensorReadings?.feeders?.[1]?.value ?? 0 },
+                            { label: "Feeder 2", value: sensorReadings?.feeders?.[2]?.value ?? 0 },
+                            { label: "Feeder 3", value: sensorReadings?.feeders?.[3]?.value ?? 0 },
+                        ];
+
+                        // Build drinkers array from sensor readings
+                        const drinkers = [
+                            { label: "Drinker 1", value: sensorReadings?.drinkers?.[1]?.value ?? 0 },
+                            { label: "Drinker 2", value: sensorReadings?.drinkers?.[2]?.value ?? 0 },
+                            { label: "Drinker 3", value: sensorReadings?.drinkers?.[3]?.value ?? 0 },
+                        ];
+
                         return {
                             id: pen.id,
                             name: pen.pen_name,
@@ -555,16 +569,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                                     accent: "orange",
                                 },
                             ],
-                            feeders: [
-                                { label: "Feeder 1", value: 0 },
-                                { label: "Feeder 2", value: 0 },
-                                { label: "Feeder 3", value: 0 },
-                            ],
-                            drinkers: [
-                                { label: "Drinker 1", value: 0 },
-                                { label: "Drinker 2", value: 0 },
-                                { label: "Drinker 3", value: 0 },
-                            ],
+                            feeders,
+                            drinkers,
                         };
                     })),
                     records: [],

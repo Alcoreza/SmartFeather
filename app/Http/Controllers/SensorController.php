@@ -54,6 +54,8 @@ class SensorController extends Controller
                             'name' => $sensor->sensorname,
                             'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
                             'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
+                            'feeder_number' => $sensor->feeder_number,
+                            'drinker_number' => $sensor->drinker_number,
 
                             // ✅ VALUE FIELDS
                             'value' => $latestValue,
@@ -125,6 +127,8 @@ class SensorController extends Controller
             'sensor_name' => 'required|string|max:255',
             'house_houseid' => 'required|integer|exists:house,id',
             'pen_penid' => 'required|integer|exists:pen,id',
+            'feeder_number' => 'nullable|integer|min:1',
+            'drinker_number' => 'nullable|integer|min:1',
         ]);
 
         $sensor = Sensor::create([
@@ -132,6 +136,8 @@ class SensorController extends Controller
             'sensorname' => $validated['sensor_name'],
             'house_houseid' => $validated['house_houseid'],
             'pen_penid' => $validated['pen_penid'],
+            'feeder_number' => $validated['feeder_number'] ?? null,
+            'drinker_number' => $validated['drinker_number'] ?? null,
             'status' => 'Active',
         ]);
 
@@ -160,6 +166,8 @@ class SensorController extends Controller
             'sensor_name' => 'required|string|max:255',
             'house_houseid' => 'required|integer|exists:house,id',
             'pen_penid' => 'required|integer|exists:pen,id',
+            'feeder_number' => 'nullable|integer|min:1',
+            'drinker_number' => 'nullable|integer|min:1',
         ]);
 
         $sensor = Sensor::findOrFail($sensorId);
@@ -169,6 +177,8 @@ class SensorController extends Controller
             'sensorname' => $validated['sensor_name'],
             'house_houseid' => $validated['house_houseid'],
             'pen_penid' => $validated['pen_penid'],
+            'feeder_number' => $validated['feeder_number'] ?? null,
+            'drinker_number' => $validated['drinker_number'] ?? null,
         ]);
 
         return response()->json($sensor);
@@ -304,5 +314,111 @@ class SensorController extends Controller
             default:
                 return $value;
         }
+    }
+
+    /**
+     * Get all sensor readings with latest value for each sensor
+     */
+    public function sensorReadings()
+    {
+        $sensors = Sensor::with([
+                'house',
+                'pen',
+                'configuration',
+                'latestReading'
+            ])
+            ->orderBy('sensortype')
+            ->orderBy('sensorname')
+            ->get();
+
+        $readings = $sensors->map(function (Sensor $sensor) {
+            $latestValue = $sensor->latestReading?->value;
+
+            return [
+                'sensor_id' => $sensor->sensorid,
+                'sensor_name' => $sensor->sensorname,
+                'sensor_type' => $sensor->sensortype,
+                'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
+                'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
+                'feeder_number' => $sensor->feeder_number,
+                'drinker_number' => $sensor->drinker_number,
+                'value' => $latestValue,
+                'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
+                'recorded_at' => $sensor->latestReading?->recorded_at,
+                'lowest_threshold' => $sensor->configuration?->lowestthreshold,
+                'highest_threshold' => $sensor->configuration?->highestthreshold,
+            ];
+        });
+
+        return response()->json(['readings' => $readings]);
+    }
+
+    /**
+     * Get sensor health/status for farm management dashboard
+     */
+    public function sensorHealth()
+    {
+        $sensors = Sensor::with(['house', 'pen', 'configuration', 'latestReading', 'maintenances'])
+            ->orderBy('sensortype')
+            ->orderBy('sensorname')
+            ->get();
+
+        $health = $sensors->map(function (Sensor $sensor) {
+            $latestValue = $sensor->latestReading?->value;
+            $latestReading = $sensor->latestReading;
+            $config = $sensor->configuration;
+
+            // Determine status
+            $status = 'Active';
+            if ($sensor->status === 'Under Maintenance') {
+                $status = 'Under Maintenance';
+            } else {
+                $latestMaintenance = $sensor->maintenances->sortByDesc('startdate')->first();
+                if ($latestMaintenance?->status === 'Maintenance') {
+                    $status = 'Under Maintenance';
+                }
+            }
+
+            // Determine alert level based on thresholds
+            $alertLevel = 'normal'; // normal, warning, critical
+            if ($latestValue !== null && $config) {
+                if ($latestValue < $config->lowestthreshold || $latestValue > $config->highestthreshold) {
+                    $alertLevel = 'critical';
+                } elseif (
+                    ($config->highestthreshold && $latestValue > $config->highestthreshold * 0.9) ||
+                    ($config->lowestthreshold && $latestValue < $config->lowestthreshold * 1.1)
+                ) {
+                    $alertLevel = 'warning';
+                }
+            }
+
+            // Check if sensor is stale (no readings in 30 minutes)
+            $isStaleFeed = false;
+            if ($latestReading) {
+                $lastReadingMinutesAgo = $latestReading->recorded_at->diffInMinutes(now());
+                $isStaleFeed = $lastReadingMinutesAgo > 30;
+            }
+
+            return [
+                'sensor_id' => $sensor->sensorid,
+                'sensor_name' => $sensor->sensorname,
+                'sensor_type' => $sensor->sensortype,
+                'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
+                'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
+                'feeder_number' => $sensor->feeder_number,
+                'drinker_number' => $sensor->drinker_number,
+                'current_value' => $latestValue,
+                'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
+                'lowest_threshold' => $config?->lowestthreshold,
+                'highest_threshold' => $config?->highestthreshold,
+                'status' => $status,
+                'alert_level' => $alertLevel,
+                'is_stale' => $isStaleFeed,
+                'last_reading_at' => $latestReading?->recorded_at,
+                'minutes_since_last_reading' => $latestReading ? $latestReading->recorded_at->diffInMinutes(now()) : null,
+            ];
+        });
+
+        return response()->json(['health' => $health]);
     }
 }

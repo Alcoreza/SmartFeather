@@ -269,6 +269,7 @@ Route::get('/api/manager/tasks', [TaskController::class, 'index']);
 Route::post('/api/manager/tasks', [TaskController::class, 'store']);
 Route::post('/api/manager/tasks/types', [ManagementCreateTaskController::class, 'storeTaskType']);
 Route::put('/api/manager/tasks/{taskId}', [TaskController::class, 'update']);
+Route::delete('/api/manager/tasks/{taskId}', [TaskController::class, 'destroy']);
 Route::get('/api/manager/tasks/form-options', [TaskController::class, 'formOptions']);
 Route::get('/api/manager/tasks/houses/{houseId}/pens', [TaskController::class, 'getPensForHouse']);
 Route::get('/api/manager/tasks/all-workers', [TaskController::class, 'getAllWorkers']);
@@ -285,6 +286,8 @@ Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
 Route::view('/manager/sensors/maintenance-records', 'manager.sensor-maintenance')->name('manager.sensor-maintenance');
 
 Route::get('/api/manager/sensors', [SensorController::class, 'index']);
+Route::get('/api/manager/sensors/readings', [SensorController::class, 'sensorReadings']);
+Route::get('/api/manager/sensors/health', [SensorController::class, 'sensorHealth']);
 
 Route::get('/api/manager/sensors/maintenance-records', [SensorController::class, 'managerMaintenanceRecords']);
 
@@ -293,6 +296,8 @@ Route::view('/admin/sensors/maintenance-records', 'admin.sensor-maintenance')->n
 
 Route::prefix('api/admin/sensors')->group(function () {
     Route::get('/', [SensorController::class, 'index']);
+    Route::get('/readings', [SensorController::class, 'sensorReadings']);
+    Route::get('/health', [SensorController::class, 'sensorHealth']);
     Route::get('/form-options', [SensorController::class, 'formOptions']);
     Route::get('/houses/{houseId}/pens', [SensorController::class, 'getPensForHouse']);
     Route::post('/', [SensorController::class, 'store']);

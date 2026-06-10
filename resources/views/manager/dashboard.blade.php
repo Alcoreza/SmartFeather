@@ -181,10 +181,6 @@
 
 
 
-<<<<<<< HEAD
-                @include('includes.manager-decision-support-card')
-=======
->>>>>>> 2067771647a589ab1f0e1f5c9e3df79658dd5e88
             </section>
         </main>
     </div>

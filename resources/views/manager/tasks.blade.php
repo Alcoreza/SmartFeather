@@ -70,15 +70,15 @@
                                     <option value="All priority">All priority</option>
                                 </select>
                             </div>
+
+                            <button type="button" class="manager-task-add-btn" id="openAddTaskModal" aria-label="Add task">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                    <path d="M12 5v14"></path>
+                                    <path d="M5 12h14"></path>
+                                </svg>
+                            </button>
                         </div>
                     </div>
-
-                    <button type="button" class="manager-task-add-btn" id="openAddTaskModal" aria-label="Add task">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                            <path d="M12 5v14"></path>
-                            <path d="M5 12h14"></path>
-                        </svg>
-                    </button>
                 </div>
 
 

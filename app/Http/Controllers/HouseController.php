@@ -564,16 +564,36 @@ class HouseController extends Controller
             $houseId = (int) $sensor->house_houseid;
             $penId = $sensor->pen_penid !== null ? (int) $sensor->pen_penid : null;
 
-            $readingsByHouse[$houseId][$sensorType] = $this->newerSensorReading(
-                $readingsByHouse[$houseId][$sensorType] ?? null,
-                $readingData
-            );
-
-            if ($penId !== null) {
-                $readingsByPen[$penId][$sensorType] = $this->newerSensorReading(
-                    $readingsByPen[$penId][$sensorType] ?? null,
+            // Handle feed and water sensors specially - group by feeder/drinker number
+            if ($sensorType === 'feed' && $penId !== null) {
+                if (!isset($readingsByPen[$penId]['feeders'])) {
+                    $readingsByPen[$penId]['feeders'] = [];
+                }
+                $feederNum = $sensor->feeder_number ?? 0;
+                if ($feederNum > 0) {
+                    $readingsByPen[$penId]['feeders'][$feederNum] = $readingData;
+                }
+            } elseif ($sensorType === 'water' && $penId !== null) {
+                if (!isset($readingsByPen[$penId]['drinkers'])) {
+                    $readingsByPen[$penId]['drinkers'] = [];
+                }
+                $drinkerNum = $sensor->drinker_number ?? 0;
+                if ($drinkerNum > 0) {
+                    $readingsByPen[$penId]['drinkers'][$drinkerNum] = $readingData;
+                }
+            } else {
+                // Temperature and ammonia sensors
+                $readingsByHouse[$houseId][$sensorType] = $this->newerSensorReading(
+                    $readingsByHouse[$houseId][$sensorType] ?? null,
                     $readingData
                 );
+
+                if ($penId !== null) {
+                    $readingsByPen[$penId][$sensorType] = $this->newerSensorReading(
+                        $readingsByPen[$penId][$sensorType] ?? null,
+                        $readingData
+                    );
+                }
             }
         }
 
@@ -593,6 +613,8 @@ class HouseController extends Controller
         return [
             'temperature' => $readings['temperature'] ?? null,
             'ammonia' => $readings['ammonia'] ?? null,
+            'feeders' => $readings['feeders'] ?? [],
+            'drinkers' => $readings['drinkers'] ?? [],
         ];
     }
 
@@ -608,17 +630,34 @@ class HouseController extends Controller
             return 'ammonia';
         }
 
+        if (str_contains($type, 'feed')) {
+            return 'feed';
+        }
+
+        if (str_contains($type, 'water') || str_contains($type, 'drink')) {
+            return 'water';
+        }
+
         return null;
     }
 
     private function formatSensorReadingValue(string $type, $value): string
     {
         if ($value === null) {
-            return $type === 'temperature' ? '0 deg' : '0 ppm';
+            if ($type === 'temperature') {
+                return '0 deg';
+            } elseif ($type === 'feed' || $type === 'water') {
+                return '0%';
+            }
+            return '0 ppm';
         }
 
         if ($type === 'temperature') {
             return number_format((float) $value, 1) . ' deg';
+        }
+
+        if ($type === 'feed' || $type === 'water') {
+            return number_format((float) $value, 0) . '%';
         }
 
         return number_format((float) $value, 1) . ' ppm';

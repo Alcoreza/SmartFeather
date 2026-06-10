@@ -214,9 +214,9 @@ body {
 
 .manager-task-filter-row {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     flex-wrap: nowrap;
 }
 
@@ -313,11 +313,12 @@ body {
     width: 42px;
     height: 42px;
     border: 1px solid rgba(23, 100, 58, 0.24);
-    border-radius: 12px;
+    border-radius: 50%;
     background: #ffffff;
     color: #1b5e20;
     display: grid;
     place-items: center;
+    flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
     transition:
         transform 0.2s ease,
@@ -336,6 +337,43 @@ body {
 .manager-task-add-btn svg {
     width: 21px;
     height: 21px;
+}
+
+.manager-task-form-body .manager-task-add-btn {
+    width: 100%;
+    height: 44px;
+    border: 1.5px dashed rgba(44, 135, 72, 0.4);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #f0fef3, #e8f9ed);
+    color: #1d6a37;
+    font: inherit;
+    font-size: 0.98rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: auto;
+}
+
+.manager-task-form-body .manager-task-add-btn:hover {
+    border-color: #2c8748;
+    background: linear-gradient(180deg, #e8f9ed, #dff6e8);
+    transform: translateY(-1px);
+}
+
+.manager-task-add-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #1d6a37;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
 .manager-task-card {
@@ -519,6 +557,48 @@ body {
     background: #f6fcf6;
 }
 
+.manager-task-action-btn {
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid rgba(23, 100, 58, 0.24);
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1b5e20;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.manager-task-action-btn + .manager-task-action-btn {
+    margin-left: 6px;
+}
+
+.manager-task-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.12);
+    background: #f6fcf6;
+}
+
+.manager-task-delete-btn {
+    border-color: rgba(211, 47, 47, 0.24);
+    color: #d32f2f;
+}
+
+.manager-task-delete-btn:hover {
+    background: #ffebee;
+    box-shadow: 0 6px 16px rgba(211, 47, 47, 0.12);
+}
+
 .manager-task-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -534,6 +614,10 @@ body {
 .manager-task-modal-backdrop.show {
     display: flex;
     animation: managerTaskFade 0.2s ease;
+}
+
+#confirmAddTaskModal {
+    z-index: 3300;
 }
 
 .manager-task-photo-modal,
@@ -908,42 +992,6 @@ body {
     transform: scale(1.1);
 }
 
-.manager-task-add-btn {
-    width: 100%;
-    height: 44px;
-    border: 1.5px dashed rgba(44, 135, 72, 0.4);
-    border-radius: 999px;
-    background: linear-gradient(180deg, #f0fef3, #e8f9ed);
-    color: #1d6a37;
-    font: inherit;
-    font-size: 0.98rem;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-}
-
-.manager-task-add-btn:hover {
-    border-color: #2c8748;
-    background: linear-gradient(180deg, #e8f9ed, #dff6e8);
-    transform: translateY(-1px);
-}
-
-.manager-task-add-btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #1d6a37;
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 700;
-}
 
 .manager-task-form-actions {
     display: flex;

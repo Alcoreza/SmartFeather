@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupTaskSelectPlaceholderState();
     setupManagerTaskModals();
     setupAddTaskModal();
+    setupEditTaskModal();
+    setupDeleteTaskModal();
     setupManagerProfileModal();
     animateTaskSections();
 });
@@ -25,6 +27,7 @@ const TASK_TABLE_COLUMNS = {
         { key: "priority", label: "Priority" },
         { key: "time_assigned", label: "Time<br>Assigned" },
         { key: "finish_by", label: "Finish<br>By" },
+        { key: "actions", label: "Actions" },
     ],
     for_approval: [
         { key: "name", label: "Name" },
@@ -54,6 +57,7 @@ const TASK_TABLE_COLUMNS = {
 };
 
 let taskPendingVerify = null;
+let pendingAddTasks = [];
 let selectedTaskStatus = "pending";
 let taskDataCache = {
     pending: [],
@@ -91,6 +95,7 @@ async function renderManagerTasks() {
             for_approval: data.for_approval || [],
             completed: data.completed || [],
         };
+        syncAvailableHouseOptions();
 
         refreshTaskFilterOptions();
         renderCurrentTaskTable();
@@ -106,10 +111,11 @@ async function loadTaskFormOptions() {
         const response = await fetch("/api/manager/tasks/form-options");
         const data = await response.json();
         formOptionsCache = data;
+        syncAvailableHouseOptions();
 
         fillSelect(
             document.getElementById("taskWorkerName"),
-            data.workers || [],
+            (data.workers || []).filter((worker) => !worker.disabled),
             "id",
             "name",
             "Select worker",
@@ -293,6 +299,18 @@ function buildHouseFilterOptions() {
     return [ALL_HOUSES_OPTION, ...values.sort((a, b) => a.localeCompare(b))];
 }
 
+function syncAvailableHouseOptions() {
+    const taskHouseNumbers = Object.values(taskDataCache)
+        .flat()
+        .map((task) => String(task.house_number ?? "").trim())
+        .filter(Boolean);
+    const formHouseNumbers = (formOptionsCache?.houses || [])
+        .map((house) => String(house.number ?? "").trim())
+        .filter(Boolean);
+
+    availableHouseOptions = [...new Set([...taskHouseNumbers, ...formHouseNumbers])];
+}
+
 function buildPriorityFilterOptions() {
     return [ALL_PRIORITY_OPTION, ...PRIORITY_ORDER];
 }
@@ -360,7 +378,7 @@ function renderUnifiedTaskTable(section, items) {
     animateTaskRows();
 }
 
-function renderTaskCell(key, item) {
+function renderTaskCell(key, item, section) {
     if (key === "photo") {
         return item.photo_url
             ? `<button
@@ -381,6 +399,25 @@ function renderTaskCell(key, item) {
             data-verify-task='${encodeTaskPayload(item)}'
         >
             Verify
+        </button>`;
+    }
+
+    if (key === "actions") {
+        return `<button
+            type="button"
+            class="manager-task-action-btn manager-task-edit-btn"
+            data-task-id="${item.id}"
+            title="Edit task"
+        >
+            ✎
+        </button>
+        <button
+            type="button"
+            class="manager-task-action-btn manager-task-delete-btn"
+            data-task-id="${item.id}"
+            title="Delete task"
+        >
+            ✕
         </button>`;
     }
 
@@ -583,7 +620,7 @@ function setupAddTaskModal() {
     const formError = document.getElementById("addTaskFormError");
     const tasksContainer = document.getElementById("tasksContainer");
     const addTaskRowBtn = document.getElementById("addTaskRowBtn");
-    let taskRowCount = 0;
+    let nextTaskRowIndex = 0;
 
     if (openButton) {
         openButton.addEventListener("click", async () => {
@@ -591,7 +628,7 @@ function setupAddTaskModal() {
             clearAddTaskFormError();
             
             // Initialize with one task row
-            taskRowCount = 0;
+            nextTaskRowIndex = 0;
             tasksContainer.innerHTML = "";
             addNewTaskRow();
             
@@ -600,8 +637,8 @@ function setupAddTaskModal() {
     }
 
     function addNewTaskRow() {
-        // Use current task count as the row index to ensure consistent numbering
-        const rowIndex = tasksContainer.querySelectorAll(".manager-task-row").length;
+        const rowIndex = nextTaskRowIndex;
+        nextTaskRowIndex += 1;
         const rowHtml = generateTaskRowHtml(rowIndex);
         tasksContainer.insertAdjacentHTML("beforeend", rowHtml);
         
@@ -659,7 +696,7 @@ function setupAddTaskModal() {
             }
 
             // Collect all task rows
-            const taskRows = tasksContainer.querySelectorAll(".task-row");
+            const taskRows = tasksContainer.querySelectorAll(".manager-task-row");
             if (taskRows.length === 0) {
                 showAddTaskFormError(formError, "Please add at least one task.");
                 return;
@@ -667,26 +704,47 @@ function setupAddTaskModal() {
 
             // Validate all tasks
             const tasks = [];
-            let hasErrors = false;
+            let hasRequiredErrors = false;
+            let hasScheduleErrors = false;
+            let previousFinishAt = null;
+            clearAddTaskRequiredFieldHighlights(false);
 
             taskRows.forEach((row) => {
                 const rowIndex = row.dataset.rowIndex;
-                const taskCategory = row.querySelector(`[name="task_category_${rowIndex}"]`).value;
-                const priorityLevel = row.querySelector(`[name="priority_level_${rowIndex}"]`).value;
-                const houseNumber = row.querySelector(`[name="house_number_${rowIndex}"]`).value;
-                const penNumber = row.querySelector(`[name="pen_number_${rowIndex}"]`).value;
-                const timeAssigned = row.querySelector(`[name="time_assigned_${rowIndex}"]`).value;
-                const dateAssigned = row.querySelector(`[name="date_assigned_${rowIndex}"]`).value;
-                const detailedTask = row.querySelector(`[name="detailed_task_${rowIndex}"]`).value;
+                const taskCategoryField = row.querySelector(`[name="task_category_${rowIndex}"]`);
+                const priorityLevelField = row.querySelector(`[name="priority_level_${rowIndex}"]`);
+                const houseNumberField = row.querySelector(`[name="house_number_${rowIndex}"]`);
+                const penNumberField = row.querySelector(`[name="pen_number_${rowIndex}"]`);
+                const timeAssignedField = row.querySelector(`[name="time_assigned_${rowIndex}"]`);
+                const dateAssignedField = row.querySelector(`[name="date_assigned_${rowIndex}"]`);
+                const detailedTaskField = row.querySelector(`[name="detailed_task_${rowIndex}"]`);
+                const requiredFields = [
+                    taskCategoryField,
+                    priorityLevelField,
+                    houseNumberField,
+                    penNumberField,
+                    timeAssignedField,
+                    dateAssignedField,
+                ];
+                const taskCategory = taskCategoryField?.value || "";
+                const priorityLevel = priorityLevelField?.value || "";
+                const houseNumber = houseNumberField?.value || "";
+                const penNumber = penNumberField?.value || "";
+                const timeAssigned = timeAssignedField?.value || "";
+                const dateAssigned = dateAssignedField?.value || "";
+                const detailedTask = detailedTaskField?.value || "";
 
                 // Check required fields
-                if (!taskCategory || !priorityLevel || !houseNumber || !penNumber) {
-                    hasErrors = true;
-                    row.style.backgroundColor = "#ffebee";
+                requiredFields.forEach((field) => {
+                    if (!String(field?.value || "").trim()) {
+                        field?.closest(".manager-task-form-field")?.classList.add("has-error");
+                    }
+                });
+
+                if (requiredFields.some((field) => !String(field?.value || "").trim())) {
+                    hasRequiredErrors = true;
                     return;
                 }
-
-                row.style.backgroundColor = "#f9f9f9";
 
                 const toLocalDateTimeString = (dateObj) => {
                     const pad = (value) => String(value).padStart(2, "0");
@@ -696,6 +754,16 @@ function setupAddTaskModal() {
 
                 const timeAssignedNow = toLocalDateTimeString(new Date());
                 const finishBy = dateAssigned && timeAssigned ? `${dateAssigned}T${timeAssigned}:00` : null;
+                const finishAt = new Date(finishBy);
+
+                if (previousFinishAt && finishAt <= previousFinishAt) {
+                    hasScheduleErrors = true;
+                    timeAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
+                    dateAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
+                    return;
+                }
+
+                previousFinishAt = finishAt;
 
                 tasks.push({
                     user_employeeid: workerId,
@@ -710,43 +778,74 @@ function setupAddTaskModal() {
                 });
             });
 
-            if (hasErrors) {
+            if (hasRequiredErrors) {
                 showAddTaskFormError(formError, "Please fill in all required fields (marked with *).");
                 return;
             }
 
-            try {
-                const token = document.querySelector('meta[name="csrf-token"]')?.content;
-                
-                // Submit each task
-                for (const task of tasks) {
-                    const response = await fetch("/api/manager/tasks", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": token || "",
-                        },
-                        body: JSON.stringify(task),
-                    });
-
-                    if (!response.ok) {
-                        const responseText = await response.text();
-                        throw new Error(responseText || `Failed to save task (${response.status}).`);
-                    }
-                }
-
-                await renderManagerTasks();
-                closeTaskModal("addTaskModal");
-                form.reset();
-                tasksContainer.innerHTML = "";
-                setupTaskSelectPlaceholderState();
-            } catch (error) {
-                console.error("Failed to save tasks:", error);
-                showAddTaskFormError(formError, "Unable to save tasks. Please try again.");
+            if (hasScheduleErrors) {
+                showAddTaskFormError(formError, "There is a conflict in time.");
+                return;
             }
+
+            pendingAddTasks = tasks;
+
+            const confirmText = document.getElementById("confirmAddTaskText");
+            if (confirmText) {
+                confirmText.textContent = tasks.length === 1
+                    ? "Are you sure you want to assign this task?"
+                    : `Are you sure you want to assign these ${tasks.length} tasks?`;
+            }
+
+            openTaskModal("confirmAddTaskModal");
         };
 
         form.addEventListener("submit", handleFormSubmit);
+    }
+
+    const confirmAddTaskButton = document.getElementById("confirmAddTask");
+    if (confirmAddTaskButton && !confirmAddTaskButton._taskConfirmHandlerSet) {
+        confirmAddTaskButton._taskConfirmHandlerSet = true;
+        confirmAddTaskButton.addEventListener("click", () => submitPendingAddTasks(form, formError, tasksContainer));
+    }
+}
+
+async function submitPendingAddTasks(form, formError, tasksContainer) {
+    if (!pendingAddTasks.length) {
+        closeTaskModal("confirmAddTaskModal");
+        return;
+    }
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        for (const task of pendingAddTasks) {
+            const response = await fetch("/api/manager/tasks", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": token || "",
+                },
+                body: JSON.stringify(task),
+            });
+
+            if (!response.ok) {
+                const responseText = await response.text();
+                throw new Error(responseText || `Failed to save task (${response.status}).`);
+            }
+        }
+
+        pendingAddTasks = [];
+        await renderManagerTasks();
+        closeTaskModal("confirmAddTaskModal");
+        closeTaskModal("addTaskModal");
+        form.reset();
+        tasksContainer.innerHTML = "";
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error("Failed to save tasks:", error);
+        closeTaskModal("confirmAddTaskModal");
+        showAddTaskFormError(formError, "Unable to save tasks. Please try again.");
     }
 }
 
@@ -851,7 +950,9 @@ function closeTaskModal(id) {
     if (!modal) return;
 
     modal.classList.remove("show");
-    document.body.style.overflow = "";
+    if (!document.querySelector(".manager-task-modal-backdrop.show")) {
+        document.body.style.overflow = "";
+    }
 }
 
 function animateTaskSections() {
@@ -1025,4 +1126,247 @@ function fillSelect(select, items, valueKey, labelKey, placeholder) {
             return `<option value="${value}" ${disabled} ${style}>${label}${note}</option>`;
         }).join("")}
     `;
+}
+
+let editingTaskId = null;
+
+function setupEditTaskModal() {
+    document.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.manager-task-edit-btn');
+        if (!editBtn) return;
+
+        editingTaskId = editBtn.dataset.taskId;
+        openEditTaskModal(editingTaskId);
+    });
+
+    const editForm = document.getElementById('editTaskForm');
+    if (editForm) {
+        editForm.addEventListener('submit', handleEditTaskSubmit);
+    }
+
+    setupEditTaskHouseChange();
+}
+
+function openEditTaskModal(taskId) {
+    const allTasks = [...taskDataCache.pending, ...taskDataCache.for_approval, ...taskDataCache.completed];
+    const task = allTasks.find(t => t.id == taskId);
+
+    if (!task) {
+        console.error('Task not found');
+        return;
+    }
+
+    populateEditTaskForm(task);
+    openTaskModal('editTaskModal');
+}
+
+function populateEditTaskForm(task) {
+    const workerNameInput = document.querySelector('#editTaskModal #editTaskWorkerName');
+    const taskCategorySelect = document.querySelector('#editTaskModal .task-category-select');
+    const prioritySelect = document.querySelector('#editTaskModal .task-priority-select');
+    const houseSelect = document.querySelector('#editTaskModal .task-house-select');
+    const penSelect = document.querySelector('#editTaskModal .task-pen-select');
+    const timeInput = document.querySelector('#editTaskModal .task-time-input');
+    const dateInput = document.querySelector('#editTaskModal .task-date-input');
+    const detailedTaskTextarea = document.querySelector('#editTaskModal .task-detailed-textarea');
+
+    // Populate worker name (read-only)
+    if (workerNameInput) {
+        workerNameInput.value = task.name || 'Unknown';
+    }
+
+    if (formOptionsCache) {
+        // Ensure the current task type is included in the options
+        const taskCategories = formOptionsCache.task_categories || [];
+        const currentTaskType = (task.task_assigned || '').trim();
+
+        if (currentTaskType && !taskCategories.includes(currentTaskType)) {
+            taskCategories.unshift(currentTaskType);
+        }
+
+        fillSimpleSelect(taskCategorySelect, taskCategories, 'Select task category');
+        fillSimpleSelect(prioritySelect, formOptionsCache.priority_levels || [], 'Select priority');
+        fillSelect(houseSelect, formOptionsCache.houses || [], 'id', 'number', 'Select house');
+    }
+
+    // Set task category and priority by matching the values
+    taskCategorySelect.value = (task.task_assigned || '').trim();
+    prioritySelect.value = (task.priority || '').trim();
+
+    // Set house dropdown value
+    houseSelect.value = task.house_id || '';
+
+    if (task.finish_by) {
+        const [date, time] = task.finish_by.split(' ');
+        dateInput.value = date;
+        if (time) {
+            timeInput.value = time.slice(0, 5);
+        }
+    }
+
+    detailedTaskTextarea.value = task.detailed_task || '';
+
+    // Update select placeholder state for task category and priority
+    setupTaskSelectPlaceholderState();
+
+    // Load pens for the selected house
+    loadPensForEditForm(task.house_id, task.pen_id);
+}
+
+async function loadPensForEditForm(houseId, penId) {
+    const penSelect = document.querySelector('#editTaskModal .task-pen-select');
+
+    if (!houseId) {
+        fillSelect(penSelect, [], 'number', 'label', 'Select pen');
+        setupTaskSelectPlaceholderState();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/manager/tasks/houses/${houseId}/pens`);
+        const data = await response.json();
+        fillSelect(penSelect, data.pens || [], 'number', 'label', 'Select pen');
+
+        // Pre-select the pen
+        if (penId) {
+            penSelect.value = penId;
+        }
+
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error('Failed to load pens:', error);
+        fillSelect(penSelect, [], 'number', 'label', 'Select pen');
+        setupTaskSelectPlaceholderState();
+    }
+}
+
+function setupEditTaskHouseChange() {
+    const houseSelect = document.querySelector('#editTaskModal .task-house-select');
+    if (!houseSelect) return;
+
+    houseSelect.addEventListener('change', async (event) => {
+        const selectedHouseId = event.target.value;
+        const penSelect = document.querySelector('#editTaskModal .task-pen-select');
+
+        if (!selectedHouseId) {
+            fillSelect(penSelect, [], 'number', 'label', 'Select pen');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/manager/tasks/houses/${selectedHouseId}/pens`);
+            const data = await response.json();
+            fillSelect(penSelect, data.pens || [], 'number', 'label', 'Select pen');
+            setupTaskSelectPlaceholderState();
+        } catch (error) {
+            console.error('Failed to load pens:', error);
+        }
+    });
+}
+
+async function handleEditTaskSubmit(event) {
+    event.preventDefault();
+
+    if (!editingTaskId) {
+        alert('Error: Task ID not found');
+        return;
+    }
+
+    const form = event.target;
+    const formError = document.getElementById('editTaskFormError');
+    const taskCategory = form.querySelector('[name="task_category"]').value;
+    const priorityLevel = form.querySelector('[name="priority_level"]').value;
+    const houseNumber = form.querySelector('[name="house_number"]').value;
+    const penNumber = form.querySelector('[name="pen_number"]').value;
+    const timeAssigned = form.querySelector('[name="time_assigned"]').value;
+    const dateAssigned = form.querySelector('[name="date_assigned"]').value;
+    const detailedTask = form.querySelector('[name="detailed_task"]').value;
+
+    if (!taskCategory || !priorityLevel || !houseNumber || !penNumber || !timeAssigned || !dateAssigned) {
+        formError.textContent = 'Please fill in all required fields.';
+        formError.classList.add('show');
+        return;
+    }
+
+    const finishBy = dateAssigned && timeAssigned ? `${dateAssigned} ${timeAssigned}:00` : null;
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${editingTaskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token || '',
+            },
+            body: JSON.stringify({
+                tasktype: taskCategory,
+                prioritylevel: priorityLevel,
+                house_houseid: houseNumber,
+                pennumber: penNumber,
+                finishby: finishBy,
+                detailedtask: detailedTask,
+            }),
+        });
+
+        if (!response.ok) {
+            const responseText = await response.text();
+            throw new Error(responseText || `Failed to update task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+        closeTaskModal('editTaskModal');
+        editingTaskId = null;
+        formError.classList.remove('show');
+        formError.textContent = '';
+    } catch (error) {
+        console.error('Failed to update task:', error);
+        formError.textContent = 'Unable to update task. Please try again.';
+        formError.classList.add('show');
+    }
+}
+
+let deletingTaskId = null;
+
+function setupDeleteTaskModal() {
+    document.addEventListener('click', (event) => {
+        const deleteBtn = event.target.closest('.manager-task-delete-btn');
+        if (!deleteBtn) return;
+
+        deletingTaskId = deleteBtn.dataset.taskId;
+        openTaskModal('deleteTaskModal');
+    });
+
+    const confirmButton = document.getElementById('confirmTaskDelete');
+    if (confirmButton) {
+        confirmButton.addEventListener('click', handleDeleteTaskConfirm);
+    }
+}
+
+async function handleDeleteTaskConfirm() {
+    if (!deletingTaskId) {
+        alert('Error: Task ID not found');
+        return;
+    }
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${deletingTaskId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': token || '',
+            },
+        });
+
+        if (!response.ok) {
+            const responseText = await response.text();
+            throw new Error(responseText || `Failed to delete task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+        closeTaskModal('deleteTaskModal');
+        deletingTaskId = null;
+    } catch (error) {
+        console.error('Failed to delete task:', error);
+        alert('Unable to delete task. Please try again.');
+    }
 }

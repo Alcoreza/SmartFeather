@@ -44,7 +44,9 @@ class TaskController extends Controller
                     'name' => $fullName ?: 'Unknown',
                     'task_assigned' => $task->tasktype,
                     'house_number' => $house?->house_number ?? null,
+                    'house_id' => $house?->id ?? null,
                     'pen_number' => $pen?->pen_name ?? 'Unknown Pen',
+                    'pen_id' => $pen?->id ?? null,
                     'detailed_task' => $task->detailedtask ?? '',
                     'priority' => $task->prioritylevel,
                     'time_assigned' => $formatDate($task->timeassigned),
@@ -128,11 +130,23 @@ class TaskController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => 'required|string|in:Pending,For Approval,Completed',
+                'status' => 'nullable|string|in:Pending,For Approval,Completed',
+                'tasktype' => 'nullable|string|max:255',
+                'prioritylevel' => 'nullable|string|max:255',
+                'house_houseid' => 'nullable|integer|exists:house,id',
+                'pennumber' => 'nullable|integer',
+                'finishby' => 'nullable|date_format:Y-m-d H:i:s',
+                'detailedtask' => 'nullable|string',
             ]);
 
             $task = Task::findOrFail($taskId);
-            $task->update($validated);
+
+            // Remove null values to only update provided fields
+            $updateData = array_filter($validated, function($value) {
+                return $value !== null;
+            });
+
+            $task->update($updateData);
 
             return response()->json($task, 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -140,6 +154,19 @@ class TaskController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Task update error:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($taskId)
+    {
+        try {
+            $task = Task::findOrFail($taskId);
+            $task->delete();
+
+            return response()->json(['message' => 'Task deleted successfully'], 200);
+        } catch (\Exception $e) {
+            Log::error('Task deletion error:', ['message' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -183,6 +210,9 @@ class TaskController extends Controller
         $taskCategories = DB::table('task_type')
             ->orderBy('id', 'asc')
             ->pluck('task')
+            ->map(function($task) {
+                return trim($task);
+            })
             ->toArray();
 
         return response()->json([

@@ -84,7 +84,7 @@ Route::post('/mobile/sensor-inspection', [MobileSensorInspectionController::clas
 
 Route::post('/mobile/device-token', [MobileDeviceTokenController::class, 'store']);
 
-Route::post('/sensor-alerts/reading-created', [SensorAlertWebhookController::class, 'readingCreated']);
+Route::post('/sensor-alerts/check-latest', [SensorAlertWebhookController::class, 'checkLatest']);
 
 Route::post('/task-alerts/check-overdue', [TaskOverdueWebhookController::class, 'checkOverdue']);
 

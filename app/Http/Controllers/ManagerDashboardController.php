@@ -2,16 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\DailyFarmOverviewService;
 use Illuminate\View\View;
 
 class ManagerDashboardController extends Controller
 {
     public function index(): View
     {
+        try {
+            $dailyFarmOverviewService = new DailyFarmOverviewService();
+            $dailyOverview = $dailyFarmOverviewService->getDailyOverview();
+        } catch (\Exception $e) {
+            // Log error and use default values
+            \Log::error('Error in ManagerDashboardController: ' . $e->getMessage());
+            $dailyOverview = [
+                'totalChickens' => 0,
+                'totalEggs' => 0,
+                'totalMortalities' => 0,
+            ];
+        }
+
         $overviewCards = [
-            ['icon' => '🐔', 'value' => 5462, 'label' => 'Total Birds', 'accent' => 'red'],
-            ['icon' => '🥚', 'value' => 367, 'label' => 'Total Eggs', 'accent' => 'orange'],
-            ['icon' => '📉', 'value' => 25, 'label' => 'Mortalities', 'accent' => 'gray'],
+            ['icon' => '🐔', 'value' => $dailyOverview['totalChickens'], 'label' => 'Total Chickens', 'accent' => 'red'],
+            ['icon' => '🥚', 'value' => $dailyOverview['totalEggs'], 'label' => 'Total Eggs', 'accent' => 'orange'],
+            ['icon' => '📉', 'value' => $dailyOverview['totalMortalities'], 'label' => 'Mortalities', 'accent' => 'gray'],
         ];
 
         $monitoringGraph = [

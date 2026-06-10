@@ -13,6 +13,7 @@ use App\Http\Controllers\BiosecurityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\FarmActivityController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\ManagerDashboardController;
 
 
 Route::post('/api/login', [AuthController::class, 'login']);
@@ -36,7 +37,7 @@ Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 |--------------------------------------------------------------------------
 */
 
-Route::view('/manager/dashboard', 'manager.dashboard')->name('manager.dashboard');
+Route::get('/manager/dashboard', [ManagerDashboardController::class, 'index'])->name('manager.dashboard');
 Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
 Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
 

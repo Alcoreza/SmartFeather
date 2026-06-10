@@ -17,14 +17,6 @@
 @endpush
 
 @section('content')
-    @php
-        $overviewCards = [
-            ['icon' => '🐔', 'value' => '5462', 'label' => 'Total Chickens', 'accent' => 'red'],
-            ['icon' => '🥚', 'value' => '367', 'label' => 'Total Eggs', 'accent' => 'orange'],
-            ['icon' => '📉', 'value' => '25', 'label' => 'Mortalities', 'accent' => 'gray'],
-        ];
-    @endphp
-
     <div class="manager-shell">
         @include('includes.manager-sidebar')
 

@@ -188,7 +188,11 @@ class SensorAlertService
 
     private function resolveAlert($reading): ?array
     {
-        $value = (float) $reading->value;
+        $value = $this->comparisonValue(
+            (string) $reading->sensortype,
+            $reading->value
+        );
+
         $lowest = $reading->lowestthreshold;
         $highest = $reading->highestthreshold;
 
@@ -201,6 +205,27 @@ class SensorAlertService
         }
 
         return null;
+    }
+
+    private function comparisonValue(string $sensorType, $value): float
+    {
+        if ($sensorType === 'Feed Sensor' || $sensorType === 'Water Sensor') {
+            return $this->resourcePercentValue($value);
+        }
+
+        return (float) $value;
+    }
+
+    private function resourcePercentValue($value): float
+    {
+        $containerHeightInches = 8.5;
+        $rawInches = (float) $value;
+
+        if ($containerHeightInches <= 0) {
+            return 0;
+        }
+
+        return max(0, ($rawInches / $containerHeightInches) * 100);
     }
 
     private function buildAlert($reading, string $alertType, float $thresholdValue): array
@@ -301,10 +326,15 @@ class SensorAlertService
         return match ($sensorType) {
             'Temperature Sensor' => number_format((float) $value, 1) . ' C',
             'Ammonia Sensor' => number_format((float) $value, 1) . ' ppm',
-            'Feed Sensor' => number_format((float) $value, 1) . ' mm',
-            'Water Sensor' => number_format((float) $value, 1) . ' level',
+            'Feed Sensor' => $this->formatResourcePercent($value),
+            'Water Sensor' => $this->formatResourcePercent($value),
             default => (string) $value,
         };
+    }
+
+    private function formatResourcePercent($value): string
+    {
+        return number_format($this->resourcePercentValue($value), 1) . '%';
     }
 
     private function formatLocation($houseNumber, $penName): string

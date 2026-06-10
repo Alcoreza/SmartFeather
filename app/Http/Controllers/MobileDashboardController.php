@@ -278,6 +278,8 @@ class MobileDashboardController extends Controller
             return [];
         }
 
+        $containerHeightInches = 8.5;
+
         $latestReadingIds = DB::table('sensor_readings')
             ->selectRaw('sensorid, max(reading_id) as latest_reading_id')
             ->groupBy('sensorid');
@@ -315,7 +317,7 @@ class MobileDashboardController extends Controller
             ->orderBy('s.drinker_number')
             ->orderBy('s.sensorid')
             ->get()
-            ->map(function ($row) {
+            ->map(function ($row) use ($containerHeightInches) {
                 $sensorType = strtolower(trim((string) $row->sensortype));
                 $isFeed = str_contains($sensorType, 'feed');
                 $isWater = str_contains($sensorType, 'water');
@@ -332,9 +334,17 @@ class MobileDashboardController extends Controller
                     $label = $row->sensorname ?: 'Resource';
                 }
 
+                $rawInches = (float) ($row->value ?? 0);
+
+                $percent = $containerHeightInches > 0
+                    ? ($rawInches / $containerHeightInches) * 100
+                    : 0;
+
+                $percent = round(max(0, min(100, $percent)), 1);
+
                 return [
                     'label' => $label,
-                    'value' => (float) ($row->value ?? 0),
+                    'value' => $percent,
                     'unit' => '%',
                     'max' => 100,
                     'color' => $isFeed ? '#C88A3D' : '#3EA7B3',

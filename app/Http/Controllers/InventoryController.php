@@ -42,6 +42,20 @@ class InventoryController extends Controller
         ));
     }
 
+    public function snapshot()
+    {
+        $items = DB::table('inventories')
+            ->whereNull('archived_at')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(fn ($item) => $this->formatItem($item))
+            ->values();
+
+        return response()->json([
+            'items' => $items,
+        ]);
+    }
+
     public function store(Request $request)
     {
         try {
@@ -230,7 +244,7 @@ class InventoryController extends Controller
             ->orderBy('r.id', 'desc');
 
         if ($type) {
-            $query->where('i.type', $type);
+            $query->whereIn(DB::raw('LOWER(TRIM(i.type))'), $this->inventoryTypeAliases($type));
         }
 
         if ($itemName) {
@@ -285,9 +299,20 @@ class InventoryController extends Controller
 
         $items = DB::table('inventories')
             ->whereNull('archived_at')
-            ->when($type, fn ($q) => $q->where('type', $type))
+            ->when($type, fn ($q) => $q->whereIn(DB::raw('LOWER(TRIM(type))'), $this->inventoryTypeAliases($type)))
             ->pluck('item_name');
 
         return response()->json($items);
+    }
+
+    private function inventoryTypeAliases($type): array
+    {
+        $normalized = strtolower(trim((string) $type));
+
+        return match ($normalized) {
+            'feed', 'feeds' => ['feed', 'feeds'],
+            'vitamin', 'vitamins' => ['vitamin', 'vitamins'],
+            default => [$normalized],
+        };
     }
 }

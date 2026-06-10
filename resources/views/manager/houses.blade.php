@@ -56,24 +56,18 @@
 
                             <div class="sensor-chart-grid">
                                 <div class="sensor-chart-wrap temperature-chart">
-                                    <div class="sensor-chart-plot">
-                                        <canvas id="farmTemperatureChart"></canvas>
-                                    </div>
-
                                     <div class="sensor-stat temperature-stat">
-                                        <span class="sensor-label">Temperature</span>
+                                        <span class="sensor-kicker">Temperature</span>
                                         <span class="sensor-reading-value" id="houseTemperature">--</span>
+                                        <span class="sensor-helper">Current pen reading</span>
                                     </div>
                                 </div>
 
                                 <div class="sensor-chart-wrap ammonia-chart">
-                                    <div class="sensor-chart-plot">
-                                        <canvas id="farmAmmoniaChart"></canvas>
-                                    </div>
-
                                     <div class="sensor-stat ammonia-stat">
-                                        <span class="sensor-label">Ammonia</span>
+                                        <span class="sensor-kicker">Ammonia</span>
                                         <span class="sensor-reading-value" id="houseAmmonia">--</span>
+                                        <span class="sensor-helper">Current pen reading</span>
                                     </div>
                                 </div>
                             </div>
@@ -121,11 +115,11 @@
 
                             <div class="houses-actions">
                                 <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">Edit</button>
-                                <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
-                                <button type="button" class="toolbar-btn btn-archive" id="openArchiveHouseModal">Archive</button>
                                 <a href="{{ route('manager.houses.record-house') }}" class="toolbar-btn btn-file" title="Records">
                                     Records
                                 </a>
+                                <button type="button" class="toolbar-btn btn-archive" id="openArchiveHouseModal">Archive</button>
+                                <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
                             </div>
                         </article>
                     </aside>

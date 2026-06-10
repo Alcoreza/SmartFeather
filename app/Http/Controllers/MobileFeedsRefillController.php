@@ -207,6 +207,11 @@ class MobileFeedsRefillController extends Controller
                 $remainingStock = (int) $inventory->remaining_stock;
                 $initialStock = (int) $inventory->initial_stock;
                 $kilograms = (int) $validated['kilograms'];
+                $initialPurchaseDate = $this->initialPurchaseDate(
+                    $validated['inventory_id'],
+                    $inventory->purchase_date ?? null
+                );
+                $reducedDate = \Illuminate\Support\Carbon::parse($validated['recorded_at'])->toDateString();
 
                 if ($remainingStock < $kilograms) {
                     abort(response()->json([
@@ -237,6 +242,10 @@ class MobileFeedsRefillController extends Controller
                     'inventory_id' => $validated['inventory_id'],
                     'initial_stock' => $initialStock,
                     'remaining_stock' => $newRemaining,
+                    'deducted' => $kilograms,
+                    'added' => 0,
+                    'initial_purchase_date' => $initialPurchaseDate,
+                    'reduced_date' => $reducedDate,
                     'monitoring_date' => $validated['recorded_at'],
                 ]);
             });
@@ -258,6 +267,15 @@ class MobileFeedsRefillController extends Controller
             ->orderByDesc('time')
             ->orderByDesc('id')
             ->first();
+    }
+
+    private function initialPurchaseDate($inventoryId, $fallback = null)
+    {
+        return DB::table('inventory_records')
+            ->where('inventory_id', $inventoryId)
+            ->whereNotNull('initial_purchase_date')
+            ->orderBy('id')
+            ->value('initial_purchase_date') ?? $fallback;
     }
 
     private function isFeedReplenishmentTask(string $taskType): bool

@@ -3,6 +3,8 @@ let monitoringSlides = [];
 let activeSlideIndex = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
+    resetInitialRealtimeWidgets();
+
     const cards = document.querySelectorAll(".dashboard-card");
 
     cards.forEach((card, index) => {
@@ -23,6 +25,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     await renderRealtimeMonitoring();
     await renderMonitoringCarousel();
 });
+
+function resetInitialRealtimeWidgets() {
+    document.querySelectorAll(".radial-gauge").forEach((gauge) => {
+        gauge.style.setProperty("--gauge-value", "0deg");
+    });
+
+    document.querySelectorAll(".resource-bar").forEach((bar) => {
+        bar.style.height = "0%";
+    });
+}
 
 async function renderRealtimeMonitoring() {
     try {
@@ -49,7 +61,7 @@ function renderEnvironment(items) {
 
             return `
             <div class="sensor-card">
-                <div class="radial-gauge ${item.status}" style="--gauge-value: ${degrees}deg;">
+                <div class="radial-gauge ${item.status}" data-gauge-value="${degrees}" style="--gauge-value: 0deg;">
                     <div class="radial-gauge-inner">
                         <span class="sensor-value">${item.value}${item.unit}</span>
                     </div>
@@ -60,6 +72,8 @@ function renderEnvironment(items) {
         `;
         })
         .join("");
+
+    animateRealtimeGauges(grid);
 }
 
 function renderResources(items) {
@@ -77,7 +91,7 @@ function renderResources(items) {
             return `
             <div class="resource-card">
                 <div class="resource-bar-shell">
-                    <div class="resource-bar ${isWater ? "water-bar" : "feed-bar"}" style="height: ${safeValue}%;"></div>
+                    <div class="resource-bar ${isWater ? "water-bar" : "feed-bar"}" data-bar-height="${safeValue}" style="height: 0%;"></div>
                 </div>
                 <div class="resource-percent ${isWater ? "water-text" : ""}">${safeValue}${item.unit}</div>
                 <div class="resource-label">${item.label}</div>
@@ -86,6 +100,53 @@ function renderResources(items) {
         `;
         })
         .join("");
+
+    animateResourceBars(grid);
+}
+
+function animateRealtimeGauges(container) {
+    const gauges = container.querySelectorAll("[data-gauge-value]");
+
+    gauges.forEach((gauge, index) => {
+        const target = Number(gauge.dataset.gaugeValue || 0);
+        animateGaugeValue(gauge, target, 900, index * 120);
+    });
+}
+
+function animateResourceBars(container) {
+    const bars = container.querySelectorAll("[data-bar-height]");
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            bars.forEach((bar, index) => {
+                setTimeout(() => {
+                    bar.style.height = `${bar.dataset.barHeight || 0}%`;
+                }, index * 120);
+            });
+        });
+    });
+}
+
+function animateGaugeValue(gauge, target, duration = 900, delay = 0) {
+    const startTime = performance.now() + delay;
+
+    function tick(now) {
+        if (now < startTime) {
+            requestAnimationFrame(tick);
+            return;
+        }
+
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        gauge.style.setProperty("--gauge-value", `${target * eased}deg`);
+
+        if (progress < 1) {
+            requestAnimationFrame(tick);
+        }
+    }
+
+    requestAnimationFrame(tick);
 }
 
 function getGaugeDegrees(value, min, max) {
@@ -147,8 +208,11 @@ function createOrUpdateChart(canvas, slide) {
         monitoringChart.destroy();
     }
 
+    const context = canvas.getContext("2d");
+    const barGradient = createBarGradient(context, canvas, slide.borderColor);
+
     monitoringChart = new Chart(canvas, {
-        type: "line",
+        type: "bar",
         data: {
             labels: slide.labels,
             datasets: [
@@ -156,14 +220,12 @@ function createOrUpdateChart(canvas, slide) {
                     label: slide.label,
                     data: slide.values,
                     borderColor: slide.borderColor,
-                    backgroundColor: slide.backgroundColor,
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: slide.borderColor,
-                    pointBorderColor: slide.borderColor,
-                    borderWidth: 3,
+                    backgroundColor: barGradient || slide.backgroundColor,
+                    hoverBackgroundColor: slide.borderColor,
+                    borderWidth: 0,
+                    borderRadius: 12,
+                    borderSkipped: false,
+                    maxBarThickness: 42,
                 },
             ],
         },
@@ -171,11 +233,44 @@ function createOrUpdateChart(canvas, slide) {
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-                duration: 450,
+                duration: 900,
+                easing: "easeOutCubic",
+                delay(context) {
+                    if (context.type !== "data" || context.mode !== "default") {
+                        return 0;
+                    }
+
+                    return context.dataIndex * 95;
+                },
+            },
+            animations: {
+                y: {
+                    from(context) {
+                        const chart = context.chart;
+                        const scale = chart.scales.y;
+
+                        return scale ? scale.getPixelForValue(0) : chart.chartArea.bottom;
+                    },
+                },
             },
             plugins: {
                 legend: {
                     display: false,
+                },
+                tooltip: {
+                    backgroundColor: "rgba(6, 51, 32, 0.94)",
+                    borderColor: "rgba(184, 239, 189, 0.32)",
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    padding: 12,
+                    titleColor: "#ffffff",
+                    bodyColor: "#e9f7ec",
+                    callbacks: {
+                        label(context) {
+                            return `${slide.label}: ${context.parsed.y}${slide.unit || ""}`;
+                        },
+                    },
                 },
             },
             scales: {
@@ -183,22 +278,53 @@ function createOrUpdateChart(canvas, slide) {
                     grid: {
                         display: false,
                     },
+                    border: {
+                        display: false,
+                    },
                     ticks: {
                         color: "#687068",
+                        font: {
+                            weight: 700,
+                        },
                     },
                 },
                 y: {
-                    beginAtZero: false,
+                    beginAtZero: true,
+                    border: {
+                        display: false,
+                    },
                     grid: {
-                        color: "rgba(90, 96, 90, 0.14)",
+                        color: "rgba(90, 96, 90, 0.12)",
                     },
                     ticks: {
                         color: "#687068",
+                        padding: 8,
                     },
                 },
             },
         },
     });
+}
+
+function createBarGradient(context, canvas, color) {
+    if (!context) {
+        return null;
+    }
+
+    const height = canvas.offsetHeight || canvas.height || 280;
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+
+    if (color === "#b7791f") {
+        gradient.addColorStop(0, "rgba(217, 158, 62, 0.96)");
+        gradient.addColorStop(0.58, "rgba(183, 121, 31, 0.78)");
+        gradient.addColorStop(1, "rgba(183, 121, 31, 0.3)");
+        return gradient;
+    }
+
+    gradient.addColorStop(0, "rgba(41, 132, 77, 0.96)");
+    gradient.addColorStop(0.58, "rgba(23, 100, 58, 0.78)");
+    gradient.addColorStop(1, "rgba(23, 100, 58, 0.3)");
+    return gradient;
 }
 
 function updateGraphCaption(caption, slide) {

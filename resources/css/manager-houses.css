@@ -71,9 +71,9 @@
 .add-house-btn {
     width: 36px;
     height: 36px;
-    border: 1px solid #214d34;
+    border: 1px solid rgba(184, 239, 189, 0.18);
     border-radius: 8px;
-    background: #214d34;
+    background: #063320;
     color: #ffffff;
     font-size: 1.35rem;
     line-height: 1;
@@ -81,6 +81,34 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.12);
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.add-house-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 64%,
+        transparent 100%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+    pointer-events: none;
+}
+
+.add-house-btn:hover::before {
+    transform: translateX(120%);
 }
 
 .houses-divider {
@@ -1137,8 +1165,8 @@
 
 .add-house-btn:hover,
 .record-back-btn:hover {
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 5px 12px rgba(31, 77, 52, 0.08);
+    transform: none;
+    box-shadow: 0 10px 20px rgba(6, 51, 32, 0.14);
 }
 
 .record-pill:hover {
@@ -1554,65 +1582,56 @@
 }
 
 .sensor-chart-wrap {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 12px;
-    min-height: 306px;
-    padding: 12px;
-    border: 1px solid rgba(16, 92, 52, 0.08);
-    border-radius: 18px;
-    background:
-        linear-gradient(180deg, rgba(248, 251, 247, 0.92), rgba(255, 255, 255, 0.84));
-}
-
-.sensor-chart-plot {
-    position: relative;
-    min-height: 198px;
+    min-height: 154px;
+    padding: 16px;
+    border: 1px solid rgba(16, 92, 52, 0.1);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 14px 28px rgba(6, 51, 32, 0.06);
 }
 
 .temperature-chart {
-    border-color: rgba(223, 77, 69, 0.16);
+    border-color: rgba(143, 31, 29, 0.16);
 }
 
 .ammonia-chart {
-    border-color: rgba(65, 164, 93, 0.16);
-}
-
-.sensor-chart-plot canvas {
-    width: 100% !important;
-    height: 100% !important;
+    border-color: rgba(23, 100, 58, 0.16);
 }
 
 .sensor-stat {
-    display: grid;
-    gap: 8px;
-    min-height: 74px;
-    padding: 12px;
-    border: 1px solid rgba(16, 92, 52, 0.08);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.72);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.sensor-stat .sensor-label {
+.sensor-kicker {
     color: var(--manager-text-soft);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 800;
     text-transform: uppercase;
 }
 
 .sensor-reading-value {
     color: var(--manager-text-main);
-    font-size: 1.55rem;
+    font-size: clamp(2.1rem, 4vw, 3rem);
     font-weight: 800;
     line-height: 1;
 }
 
+.sensor-helper {
+    color: var(--manager-text-soft);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
 .temperature-stat .sensor-reading-value {
-    color: #df4d45;
+    color: #8f1f1d;
 }
 
 .ammonia-stat .sensor-reading-value {
-    color: #2f9d52;
+    color: #17643a;
 }
 
 .info-panel {
@@ -1684,11 +1703,7 @@
 
 @media (max-width: 768px) {
     .sensor-chart-wrap {
-        min-height: 290px;
-    }
-
-    .sensor-chart-plot {
-        min-height: 190px;
+        min-height: 138px;
     }
 
     .sensor-chart-grid,
@@ -1922,64 +1937,112 @@
 }
 
 .cycle-panel .toolbar-btn {
+    position: relative;
+    overflow: hidden;
     min-height: 42px;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 999px;
     font-size: 0.94rem;
     font-weight: 800;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.1);
     transition:
-        transform 0.22s ease,
-        box-shadow 0.22s ease,
-        filter 0.22s ease,
-        background-color 0.22s ease;
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.cycle-panel .toolbar-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 64%,
+        transparent 100%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+    pointer-events: none;
 }
 
 .cycle-panel .toolbar-btn:hover {
-    transform: translateY(-3px);
-    filter: brightness(1.04);
+    transform: none;
+    box-shadow:
+        0 10px 20px rgba(6, 51, 32, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.cycle-panel .toolbar-btn:hover::before {
+    transform: translateX(120%);
 }
 
 .cycle-panel .toolbar-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
-    filter: brightness(0.98);
+    transform: scale(0.98);
+    box-shadow:
+        0 5px 12px rgba(6, 51, 32, 0.1),
+        inset 0 2px 6px rgba(4, 35, 24, 0.14);
 }
 
 .cycle-panel .btn-edit {
-    background: #8b9198;
-    color: #ffffff;
+    background: #edf4ee;
+    border-color: rgba(23, 100, 58, 0.14);
+    color: #063320;
 }
 
-.cycle-panel .btn-edit:hover {
-    box-shadow: 0 12px 22px rgba(139, 145, 152, 0.35);
+.cycle-panel .btn-edit::before {
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 34%,
+        rgba(23, 100, 58, 0.16) 50%,
+        transparent 66%,
+        transparent 100%
+    );
 }
 
 .cycle-panel .btn-file {
-    background: #c58a3a;
+    background: #063320;
+    border-color: rgba(184, 239, 189, 0.16);
     color: #ffffff;
 }
 
 .cycle-panel .btn-file:hover {
-    box-shadow: 0 12px 22px rgba(197, 138, 58, 0.35);
+    background: #0d4a2d;
 }
 
 .cycle-panel .btn-end {
-    background: #dc3545;
+    background: #8f1f1d;
+    border-color: rgba(143, 31, 29, 0.16);
     color: #ffffff;
 }
 
 .cycle-panel .btn-end:hover {
-    box-shadow: 0 12px 22px rgba(220, 53, 69, 0.32);
+    background: #a92c27;
 }
 
 .cycle-panel .btn-archive {
-    background: #7b4b14;
-    color: #ffffff;
+    background: #eee6d8;
+    border-color: rgba(105, 85, 54, 0.16);
+    color: #513d1d;
+}
+
+.cycle-panel .btn-archive::before {
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 34%,
+        rgba(105, 85, 54, 0.16) 50%,
+        transparent 66%,
+        transparent 100%
+    );
 }
 
 .cycle-panel .btn-archive:hover {
-    box-shadow: 0 12px 22px rgba(123, 75, 20, 0.32);
+    background: #e4dac9;
 }
 
 .houses-page {

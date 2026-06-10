@@ -205,6 +205,11 @@ class MobileVitaminsRefillController extends Controller
             $remainingStock = (int) $inventory->remaining_stock;
             $initialStock = (int) $inventory->initial_stock;
             $bottles = (int) $validated['bottles'];
+            $initialPurchaseDate = $this->initialPurchaseDate(
+                $validated['inventory_id'],
+                $inventory->purchase_date ?? null
+            );
+            $reducedDate = \Illuminate\Support\Carbon::parse($validated['recorded_at'])->toDateString();
 
             if ($remainingStock < $bottles) {
                 return response()->json([
@@ -234,6 +239,10 @@ class MobileVitaminsRefillController extends Controller
                 'inventory_id' => $validated['inventory_id'],
                 'initial_stock' => $initialStock,
                 'remaining_stock' => $newRemaining,
+                'deducted' => $bottles,
+                'added' => 0,
+                'initial_purchase_date' => $initialPurchaseDate,
+                'reduced_date' => $reducedDate,
                 'monitoring_date' => $validated['recorded_at'],
             ]);
 
@@ -252,6 +261,15 @@ class MobileVitaminsRefillController extends Controller
             ->orderByDesc('time')
             ->orderByDesc('id')
             ->first();
+    }
+
+    private function initialPurchaseDate($inventoryId, $fallback = null)
+    {
+        return DB::table('inventory_records')
+            ->where('inventory_id', $inventoryId)
+            ->whereNotNull('initial_purchase_date')
+            ->orderBy('id')
+            ->value('initial_purchase_date') ?? $fallback;
     }
 
     private function isVitaminsSupplementationTask(string $taskType): bool

@@ -16,6 +16,362 @@ body {
     font-family: "Poppins", sans-serif;
 }
 
+:root {
+    --sf-button-green-950: #042318;
+    --sf-button-green-900: #063320;
+    --sf-button-green-800: #0d4a2d;
+    --sf-button-green-700: #17643a;
+    --sf-button-green-300: #b8efbd;
+    --sf-button-danger-700: #bd332b;
+    --sf-button-danger-800: #9f251f;
+    --sf-button-light: #f9fff9;
+    --sf-button-light-pressed: #dff2e3;
+}
+
+button[class*="btn"],
+a[class*="btn"],
+.management-action-card {
+    position: relative !important;
+    isolation: isolate !important;
+    overflow: hidden !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(23, 100, 58, 0.16) !important;
+    background: linear-gradient(180deg, var(--sf-button-green-700) 0%, var(--sf-button-green-800) 100%) !important;
+    color: #f8fff8 !important;
+    box-shadow:
+        0 8px 16px rgba(6, 51, 32, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    font-family: inherit !important;
+    font-weight: 750 !important;
+    letter-spacing: 0 !important;
+    text-decoration: none !important;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        filter 0.2s ease !important;
+}
+
+button[class*="btn"]::before,
+a[class*="btn"]::before,
+.management-action-card::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 64%,
+        transparent 100%
+    ) !important;
+    transform: translateX(-120%) !important;
+    transition: transform 0.42s ease !important;
+}
+
+button[class*="btn"] > *,
+a[class*="btn"] > *,
+.management-action-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+button[class*="btn"]:hover:not(:disabled),
+a[class*="btn"]:hover,
+.management-action-card:hover {
+    transform: none !important;
+    border-color: rgba(23, 100, 58, 0.28) !important;
+    box-shadow:
+        0 10px 20px rgba(6, 51, 32, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+    filter: none !important;
+}
+
+button[class*="btn"]:hover:not(:disabled)::before,
+a[class*="btn"]:hover::before,
+.management-action-card:hover::before {
+    transform: translateX(120%) !important;
+}
+
+button[class*="btn"]:active:not(:disabled),
+a[class*="btn"]:active,
+.management-action-card:active {
+    transform: scale(0.98) !important;
+    box-shadow:
+        0 5px 12px rgba(6, 51, 32, 0.1),
+        inset 0 2px 6px rgba(4, 35, 24, 0.14) !important;
+}
+
+button[class*="btn"]:focus-visible,
+a[class*="btn"]:focus-visible,
+.management-action-card:focus-visible {
+    outline: 3px solid rgba(22, 101, 52, 0.18) !important;
+    outline-offset: 2px !important;
+}
+
+button[class*="btn"]:disabled,
+a[class*="btn"][aria-disabled="true"] {
+    cursor: not-allowed !important;
+    opacity: 0.56 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+button[class*="cancel"],
+button[class*="close"],
+a[class*="back-btn"],
+button[class*="clear"],
+button[class*="page-btn"],
+button[class*="view-btn"],
+button[class*="threshold-btn"],
+button[class*="maintenance-btn"],
+a[class*="maintenance-btn"],
+button[class*="secondary"],
+.logout-confirm-btn.cancel,
+.manager-management-modal-secondary-btn {
+    background: linear-gradient(180deg, var(--sf-button-light) 0%, #e8f4ea 100%) !important;
+    color: var(--sf-button-green-900) !important;
+    border-color: rgba(23, 100, 58, 0.18) !important;
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.08) !important;
+}
+
+button[class*="cancel"]:hover:not(:disabled),
+button[class*="close"]:hover:not(:disabled),
+a[class*="back-btn"]:hover,
+button[class*="clear"]:hover:not(:disabled),
+button[class*="page-btn"]:hover:not(:disabled),
+button[class*="view-btn"]:hover:not(:disabled),
+button[class*="threshold-btn"]:hover:not(:disabled),
+button[class*="maintenance-btn"]:hover:not(:disabled),
+a[class*="maintenance-btn"]:hover,
+button[class*="secondary"]:hover:not(:disabled),
+.logout-confirm-btn.cancel:hover,
+.manager-management-modal-secondary-btn:hover {
+    background: linear-gradient(180deg, #ffffff 0%, var(--sf-button-light-pressed) 100%) !important;
+    color: var(--sf-button-green-950) !important;
+}
+
+button[class*="delete"],
+button[class*="archive"],
+button[class*="logout"],
+button[class*="danger"],
+button[class*="end"],
+a[class*="logout"],
+.logout-confirm-btn.confirm {
+    background: linear-gradient(180deg, var(--sf-button-danger-700) 0%, var(--sf-button-danger-800) 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow:
+        0 10px 20px rgba(159, 37, 31, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+button[class*="delete"]:hover:not(:disabled),
+button[class*="archive"]:hover:not(:disabled),
+button[class*="logout"]:hover:not(:disabled),
+button[class*="danger"]:hover:not(:disabled),
+button[class*="end"]:hover:not(:disabled),
+a[class*="logout"]:hover,
+.logout-confirm-btn.confirm:hover {
+    background: linear-gradient(180deg, #cf443a 0%, #a92822 100%) !important;
+    box-shadow:
+        0 14px 26px rgba(159, 37, 31, 0.2),
+        0 0 0 4px rgba(207, 68, 58, 0.1) !important;
+}
+
+button[class*="add-btn"],
+button[class*="icon-btn"],
+a[class*="icon-btn"],
+button[class*="circle-btn"] {
+    background: linear-gradient(180deg, var(--sf-button-green-900), #032b16) !important;
+    color: var(--sf-button-green-300) !important;
+    border-color: rgba(184, 239, 189, 0.18) !important;
+}
+
+button[class*="add-btn"]:hover:not(:disabled),
+button[class*="icon-btn"]:hover:not(:disabled),
+a[class*="icon-btn"]:hover,
+button[class*="circle-btn"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--sf-button-green-800), var(--sf-button-green-900)) !important;
+    color: #f9fff9 !important;
+}
+
+.graph-dot,
+.record-page-dot {
+    background: unset !important;
+    color: inherit !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+}
+
+.bio-category-btn,
+.export-format-btn,
+.record-tab,
+.record-house-tab,
+.house-tab {
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    color: #102016 !important;
+    border: 1.5px solid rgba(23, 100, 58, 0.18) !important;
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.06) !important;
+    font-weight: 800 !important;
+}
+
+.bio-category-btn::before,
+.export-format-btn::before,
+.record-tab::before,
+.record-house-tab::before,
+.house-tab::before {
+    display: none !important;
+}
+
+.bio-category-btn:hover,
+.export-format-btn:hover,
+.record-tab:hover,
+.record-house-tab:hover,
+.house-tab:hover {
+    background: #f9fff9 !important;
+    color: #063320 !important;
+    border-color: rgba(23, 100, 58, 0.32) !important;
+    box-shadow: 0 8px 18px rgba(6, 51, 32, 0.1) !important;
+}
+
+.bio-category-btn.active,
+.export-format-btn.active,
+.record-tab.active,
+.record-house-tab.active,
+.house-tab.active {
+    background: linear-gradient(180deg, #17643a 0%, #0d4a2d 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(184, 239, 189, 0.22) !important;
+    box-shadow:
+        0 10px 22px rgba(6, 51, 32, 0.16),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+}
+
+.bio-category-btn.active svg,
+.export-format-btn.active *,
+.record-tab.active,
+.record-house-tab.active,
+.house-tab.active {
+    color: #ffffff !important;
+}
+
+.bio-category-btn.active {
+    background: linear-gradient(180deg, #63d15f 0%, #57c451 100%) !important;
+    color: #062c17 !important;
+    border-color: rgba(87, 196, 81, 0.42) !important;
+    box-shadow:
+        0 8px 18px rgba(87, 196, 81, 0.22),
+        inset 0 1px 2px rgba(255, 255, 255, 0.28) !important;
+}
+
+.bio-category-btn.active svg {
+    color: #062c17 !important;
+}
+
+button.export-format-btn {
+    min-height: 118px !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    color: #102016 !important;
+    border-color: rgba(23, 100, 58, 0.18) !important;
+}
+
+button.export-format-btn.active,
+button.export-format-btn:active,
+button.export-format-btn:focus-visible {
+    background: linear-gradient(180deg, #17643a 0%, #0d4a2d 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(184, 239, 189, 0.26) !important;
+}
+
+button.export-format-btn.active *,
+button.export-format-btn:active *,
+button.export-format-btn:focus-visible * {
+    color: #ffffff !important;
+}
+
+button.export-format-btn .export-format-text {
+    color: #102016 !important;
+    font-size: 1.04rem !important;
+    font-weight: 850 !important;
+}
+
+.toolbar-btn,
+.cycle-panel .toolbar-btn {
+    border-radius: 12px !important;
+    min-height: 38px !important;
+}
+
+.toolbar-btn.btn-edit,
+.cycle-panel .toolbar-btn.btn-edit {
+    background: linear-gradient(180deg, #f9fff9 0%, #e8f4ea 100%) !important;
+    color: #063320 !important;
+    border-color: rgba(23, 100, 58, 0.18) !important;
+}
+
+.toolbar-btn.btn-file,
+.cycle-panel .toolbar-btn.btn-file {
+    background: linear-gradient(180deg, #17643a 0%, #0d4a2d 100%) !important;
+    color: #ffffff !important;
+}
+
+.toolbar-btn.btn-end,
+.cycle-panel .toolbar-btn.btn-end {
+    background: #c91c16 !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+}
+
+.toolbar-btn.btn-end:hover:not(:disabled),
+.cycle-panel .toolbar-btn.btn-end:hover:not(:disabled) {
+    background: #b21b15 !important;
+    box-shadow: 0 12px 22px rgba(201, 28, 22, 0.24) !important;
+}
+
+.toolbar-btn.btn-archive,
+.cycle-panel .toolbar-btn.btn-archive {
+    background: #fff6e8 !important;
+    color: #805214 !important;
+    border-color: #efd2a5 !important;
+    box-shadow: none !important;
+}
+
+.toolbar-btn.btn-archive:hover:not(:disabled),
+.cycle-panel .toolbar-btn.btn-archive:hover:not(:disabled) {
+    background: #ffeed4 !important;
+    color: #805214 !important;
+    border-color: #efd2a5 !important;
+    box-shadow: none !important;
+}
+
+.record-back-btn,
+.record-clear-filters-btn,
+.record-page-btn,
+.bio-page-btn,
+.reports-page-btn {
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    color: #063320 !important;
+    border-color: rgba(23, 100, 58, 0.2) !important;
+}
+
+.record-back-btn:hover,
+.record-clear-filters-btn:hover:not(:disabled),
+.record-page-btn:hover:not(:disabled),
+.bio-page-btn:hover:not(:disabled),
+.reports-page-btn:hover:not(:disabled) {
+    background: #f9fff9 !important;
+    color: #042318 !important;
+    border-color: rgba(23, 100, 58, 0.32) !important;
+}
+
 body.logout-confirm-open {
     overflow: hidden;
 }

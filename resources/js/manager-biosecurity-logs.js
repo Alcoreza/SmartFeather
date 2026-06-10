@@ -178,17 +178,11 @@ function formatDateForDisplay(isoDate) {
 }
 
 function setOverview(overview) {
-    const violations = document.getElementById('bioViolations');
-    const visitors = document.getElementById('bioVisitors');
-    const mortalities = document.getElementById('bioMortalities');
-    const disinfectionDate = document.getElementById('bioDisinfectionDate');
-    const disinfectionTime = document.getElementById('bioDisinfectionTime');
+    const personnelEntered = document.getElementById('bioPersonnelEntered');
+    const visitorsEntered = document.getElementById('bioVisitorsEntered');
 
-    if (violations) violations.textContent = overview?.violations ?? 0;
-    if (visitors) visitors.textContent = overview?.visitors ?? 0;
-    if (mortalities) mortalities.textContent = overview?.mortalities ?? 0;
-    if (disinfectionDate) disinfectionDate.textContent = formatDateForDisplay(overview?.last_disinfection?.date) ?? '--';
-    if (disinfectionTime) disinfectionTime.textContent = overview?.last_disinfection?.time ?? '--';
+    if (personnelEntered) personnelEntered.textContent = overview?.personnel_entered ?? 0;
+    if (visitorsEntered) visitorsEntered.textContent = overview?.visitors_entered ?? 0;
 }
 
 function renderTableHead(type) {

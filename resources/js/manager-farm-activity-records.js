@@ -1,4 +1,4 @@
-const FARM_ACTIVITY_ROWS_PER_PAGE = 5;
+const FARM_ACTIVITY_ROWS_PER_PAGE = 8;
 
 const farmRecordState = {
     selectedRecord: 'Hatch and Mortality Check',
@@ -199,6 +199,21 @@ function formatNumber(value) {
     return Number.isInteger(number) ? String(number) : number.toFixed(2);
 }
 
+function formatRecordCount(count) {
+    return `${count} ${count === 1 ? 'record' : 'records'}`;
+}
+
+function getPageRangeText(totalRows, currentPage = 0) {
+    if (!totalRows) {
+        return '0 records';
+    }
+
+    const start = currentPage * FARM_ACTIVITY_ROWS_PER_PAGE + 1;
+    const end = Math.min(totalRows, start + FARM_ACTIVITY_ROWS_PER_PAGE - 1);
+
+    return `Showing ${start}-${end} of ${totalRows}`;
+}
+
 function getInventoryMovement(row) {
     const added = Number(row.added ?? 0);
     const deducted = Number(row.deducted ?? 0);
@@ -349,13 +364,17 @@ function reRenderFarmActivityCard(cardKey) {
 
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, allRows.length);
+    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
-    farmRecordContent.innerHTML = `
-        <section class="reports-card">
+    farmRecordContent.innerHTML = renderFarmActivityCardShell(
+        recordType,
+        formatRecordCount(allRows.length),
+        getPageRangeText(allRows.length, currentPage),
+        `
             ${tableHtml}
             ${paginationHtml}
-        </section>
-    `;
+        `
+    );
 
     updateFarmActivityPagination(cardKey, allRows.length);
 }
@@ -401,15 +420,38 @@ function renderSingleRecord(recordType, recordData) {
     const paginatedRows = updateFarmActivityCard(cardKey, rows);
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, rows.length);
+    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
-    farmRecordContent.innerHTML = `
-        <section class="reports-card">
+    farmRecordContent.innerHTML = renderFarmActivityCardShell(
+        recordType,
+        formatRecordCount(rows.length),
+        getPageRangeText(rows.length, currentPage),
+        `
             ${tableHtml}
             ${paginationHtml}
-        </section>
-    `;
+        `
+    );
 
     updateFarmActivityPagination(cardKey, rows.length);
+}
+
+function renderFarmActivityCardShell(title, countText, pageText, contentHtml) {
+    return `
+        <section class="reports-card farm-record-card">
+            <div class="farm-record-card-header">
+                <div>
+                    <h2>${escapeHtml(title)}</h2>
+                    <p>${escapeHtml(pageText)}</p>
+                </div>
+                <div class="farm-record-card-badges">
+                    <span class="farm-record-count">${escapeHtml(countText)}</span>
+                </div>
+            </div>
+            <div class="farm-record-card-body">
+                ${contentHtml}
+            </div>
+        </section>
+    `;
 }
 
 function renderMultiRecord(recordType, recordData) {
@@ -419,7 +461,16 @@ function renderMultiRecord(recordType, recordData) {
         return `
             <section class="reports-section-block">
                 <h3 class="reports-section-title">${section.title}</h3>
-                <div class="reports-card">
+                <div class="reports-card farm-record-card">
+                    <div class="farm-record-card-header">
+                        <div>
+                            <h2>${escapeHtml(section.title)}</h2>
+                            <p>${escapeHtml(getPageRangeText(rows.length))}</p>
+                        </div>
+                        <div class="farm-record-card-badges">
+                            <span class="farm-record-count">${escapeHtml(formatRecordCount(rows.length))}</span>
+                        </div>
+                    </div>
                     ${renderRecordTable(section.columns, rows)}
                 </div>
             </section>

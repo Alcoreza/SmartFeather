@@ -42,6 +42,7 @@ Route::get('/mobile/vitamin-refill/houses/{houseId}/pens', [MobileVitaminsRefill
 Route::get('/mobile/vitamin-refill/options', [MobileVitaminsRefillController::class, 'getVitaminInventoryOptions']);
 Route::post('/mobile/vitamin-refill', [MobileVitaminsRefillController::class, 'submit']);
 Route::get('/mobile/vitamin-refill/context', [MobileVitaminsRefillController::class, 'getContext']);
+Route::get('/mobile/feed-refill/houses/{houseId}/pens/{penId}/feeders', [MobileFeedsRefillController::class, 'getFeederOptions']);
 
 
 Route::get('/mobile/profile/{employeeId}', [MobileProfileController::class, 'show']);

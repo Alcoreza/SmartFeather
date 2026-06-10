@@ -56,11 +56,13 @@ class MobileFeedsRefillController extends Controller
 
         $pens = Pen::where('house_id', $house->id)
             ->orderBy('id', 'asc')
-            ->get(['id', 'pen_name'])
+            ->get(['id', 'pen_name', 'feeder_count', 'drinker_count'])
             ->map(function (Pen $pen) {
                 return [
-                    'id' => $pen->id,
+                    'id' => (int) $pen->id,
                     'pen_name' => $pen->pen_name,
+                    'feeder_count' => (int) ($pen->feeder_count ?? 0),
+                    'drinker_count' => (int) ($pen->drinker_count ?? 0),
                 ];
             })
             ->values();
@@ -71,6 +73,24 @@ class MobileFeedsRefillController extends Controller
             'house_id' => $house->id,
             'house_number' => $house->house_number,
             'pen_options' => $pens,
+        ]);
+    }
+
+    public function getFeederOptions(int $houseId, int $penId)
+    {
+        $pen = Pen::where('id', $penId)
+            ->where('house_id', $houseId)
+            ->first(['id', 'house_id', 'feeder_count']);
+
+        if (!$pen) {
+            return response()->json([
+                'message' => 'Selected pen does not belong to the selected house.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'feeder_options' => $this->buildNumberOptions((int) ($pen->feeder_count ?? 0)),
         ]);
     }
 
@@ -181,11 +201,25 @@ class MobileFeedsRefillController extends Controller
 
         $pen = Pen::where('id', $validated['pen_id'])
             ->where('house_id', $validated['house_id'])
-            ->first();
+            ->first(['id', 'house_id', 'feeder_count']);
 
         if (!$pen) {
             return response()->json([
                 'message' => 'Selected pen does not belong to the selected house.',
+            ], 422);
+        }
+
+        $feederCount = (int) ($pen->feeder_count ?? 0);
+
+        if ($feederCount <= 0) {
+            return response()->json([
+                'message' => 'No feeders are configured for this pen.',
+            ], 422);
+        }
+
+        if ((int) $validated['feeder_number'] > $feederCount) {
+            return response()->json([
+                'message' => 'Selected feeder does not exist for this pen.',
             ], 422);
         }
 
@@ -248,6 +282,18 @@ class MobileFeedsRefillController extends Controller
             'success' => true,
             'message' => 'Feeds refill submitted successfully.',
         ]);
+    }
+
+    private function buildNumberOptions(int $count): array
+    {
+        if ($count <= 0) {
+            return [];
+        }
+
+        return collect(range(1, $count))
+            ->map(fn($number) => (string) $number)
+            ->values()
+            ->all();
     }
 
     private function latestEntryLog(int $employeeId)

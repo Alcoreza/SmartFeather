@@ -98,7 +98,6 @@ function setupInventoryRecordTabs() {
             <option value="${item}">${item}</option>
         `).join("");
 
-        filterWrap.classList.remove("hidden");
     }
 
     /* ===== FETCH RECORDS ===== */

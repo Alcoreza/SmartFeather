@@ -175,6 +175,12 @@
 }
 
 .go-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 118px;
     padding: 11px 34px;
     border: none;
     border-radius: 999px;
@@ -193,10 +199,25 @@
         box-shadow 0.25s ease;
 }
 
-.go-btn:hover {
+.go-btn:hover:not(:disabled) {
     color: #fff;
     background: linear-gradient(180deg, #39a952, #27813c);
     transform: translateY(-2px) scale(1.02);
+}
+
+.go-btn:disabled {
+    cursor: wait;
+    opacity: 0.92;
+}
+
+.go-btn.is-loading::before {
+    content: "";
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: login-button-spin 0.7s linear infinite;
 }
 
 .login-error-modal-backdrop {
@@ -294,6 +315,12 @@
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes login-button-spin {
+    to {
+        transform: rotate(360deg);
     }
 }
 

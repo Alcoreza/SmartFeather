@@ -208,7 +208,114 @@ document.addEventListener("DOMContentLoaded", () => {
     setupCreateInventoryTypeModal();
     setupInventoryModals();
     setupProfileModal();
+    setupInventoryStockSync();
 });
+
+function setupInventoryStockSync() {
+    const entries = document.querySelectorAll(".inventory-entry[data-id]");
+
+    if (!entries.length) return;
+
+    let isSyncing = false;
+
+    async function syncInventoryStocks() {
+        if (document.hidden || isSyncing) return;
+
+        isSyncing = true;
+
+        try {
+            const response = await fetch("/api/manager/inventory/snapshot", {
+                headers: {
+                    "Accept": "application/json",
+                },
+            });
+
+            if (!response.ok) return;
+
+            const data = await response.json().catch(() => ({}));
+            const items = Array.isArray(data.items) ? data.items : [];
+
+            items.forEach(updateInventoryEntry);
+        } catch (error) {
+            console.error("Inventory stock sync failed:", error);
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    function updateInventoryEntry(item) {
+        const entry = document.querySelector(`.inventory-entry[data-id="${item.id}"]`);
+
+        if (!entry) return;
+
+        const nextRemaining = formatStockNumber(item.remaining_stock);
+        const previousRemaining = formatStockNumber(entry.dataset.remainingStock);
+
+        entry.dataset.initialStock = item.initial_stock;
+        entry.dataset.remainingStock = item.remaining_stock;
+        entry.dataset.critical = item.critical;
+        entry.dataset.unit = item.unit;
+
+        const amount = entry.querySelector(".inventory-stock-amount");
+        const progressTrack = entry.querySelector(".inventory-progress-track");
+        const progressLabel = entry.querySelector(".inventory-progress-label");
+        const currentStockInput = getCurrentStockInput(entry);
+
+        if (amount) {
+            amount.innerHTML = `${nextRemaining} <span class="inventory-stock-unit">${unitLabel(item.unit)}</span>`;
+        }
+
+        if (progressTrack) {
+            progressTrack.style.setProperty("--percent", Number(item.percentage ?? 0));
+            progressTrack.classList.remove("high", "moderate", "critical");
+            progressTrack.classList.add(item.status_class || "high");
+        }
+
+        if (progressLabel) {
+            progressLabel.textContent = item.status || "";
+        }
+
+        if (currentStockInput) {
+            currentStockInput.value = item.remaining_stock;
+        }
+
+        if (nextRemaining !== previousRemaining) {
+            entry.classList.remove("stock-updated");
+            void entry.offsetWidth;
+            entry.classList.add("stock-updated");
+        }
+    }
+
+    function getCurrentStockInput(entry) {
+        const isFeed = entry.classList.contains("inventory-feed-entry");
+        const selectedInput = isFeed
+            ? document.getElementById("feedInventoryIdUnified")
+            : document.getElementById("vitaminInventoryIdUnified");
+        const currentStockInput = isFeed
+            ? document.getElementById("feedCurrentStock")
+            : document.getElementById("vitaminCurrentStock");
+
+        return selectedInput?.value === String(entry.dataset.id)
+            ? currentStockInput
+            : null;
+    }
+
+    function formatStockNumber(value) {
+        const number = Number(value ?? 0);
+
+        return Number.isInteger(number)
+            ? number.toString()
+            : number.toFixed(2);
+    }
+
+    function unitLabel(unit) {
+        return unit === "bottles" || unit === "bottle" ? "btls" : unit;
+    }
+
+    syncInventoryStocks();
+    setInterval(syncInventoryStocks, 5000);
+    document.addEventListener("visibilitychange", syncInventoryStocks);
+}
 
 function setupCreateInventoryTypeModal() {
     const createInventoryTypeModal = document.getElementById("createInventoryTypeModal");

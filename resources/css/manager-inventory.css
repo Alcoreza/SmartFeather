@@ -65,32 +65,83 @@
 .inventory-rec-btn,
 .inventory-icon-btn,
 .inventory-edit-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     border: none;
     border-radius: 999px;
     font-weight: 700;
     cursor: pointer;
     transition:
-        transform 0.22s ease,
-        box-shadow 0.22s ease,
-        filter 0.22s ease,
-        background-color 0.22s ease;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease;
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.1);
+}
+
+.inventory-rec-btn::before,
+.inventory-icon-btn::before,
+.inventory-edit-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.24) 50%,
+        transparent 64%,
+        transparent 100%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+    pointer-events: none;
+}
+
+.inventory-rec-btn::before {
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 34%,
+        rgba(23, 100, 58, 0.18) 50%,
+        transparent 66%,
+        transparent 100%
+    );
+}
+
+.inventory-rec-btn::after,
+.inventory-icon-btn::after,
+.inventory-edit-btn::after,
+.inventory-cancel-btn::after,
+.inventory-save-btn::after {
+    display: none;
 }
 
 .inventory-rec-btn:hover,
 .inventory-icon-btn:hover,
 .inventory-edit-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 22px rgba(0, 0, 0, 0.2);
-    filter: brightness(1.04);
+    transform: none;
+    box-shadow:
+        0 10px 20px rgba(6, 51, 32, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.inventory-rec-btn:hover::before,
+.inventory-icon-btn:hover::before,
+.inventory-edit-btn:hover::before {
+    transform: translateX(120%);
 }
 
 .inventory-rec-btn:active,
 .inventory-icon-btn:active,
 .inventory-edit-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
-    filter: brightness(0.98);
+    transform: scale(0.98);
+    box-shadow:
+        0 5px 12px rgba(6, 51, 32, 0.1),
+        inset 0 2px 6px rgba(4, 35, 24, 0.14);
 }
 
 .inventory-rec-btn:focus-visible,
@@ -107,8 +158,9 @@
     min-width: 68px;
     height: 42px;
     padding: 0 18px;
-    background: #c58a3a;
-    color: #ffffff;
+    background: linear-gradient(180deg, #f9fff9 0%, #e8f4ea 100%);
+    color: var(--manager-green-900, #063320);
+    border: 1px solid rgba(23, 100, 58, 0.18);
     font-size: 0.95rem;
     font-weight: 700;
     text-decoration: none;
@@ -116,7 +168,9 @@
 }
 
 .inventory-rec-btn:hover {
-    box-shadow: 0 12px 22px rgba(197, 138, 58, 0.35);
+    color: var(--manager-green-950, #042318);
+    background: linear-gradient(180deg, #ffffff 0%, #dff2e3 100%);
+    border-color: rgba(23, 100, 58, 0.28);
 }
 
 .inventory-icon-btn {
@@ -131,13 +185,14 @@
 .inventory-edit-btn {
     height: 42px;
     padding: 0 16px;
-    background: #8b9198;
-    color: #ffffff;
+    background: linear-gradient(180deg, #17643a 0%, #0d4a2d 100%);
+    color: #f8fff8;
+    border: 1px solid rgba(184, 239, 189, 0.16);
     font-size: 0.95rem;
 }
 
 .inventory-edit-btn:hover {
-    box-shadow: 0 12px 22px rgba(139, 145, 152, 0.35);
+    background: linear-gradient(180deg, #1d7545 0%, #0f5633 100%);
 }
 
 .inventory-edit-select {
@@ -168,17 +223,18 @@
     height: 42px;
     border-radius: 50%;
     background: linear-gradient(180deg, #063320, #032b16);
-    color: #6de16f;
+    color: #b8efbd;
+    border: 1px solid rgba(184, 239, 189, 0.18);
     box-shadow:
         0 14px 28px rgba(3, 43, 22, 0.22),
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .add-btn:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow:
-        0 18px 34px rgba(3, 43, 22, 0.28),
-        0 0 0 8px rgba(109, 225, 111, 0.08);
+    background: linear-gradient(180deg, #0d4a2d, #063320);
+    color: #f9fff9;
+    transform: none;
+    box-shadow: 0 10px 20px rgba(3, 43, 22, 0.2);
 }
 
 .add-btn svg {
@@ -195,15 +251,35 @@
 
 .inventory-entry {
     cursor: pointer;
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.inventory-entry:hover {
-    transform: translateY(-3px);
+    transition: transform 0.22s ease;
 }
 
 .inventory-entry.selected {
-    box-shadow: 0 0 0 2px rgba(22, 107, 43, 0.18), 0 18px 36px rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    box-shadow:
+        0 0 0 2px rgba(23, 100, 58, 0.24),
+        0 18px 36px rgba(6, 51, 32, 0.1);
+}
+
+.inventory-entry.stock-updated .inventory-stock-card {
+    animation: inventory-stock-pulse 0.7s ease;
+}
+
+@keyframes inventory-stock-pulse {
+    0% {
+        border-color: rgba(23, 100, 58, 0.12);
+        box-shadow: 0 18px 36px rgba(6, 51, 32, 0.08);
+    }
+
+    35% {
+        border-color: rgba(23, 100, 58, 0.32);
+        box-shadow: 0 18px 38px rgba(23, 100, 58, 0.18);
+    }
+
+    100% {
+        border-color: rgba(73, 86, 76, 0.12);
+        box-shadow: 0 18px 36px rgba(6, 51, 32, 0.08);
+    }
 }
 
 .inventory-item-name {
@@ -213,6 +289,9 @@
     color: #111111;
     line-height: 1.15;
     overflow-wrap: anywhere;
+    transition:
+        color 0.24s ease,
+        transform 0.24s ease;
 }
 
 .inventory-card {
@@ -221,17 +300,35 @@
 }
 
 .inventory-stock-card {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-height: 152px;
     padding: 14px;
     border-radius: 18px;
-    background: #ffffff;
-    box-shadow: 0 18px 36px rgba(15, 23, 36, 0.08);
-    border: 1px solid rgba(15, 23, 36, 0.08);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 18px 36px rgba(6, 51, 32, 0.08);
+    border: 1px solid rgba(73, 86, 76, 0.12);
     overflow: hidden;
     box-sizing: border-box;
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.28s ease,
+        border-color 0.28s ease,
+        background-color 0.28s ease;
+}
+
+.inventory-stock-card::before {
+    display: none;
+}
+
+.inventory-entry:hover .inventory-stock-card {
+    transform: translateY(-2px);
+    border-color: rgba(73, 86, 76, 0.18);
+    background-color: #ffffff;
+    box-shadow: 0 20px 42px rgba(6, 51, 32, 0.105);
 }
 
 .inventory-stock-card,
@@ -300,6 +397,9 @@
     white-space: normal;
     overflow-wrap: break-word;
     max-width: 100%;
+    transition:
+        color 0.24s ease,
+        transform 0.24s ease;
 }
 
 .inventory-stock-unit {
@@ -318,65 +418,101 @@
 }
 
 .inventory-progress-track {
-    --progress-start: #64748b;
-    --progress-end: #64748b;
-    --progress-track-bg: #e5e7eb;
+    --progress-start: #52685c;
+    --progress-end: #7f9388;
+    --progress-track-bg: #e5ece7;
     position: relative;
     width: 100%;
     max-width: 100%;
-    height: 24px;
+    height: 26px;
+    padding: 2px;
     border-radius: 999px;
     background: var(--progress-track-bg);
     overflow: hidden;
     box-sizing: border-box;
+    box-shadow:
+        inset 0 1px 2px rgba(6, 51, 32, 0.08),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .inventory-progress-track.high {
-    --progress-start: #4f9b70;
-    --progress-end: #63ad7f;
-    --progress-track-bg: #edf7f0;
+    --progress-start: #17643a;
+    --progress-end: #6f9f7b;
+    --progress-track-bg: #e1ebe4;
 }
 
 .inventory-progress-track.moderate {
-    --progress-start: #d2a43a;
-    --progress-end: #e0b84a;
-    --progress-track-bg: #fbf4d8;
+    --progress-start: #697653;
+    --progress-end: #a4ad7a;
+    --progress-track-bg: #e9ecdc;
 }
 
 .inventory-progress-track.critical {
-    --progress-start: #b95a52;
-    --progress-end: #cf6d65;
-    --progress-track-bg: #fae8e6;
+    --progress-start: #b43a34;
+    --progress-end: #b43a34;
+    --progress-track-bg: #f0dfdc;
 }
 
 .inventory-progress-fill {
+    position: relative;
     width: calc(var(--percent) * 1%);
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--progress-start) 0%, var(--progress-end) 100%);
+    background: var(--progress-start);
+    box-shadow:
+        0 4px 12px color-mix(in srgb, var(--progress-start) 30%, transparent);
+    transition:
+        filter 0.24s ease,
+        box-shadow 0.24s ease;
+}
+
+.inventory-entry:hover .inventory-progress-fill {
+    filter: saturate(1.025) brightness(1.01);
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--progress-start) 28%, transparent);
 }
 
 .inventory-progress-label {
     position: absolute;
-    inset: 0;
+    inset: 2px;
     z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0 12px;
-    color: #111827;
+    color: #102016;
     font-size: 0.78rem;
     font-weight: 800;
     line-height: 1;
     text-align: center;
     white-space: nowrap;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.48);
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.78),
+        0 0 1px rgba(255, 255, 255, 0.52);
+    transition:
+        color 0.22s ease;
+}
+
+.inventory-entry:hover .inventory-progress-label {
+    color: #102016;
+}
+
+.inventory-progress-track.high .inventory-progress-label {
+    color: #ffffff;
+    text-shadow:
+        0 1px 2px rgba(4, 24, 17, 0.72),
+        0 0 2px rgba(4, 24, 17, 0.58),
+        0 0 1px rgba(4, 24, 17, 0.86);
+}
+
+.inventory-entry:hover .inventory-progress-track.high .inventory-progress-label {
+    color: #ffffff;
 }
 
 .inventory-stock-details {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    transition: transform 0.24s ease;
 }
 
 .inventory-stock-details p,
@@ -617,6 +753,9 @@
 
 .inventory-cancel-btn,
 .inventory-save-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     border: none;
     border-radius: 999px;
     height: 38px;
@@ -625,26 +764,71 @@
     font-size: 0.95rem;
     font-weight: 800;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.inventory-cancel-btn::before,
+.inventory-save-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 64%,
+        transparent 100%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+    pointer-events: none;
 }
 
 .inventory-cancel-btn {
-    background: #7c7f86;
+    background: #edf4ee;
+    color: var(--manager-green-900, #063320);
+    border: 1px solid rgba(23, 100, 58, 0.14);
 }
 
 .inventory-save-btn {
-    background: #0b6a1d;
+    background: linear-gradient(180deg, #17643a 0%, #0d4a2d 100%);
+    color: #f8fff8;
 }
 
 .inventory-cancel-btn:hover,
 .inventory-save-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+    transform: none;
+    box-shadow:
+        0 10px 20px rgba(6, 51, 32, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.inventory-cancel-btn:hover::before,
+.inventory-save-btn:hover::before {
+    transform: translateX(120%);
+}
+
+.inventory-cancel-btn:hover {
+    background: #ffffff;
+    color: var(--manager-green-950, #042318);
+}
+
+.inventory-save-btn:hover {
+    background: linear-gradient(180deg, #1d7545 0%, #0f5633 100%);
 }
 
 .inventory-cancel-btn:active,
 .inventory-save-btn:active {
-    transform: translateY(0);
+    transform: scale(0.98);
+    box-shadow:
+        0 5px 12px rgba(6, 51, 32, 0.1),
+        inset 0 2px 6px rgba(4, 35, 24, 0.14);
 }
 
 .inventory-section,
@@ -695,13 +879,33 @@
 }
 
 #openArchiveInventoryModal {
-    background: #dc2626 !important;
-    color: #ffffff !important;
+    background: #fff6e8 !important;
+    color: #805214 !important;
+    border-color: #efd2a5 !important;
+    box-shadow: none !important;
 }
 
 #openArchiveInventoryModal:hover {
-    background: #b91c1c !important;
-    box-shadow: 0 12px 22px rgba(220, 38, 38, 0.35) !important;
+    background: #ffeed4 !important;
+    color: #805214 !important;
+    border-color: #efd2a5 !important;
+    box-shadow: none !important;
+}
+
+.inventory-actions .inventory-rec-btn:not(#openArchiveInventoryModal) {
+    background: linear-gradient(180deg, #f9fff9 0%, #e8f4ea 100%) !important;
+    color: var(--manager-green-900, #063320) !important;
+    border-color: rgba(23, 100, 58, 0.18) !important;
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.1) !important;
+}
+
+.inventory-actions .inventory-rec-btn:not(#openArchiveInventoryModal):hover {
+    background: linear-gradient(180deg, #ffffff 0%, #dff2e3 100%) !important;
+    color: var(--manager-green-950, #042318) !important;
+    border-color: rgba(23, 100, 58, 0.28) !important;
+    box-shadow:
+        0 10px 20px rgba(6, 51, 32, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
 }
 
 @keyframes inventoryFadeUp {

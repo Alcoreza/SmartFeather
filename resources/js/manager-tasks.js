@@ -14,8 +14,47 @@ const ALL_HOUSES_OPTION = "All houses";
 const ALL_PRIORITY_OPTION = "All priority";
 const PRIORITY_ORDER = ["Low", "Medium", "High"];
 const TASK_ROWS_PER_PAGE = 5;
+const TASK_STATUS_OPTIONS = ["pending", "for_approval", "completed"];
+const TASK_TABLE_COLUMNS = {
+    pending: [
+        { key: "name", label: "Name" },
+        { key: "task_assigned", label: "Task<br>Assigned" },
+        { key: "house_number", label: "House<br>Number" },
+        { key: "pen_number", label: "Pen<br>Number" },
+        { key: "detailed_task", label: "Detailed<br>Task" },
+        { key: "priority", label: "Priority" },
+        { key: "time_assigned", label: "Time<br>Assigned" },
+        { key: "finish_by", label: "Finish<br>By" },
+    ],
+    for_approval: [
+        { key: "name", label: "Name" },
+        { key: "task_assigned", label: "Task<br>Assigned" },
+        { key: "house_number", label: "House<br>Number" },
+        { key: "pen_number", label: "Pen<br>Number" },
+        { key: "detailed_task", label: "Detailed<br>Task" },
+        { key: "photo", label: "Photo" },
+        { key: "priority", label: "Priority" },
+        { key: "time_assigned", label: "Time<br>Assigned" },
+        { key: "finish_by", label: "Finish<br>By" },
+        { key: "mark", label: "Mark" },
+    ],
+    completed: [
+        { key: "name", label: "Name" },
+        { key: "task_assigned", label: "Task<br>Assigned" },
+        { key: "house_number", label: "House<br>Number" },
+        { key: "pen_number", label: "Pen<br>Number" },
+        { key: "detailed_task", label: "Detailed<br>Task" },
+        { key: "photo", label: "Photo" },
+        { key: "priority", label: "Priority" },
+        { key: "notes", label: "Notes" },
+        { key: "time_assigned", label: "Time<br>Assigned" },
+        { key: "finish_by", label: "Finish<br>By" },
+        { key: "time_completed", label: "Time<br>Completed" },
+    ],
+};
 
 let taskPendingVerify = null;
+let selectedTaskStatus = "pending";
 let taskDataCache = {
     pending: [],
     for_approval: [],
@@ -38,9 +77,8 @@ const addTaskRequiredFields = [
 ];
 let shouldTrackAddTaskRequiredHighlights = false;
 let taskFilters = {
-    pending: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
-    for_approval: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
-    completed: { house: ALL_HOUSES_OPTION, priority: ALL_PRIORITY_OPTION },
+    house: ALL_HOUSES_OPTION,
+    priority: ALL_PRIORITY_OPTION,
 };
 
 async function renderManagerTasks() {
@@ -54,10 +92,8 @@ async function renderManagerTasks() {
             completed: data.completed || [],
         };
 
-        renderPendingTasks(taskDataCache.pending);
-        renderApprovalTasks(taskDataCache.for_approval);
-        renderCompletedTasks(taskDataCache.completed);
         refreshTaskFilterOptions();
+        renderCurrentTaskTable();
     } catch (error) {
         console.error("Failed to load manager tasks.", error);
     }
@@ -140,87 +176,99 @@ function fillSimpleSelect(select, items, placeholder) {
 }
 
 function setupTaskFilters() {
-    document.querySelectorAll(".manager-task-filter-select").forEach((select) => {
-        select.addEventListener("change", () => {
-            const section = select.dataset.taskSection;
-            const filterType = select.dataset.filterType;
+    document.querySelectorAll("[data-task-status]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const nextStatus = button.dataset.taskStatus;
 
-            if (!section || !filterType) {
+            if (!TASK_STATUS_OPTIONS.includes(nextStatus) || nextStatus === selectedTaskStatus) {
                 return;
             }
 
-            taskFilters[section] = {
-                ...taskFilters[section],
-                [filterType]: select.value,
-            };
+            selectedTaskStatus = nextStatus;
+            taskRowPages[selectedTaskStatus] = taskRowPages[selectedTaskStatus] || 0;
+            syncTaskStatusButtons();
+            renderCurrentTaskTable();
+        });
+    });
 
-            renderTaskSection(section);
+    document.querySelectorAll(".manager-task-filter-select[data-filter-type]").forEach((select) => {
+        select.addEventListener("change", () => {
+            const filterType = select.dataset.filterType;
+
+            if (!filterType) {
+                return;
+            }
+
+            taskFilters[filterType] = select.value;
+
+            resetTaskRowPages();
+            syncTaskFilterControls();
+            renderCurrentTaskTable();
         });
     });
 }
 
-function setupTaskRowPaginationControls() {
-    const sections = ["pending", "for_approval", "completed"];
-
-    sections.forEach((section) => {
-        const prevBtn = document.querySelector(`[data-task-row-prev="${section}"]`);
-        const nextBtn = document.querySelector(`[data-task-row-next="${section}"]`);
-        const dotsContainer = document.querySelector(`[data-task-row-dots="${section}"]`);
-
-        if (prevBtn) {
-            prevBtn.addEventListener("click", () => {
-                taskRowPages[section] = Math.max(0, taskRowPages[section] - 1);
-                renderTaskSection(section);
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener("click", () => {
-                taskRowPages[section] += 1;
-                renderTaskSection(section);
-            });
-        }
-
-        if (dotsContainer) {
-            dotsContainer.addEventListener("click", (event) => {
-                const dot = event.target.closest("[data-task-row-page]");
-                if (!dot) return;
-                taskRowPages[section] = Number(dot.dataset.taskRowPage || 0);
-                renderTaskSection(section);
-            });
-        }
+function resetTaskRowPages() {
+    TASK_STATUS_OPTIONS.forEach((section) => {
+        taskRowPages[section] = 0;
     });
+}
+
+function setupTaskRowPaginationControls() {
+    const prevBtn = document.querySelector("[data-task-row-prev]");
+    const nextBtn = document.querySelector("[data-task-row-next]");
+    const dotsContainer = document.querySelector("[data-task-row-dots]");
+
+    prevBtn?.addEventListener("click", () => {
+        taskRowPages[selectedTaskStatus] = Math.max(0, taskRowPages[selectedTaskStatus] - 1);
+        renderCurrentTaskTable();
+    });
+
+    nextBtn?.addEventListener("click", () => {
+        taskRowPages[selectedTaskStatus] += 1;
+        renderCurrentTaskTable();
+    });
+
+    dotsContainer?.addEventListener("click", (event) => {
+        const dot = event.target.closest("[data-task-row-page]");
+        if (!dot) return;
+        taskRowPages[selectedTaskStatus] = Number(dot.dataset.taskRowPage || 0);
+        renderCurrentTaskTable();
+    });
+}
+
+function renderCurrentTaskTable() {
+    renderTaskSection(selectedTaskStatus);
 }
 
 function renderTaskSection(section) {
     if (section === "pending") {
-        renderPendingTasks(taskDataCache.pending);
+        renderUnifiedTaskTable("pending", taskDataCache.pending);
         return;
     }
 
     if (section === "for_approval") {
-        renderApprovalTasks(taskDataCache.for_approval);
+        renderUnifiedTaskTable("for_approval", taskDataCache.for_approval);
         return;
     }
 
     if (section === "completed") {
-        renderCompletedTasks(taskDataCache.completed);
+        renderUnifiedTaskTable("completed", taskDataCache.completed);
     }
 }
 
 function updateTaskRowPagination(section, totalItems) {
-    const filteredItems = section === "pending" 
-        ? applyTaskFilters(totalItems, taskFilters.pending)
-        : section === "for_approval"
-        ? applyTaskFilters(totalItems, taskFilters.for_approval)
-        : applyTaskFilters(totalItems, taskFilters.completed);
+    const filteredItems = applyTaskFilters(totalItems, taskFilters);
 
     const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
     taskRowPages[section] = Math.min(taskRowPages[section], totalPages - 1);
 
-    const prevBtn = document.querySelector(`[data-task-row-prev="${section}"]`);
-    const nextBtn = document.querySelector(`[data-task-row-next="${section}"]`);
-    const dotsContainer = document.querySelector(`[data-task-row-dots="${section}"]`);
+    const prevBtn = document.querySelector("[data-task-row-prev]");
+    const nextBtn = document.querySelector("[data-task-row-next]");
+    const dotsContainer = document.querySelector("[data-task-row-dots]");
+    const pagination = document.querySelector("[data-task-pagination]");
+
+    pagination?.classList.toggle("is-hidden", filteredItems.length <= TASK_ROWS_PER_PAGE);
 
     if (prevBtn) {
         prevBtn.disabled = taskRowPages[section] === 0;
@@ -243,14 +291,43 @@ function updateTaskRowPagination(section, totalItems) {
 }
 
 function refreshTaskFilterOptions() {
-    const sections = ["pending", "for_approval", "completed"];
+    const houseOptions = buildHouseFilterOptions();
+    const priorityOptions = buildPriorityFilterOptions();
 
-    sections.forEach((section) => {
+    taskFilters.house = houseOptions.includes(taskFilters.house)
+        ? taskFilters.house
+        : houseOptions[0];
+
+    taskFilters.priority = priorityOptions.includes(taskFilters.priority)
+        ? taskFilters.priority
+        : priorityOptions[0];
+
+    syncTaskFilterControls();
+}
+
+function syncTaskFilterControls() {
+    const houseSelect = document.getElementById("taskHouseFilter");
+    const prioritySelect = document.getElementById("taskPriorityFilter");
+
+    syncTaskStatusButtons();
+
+    if (houseSelect) {
         const houseOptions = buildHouseFilterOptions();
-        const priorityOptions = buildPriorityFilterOptions();
+        updateTaskFilterSelect("taskHouseFilter", houseOptions, taskFilters.house);
+    }
 
-        updateTaskFilterSelect(`taskHouseFilter-${section}`, houseOptions, taskFilters[section].house);
-        updateTaskFilterSelect(`taskPriorityFilter-${section}`, priorityOptions, taskFilters[section].priority);
+    if (prioritySelect) {
+        const priorityOptions = buildPriorityFilterOptions();
+        updateTaskFilterSelect("taskPriorityFilter", priorityOptions, taskFilters.priority);
+    }
+}
+
+function syncTaskStatusButtons() {
+    document.querySelectorAll("[data-task-status]").forEach((button) => {
+        const isActive = button.dataset.taskStatus === selectedTaskStatus;
+        button.classList.remove("active");
+        button.classList.toggle("is-selected", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
 }
 
@@ -289,159 +366,69 @@ function applyTaskFilters(items, filters) {
     });
 }
 
-function renderPendingTasks(items) {
-    const tbody = document.getElementById("pendingTasksTable");
+function renderUnifiedTaskTable(section, items) {
+    const thead = document.getElementById("managerTasksTableHead");
+    const tbody = document.getElementById("managerTasksTableBody");
     if (!tbody) return;
 
-    const filteredItems = applyTaskFilters(items, taskFilters.pending);
+    const columns = TASK_TABLE_COLUMNS[section] || TASK_TABLE_COLUMNS.pending;
+    if (thead) {
+        thead.innerHTML = `<tr>${columns.map((column) => `<th>${column.label}</th>`).join("")}</tr>`;
+    }
+
+    const filteredItems = applyTaskFilters(items, taskFilters);
     const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
-    taskRowPages.pending = Math.min(taskRowPages.pending, totalPages - 1);
+    taskRowPages[section] = Math.min(taskRowPages[section], totalPages - 1);
 
     if (!filteredItems.length) {
-        tbody.innerHTML = `<tr><td colspan="8">No tasks match the selected filters.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${columns.length}" class="manager-task-empty">No tasks match the selected filters.</td></tr>`;
         animateTaskRows();
-        updateTaskRowPagination("pending", items);
+        updateTaskRowPagination(section, items);
         return;
     }
 
-    const start = taskRowPages.pending * TASK_ROWS_PER_PAGE;
+    const start = taskRowPages[section] * TASK_ROWS_PER_PAGE;
     const pageItems = filteredItems.slice(start, start + TASK_ROWS_PER_PAGE);
 
     tbody.innerHTML = pageItems
-        .map(
-            (item) => `
-        <tr>
-            <td>${item.name}</td>
-            <td>${item.task_assigned}</td>
-            <td>${item.house_number}</td>
-            <td>${item.pen_number}</td>
-            <td>${item.detailed_task}</td>
-            <td>${item.priority}</td>
-            <td>${item.time_assigned}</td>
-            <td>${item.finish_by}</td>
-        </tr>
-    `,
-        )
+        .map((item) => `
+            <tr>
+                ${columns.map((column) => `<td>${renderTaskCell(column.key, item, section)}</td>`).join("")}
+            </tr>
+        `)
         .join("");
 
-    updateTaskRowPagination("pending", items);
+    updateTaskRowPagination(section, items);
+    bindPhotoButtons();
+    if (section === "for_approval") bindVerifyButtons();
     animateTaskRows();
 }
 
-function renderApprovalTasks(items) {
-    const tbody = document.getElementById("approvalTasksTable");
-    if (!tbody) return;
-
-    const filteredItems = applyTaskFilters(items, taskFilters.for_approval);
-    const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
-    taskRowPages.for_approval = Math.min(taskRowPages.for_approval, totalPages - 1);
-
-    if (!filteredItems.length) {
-        tbody.innerHTML = `<tr><td colspan="10">No tasks match the selected filters.</td></tr>`;
-        animateTaskRows();
-        updateTaskRowPagination("for_approval", items);
-        return;
+function renderTaskCell(key, item) {
+    if (key === "photo") {
+        return item.photo_url
+            ? `<button
+                type="button"
+                class="manager-task-photo-link"
+                data-photo-name="${item.photo_name}"
+                data-photo-url="${item.photo_url}"
+            >
+                <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
+            </button>`
+            : "No photo";
     }
 
-    const start = taskRowPages.for_approval * TASK_ROWS_PER_PAGE;
-    const pageItems = filteredItems.slice(start, start + TASK_ROWS_PER_PAGE);
-
-    tbody.innerHTML = pageItems
-        .map(
-            (item) => `
-        <tr>
-            <td>${item.name}</td>
-            <td>${item.task_assigned}</td>
-            <td>${item.house_number}</td>
-            <td>${item.pen_number}</td>
-            <td>${item.detailed_task}</td>
-            <td>
-                ${item.photo_url
-                    ? `<button
-                        type="button"
-                        class="manager-task-photo-link"
-                        data-photo-name="${item.photo_name}"
-                        data-photo-url="${item.photo_url}"
-                    >
-                        <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
-                    </button>`
-                    : 'No photo'}
-            </td>
-            <td>${item.priority}</td>
-            <td>${item.time_assigned}</td>
-            <td>${item.finish_by}</td>
-            <td>
-                <button
-                    type="button"
-                    class="manager-task-verify-btn"
-                    data-verify-task='${encodeTaskPayload(item)}'
-                >
-                    Verify
-                </button>
-            </td>
-        </tr>
-    `,
-        )
-        .join("");
-
-    updateTaskRowPagination("for_approval", items);
-    bindPhotoButtons();
-    bindVerifyButtons();
-    animateTaskRows();
-}
-
-function renderCompletedTasks(items) {
-    const tbody = document.getElementById("completedTasksTable");
-    if (!tbody) return;
-
-    const filteredItems = applyTaskFilters(items, taskFilters.completed);
-    const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
-    taskRowPages.completed = Math.min(taskRowPages.completed, totalPages - 1);
-
-    if (!filteredItems.length) {
-        tbody.innerHTML = `<tr><td colspan="11">No tasks match the selected filters.</td></tr>`;
-        animateTaskRows();
-        updateTaskRowPagination("completed", items);
-        return;
+    if (key === "mark") {
+        return `<button
+            type="button"
+            class="manager-task-verify-btn"
+            data-verify-task='${encodeTaskPayload(item)}'
+        >
+            Verify
+        </button>`;
     }
 
-    const start = taskRowPages.completed * TASK_ROWS_PER_PAGE;
-    const pageItems = filteredItems.slice(start, start + TASK_ROWS_PER_PAGE);
-
-    tbody.innerHTML = pageItems
-        .map(
-            (item) => `
-        <tr>
-            <td>${item.name}</td>
-            <td>${item.task_assigned}</td>
-            <td>${item.house_number}</td>
-            <td>${item.pen_number}</td>
-            <td>${item.detailed_task}</td>
-            <td>
-                ${item.photo_url
-                    ? `<button
-                        type="button"
-                        class="manager-task-photo-link"
-                        data-photo-name="${item.photo_name}"
-                        data-photo-url="${item.photo_url}"
-                    >
-                        <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
-                    </button>`
-                    : 'No photo'}
-            </td>
-            <td>${item.priority}</td>
-            <td>${item.notes}</td>
-            <td>${item.time_assigned}</td>
-            <td>${item.finish_by}</td>
-            <td>${item.time_completed}</td>
-        </tr>
-    `,
-        )
-        .join("");
-
-    updateTaskRowPagination("completed", items);
-    bindPhotoButtons();
-    animateTaskRows();
+    return item[key] ?? "";
 }
 
 function encodeTaskPayload(item) {

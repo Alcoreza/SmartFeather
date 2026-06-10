@@ -43,6 +43,7 @@ const reportsHouse = document.getElementById('reportsHouse');
 const REPORTS_ROWS_PER_PAGE = 5;
 const reportPagination = {};
 let currentReportData = {};
+let reportsPaginationBound = false;
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -85,7 +86,10 @@ function renderReportCards() {
     reportContent.innerHTML = reportCards.map((card) => `
         <section class="reports-card reports-data-card" data-report-card="${card.key}">
             <div class="reports-card-header">
-                <h2>${escapeHtml(card.title)}</h2>
+                <div>
+                    <h2>${escapeHtml(card.title)}</h2>
+                </div>
+                <span class="reports-row-count" data-report-count="${card.key}">0 records</span>
             </div>
             <div class="reports-card-body">
                 <div class="reports-empty">Loading records...</div>
@@ -120,8 +124,13 @@ async function fetchJson(url) {
 function updateReportCard(card, rows) {
     const cardElement = reportContent?.querySelector(`[data-report-card="${card.key}"]`);
     const body = cardElement?.querySelector('.reports-card-body');
+    const count = cardElement?.querySelector(`[data-report-count="${card.key}"]`);
 
     if (!body) return;
+
+    if (count) {
+        count.textContent = `${rows.length} ${rows.length === 1 ? 'record' : 'records'}`;
+    }
 
     // Initialize pagination for this card if not exists
     if (!reportPagination[card.key]) {
@@ -243,12 +252,16 @@ function updateSummaryCard(summary) {
 
     if (weightStatusEl) {
         const weight = summary.weight_status || {};
-        const breakdown = [
-            `Overweight: ${weight.overweight || 0}`,
-            `Normal: ${weight.normal || 0}`,
-            `Underweight: ${weight.underweight || 0}`,
-        ].join(' | ');
-        weightStatusEl.textContent = breakdown || '--';
+        weightStatusEl.innerHTML = [
+            ['Overweight', weight.overweight || 0, 'over'],
+            ['Normal', weight.normal || 0, 'normal'],
+            ['Underweight', weight.underweight || 0, 'under'],
+        ].map(([label, value, tone]) => `
+            <span class="reports-weight-chip ${tone}">
+                <span>${label}</span>
+                <strong>${value}</strong>
+            </span>
+        `).join('');
     }
 }
 
@@ -293,6 +306,9 @@ function updateReportsPagination(cardKey, totalRows) {
 }
 
 function setupReportsPagination() {
+    if (reportsPaginationBound) return;
+    reportsPaginationBound = true;
+
     reportContent?.addEventListener('click', (event) => {
         // Previous button click
         const prevBtn = event.target.closest('[data-reports-prev]');
@@ -567,12 +583,18 @@ function setupExportModal() {
 
     if (!modal || !openBtn) return;
 
+    function resetSelectedExportFormat() {
+        [pdfBtn, csvBtn].forEach((button) => button?.classList.remove('active'));
+    }
+
     function closeModal() {
         modal.classList.remove('show');
+        resetSelectedExportFormat();
         document.body.style.overflow = '';
     }
 
     openBtn.addEventListener('click', () => {
+        resetSelectedExportFormat();
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
     });
@@ -587,15 +609,23 @@ function setupExportModal() {
 
     if (pdfBtn) {
         pdfBtn.addEventListener('click', () => {
-            generatePdfExport();
-            closeModal();
+            setSelectedExportFormat(pdfBtn, [csvBtn]);
+
+            setTimeout(() => {
+                generatePdfExport();
+                closeModal();
+            }, 140);
         });
     }
 
     if (csvBtn) {
         csvBtn.addEventListener('click', () => {
-            generateCsvExport();
-            closeModal();
+            setSelectedExportFormat(csvBtn, [pdfBtn]);
+
+            setTimeout(() => {
+                generateCsvExport();
+                closeModal();
+            }, 140);
         });
     }
 
@@ -610,6 +640,11 @@ function setupExportModal() {
             closeModal();
         }
     });
+}
+
+function setSelectedExportFormat(selectedButton, otherButtons = []) {
+    otherButtons.forEach((button) => button?.classList.remove('active'));
+    selectedButton?.classList.add('active');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

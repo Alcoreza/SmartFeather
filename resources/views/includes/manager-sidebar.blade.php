@@ -4,11 +4,25 @@
             <div class="sidebar-logo">
                 <img src="{{ asset('images/AppLogoSmartFeather.png') }}" alt="SmartFeather">
             </div>
+
+            <button type="button" class="sidebar-menu-toggle" data-sidebar-toggle aria-label="Open navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
 
         <div class="sidebar-divider"></div>
 
         <nav class="sidebar-nav">
+            <a href="{{ route('manager.profile') }}"
+                class="sidebar-link {{ request()->routeIs('manager.profile') ? 'active' : '' }}">
+                <span class="sidebar-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </span>
+                <span>Profile</span>
+            </a>
+
             <a href="{{ route('manager.dashboard') }}"
                 class="sidebar-link {{ request()->routeIs('manager.dashboard') ? 'active' : '' }}">
                 <span class="sidebar-icon" aria-hidden="true">
@@ -17,20 +31,12 @@
                 <span>Dashboard</span>
             </a>
 
-            <a href="{{ route('manager.houses') }}"
-                class="sidebar-link {{ request()->routeIs('manager.houses') ? 'active' : '' }}">
+            <a href="{{ route('manager.sensors') }}"
+                class="sidebar-link {{ request()->routeIs('manager.sensors') ? 'active' : '' }}">
                 <span class="sidebar-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-7h6v7"></path></svg>
+                    <svg viewBox="0 0 24 24"><path d="M12 20h.01"></path><path d="M8.5 16.5a5 5 0 0 1 7 0"></path><path d="M5 13a10 10 0 0 1 14 0"></path><path d="M2 9.5a15 15 0 0 1 20 0"></path></svg>
                 </span>
-                <span>Houses</span>
-            </a>
-
-            <a href="{{ route('manager.workers') }}"
-                class="sidebar-link {{ request()->routeIs('manager.workers') ? 'active' : '' }}">
-                <span class="sidebar-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                </span>
-                <span>Workers</span>
+                <span>Sensors</span>
             </a>
 
             <a href="{{ route('manager.tasks') }}"
@@ -49,12 +55,12 @@
                 <span>Inventory</span>
             </a>
 
-            <a href="{{ route('manager.sensors') }}"
-                class="sidebar-link {{ request()->routeIs('manager.sensors') ? 'active' : '' }}">
+            <a href="{{ route('manager.workers') }}"
+                class="sidebar-link {{ request()->routeIs('manager.workers') ? 'active' : '' }}">
                 <span class="sidebar-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M12 20h.01"></path><path d="M8.5 16.5a5 5 0 0 1 7 0"></path><path d="M5 13a10 10 0 0 1 14 0"></path><path d="M2 9.5a15 15 0 0 1 20 0"></path></svg>
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </span>
-                <span>Sensors</span>
+                <span>Workers</span>
             </a>
 
             <a href="{{ route('manager.biosecurity-logs') }}"
@@ -81,16 +87,16 @@
                 <span>Reports</span>
             </a>
 
-            <a href="{{ route('manager.profile') }}"
-                class="sidebar-link {{ request()->routeIs('manager.profile') ? 'active' : '' }}">
+            <a href="{{ route('manager.houses') }}"
+                class="sidebar-link {{ request()->routeIs('manager.houses') ? 'active' : '' }}">
                 <span class="sidebar-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-7h6v7"></path></svg>
                 </span>
-                <span>Profile</span>
+                <span>Farm Management</span>
             </a>
 
             <div class="sidebar-footer">
-                <a href="{{ route('logout') }}" class="sidebar-link sidebar-logout">
+                <a href="{{ route('logout') }}" class="sidebar-link sidebar-logout" data-logout-trigger>
                     <span class="sidebar-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
                     </span>

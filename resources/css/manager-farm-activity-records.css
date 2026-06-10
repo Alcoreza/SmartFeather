@@ -1,7 +1,181 @@
+.farm-records-page .reports-divider {
+    margin-bottom: 18px;
+}
+
 .farm-records-toolbar {
-    justify-content: flex-start;
+    display: flex;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.farm-records-filter-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: auto;
+    max-width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(87, 196, 81, 0.16);
+    border-radius: 12px;
+    background: #f5fbf5;
+    box-shadow: 0 4px 12px rgba(12, 35, 22, 0.035);
+}
+
+.farm-records-filter-card label {
+    color: #1b5e20;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.farm-records-filter-card .reports-filter-select {
+    width: 260px;
+    min-width: 180px;
+    height: 34px;
+    padding: 0 38px 0 12px;
+    border: 1px solid rgba(87, 196, 81, 0.24);
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 650;
+    outline: none;
+    box-shadow: none;
+    appearance: none;
+    cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 8px) calc(50% - 3px);
+    background-size:
+        12px 12px,
+        12px 12px;
+    background-repeat: no-repeat;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.farm-records-filter-card .reports-filter-select:focus {
+    border-color: rgba(87, 196, 81, 0.6);
+    background-color: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
+.farm-records-page #farmRecordContent {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.farm-record-card {
+    background: #ffffff;
+    border: 1px solid rgba(87, 196, 81, 0.12);
+    box-shadow: 0 6px 16px rgba(10, 24, 15, 0.035);
+}
+
+.farm-record-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(87, 196, 81, 0.1);
+}
+
+.farm-record-card-header h2 {
+    margin: 0;
+    color: #102016;
+    font-size: 1.16rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.farm-record-card-header p {
+    margin: 5px 0 0;
+    color: #607066;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+.farm-record-card-badges {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.farm-record-count {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid rgba(87, 196, 81, 0.12);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4e6257;
+    font-size: 0.85rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.farm-record-card-body {
+    min-height: 160px;
 }
 
 .farm-records-page .reports-table {
     min-width: 760px;
+}
+
+.farm-records-page .reports-table th {
+    color: #4f5f55;
+    background: #f2faf3;
+    border-bottom-color: rgba(87, 196, 81, 0.12);
+}
+
+.farm-records-page .reports-table td {
+    background: #ffffff;
+    border-bottom-color: rgba(87, 196, 81, 0.08);
+}
+
+.farm-records-page .reports-table tbody tr:hover td {
+    background: #f6fcf6;
+}
+
+.farm-records-page .reports-empty {
+    background: #ffffff;
+    border-color: rgba(87, 196, 81, 0.14);
+}
+
+@media (max-width: 768px) {
+    .farm-records-filter-card {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .farm-records-filter-card label {
+        white-space: normal;
+    }
+
+    .farm-records-filter-card .reports-filter-select {
+        width: 100%;
+    }
+
+    .farm-record-card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .farm-record-card-badges {
+        justify-content: flex-start;
+    }
+
+    .farm-record-count {
+        align-self: flex-start;
+    }
 }

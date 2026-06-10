@@ -46,8 +46,8 @@
                     </select>
                 </div>
 
-                <button type="submit" class="reports-filter-submit">Generate Report</button>
-                <button type="button" id="openExportModal" class="reports-export-btn" title="Export Report">💾 Export</button>
+                <button type="submit" class="reports-filter-submit">Generate</button>
+                <button type="button" id="openExportModal" class="reports-export-btn" title="Export Report">Export</button>
             </form>
 
             <div class="reports-summary-card">

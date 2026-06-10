@@ -12,8 +12,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const housePen = document.getElementById("housePen");
     const houseTemperature = document.getElementById("houseTemperature");
     const houseAmmonia = document.getElementById("houseAmmonia");
-    const temperatureGauge = houseTemperature?.closest(".semi-gauge");
-    const ammoniaGauge = houseAmmonia?.closest(".semi-gauge");
     const infoGrid = document.getElementById("infoGrid");
     const feedRow = document.getElementById("feedRow");
     const waterRow = document.getElementById("waterRow");
@@ -418,12 +416,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             .map(
                 (card) => `
             <article class="info-card card-animate">
-                <div class="info-icon ${card.accent}">
-                    <span>${card.icon}</span>
-                </div>
                 <div class="info-text">
-                    <div class="info-title">${card.title}</div>
-                    <div class="info-subtitle">${card.subtitle}</div>
+                    <div class="info-title">${card.label}</div>
+                    <div class="info-value">${card.value}</div>
+                    <div class="info-subtitle">${card.detail}</div>
                 </div>
             </article>
         `,
@@ -467,35 +463,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         return Number.isFinite(numberValue) ? numberValue : null;
     }
-
-    function getGaugeState(type, value) {
-        if (value === null) {
-            return "no-data";
-        }
-
-        if (type === "temperature") {
-            if (value >= 35) return "danger";
-            if (value >= 30) return "warning";
-            return "safe";
-        }
-
-        if (value >= 25) return "danger";
-        if (value >= 10) return "warning";
-        return "safe";
-    }
-
-    function updateGauge(gauge, type, value) {
-        if (!gauge) return;
-
-        const maxValue = type === "temperature" ? 40 : 40;
-        const safeValue = value ?? 0;
-        const degrees = Math.max(0, Math.min(180, (safeValue / maxValue) * 180));
-
-        gauge.style.setProperty("--gauge-value", `${degrees}deg`);
-        gauge.classList.remove("safe", "warning", "danger", "no-data");
-        gauge.classList.add(getGaugeState(type, value));
-    }
-
     function populatePenOptions(house) {
         if (!housePen) return;
 
@@ -558,29 +525,33 @@ document.addEventListener("DOMContentLoaded", async () => {
                             cards: [
                                 {
                                     icon: "🏠",
-                                    title: `Capacity: ${pen.capacity || 0}`,
-                                    subtitle: `Population: ${pen.population || 0}`,
+                                    label: "Pen Capacity",
+                                    value: pen.capacity || 0,
+                                    detail: `${pen.population || 0} birds currently placed`,
                                     accent: "red",
                                 },
                                 {
                                     icon: "📅",
-                                    title: "Start Date",
-                                    subtitle:
+                                    label: "Batch ID",
+                                    value: flockBatch?.batch_code || "No active batch",
+                                    detail:
                                         flockBatch?.started_at ||
                                         pen.batch_started_at ||
-                                        "Not set",
+                                        "Start date not set",
                                     accent: "blue",
                                 },
                                 {
                                     icon: "💚",
-                                    title: "Current Condition",
-                                    subtitle: "Normal",
+                                    label: "Batch Status",
+                                    value: pen.status || "Unknown",
+                                    detail: flockBatch?.status || "Inactive",
                                     accent: "green",
                                 },
                                 {
                                     icon: "📊",
-                                    title: `Eggs Hatched: ${pen.eggs_hatched || 0}`,
-                                    subtitle: `Mortality: ${pen.mortality || 0}`,
+                                    label: "Hatch & Mortality",
+                                    value: pen.eggs_hatched || 0,
+                                    detail: `${pen.mortality || 0} mortality recorded`,
                                     accent: "orange",
                                 },
                             ],
@@ -633,20 +604,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (feedRow) feedRow.innerHTML = "";
         if (waterRow) waterRow.innerHTML = "";
 
-        updateGauge(temperatureGauge, "temperature", null);
-        updateGauge(ammoniaGauge, "ammonia", null);
         updateHouseActionButtonState();
     }
 
     function animateStats() {
         const animatedElements = document.querySelectorAll(
-            ".env-card, .resource-section, #houseStatus, #houseBatch, #housePen, #houseTemperature, #houseAmmonia, .info-card, .resource-item",
+            ".env-card, .resource-section, #houseStatus, #houseBatch, #houseTemperature, #houseAmmonia, .info-card, .resource-item",
         );
 
         animatedElements.forEach((element, index) => {
             element.classList.remove("show-stat", "show-card");
             void element.offsetWidth;
-            element.style.animationDelay = `${index * 0.07}s`;
+            element.style.animationDelay = `${index * 0.035}s`;
 
             if (
                 element.classList.contains("env-card") ||
@@ -670,8 +639,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
         if (houseTemperature) houseTemperature.textContent = pen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
-        updateGauge(temperatureGauge, "temperature", pen.temperatureValue);
-        updateGauge(ammoniaGauge, "ammonia", pen.ammoniaValue);
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
         if (feedRow) feedRow.innerHTML = buildResourceRow(pen.feeders, "feed");
@@ -731,7 +698,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 (house, index) => `
             <button
                 type="button"
-                class="house-tab ${index === activeHouseIndex ? "active" : " No Batch"}"
+                class="house-tab ${index === activeHouseIndex ? "active" : ""}"
                 data-house-index="${index}"
             >
                 ${house.name}

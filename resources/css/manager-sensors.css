@@ -44,44 +44,53 @@
 }
 
 .manager-sensor-section {
-    padding: 18px 18px 16px;
-    border-radius: 30px;
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.95),
-        rgba(248, 249, 247, 0.98)
-    );
-    box-shadow: var(--manager-shadow-soft);
-    border: 1px solid rgba(10, 51, 27, 0.06);
+    padding: 16px 18px 18px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 2px 8px rgba(10, 24, 15, 0.035);
+    border: 1px solid rgba(16, 32, 22, 0.09);
+    --sensor-section-accent: #17643a;
+    --sensor-section-tint: #f3f8f2;
+    --sensor-section-text: #17452d;
     opacity: 0;
     transform: translateY(18px);
     transition:
-        transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-        border-color 0.42s ease,
-        background 0.42s ease;
-    will-change: transform, box-shadow;
+        opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
 }
 
-.manager-sensor-section:hover {
-    transform: translateY(-4px);
-    box-shadow:
-        0 28px 52px rgba(10, 24, 15, 0.11),
-        0 8px 18px rgba(97, 208, 95, 0.05);
-    border-color: rgba(29, 106, 55, 0.12);
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.98),
-        rgba(249, 251, 248, 1)
-    );
+.manager-sensor-section:nth-child(2n) {
+    --sensor-section-accent: #628141;
+    --sensor-section-tint: #f6f8ef;
+    --sensor-section-text: #3f5a2c;
+}
+
+.manager-sensor-section:nth-child(3n) {
+    --sensor-section-accent: #1d5d63;
+    --sensor-section-tint: #f1f8f7;
+    --sensor-section-text: #1d5d63;
+}
+
+.manager-sensor-section:nth-child(4n) {
+    --sensor-section-accent: #8a6a2f;
+    --sensor-section-tint: #faf6ed;
+    --sensor-section-text: #614719;
 }
 
 .manager-sensor-section-head {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
     align-items: center;
-    gap: 14px;
-    margin-bottom: 12px;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 8px 0 12px;
+    border: 0;
+    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    flex-wrap: wrap;
 }
 
 .manager-sensor-section-main {
@@ -92,10 +101,17 @@
 }
 
 .manager-sensor-section-title {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 6px 12px;
+    border: 1px solid rgba(16, 32, 22, 0.08);
+    border-radius: 8px;
+    background: var(--sensor-section-tint, #f3f8f2);
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.02rem;
     font-weight: 800;
-    color: var(--manager-text-main);
+    color: var(--sensor-section-text, #102016);
 }
 
 .manager-sensor-tools {
@@ -108,17 +124,21 @@
 }
 
 .manager-sensor-filter {
-    min-width: 180px;
-    padding: 10px 40px 10px 14px;
-    border: 1.5px solid rgba(10, 51, 27, 0.16);
-    border-radius: 999px;
-    background: linear-gradient(180deg, #ffffff, #f8faf8);
-    color: var(--manager-green-900);
+    min-width: 190px;
+    height: 40px;
+    padding: 0 40px 0 14px;
+    border: 1.5px solid rgba(16, 32, 22, 0.12);
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: var(--sensor-section-text, #17452d);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
     appearance: none;
     outline: none;
     background-image:
-        linear-gradient(45deg, transparent 50%, currentColor 50%),
-        linear-gradient(135deg, currentColor 50%, transparent 50%);
+        linear-gradient(45deg, transparent 50%, var(--sensor-section-text, #17643a) 50%),
+        linear-gradient(135deg, var(--sensor-section-text, #17643a) 50%, transparent 50%);
     background-position:
         calc(100% - 21px) calc(50% - 3px),
         calc(100% - 13px) calc(50% - 3px);
@@ -142,24 +162,24 @@
 }
 
 .manager-sensor-threshold-btn {
-    width: 38px;
-    height: 38px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(10, 51, 27, 0.08);
-    color: var(--manager-green-900);
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(16, 32, 22, 0.12);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--sensor-section-text, #17452d);
     display: grid;
     place-items: center;
     cursor: pointer;
 }
 
 .manager-sensor-view-btn {
-    width: 40px;
-    height: 40px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(10, 51, 27, 0.08);
-    color: var(--manager-green-900);
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(16, 32, 22, 0.1);
+    border-radius: 8px;
+    background: var(--sensor-section-tint, #f8fbf8);
+    color: var(--sensor-section-text, #17452d);
     display: grid;
     place-items: center;
     cursor: pointer;
@@ -187,20 +207,21 @@
 }
 
 .manager-sensor-filter:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        0 12px 24px rgba(10, 24, 15, 0.08),
-        0 0 0 5px rgba(97, 208, 95, 0.05);
-    border-color: rgba(29, 106, 55, 0.22);
+    background-color: #ffffff;
+    border-color: rgba(23, 100, 58, 0.28);
+    box-shadow: none;
 }
 
-.manager-sensor-threshold-btn:hover,
+.manager-sensor-threshold-btn:hover {
+    box-shadow: none;
+    background: var(--sensor-section-tint, #f8fbf8);
+    border-color: rgba(23, 100, 58, 0.24);
+}
+
 .manager-sensor-view-btn:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow:
-        0 12px 22px rgba(10, 24, 15, 0.1),
-        0 0 0 5px rgba(29, 106, 55, 0.06);
-    background: rgba(10, 51, 27, 0.12);
+    box-shadow: none;
+    background: var(--sensor-section-tint, #eef8ef);
+    border-color: rgba(23, 100, 58, 0.22);
 }
 
 .manager-sensor-maintenance-btn:hover {
@@ -213,62 +234,67 @@
 
 .manager-sensor-table-wrap {
     overflow-x: auto;
-    border-radius: 22px;
+    overflow-y: hidden;
+    border-radius: 0;
 }
 
 .manager-sensor-table {
     width: 100%;
     min-width: 680px;
-    border-collapse: separate;
-    border-spacing: 0 12px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
 }
 
 .manager-sensor-table th {
-    padding: 0 14px 10px;
-    text-align: left;
-    font-size: 0.8rem;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.88rem;
     font-weight: 800;
-    color: var(--manager-green-700);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    color: #4f5f55;
+    line-height: 1.1;
+    background: var(--sensor-section-tint, #f6f8f5);
+    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
 }
 
 .manager-sensor-table td {
-    padding: 14px;
-    background: linear-gradient(180deg, #ffffff, #f7f9f7);
-    color: var(--manager-text-main);
-    font-size: 0.95rem;
-    box-shadow: none;
-    transition:
-        background 0.46s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.46s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.46s cubic-bezier(0.16, 1, 0.3, 1),
-        color 0.3s ease;
-    will-change: transform, background;
+    height: 54px;
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle;
+    background: #ffffff;
+    color: #102016;
+    font-size: 0.94rem;
+    font-weight: 550;
+    line-height: 1.15;
+    border-bottom: 1px solid rgba(16, 32, 22, 0.055);
+    transition: background 0.2s ease;
 }
 
 .manager-sensor-table td:first-child {
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
+    text-align: left;
+    padding-left: 16px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .manager-sensor-table td:last-child {
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
+    text-align: center;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.manager-sensor-table td:last-child .manager-sensor-view-btn {
+    margin: 0 auto;
 }
 
 .manager-sensor-table tbody tr {
-    transition:
-        transform 0.46s cubic-bezier(0.16, 1, 0.3, 1),
-        filter 0.46s cubic-bezier(0.16, 1, 0.3, 1);
-    filter: drop-shadow(0 0 0 rgba(10, 24, 15, 0));
     opacity: 0;
     transform: translateY(10px);
 }
 
-.manager-sensor-table tbody tr:hover {
-    transform: translateY(-2px);
-    filter: drop-shadow(0 16px 26px rgba(10, 24, 15, 0.08));
+.manager-sensor-table tbody tr:hover td {
+    background: var(--sensor-section-tint, #f8fbf8);
 }
 
 .manager-sensor-empty {
@@ -389,26 +415,28 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 128px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 0.86rem;
-    font-weight: 700;
+    min-width: 104px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    font-weight: 800;
     line-height: 1;
 }
 
 .manager-sensor-status-pill.active {
-    background: rgba(44, 135, 72, 0.12);
-    color: #1f6f2b;
+    background: #ffffff;
+    color: #17643a;
+    border: 1px solid rgba(23, 100, 58, 0.18);
 }
 
 .manager-sensor-status-pill.maintenance {
-    background: rgba(198, 54, 54, 0.14);
-    color: #a12727;
+    background: #fff7ed;
+    color: #8a3f28;
+    border: 1px solid rgba(138, 63, 40, 0.18);
 }
 
 .manager-sensor-row-maintenance td {
-    background: linear-gradient(180deg, #fff5f5, #fdecec);
+    background: #fffcf7;
 }
 
 .manager-sensor-status-filter {
@@ -446,17 +474,13 @@
 }
 
 .manager-sensor-table tbody tr:not(.manager-sensor-row-maintenance):hover td {
-    background: linear-gradient(180deg, #ffffff, #fcfdfb);
-    box-shadow:
-        0 14px 24px rgba(10, 24, 15, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    background: #f8fbf8;
+    box-shadow: none;
 }
 
 .manager-sensor-row-maintenance:hover td {
-    background: linear-gradient(180deg, #fff1f1, #fbe3e3);
-    box-shadow:
-        0 14px 24px rgba(120, 40, 40, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    background: #fff7ed;
+    box-shadow: none;
 }
 
 @keyframes managerSensorFade {
@@ -481,11 +505,11 @@
 
 @media (max-width: 992px) {
     .manager-sensor-section-head {
-        grid-template-columns: 1fr;
+        align-items: stretch;
     }
 
     .manager-sensor-tools {
-        justify-self: start;
+        justify-content: flex-start;
     }
 }
 
@@ -505,7 +529,7 @@
 
     .manager-sensor-section {
         padding: 16px;
-        border-radius: 24px;
+        border-radius: 8px;
     }
 
     .manager-sensor-filter {

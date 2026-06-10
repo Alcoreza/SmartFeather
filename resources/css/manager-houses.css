@@ -69,14 +69,12 @@
 }
 
 .add-house-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgba(184, 239, 189, 0.18);
-    border-radius: 8px;
-    background: #063320;
-    color: #ffffff;
-    font-size: 1.35rem;
-    line-height: 1;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(23, 100, 58, 0.24);
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1b5e20;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -85,9 +83,10 @@
     overflow: hidden;
     box-shadow: 0 8px 16px rgba(6, 51, 32, 0.12);
     transition:
-        transform 0.18s ease,
+        transform 0.2s ease,
         box-shadow 0.2s ease,
-        background 0.2s ease;
+        background-color 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .add-house-btn::before {
@@ -109,6 +108,13 @@
 
 .add-house-btn:hover::before {
     transform: translateX(120%);
+}
+
+.add-house-btn svg {
+    width: 21px;
+    height: 21px;
+    position: relative;
+    z-index: 1;
 }
 
 .houses-divider {
@@ -1219,7 +1225,6 @@
 }
 
 .house-tab.active,
-.add-house-btn,
 .btn-file {
     background: linear-gradient(180deg, var(--manager-green-800), var(--manager-green-900));
     border-color: transparent;
@@ -1227,7 +1232,7 @@
 }
 
 .add-house-btn {
-    border-radius: 50%;
+    border-radius: 12px;
 }
 
 .houses-divider {

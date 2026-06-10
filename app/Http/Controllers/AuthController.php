@@ -34,15 +34,22 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Store user data in session
+        $request->session()->regenerate(); // Prevent session fixation attacks
+        
         session([
             'user_id' => $user->EmployeeId,
+            'user_name' => $user->Username,
             'role' => $user->Role,
+            'email' => $user->Email ?? null,
+            'logged_in_at' => now(),
         ]);
 
         return response()->json([
             'message' => 'Login successful',
             'user' => [
                 'EmployeeId' => $user->EmployeeId,
+                'Username' => $user->Username,
                 'Role' => $user->Role
             ]
         ]);
@@ -50,9 +57,15 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->invalidate();
+        // Completely destroy the session
+        $request->session()->flush();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Redirect to login with cache control headers
+        return redirect('/')
+            ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT')
+            ->with('message', 'Logged out successfully');
     }
 }

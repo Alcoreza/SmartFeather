@@ -79,9 +79,11 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         }
 
         if (data.user.Role === 'Admin') {
-            window.location.href = '/admin/dashboard';
+            // Use replace() instead of href to replace history entry
+            window.location.replace('/admin/dashboard');
         } else if (data.user.Role === 'Manager') {
-            window.location.href = '/manager/dashboard';
+            // Use replace() instead of href to replace history entry
+            window.location.replace('/manager/dashboard');
         } else {
             showLoginError('Unauthorized role.');
             setLoginLoading(false);

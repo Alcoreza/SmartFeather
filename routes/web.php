@@ -14,6 +14,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\FarmActivityController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ManagerDashboardController;
+use App\Http\Controllers\LoginController;
 
 
 Route::post('/api/login', [AuthController::class, 'login']);
@@ -27,7 +28,7 @@ Route::get('/api/user', [ProfileController::class, 'getCurrentUser']);
 |--------------------------------------------------------------------------
 */
 
-Route::view('/', 'auth.login')->name('login');
+Route::get('/', [LoginController::class, 'show'])->name('login');
 
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -37,30 +38,32 @@ Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 |--------------------------------------------------------------------------
 */
 
-Route::get('/manager/dashboard', [ManagerDashboardController::class, 'index'])->name('manager.dashboard');
-Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
-Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
+Route::middleware(['web', 'auth.session', 'check.role:Manager', 'prevent.cache'])->group(function () {
+    Route::get('/manager/dashboard', [ManagerDashboardController::class, 'index'])->name('manager.dashboard');
+    Route::view('/manager/workers', 'manager.workers')->name('manager.workers');
+    Route::view('/manager/houses', 'manager.houses')->name('manager.houses');
 
-Route::view('/manager/houses/records', 'manager.record-house')
-    ->name('manager.houses.record-house');
+    Route::view('/manager/houses/records', 'manager.record-house')
+        ->name('manager.houses.record-house');
 
-Route::get('/manager/inventory', [InventoryController::class, 'managerIndex'])
-    ->name('manager.inventory');
+    Route::get('/manager/inventory', [InventoryController::class, 'managerIndex'])
+        ->name('manager.inventory');
 
-Route::view('/manager/inventory/records', 'manager.record-inventory')
+    Route::view('/manager/inventory/records', 'manager.record-inventory')
     ->name('manager.inventory.records');
 
-Route::view('/manager/inventory/records/feed', 'manager.record-inventory-feed')
-    ->name('manager.inventory.records.feed');
+    Route::view('/manager/inventory/records/feed', 'manager.record-inventory-feed')
+        ->name('manager.inventory.records.feed');
 
-Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
-    ->name('manager.inventory.records.vitamins');
+    Route::view('/manager/inventory/records/vitamins', 'manager.record-inventory')
+        ->name('manager.inventory.records.vitamins');
 
-Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
-Route::view('/manager/management', 'manager.management')->name('manager.management');
-Route::view('/manager/farm-activity-records', 'manager.farm-activity-records')->name('manager.farm-activity-records');
-Route::get('/manager/profile', [ProfileController::class, 'managerProfile'])->name('manager.profile');
-Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::view('/manager/tasks', 'manager.tasks')->name('manager.tasks');
+    Route::view('/manager/management', 'manager.management')->name('manager.management');
+    Route::view('/manager/farm-activity-records', 'manager.farm-activity-records')->name('manager.farm-activity-records');
+    Route::get('/manager/profile', [ProfileController::class, 'managerProfile'])->name('manager.profile');
+    Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -68,13 +71,15 @@ Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('pro
 |--------------------------------------------------------------------------
 */
 
-Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
-Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
-Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
-Route::get('/admin/profile', [ProfileController::class, 'adminProfile'])->name('admin.profile');
+Route::middleware(['web', 'auth.session', 'check.role:Admin', 'prevent.cache'])->group(function () {
+    Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+    Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
+    Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
+    Route::get('/admin/profile', [ProfileController::class, 'adminProfile'])->name('admin.profile');
 
-Route::view('/admin/houses/records', 'admin.record-house')
-    ->name('admin.houses.record-house');
+    Route::view('/admin/houses/records', 'admin.record-house')
+        ->name('admin.houses.record-house');
+});
 
 /*
 |--------------------------------------------------------------------------

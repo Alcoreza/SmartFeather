@@ -10,11 +10,6 @@ class SensorAlertService
 {
     private int $cooldownMinutes = 15;
 
-    public function __construct(
-        private FirebaseCloudMessagingService $firebase
-    ) {
-    }
-
     public function checkAndSendAlerts(): array
     {
         $latestReadings = DB::table('sensor_readings as sr')
@@ -43,21 +38,21 @@ class SensorAlertService
             ->get();
 
         $checked = 0;
-        $sent = 0;
+        $queued = 0;
         $skipped = 0;
         $failed = 0;
 
         foreach ($latestReadings as $reading) {
             $result = $this->processReading($reading);
             $checked += $result['checked'];
-            $sent += $result['sent'];
+            $queued += $result['queued'];
             $skipped += $result['skipped'];
             $failed += $result['failed'];
         }
 
         return [
             'checked' => $checked,
-            'sent' => $sent,
+            'queued' => $queued,
             'skipped' => $skipped,
             'failed' => $failed,
         ];
@@ -84,7 +79,7 @@ class SensorAlertService
         if (!$reading) {
             return [
                 'checked' => 0,
-                'sent' => 0,
+                'queued' => 0,
                 'skipped' => 1,
                 'failed' => 0,
                 'reason' => 'Reading not found, inactive sensor, or unsupported sensor type.',
@@ -101,7 +96,7 @@ class SensorAlertService
         if (!$alert) {
             return [
                 'checked' => 1,
-                'sent' => 0,
+                'queued' => 0,
                 'skipped' => 1,
                 'failed' => 0,
                 'reason' => 'Reading is within threshold.',
@@ -111,7 +106,7 @@ class SensorAlertService
         if ($this->recentAlertExists((int) $reading->sensorid, $alert['alert_type'])) {
             return [
                 'checked' => 1,
-                'sent' => 0,
+                'queued' => 0,
                 'skipped' => 1,
                 'failed' => 0,
                 'reason' => 'Cooldown active.',
@@ -125,46 +120,59 @@ class SensorAlertService
 
             return [
                 'checked' => 1,
-                'sent' => 0,
+                'queued' => 0,
                 'skipped' => 1,
                 'failed' => 0,
                 'reason' => 'No active flockman tokens.',
             ];
         }
 
-        $sent = 0;
+        $queued = 0;
         $failed = 0;
 
         foreach ($tokens as $tokenRow) {
-            $success = $this->firebase->sendToToken(
-                token: $tokenRow->fcm_token,
-                title: $alert['title'],
-                body: $alert['message'],
-                data: [
-                    'type' => 'sensor_alert',
-                    'sensor_id' => (string) $reading->sensorid,
-                    'sensor_type' => (string) $reading->sensortype,
-                    'reading_id' => (string) $reading->reading_id,
-                    'alert_type' => $alert['alert_type'],
-                    'house_id' => (string) ($reading->house_houseid ?? ''),
-                    'pen_id' => (string) ($reading->pen_penid ?? ''),
-                ]
-            );
+            try {
+                DB::table('notification_queue')->insert([
+                    'queue_type' => 'sensor_alert',
+                    'title' => $alert['title'],
+                    'body' => $alert['message'],
+                    'data' => json_encode([
+                        'type' => 'sensor_alert',
+                        'sensor_id' => (string) $reading->sensorid,
+                        'sensor_type' => (string) $reading->sensortype,
+                        'reading_id' => (string) $reading->reading_id,
+                        'alert_type' => $alert['alert_type'],
+                        'house_id' => (string) ($reading->house_houseid ?? ''),
+                        'pen_id' => (string) ($reading->pen_penid ?? ''),
+                    ]),
+                    'channel_id' => 'sensor_alerts',
+                    'fcm_token' => $tokenRow->fcm_token,
+                    'employee_id' => $tokenRow->employee_id,
+                    'status' => 'pending',
+                    'available_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-            if ($success) {
                 $this->logAlert($reading, $alert, (int) $tokenRow->employee_id);
-                $sent++;
-            } else {
+                $queued++;
+            } catch (\Throwable $exception) {
+                Log::error('Failed to queue sensor notification', [
+                    'message' => $exception->getMessage(),
+                    'sensor_id' => $reading->sensorid,
+                    'employee_id' => $tokenRow->employee_id,
+                ]);
+
                 $failed++;
             }
         }
 
         return [
             'checked' => 1,
-            'sent' => $sent,
+            'queued' => $queued,
             'skipped' => 0,
             'failed' => $failed,
-            'reason' => 'Alert processed.',
+            'reason' => 'Alert queued.',
         ];
     }
 
@@ -188,11 +196,7 @@ class SensorAlertService
 
     private function resolveAlert($reading): ?array
     {
-        $value = $this->comparisonValue(
-            (string) $reading->sensortype,
-            $reading->value
-        );
-
+        $value = $this->comparisonValue((string) $reading->sensortype, $reading->value);
         $lowest = $reading->lowestthreshold;
         $highest = $reading->highestthreshold;
 
@@ -250,19 +254,15 @@ class SensorAlertService
             'Temperature Sensor' => $alertType === 'above_threshold'
             ? 'Inspect ventilation, fan operation, and nearby heat sources.'
             : 'Check heater operation, openings, and possible cold air sources.',
-
             'Ammonia Sensor' => $alertType === 'above_threshold'
             ? 'Assess ventilation, litter condition, and waste buildup.'
             : 'Verify that ventilation is balanced and operating properly.',
-
             'Feed Sensor' => $alertType === 'below_threshold'
             ? 'Check feeder supply and possible blockage.'
             : 'Evaluate feeder level and adjust if needed.',
-
             'Water Sensor' => $alertType === 'below_threshold'
             ? 'Examine water supply, drinker lines, and possible blockage.'
             : 'Monitor water level and adjust if needed.',
-
             default => 'Inspect the affected area when available.',
         };
     }

@@ -18,6 +18,7 @@ use App\Http\Controllers\MobileSensorInspectionController;
 use App\Http\Controllers\MobileDeviceTokenController;
 use App\Http\Controllers\SensorAlertWebhookController;
 use App\Http\Controllers\TaskOverdueWebhookController;
+use App\Http\Controllers\NotificationQueueController;
 
 
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
@@ -85,8 +86,11 @@ Route::post('/mobile/sensor-inspection', [MobileSensorInspectionController::clas
 Route::post('/mobile/device-token', [MobileDeviceTokenController::class, 'store']);
 
 Route::post('/sensor-alerts/check-latest', [SensorAlertWebhookController::class, 'checkLatest']);
+Route::post('/notification-queue/process-one', [NotificationQueueController::class, 'processOne']);
 
 Route::post('/task-alerts/check-overdue', [TaskOverdueWebhookController::class, 'checkOverdue']);
+
+
 
 
 

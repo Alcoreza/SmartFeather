@@ -40,51 +40,34 @@
         <form class="manager-task-form-body" id="addTaskForm">
             <div class="manager-task-form-error" id="addTaskFormError" role="alert" aria-live="polite"></div>
 
-            <div class="manager-task-form-field full">
-                <label for="taskWorkerName">Assign Flockman*</label>
-                <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>
-            </div>
-
-            <div class="manager-task-form-grid">
-                <div class="manager-task-form-field">
-                    <label for="taskCategory">Task*</label>
-                    <select id="taskCategory" name="task_category" class="task-select-placeholder"></select>
-                </div>
-
-                <div class="manager-task-form-field">
-                    <label for="taskPriority">Priority Level*</label>
-                    <select id="taskPriority" name="priority_level" class="task-select-placeholder"></select>
-                </div>
-
-                <div class="manager-task-form-field">
-                    <label for="taskHouseNumber">House Number*</label>
-                    <select id="taskHouseNumber" name="house_number" class="task-select-placeholder"></select>
-                </div>
-
-                <div class="manager-task-form-field">
-                    <label for="taskPenNumber">Pen Number*</label>
-                    <select id="taskPenNumber" name="pen_number" class="task-select-placeholder"></select>
-                </div>
-
-
-                <div class="manager-task-form-field">
-                    <label for="taskTimeAssigned">Time to finish*</label>
-                    <input type="time" id="taskTimeAssigned" name="time_assigned">
-                </div>
-
-                <div class="manager-task-form-field">
-                    <label for="taskDateAssigned">Date to finish*</label>
-                    <input type="date" id="taskDateAssigned" name="date_assigned">
+            <!-- Worker Selection Section -->
+            <div class="manager-task-form-section">
+                <h3 class="manager-task-form-section-title">Select Flockman</h3>
+                <div class="manager-task-form-field full">
+                    <label for="taskWorkerName">Assign Flockman*</label>
+                    <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>
                 </div>
             </div>
 
-            <div class="manager-task-form-field full">
-                <label for="taskDetailedDescription">Detailed Task</label>
-                <textarea id="taskDetailedDescription" name="detailed_task" rows="5"
-                    placeholder="Write a clear and specific task instruction here. Include what needs to be checked, where it should be done, and any expected outcome or notes the worker should follow."></textarea>
+            <!-- Tasks Section -->
+            <div class="manager-task-form-section">
+                <div class="manager-task-tasks-header">
+                    <h3 class="manager-task-form-section-title">Tasks</h3>
+                    <span class="manager-task-count-badge" id="taskCountBadge">0</span>
+                </div>
+                
+                <div id="tasksContainer" class="manager-task-rows-container">
+                    <!-- Task rows will be dynamically added here -->
+                </div>
+
+                <button type="button" class="manager-task-add-btn" id="addTaskRowBtn">
+                    <span class="manager-task-add-btn-icon">+</span>
+                    Add Another Task
+                </button>
             </div>
 
-            <div class="manager-task-confirm-actions">
+            <!-- Actions Section -->
+            <div class="manager-task-form-actions">
                 <button type="button" class="manager-task-btn cancel"
                     data-close-task-modal="addTaskModal">Cancel</button>
                 <button type="submit" class="manager-task-btn confirm">Save</button>

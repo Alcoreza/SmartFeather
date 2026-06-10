@@ -387,14 +387,26 @@ class HouseController extends Controller
     }
 
     /**
-     * Get all pens for records display
+     * Get all pens for records display - returns only latest recording per pen
      */
     public function getPenRecords()
     {
         try {
             $houses = DB::table('house as h')
                 ->leftJoin('pen as p', 'p.house_id', '=', 'h.id')
-                ->leftJoin('population_record as pr', 'pr.pen_id', '=', 'p.id')
+                ->leftJoinSub(
+                    DB::table('population_record')
+                        ->selectRaw('pen_id, MAX(recorded_at) as recorded_at')
+                        ->groupBy('pen_id'),
+                    'latest_pr',
+                    function ($join) {
+                        $join->on('p.id', '=', 'latest_pr.pen_id');
+                    }
+                )
+                ->leftJoin('population_record as pr', function ($join) {
+                    $join->on('pr.pen_id', '=', 'p.id')
+                         ->on('pr.recorded_at', '=', 'latest_pr.recorded_at');
+                })
                 ->whereNull('h.archived_at')
                 ->where(function ($query) {
                     $query->whereNull('p.id')

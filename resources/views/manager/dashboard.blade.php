@@ -5,13 +5,15 @@
 @push('styles')
     @vite([
         'resources/css/manager-shared.css',
-        'resources/css/manager-dashboard.css'
+        'resources/css/manager-dashboard.css',
+        'resources/css/manager-decision-support.css'
     ])
 @endpush
 
 
 @push('scripts')
     @vite('resources/js/manager-dashboard.js')
+    @vite('resources/js/manager-decision-support.js')
 @endpush
 
 @section('content')
@@ -132,31 +134,7 @@
 
 
 
-                <article class="dashboard-card decision-card">
-                    <div class="decision-header">
-                        <h2>Decision Support</h2>
-
-                        <select class="decision-select">
-                            <option>Mortality</option>
-                            <option>Temperature</option>
-                            <option>Water</option>
-                        </select>
-                    </div>
-
-                    <div class="decision-content">
-                        <div class="decision-stars">
-                            <span class="star star-lg"></span>
-                            <span class="star star-md"></span>
-                            <span class="star star-sm"></span>
-                        </div>
-
-                        <p>
-                            Mortality count has increased beyond the normal daily range.
-                            Conduct flock inspection, review environmental conditions,
-                            and verify feed and water availability to identify possible causes.
-                        </p>
-                    </div>
-                </article>
+                @include('includes.manager-decision-support-card')
             </section>
         </main>
     </div>

@@ -117,6 +117,24 @@ Route::get('/api/manager/dashboard/realtime', function () {
     ]);
 });
 
+Route::get('/api/manager/dashboard/decision-support', function () {
+    $service = new \App\Services\DecisionSupportService();
+    $recommendations = $service->getAllActiveRecommendations();
+    
+    return response()->json([
+        'recommendations' => $recommendations->map(function ($rec) {
+            return [
+                'id' => $rec->id,
+                'house_id' => $rec->house_id,
+                'house_name' => $rec->house?->house_number ?? "House {$rec->house_id}",
+                'text' => $rec->recommendation_text,
+                'generated_at' => $rec->generated_at->toIso8601String(),
+                'expires_at' => $rec->expires_at?->toIso8601String(),
+            ];
+        })->toArray(),
+    ]);
+});
+
 Route::get('/api/manager/workers', function () {
     return response()->json([
         [

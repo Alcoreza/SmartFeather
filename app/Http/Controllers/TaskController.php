@@ -201,9 +201,14 @@ class TaskController extends Controller
             ->orderBy('id', 'asc')
             ->get(['id', 'pen_name'])
             ->map(function (Pen $pen) {
+                // Check if pen has a running batch
+                $hasRunningBatch = $pen->runningBatch()->exists();
+                
                 return [
                     'number' => $pen->id,
                     'label' => $pen->pen_name,
+                    'disabled' => !$hasRunningBatch,
+                    'disabledReason' => !$hasRunningBatch ? 'no running batch' : null,
                 ];
             });
 

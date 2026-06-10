@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('sensor-alerts:check')->everyMinute();
+Schedule::command('decision-support:generate')->hourly();

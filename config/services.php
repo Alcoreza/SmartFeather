@@ -42,5 +42,9 @@ return [
         'visitor_photos_bucket' => env('SUPABASE_VISITOR_PHOTOS_BUCKET', 'visitor-photos'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+    ],
 
 ];

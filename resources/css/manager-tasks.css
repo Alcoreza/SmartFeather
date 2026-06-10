@@ -95,8 +95,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 14px;
+    padding: 10px 18px;
+    border: 1px solid rgba(87, 196, 81, 0.22);
+    border-radius: 18px;
+    background: #eef8ef;
+    box-shadow: 0 6px 16px rgba(12, 35, 22, 0.055);
     flex-wrap: wrap;
 }
 
@@ -109,17 +114,117 @@ body {
     margin-left: auto;
 }
 
-.manager-task-filter-row {
+.manager-task-status-buttons {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.manager-task-status-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px 20px;
+    border: 1.5px solid rgba(23, 100, 58, 0.12);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0d4a2d;
+    font-family: inherit;
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(6, 51, 32, 0.08);
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.manager-task-status-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.manager-task-status-btn[data-task-status="pending"] {
+    color: #3f5a2c;
+}
+
+.manager-task-status-btn[data-task-status="for_approval"] {
+    color: #614719;
+}
+
+.manager-task-status-btn[data-task-status="completed"] {
+    color: #0d4a2d;
+}
+
+.manager-task-status-btn:not(.is-selected) {
+    background: #ffffff !important;
+    background-image: none !important;
+    box-shadow: 0 8px 18px rgba(6, 51, 32, 0.08) !important;
+}
+
+.manager-task-status-btn[data-task-status="pending"]:not(.is-selected) {
+    color: #3f5a2c !important;
+}
+
+.manager-task-status-btn[data-task-status="for_approval"]:not(.is-selected) {
+    color: #614719 !important;
+}
+
+.manager-task-status-btn[data-task-status="completed"]:not(.is-selected) {
+    color: #0d4a2d !important;
+}
+
+.manager-task-status-btn:not(.is-selected):hover {
+    transform: translateY(-1px);
+    background: #ffffff !important;
+    background-image: none !important;
+    border-color: rgba(87, 196, 81, 0.26);
+    box-shadow: 0 10px 22px rgba(6, 51, 32, 0.12);
+}
+
+.manager-task-status-btn.is-selected,
+.manager-task-status-btn.is-selected:hover {
+    color: #ffffff !important;
+    box-shadow:
+        0 12px 24px rgba(6, 51, 32, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.manager-task-status-btn[data-task-status="pending"].is-selected {
+    background: linear-gradient(180deg, #8bae66 0%, #628141 100%) !important;
+    border-color: rgba(98, 129, 65, 0.55);
+}
+
+.manager-task-status-btn[data-task-status="for_approval"].is-selected {
+    background: linear-gradient(180deg, #c8ad74 0%, #8a6a2f 100%) !important;
+    border-color: rgba(138, 106, 47, 0.5);
+}
+
+.manager-task-status-btn[data-task-status="completed"].is-selected {
+    background: linear-gradient(180deg, #17643a 0%, #0d4a2d 100%) !important;
+    border-color: rgba(23, 100, 58, 0.46);
+}
+
+.manager-task-filter-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: nowrap;
 }
 
 .manager-task-filter-label {
-    font-size: 0.9rem;
+    color: #1b5e20;
+    font-size: 0.82rem;
     font-weight: 800;
-    color: #10351d;
+    line-height: 1;
 }
 
 .manager-task-filter-wrap {
@@ -127,33 +232,43 @@ body {
 }
 
 .manager-task-filter-select {
-    min-width: 180px;
+    min-width: 220px;
     width: auto;
-    height: 48px;
-    padding: 0 18px;
-    border: 2px solid var(--manager-green-700);
-    border-radius: 999px;
-    background: #fff;
-    color: var(--manager-green-900);
-    font: inherit;
-    font-size: 1rem;
+    height: 42px;
+    padding: 0 40px 0 14px;
+    border: 1.5px solid rgba(23, 100, 58, 0.24);
+    border-radius: 12px;
+    background-color: #ffffff;
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
     outline: none;
-    box-shadow: var(--manager-shadow-soft);
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
     appearance: none;
     cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
+    background-position:
+        calc(100% - 20px) calc(50% - 3px),
+        calc(100% - 10px) calc(50% - 3px);
+    background-size:
+        10px 10px,
+        10px 10px;
+    background-repeat: no-repeat;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.manager-task-filter-wrap::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 16px;
-    width: 9px;
-    height: 9px;
-    border-right: 2px solid var(--manager-green-900);
-    border-bottom: 2px solid var(--manager-green-900);
-    transform: translateY(-65%) rotate(45deg);
-    pointer-events: none;
+.manager-task-filter-select:hover {
+    background-color: #f9fff9;
+    border-color: rgba(87, 196, 81, 0.38);
+}
+
+.manager-task-filter-select:focus {
+    border-color: rgba(87, 196, 81, 0.6);
+    background-color: #ffffff;
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
 }
 
 .manager-task-filter-select option {
@@ -164,51 +279,58 @@ body {
 .manager-task-chip {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-height: 42px;
     padding: 12px 28px;
-    border-radius: 999px;
+    border-radius: 12px;
     font-size: 1rem;
     font-weight: 700;
-    color: #fff;
+    color: #f3fff6;
     letter-spacing: -0.01em;
+    border: 1px solid rgba(184, 239, 189, 0.16);
     box-shadow:
-        0 12px 26px rgba(0, 0, 0, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        0 10px 22px rgba(4, 35, 24, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .manager-task-chip.pending {
-    background: linear-gradient(180deg, #ffb072, #f59a56);
+    background: linear-gradient(180deg, #628141 0%, #3f5a2c 100%);
 }
 
 .manager-task-chip.approval {
-    background: linear-gradient(180deg, #dd8b45, #ca7330);
+    background: linear-gradient(180deg, #ebd5ab 0%, #c8ad74 100%);
+    color: #1b211a;
+    border-color: rgba(27, 33, 26, 0.14);
 }
 
 .manager-task-chip.completed {
-    background: linear-gradient(180deg, #2c8748, #1f6f2b);
+    background: linear-gradient(180deg, #8bae66 0%, #628141 100%);
+    color: #1b211a;
+    border-color: rgba(27, 33, 26, 0.14);
 }
 
 .manager-task-add-btn {
-    width: 50px;
-    height: 50px;
-    border: 0;
-    border-radius: 50%;
-    background: linear-gradient(180deg, #063320, #032b16);
-    color: #6de16f;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(23, 100, 58, 0.24);
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1b5e20;
     display: grid;
     place-items: center;
-    box-shadow:
-        0 14px 28px rgba(3, 43, 22, 0.22),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
     transition:
         transform 0.2s ease,
-        box-shadow 0.2s ease;
+        box-shadow 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .manager-task-add-btn:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow:
-        0 18px 34px rgba(3, 43, 22, 0.28),
-        0 0 0 8px rgba(109, 225, 111, 0.08);
+    transform: translateY(-1px);
+    background: #f9fff9;
+    border-color: rgba(87, 196, 81, 0.38);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.12);
 }
 
 .manager-task-add-btn svg {
@@ -217,96 +339,71 @@ body {
 }
 
 .manager-task-card {
-    padding: 14px 16px 18px;
-    border: 1px solid rgba(10, 51, 27, 0.06);
-    border-radius: 34px;
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.97),
-        rgba(248, 250, 248, 0.95)
-    );
-    box-shadow:
-        0 20px 48px rgba(10, 24, 15, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(10px);
+    padding: 18px;
+    border: 1px solid rgba(87, 196, 81, 0.12);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(10, 24, 15, 0.035);
     overflow: hidden;
-    transition:
-        transform 0.25s ease,
-        box-shadow 0.25s ease;
-}
-
-.manager-task-card:hover {
-    transform: translateY(-3px);
-    box-shadow:
-        0 26px 56px rgba(10, 24, 15, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .manager-task-table-wrap {
     width: 100%;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
-    height: 380px;
-    flex: 1;
+    height: auto;
+    flex: 0 0 auto;
 }
 
 .manager-task-table {
     width: 100%;
     min-width: 0;
     table-layout: fixed;
-    border-collapse: separate;
-    border-spacing: 0 8px;
+    border-collapse: collapse;
+    border-spacing: 0;
 }
 
 .manager-task-table th {
-    padding: 8px 8px 6px;
-    color: var(--manager-green-700);
+    padding: 11px 8px;
+    color: #4f5f55;
+    background: #f2faf3;
+    border-bottom: 1px solid rgba(87, 196, 81, 0.12);
     font-weight: 800;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     text-align: center;
-    line-height: 1.05;
+    line-height: 1.1;
     white-space: normal;
     word-break: break-word;
 }
 
 .manager-task-table td {
-    padding: 13px 8px;
-    vertical-align: top;
-    color: var(--manager-text-main);
-    background: linear-gradient(
-        180deg,
-        rgba(252, 252, 252, 0.98),
-        rgba(246, 248, 246, 0.96)
-    );
-    font-size: 0.94rem;
-    line-height: 1.1;
-    box-shadow: 0 8px 20px rgba(10, 24, 15, 0.035);
+    height: 58px;
+    padding: 12px 8px;
+    vertical-align: middle;
+    color: #102016;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(87, 196, 81, 0.08);
+    font-size: 0.92rem;
+    font-weight: 550;
+    line-height: 1.15;
     word-break: break-word;
     overflow-wrap: anywhere;
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
+    transition: background 0.2s ease;
 }
 
 .manager-task-table tbody tr:hover td {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(10, 24, 15, 0.07);
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.99),
-        rgba(247, 250, 247, 0.97)
-    );
+    background: #f6fcf6;
 }
 
 .manager-task-table td:first-child {
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .manager-task-table td:last-child {
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .manager-task-row-pagination {
@@ -314,9 +411,13 @@ body {
     align-items: center;
     justify-content: center;
     gap: 12px;
-    margin-top: auto;
+    margin-top: 16px;
     padding-top: 12px;
-    border-top: 1px solid rgba(10, 51, 27, 0.08);
+    border-top: 1px solid rgba(87, 196, 81, 0.1);
+}
+
+.manager-task-row-pagination.is-hidden {
+    display: none;
 }
 
 .manager-task-page-btn {
@@ -373,33 +474,39 @@ body {
 }
 
 .manager-task-photo-link {
-    border: 0;
-    background: transparent;
+    border: 1px solid rgba(87, 196, 81, 0.14);
+    border-radius: 8px;
+    background: #ffffff;
     padding: 0;
     color: #1e2a1f;
-    text-decoration: underline;
+    text-decoration: none;
     cursor: pointer;
     font-weight: 600;
+    overflow: hidden;
     transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
         color 0.2s ease,
         opacity 0.2s ease;
 }
 
 .manager-task-photo-link:hover {
+    border-color: rgba(87, 196, 81, 0.32);
+    background: #f6fcf6;
     color: #2c8748;
     opacity: 0.9;
 }
 
 .manager-task-verify-btn {
-    min-width: 88px;
-    height: 38px;
-    border: 1.5px solid #2c8748;
-    border-radius: 999px;
-    background: linear-gradient(180deg, #ffffff, #f9fcf9);
-    color: #2c8748;
+    min-width: 82px;
+    height: 34px;
+    border: 1.5px solid rgba(23, 100, 58, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1b5e20;
     font: inherit;
     font-weight: 700;
-    box-shadow: 0 8px 18px rgba(44, 135, 72, 0.08);
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
     transition:
         transform 0.2s ease,
         box-shadow 0.2s ease,
@@ -408,8 +515,8 @@ body {
 
 .manager-task-verify-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 22px rgba(44, 135, 72, 0.12);
-    background: linear-gradient(180deg, #ffffff, #f3fbf4);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.12);
+    background: #f6fcf6;
 }
 
 .manager-task-modal-backdrop {
@@ -912,9 +1019,28 @@ body {
 
     .manager-task-section-head {
         margin-bottom: 10px;
+        align-items: stretch;
+    }
+
+    .manager-task-header-actions,
+    .manager-task-status-buttons,
+    .manager-task-filter-row,
+    .manager-task-filter-wrap,
+    .manager-task-filter-select {
+        width: 100%;
+    }
+
+    .manager-task-status-btn {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .manager-task-add-btn {
+        align-self: flex-end;
     }
 
     .manager-task-chip {
+        align-self: flex-start;
         padding: 10px 24px;
         letter-spacing: 0;
     }

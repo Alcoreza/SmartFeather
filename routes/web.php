@@ -89,16 +89,16 @@ Route::get('/api/manager/dashboard/monitoring-graphs', function () {
                 'unit' => 'deg',
                 'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                 'values' => [22, 24, 23, 25, 24, 26, 24],
-                'borderColor' => '#63d7e6',
-                'backgroundColor' => 'rgba(99, 215, 230, 0.16)',
+                'borderColor' => '#17643a',
+                'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
             ],
             [
                 'label' => 'Ammonia',
                 'unit' => 'ppm',
                 'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                 'values' => [12, 14, 13, 15, 17, 16, 15],
-                'borderColor' => '#f1ab3c',
-                'backgroundColor' => 'rgba(241, 171, 60, 0.18)',
+                'borderColor' => '#b7791f',
+                'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
             ],
         ],
     ]);
@@ -173,7 +173,24 @@ Route::get('/api/admin/dashboard/realtime', function () {
 
 Route::get('/api/admin/dashboard/monitoring-graphs', function () {
     return response()->json([
-        'slides' => [],
+        'slides' => [
+            [
+                'label' => 'Temperature',
+                'unit' => 'deg',
+                'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'values' => [22, 24, 23, 25, 24, 26, 24],
+                'borderColor' => '#17643a',
+                'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+            ],
+            [
+                'label' => 'Ammonia',
+                'unit' => 'ppm',
+                'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'values' => [12, 14, 13, 15, 17, 16, 15],
+                'borderColor' => '#b7791f',
+                'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+            ],
+        ],
     ]);
 });
 
@@ -198,6 +215,7 @@ Route::prefix('api/admin/workers')->group(function () {
 */
 
 Route::prefix('api/manager/inventory')->group(function () {
+    Route::get('/snapshot', [InventoryController::class, 'snapshot']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::put('/{id}', [InventoryController::class, 'update']);
     Route::delete('/{id}', [InventoryController::class, 'destroy']);

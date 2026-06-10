@@ -14,6 +14,8 @@ class PersonnelEntryLog extends Model
         'house',
         'date',
         'time',
+        'employee_id',
+        'status',
     ];
 
     protected $casts = [

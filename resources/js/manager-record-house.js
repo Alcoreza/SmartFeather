@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return `
                 <tr style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
                     <td>
-                        <span class="record-house-badge">${escapeHtml(pen.house_name || 'N/A')}</span>
+                        <span class="record-house-badge">${escapeHtml(formatHouseName(pen.house_name || 'N/A'))}</span>
                     </td>
                     <td>${escapeHtml(pen.pen_name || 'N/A')}</td>
                     <td>${formatNumber(capacity)}</td>
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const tabs = houses.map((house, index) => `
             <button class="record-house-tab ${index === 0 ? 'active' : ''}" data-house-index="${index}">
-                ${escapeHtml(house.name)}
+                ${escapeHtml(formatHouseName(house.name))}
             </button>
         `).join('');
 
@@ -228,6 +228,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         return Number.isInteger(number)
             ? number.toString()
             : number.toFixed(2);
+    }
+
+    function formatHouseName(value) {
+        const name = String(value ?? '').trim();
+
+        return name.replace(/^House\s+House\s+/i, 'House ') || 'N/A';
     }
 
     function escapeHtml(value) {

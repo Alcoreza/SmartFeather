@@ -690,7 +690,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function rebuildHouseTabs() {
         const addButtonHtml = `
-            <button type="button" class="add-house-btn" id="openAddHouseModal">+</button>
+            <button type="button" class="add-house-btn" id="openAddHouseModal" aria-label="Add house">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                </svg>
+            </button>
         `;
 
         const tabsHtml = houses

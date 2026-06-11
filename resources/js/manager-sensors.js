@@ -86,6 +86,7 @@ function createSectionMarkup(section, index) {
                             rows.length
                                 ? rows.map(item => `
 <tr
+    class="${(item.status || "Active").toLowerCase() === "under maintenance" ? "manager-sensor-row-maintenance" : ""}"
     data-name="${escapeHtml(item.name)}"
     data-house-number="${escapeHtml(item.house_number)}"
     data-pen-number="${escapeHtml(item.pen_number)}"
@@ -106,7 +107,11 @@ function createSectionMarkup(section, index) {
         </div>
     </td>
 
-    <td>${escapeHtml(item.status)}</td>
+    <td>
+        <span class="manager-sensor-status-pill ${(item.status || "Active").toLowerCase() === "under maintenance" ? "maintenance" : "active"}">
+            ${escapeHtml(item.status || "Active")}
+        </span>
+    </td>
 
     <td>
         <button
@@ -131,7 +136,7 @@ function createSectionMarkup(section, index) {
                                       .join("")
                                 : `
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div class="manager-sensor-empty">No placeholder sensors available.</div>
                                 </td>
                             </tr>
@@ -159,7 +164,7 @@ function bindManagerSensorFilters() {
                     const noMatchRow = document.createElement("tr");
                     noMatchRow.className = "manager-sensor-filter-empty";
                     noMatchRow.innerHTML = `
-                        <td colspan="4">
+                        <td colspan="6">
                             <div class="manager-sensor-empty">No sensors match the filter.</div>
                         </td>
                     `;
@@ -384,7 +389,7 @@ function bindManagerStatusFilters() {
                     const noMatchRow = document.createElement("tr");
                     noMatchRow.className = "manager-sensor-filter-empty";
                     noMatchRow.innerHTML = `
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="manager-sensor-empty">No sensors match the selected status.</div>
                         </td>
                     `;

@@ -39,14 +39,22 @@
                 <div class="profile-page-hero">
                     <div class="profile-page-hero-avatar">
                         <span>{{ strtoupper(substr($user->FirstName ?? '', 0, 1)) }}{{ strtoupper(substr($user->LastName ?? '', 0, 1)) }}</span>
+                        <span class="profile-page-hero-avatar-badge" aria-hidden="true"></span>
                     </div>
 
                     <div class="profile-page-hero-copy">
-                        <h1 class="profile-page-title">Profile</h1>
+                        <p class="profile-page-user-name">
+                            {{ trim(($user->FirstName ?? '') . ' ' . ($user->LastName ?? '')) ?: 'User profile' }}
+                        </p>
+                        <p class="profile-page-user-meta">{{ $user->Role ?? 'Manager' }}</p>
                     </div>
 
                     <div class="profile-page-hero-actions">
                         <button type="button" class="profile-page-btn edit-btn" data-profile-edit-open>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                            </svg>
                             Edit
                         </button>
                     </div>

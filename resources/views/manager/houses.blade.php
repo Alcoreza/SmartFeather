@@ -27,14 +27,18 @@
             <section class="houses-page">
                 <div class="houses-header">
                     <div>
-                        <p class="houses-eyebrow">Farm Structure</p>
                         <h1>Farm Management</h1>
                         <p class="houses-subtitle">Manage each poultry house, select its pens, and update flock capacity, population, batch dates, hatch counts, and mortality.</p>
                     </div>
                 </div>
 
                 <div class="houses-tabs">
-                    <button type="button" class="add-house-btn" id="openAddHouseModal">+</button>
+                    <button type="button" class="add-house-btn" id="openAddHouseModal" aria-label="Add house">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                            <path d="M12 5v14"></path>
+                            <path d="M5 12h14"></path>
+                        </svg>
+                    </button>
                 </div>
 
                 <div class="houses-divider"></div>

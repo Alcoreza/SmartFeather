@@ -2,6 +2,10 @@ let monitoringChart = null;
 let monitoringSlides = [];
 let activeSlideIndex = 0;
 
+let environmentChart = null;
+let environmentSlides = [];
+let activeEnvironmentSlideIndex = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
     resetInitialRealtimeWidgets();
 
@@ -24,6 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await renderRealtimeMonitoring();
     await renderMonitoringCarousel();
+    await renderEnvironmentCarousel();
 });
 
 function resetInitialRealtimeWidgets() {
@@ -338,6 +343,153 @@ function updateGraphCaption(caption, slide) {
 function updateDots(dots, activeIndex) {
     dots.forEach((dot, index) => {
         dot.classList.toggle("active", index === activeIndex);
+    });
+}
+
+async function renderEnvironmentCarousel() {
+    const canvas = document.getElementById("environmentChart");
+    const caption = document.getElementById("envGraphCaption");
+    const dots = document.querySelectorAll(".env-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/manager/dashboard/environment-by-house",
+        );
+        const data = await response.json();
+
+        environmentSlides = Array.isArray(data.slides) ? data.slides : [];
+
+        if (!environmentSlides.length) {
+            return;
+        }
+
+        createOrUpdateEnvironmentChart(canvas, environmentSlides[0]);
+        updateGraphCaption(caption, environmentSlides[0]);
+        updateDots(dots, 0);
+
+        dots.forEach((dot) => {
+            dot.addEventListener("click", () => {
+                const index = Number(dot.dataset.slide);
+                if (Number.isNaN(index) || !environmentSlides[index]) {
+                    return;
+                }
+
+                activeEnvironmentSlideIndex = index;
+                createOrUpdateEnvironmentChart(canvas, environmentSlides[index]);
+                updateGraphCaption(caption, environmentSlides[index]);
+                updateDots(dots, index);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to load environment monitoring data.", error);
+    }
+}
+
+function createOrUpdateEnvironmentChart(canvas, slide) {
+    if (environmentChart) {
+        environmentChart.destroy();
+    }
+
+    const context = canvas.getContext("2d");
+    const barGradient = createBarGradient(context, canvas, slide.borderColor);
+
+    environmentChart = new Chart(canvas, {
+        type: "bar",
+        data: {
+            labels: slide.labels,
+            datasets: [
+                {
+                    label: slide.label,
+                    data: slide.values,
+                    borderColor: slide.borderColor,
+                    backgroundColor: barGradient || slide.backgroundColor,
+                    hoverBackgroundColor: slide.borderColor,
+                    borderWidth: 0,
+                    borderRadius: 12,
+                    borderSkipped: false,
+                    maxBarThickness: 42,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 900,
+                easing: "easeOutCubic",
+                delay(context) {
+                    if (context.type !== "data" || context.mode !== "default") {
+                        return 0;
+                    }
+
+                    return context.dataIndex * 95;
+                },
+            },
+            animations: {
+                y: {
+                    from(context) {
+                        const chart = context.chart;
+                        const scale = chart.scales.y;
+
+                        return scale ? scale.getPixelForValue(0) : chart.chartArea.bottom;
+                    },
+                },
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    backgroundColor: "rgba(6, 51, 32, 0.94)",
+                    borderColor: "rgba(184, 239, 189, 0.32)",
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    padding: 12,
+                    titleColor: "#ffffff",
+                    bodyColor: "#e9f7ec",
+                    callbacks: {
+                        label(context) {
+                            return `${slide.label}: ${context.parsed.y}${slide.unit || ""}`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                    },
+                    border: {
+                        display: false,
+                    },
+                    ticks: {
+                        color: "#687068",
+                        font: {
+                            weight: 700,
+                        },
+                    },
+                },
+                y: {
+                    beginAtZero: true,
+                    max: slide.maxValue || 35,
+                    border: {
+                        display: false,
+                    },
+                    grid: {
+                        color: "rgba(90, 96, 90, 0.12)",
+                    },
+                    ticks: {
+                        color: "#687068",
+                        padding: 8,
+                    },
+                },
+            },
+        },
     });
 }
 

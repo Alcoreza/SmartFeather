@@ -98,26 +98,15 @@
                         <h2>Environmental Monitoring</h2>
                     </div>
 
-                    <div class="env-realtime-grid" id="environmentGrid">
-                        <div class="sensor-card">
-                            <div class="radial-gauge safe" style="--gauge-value: 0deg;">
-                                <div class="radial-gauge-inner">
-                                    <span class="sensor-value">24deg</span>
-                                </div>
-                            </div>
-                            <div class="sensor-label">Temperature</div>
-                        </div>
+                    <div class="env-chart-area">
+                        <canvas id="environmentChart"></canvas>
+                    </div>
 
-                        <div class="panel-divider"></div>
+                    <div class="graph-caption" id="envGraphCaption">Temperature</div>
 
-                        <div class="sensor-card">
-                            <div class="radial-gauge warning" style="--gauge-value: 0deg;">
-                                <div class="radial-gauge-inner">
-                                    <span class="sensor-value">15ppm</span>
-                                </div>
-                            </div>
-                            <div class="sensor-label">Ammonia</div>
-                        </div>
+                    <div class="graph-dots">
+                        <button type="button" class="graph-dot env-dot active" data-slide="0"></button>
+                        <button type="button" class="graph-dot env-dot" data-slide="1"></button>
                     </div>
                 </article>
 

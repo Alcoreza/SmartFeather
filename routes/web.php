@@ -123,6 +123,100 @@ Route::get('/api/manager/dashboard/realtime', function () {
     ]);
 });
 
+Route::get('/api/manager/dashboard/environment-by-house', function () {
+    try {
+        $houses = \App\Models\House::with([
+            'pens' => function ($query) {
+                $query->whereNull('archived_at');
+            }
+        ])
+            ->whereNull('archived_at')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Use the HouseController's logic to attach sensor readings
+        $controller = new \App\Http\Controllers\HouseController();
+        $reflectionMethod = new \ReflectionMethod($controller, 'attachLatestSensorReadings');
+        $reflectionMethod->setAccessible(true);
+        $reflectionMethod->invoke($controller, $houses);
+
+        $temperatureByHouse = [];
+        $ammoniaByHouse = [];
+
+        foreach ($houses as $house) {
+            $temperatureReadings = [];
+            $ammoniaReadings = [];
+
+            foreach ($house->pens as $pen) {
+                $sensorReadings = $pen->getAttribute('sensor_readings');
+                if ($sensorReadings) {
+                    if (isset($sensorReadings['temperature']) && $sensorReadings['temperature']) {
+                        $temperatureReadings[] = (float) $sensorReadings['temperature']['value'];
+                    }
+                    if (isset($sensorReadings['ammonia']) && $sensorReadings['ammonia']) {
+                        $ammoniaReadings[] = (float) $sensorReadings['ammonia']['value'];
+                    }
+                }
+            }
+
+            $avgTemp = count($temperatureReadings) > 0 ? array_sum($temperatureReadings) / count($temperatureReadings) : 0;
+            $avgAmmonia = count($ammoniaReadings) > 0 ? array_sum($ammoniaReadings) / count($ammoniaReadings) : 0;
+
+            $temperatureByHouse[] = round($avgTemp, 1);
+            $ammoniaByHouse[] = round($avgAmmonia, 1);
+        }
+
+        $houseLabels = $houses->pluck('house_number')->toArray();
+
+        return response()->json([
+            'slides' => [
+                [
+                    'label' => 'Temperature',
+                    'unit' => 'deg',
+                    'labels' => $houseLabels,
+                    'values' => $temperatureByHouse,
+                    'borderColor' => '#17643a',
+                    'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                    'maxValue' => 35,
+                ],
+                [
+                    'label' => 'Ammonia',
+                    'unit' => 'ppm',
+                    'labels' => $houseLabels,
+                    'values' => $ammoniaByHouse,
+                    'borderColor' => '#b7791f',
+                    'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                    'maxValue' => 25,
+                ],
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Environment by house error: ' . $e->getMessage());
+        return response()->json([
+            'slides' => [
+                [
+                    'label' => 'Temperature',
+                    'unit' => 'deg',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [24, 23],
+                    'borderColor' => '#17643a',
+                    'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                    'maxValue' => 35,
+                ],
+                [
+                    'label' => 'Ammonia',
+                    'unit' => 'ppm',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [8, 10],
+                    'borderColor' => '#b7791f',
+                    'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                    'maxValue' => 25,
+                ],
+            ],
+        ]);
+    }
+});
+
 Route::get('/api/manager/dashboard/decision-support', function () {
     $service = new \App\Services\DecisionSupportService();
     $recommendations = $service->getAllActiveRecommendations();

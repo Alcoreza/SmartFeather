@@ -10,12 +10,10 @@ class MobilePersonnelLogsController extends Controller
 {
     public function context(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -34,7 +32,7 @@ class MobilePersonnelLogsController extends Controller
         }
 
         $previousBiosecurity = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -74,8 +72,9 @@ class MobilePersonnelLogsController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'personnel_entry_log_id' => 'required|integer|exists:personnel_entry_logs,id',
             'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
@@ -93,7 +92,7 @@ class MobilePersonnelLogsController extends Controller
 
         $latestEntry = DB::table('personnel_entry_logs')
             ->where('id', $validated['personnel_entry_log_id'])
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->first();
 
         if (!$latestEntry) {
@@ -134,7 +133,7 @@ class MobilePersonnelLogsController extends Controller
         if (!empty($validated['task_id'])) {
             $task = DB::table('tasks')
                 ->where('taskid', $validated['task_id'])
-                ->where('user_employeeid', $validated['employee_id'])
+                ->where('user_employeeid', $employeeId)
                 ->where('status', 'Pending')
                 ->first();
 
@@ -161,6 +160,7 @@ class MobilePersonnelLogsController extends Controller
 
         $alreadySubmittedQuery = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
+            ->where('employee_id', $employeeId)
             ->where('created_at', '>=', $validBiosecurityFrom);
 
         if (!empty($validated['task_id'])) {
@@ -179,7 +179,7 @@ class MobilePersonnelLogsController extends Controller
         }
 
         DB::table('personnel_biosecurity_logs')->insert([
-            'employee_id' => $validated['employee_id'],
+            'employee_id' => $employeeId,
             'personnel_entry_log_id' => $latestEntry->id,
             'task_id' => $validated['task_id'] ?? null,
             'name' => $latestEntry->name,

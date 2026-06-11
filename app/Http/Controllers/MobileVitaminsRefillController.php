@@ -11,11 +11,9 @@ class MobileVitaminsRefillController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
-        $latestEntry = $this->latestEntryLog($validated['employee_id']);
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -28,6 +26,7 @@ class MobileVitaminsRefillController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -101,8 +100,9 @@ class MobileVitaminsRefillController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'task_id' => 'nullable|integer|exists:tasks,taskid',
             'inventory_id' => 'required|integer|exists:inventories,id',
             'house_id' => 'required|integer|exists:house,id',
@@ -114,7 +114,7 @@ class MobileVitaminsRefillController extends Controller
         if (!empty($validated['task_id'])) {
             $task = DB::table('tasks')
                 ->where('taskid', $validated['task_id'])
-                ->where('user_employeeid', $validated['employee_id'])
+                ->where('user_employeeid', $employeeId)
                 ->first();
 
             if (!$task) {
@@ -148,7 +148,7 @@ class MobileVitaminsRefillController extends Controller
             }
         }
 
-        $latestEntry = $this->latestEntryLog($validated['employee_id']);
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -158,7 +158,7 @@ class MobileVitaminsRefillController extends Controller
 
         $biosecurityQuery = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('house_id', $validated['house_id'])
             ->orderByDesc('id');
 

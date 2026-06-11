@@ -10,8 +10,9 @@ class MobileDashboardController extends Controller
 {
     public function show(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'environment_house_id' => 'nullable|integer',
             'environment_pen_id' => 'nullable|integer',
             'resource_house_id' => 'nullable|integer',
@@ -49,7 +50,7 @@ class MobileDashboardController extends Controller
                 $join->on('t.pennumber', '=', 'p.id')
                     ->on('t.house_houseid', '=', 'p.house_id');
             })
-            ->where('t.user_employeeid', $validated['employee_id'])
+            ->where('t.user_employeeid', $employeeId)
             ->where('t.status', 'Pending');
 
         $pendingTasks = (int) $pendingTasksQuery->count();
@@ -60,7 +61,7 @@ class MobileDashboardController extends Controller
                 $join->on('t.pennumber', '=', 'p.id')
                     ->on('t.house_houseid', '=', 'p.house_id');
             })
-            ->where('t.user_employeeid', $validated['employee_id'])
+            ->where('t.user_employeeid', $employeeId)
             ->where('t.status', 'Pending')
             ->orderByRaw("
                 CASE

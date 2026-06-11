@@ -9,9 +9,10 @@ class MobileDeviceTokenController extends Controller
 {
     public function store(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-            'fcm_token' => 'required|string',
+            'fcm_token' => 'required|string|max:4096',
             'platform' => 'nullable|string|max:50',
             'device_name' => 'nullable|string|max:255',
         ]);
@@ -24,7 +25,7 @@ class MobileDeviceTokenController extends Controller
             DB::table('mobile_device_tokens')
                 ->where('id', $existingToken->id)
                 ->update([
-                    'employee_id' => $validated['employee_id'],
+                    'employee_id' => $employeeId,
                     'platform' => $validated['platform'] ?? 'android',
                     'device_name' => $validated['device_name'] ?? null,
                     'is_active' => DB::raw('true'),
@@ -33,7 +34,7 @@ class MobileDeviceTokenController extends Controller
                 ]);
         } else {
             DB::table('mobile_device_tokens')->insert([
-                'employee_id' => $validated['employee_id'],
+                'employee_id' => $employeeId,
                 'fcm_token' => $validated['fcm_token'],
                 'platform' => $validated['platform'] ?? 'android',
                 'device_name' => $validated['device_name'] ?? null,

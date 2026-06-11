@@ -13,14 +13,14 @@ class MobileTaskController extends Controller
 {
     public function getFlockmanTasks(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer',
             'status' => 'nullable|string|in:Pending,For Approval,Completed',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:20',
         ]);
 
-        $employeeId = (int) $validated['employee_id'];
         $status = $validated['status'] ?? 'Pending';
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 10);
@@ -134,9 +134,10 @@ class MobileTaskController extends Controller
 
     public function getSubmittedTaskDetail(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
         ]);
 
         $task = Task::query()
@@ -146,7 +147,7 @@ class MobileTaskController extends Controller
                     ->on('tasks.pennumber', '=', 'pen.id');
             })
             ->where('tasks.taskid', $validated['task_id'])
-            ->where('tasks.user_employeeid', $validated['employee_id'])
+            ->where('tasks.user_employeeid', $employeeId)
             ->first([
                 'tasks.taskid',
                 'tasks.tasktype',
@@ -170,13 +171,14 @@ class MobileTaskController extends Controller
 
     public function checkTaskAccess(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -194,7 +196,7 @@ class MobileTaskController extends Controller
         $assignedPenId = $task->pennumber;
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -209,7 +211,7 @@ class MobileTaskController extends Controller
         $validBiosecurityFrom = Carbon::now()->subHours(24);
 
         $hasBiosecurity = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)
@@ -234,14 +236,15 @@ class MobileTaskController extends Controller
 
     public function createTaskPhotoUploadUrl(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
             'mime_type' => 'required|string|in:image/jpeg,image/png,image/webp',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -268,7 +271,7 @@ class MobileTaskController extends Controller
 
         $path = sprintf(
             'employee-%d/task-%d/%s.%s',
-            $validated['employee_id'],
+            $employeeId,
             $validated['task_id'],
             Str::uuid()->toString(),
             $extension
@@ -317,15 +320,16 @@ class MobileTaskController extends Controller
 
     public function submitTaskForApproval(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
             'notes' => 'nullable|string|max:1000',
             'photo_path' => 'nullable|string|max:500',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -340,10 +344,21 @@ class MobileTaskController extends Controller
             ], 422);
         }
 
+        if (!empty($validated['photo_path'])) {
+            $photoPath = ltrim($validated['photo_path'], '/');
+            $expectedPrefix = sprintf('employee-%d/task-%d/', $employeeId, $task->taskid);
+
+            if (!str_starts_with($photoPath, $expectedPrefix)) {
+                return response()->json([
+                    'message' => 'Invalid task photo path.'
+                ], 422);
+            }
+        }
+
         $assignedPenId = $task->pennumber;
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -356,7 +371,7 @@ class MobileTaskController extends Controller
         }
 
         $taskBiosecurity = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)

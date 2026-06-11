@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class MobileProfileController extends Controller
 {
-    public function show($employeeId)
+    public function show(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $user = User::where('EmployeeId', $employeeId)->first();
 
         if (!$user) {
@@ -17,7 +20,7 @@ class MobileProfileController extends Controller
             ], 404);
         }
 
-        if (strtolower($user->Role) !== 'flockman') {
+        if (strtolower((string) $user->Role) !== 'flockman') {
             return response()->json([
                 'message' => 'Only Flockman profiles are available on mobile.',
             ], 403);
@@ -26,8 +29,10 @@ class MobileProfileController extends Controller
         return response()->json($this->transformUser($user));
     }
 
-    public function update(Request $request, $employeeId)
+    public function update(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $user = User::where('EmployeeId', $employeeId)->first();
 
         if (!$user) {
@@ -36,7 +41,7 @@ class MobileProfileController extends Controller
             ], 404);
         }
 
-        if (strtolower($user->Role) !== 'flockman') {
+        if (strtolower((string) $user->Role) !== 'flockman') {
             return response()->json([
                 'message' => 'Only Flockman profiles are available on mobile.',
             ], 403);
@@ -70,7 +75,7 @@ class MobileProfileController extends Controller
             'role' => $user->Role,
             'phone_number' => $user->PhoneNumber,
             'address' => $user->Address,
-            'birthday' => $user->Birthday ? \Illuminate\Support\Carbon::parse($user->Birthday)->toDateString() : null,
+            'birthday' => $user->Birthday ? Carbon::parse($user->Birthday)->toDateString() : null,
             'gender' => $user->Gender,
         ];
     }

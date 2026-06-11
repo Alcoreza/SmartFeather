@@ -320,8 +320,8 @@ class MobileTaskController extends Controller
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
             'employee_id' => 'required|integer',
-            'notes' => 'nullable|string',
-            'photo_path' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
+            'photo_path' => 'nullable|string|max:500',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])

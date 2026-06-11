@@ -92,7 +92,7 @@ class MobileVisitorController extends Controller
             'foot_bath' => 'required|boolean',
             'sanitation' => 'required|boolean',
             'ppe' => 'required|boolean',
-            'photo_path' => 'nullable|string',
+            'photo_path' => 'nullable|string|max:500',
         ]);
 
         $employee = Employee::find($validated['employee_id']);

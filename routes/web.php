@@ -217,6 +217,110 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
     }
 });
 
+Route::get('/api/manager/dashboard/resources-by-house', function () {
+    try {
+        $houses = \App\Models\House::with([
+            'pens' => function ($query) {
+                $query->whereNull('archived_at');
+            }
+        ])
+            ->whereNull('archived_at')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Use the HouseController's logic to attach sensor readings
+        $controller = new \App\Http\Controllers\HouseController();
+        $reflectionMethod = new \ReflectionMethod($controller, 'attachLatestSensorReadings');
+        $reflectionMethod->setAccessible(true);
+        $reflectionMethod->invoke($controller, $houses);
+
+        $feedByHouse = [];
+        $waterByHouse = [];
+
+        foreach ($houses as $house) {
+            $feedReadings = [];
+            $waterReadings = [];
+
+            foreach ($house->pens as $pen) {
+                $sensorReadings = $pen->getAttribute('sensor_readings');
+                if ($sensorReadings) {
+                    // Get feeders
+                    if (isset($sensorReadings['feeders']) && is_array($sensorReadings['feeders'])) {
+                        foreach ($sensorReadings['feeders'] as $feeder) {
+                            if ($feeder && isset($feeder['value'])) {
+                                $feedReadings[] = (float) $feeder['value'];
+                            }
+                        }
+                    }
+                    // Get drinkers
+                    if (isset($sensorReadings['drinkers']) && is_array($sensorReadings['drinkers'])) {
+                        foreach ($sensorReadings['drinkers'] as $drinker) {
+                            if ($drinker && isset($drinker['value'])) {
+                                $waterReadings[] = (float) $drinker['value'];
+                            }
+                        }
+                    }
+                }
+            }
+
+            $avgFeed = count($feedReadings) > 0 ? array_sum($feedReadings) / count($feedReadings) : 0;
+            $avgWater = count($waterReadings) > 0 ? array_sum($waterReadings) / count($waterReadings) : 0;
+
+            $feedByHouse[] = round($avgFeed, 1);
+            $waterByHouse[] = round($avgWater, 1);
+        }
+
+        $houseLabels = $houses->pluck('house_number')->toArray();
+
+        return response()->json([
+            'slides' => [
+                [
+                    'label' => 'Feed',
+                    'unit' => '%',
+                    'labels' => $houseLabels,
+                    'values' => $feedByHouse,
+                    'borderColor' => '#c88a3d',
+                    'backgroundColor' => 'rgba(200, 138, 61, 0.72)',
+                    'maxValue' => 100,
+                ],
+                [
+                    'label' => 'Water',
+                    'unit' => '%',
+                    'labels' => $houseLabels,
+                    'values' => $waterByHouse,
+                    'borderColor' => '#6cdde5',
+                    'backgroundColor' => 'rgba(108, 221, 229, 0.72)',
+                    'maxValue' => 100,
+                ],
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Resources by house error: ' . $e->getMessage());
+        return response()->json([
+            'slides' => [
+                [
+                    'label' => 'Feed',
+                    'unit' => '%',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [60, 65],
+                    'borderColor' => '#c88a3d',
+                    'backgroundColor' => 'rgba(200, 138, 61, 0.72)',
+                    'maxValue' => 100,
+                ],
+                [
+                    'label' => 'Water',
+                    'unit' => '%',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [45, 50],
+                    'borderColor' => '#6cdde5',
+                    'backgroundColor' => 'rgba(108, 221, 229, 0.72)',
+                    'maxValue' => 100,
+                ],
+            ],
+        ]);
+    }
+});
+
 Route::get('/api/manager/dashboard/decision-support', function () {
     $service = new \App\Services\DecisionSupportService();
     $recommendations = $service->getAllActiveRecommendations();

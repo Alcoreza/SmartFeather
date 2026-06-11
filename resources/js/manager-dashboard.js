@@ -6,6 +6,10 @@ let environmentChart = null;
 let environmentSlides = [];
 let activeEnvironmentSlideIndex = 0;
 
+let resourceChart = null;
+let resourceSlides = [];
+let activeResourceSlideIndex = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
     resetInitialRealtimeWidgets();
 
@@ -29,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await renderRealtimeMonitoring();
     await renderMonitoringCarousel();
     await renderEnvironmentCarousel();
+    await renderResourceCarousel();
 });
 
 function resetInitialRealtimeWidgets() {
@@ -477,6 +482,153 @@ function createOrUpdateEnvironmentChart(canvas, slide) {
                 y: {
                     beginAtZero: true,
                     max: slide.maxValue || 35,
+                    border: {
+                        display: false,
+                    },
+                    grid: {
+                        color: "rgba(90, 96, 90, 0.12)",
+                    },
+                    ticks: {
+                        color: "#687068",
+                        padding: 8,
+                    },
+                },
+            },
+        },
+    });
+}
+
+async function renderResourceCarousel() {
+    const canvas = document.getElementById("resourceChart");
+    const caption = document.getElementById("resourceGraphCaption");
+    const dots = document.querySelectorAll(".resource-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/manager/dashboard/resources-by-house",
+        );
+        const data = await response.json();
+
+        resourceSlides = Array.isArray(data.slides) ? data.slides : [];
+
+        if (!resourceSlides.length) {
+            return;
+        }
+
+        createOrUpdateResourceChart(canvas, resourceSlides[0]);
+        updateGraphCaption(caption, resourceSlides[0]);
+        updateDots(dots, 0);
+
+        dots.forEach((dot) => {
+            dot.addEventListener("click", () => {
+                const index = Number(dot.dataset.slide);
+                if (Number.isNaN(index) || !resourceSlides[index]) {
+                    return;
+                }
+
+                activeResourceSlideIndex = index;
+                createOrUpdateResourceChart(canvas, resourceSlides[index]);
+                updateGraphCaption(caption, resourceSlides[index]);
+                updateDots(dots, index);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to load resource monitoring data.", error);
+    }
+}
+
+function createOrUpdateResourceChart(canvas, slide) {
+    if (resourceChart) {
+        resourceChart.destroy();
+    }
+
+    const context = canvas.getContext("2d");
+    const barGradient = createBarGradient(context, canvas, slide.borderColor);
+
+    resourceChart = new Chart(canvas, {
+        type: "bar",
+        data: {
+            labels: slide.labels,
+            datasets: [
+                {
+                    label: slide.label,
+                    data: slide.values,
+                    borderColor: slide.borderColor,
+                    backgroundColor: barGradient || slide.backgroundColor,
+                    hoverBackgroundColor: slide.borderColor,
+                    borderWidth: 0,
+                    borderRadius: 12,
+                    borderSkipped: false,
+                    maxBarThickness: 42,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 900,
+                easing: "easeOutCubic",
+                delay(context) {
+                    if (context.type !== "data" || context.mode !== "default") {
+                        return 0;
+                    }
+
+                    return context.dataIndex * 95;
+                },
+            },
+            animations: {
+                y: {
+                    from(context) {
+                        const chart = context.chart;
+                        const scale = chart.scales.y;
+
+                        return scale ? scale.getPixelForValue(0) : chart.chartArea.bottom;
+                    },
+                },
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    backgroundColor: "rgba(6, 51, 32, 0.94)",
+                    borderColor: "rgba(184, 239, 189, 0.32)",
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    padding: 12,
+                    titleColor: "#ffffff",
+                    bodyColor: "#e9f7ec",
+                    callbacks: {
+                        label(context) {
+                            return `${slide.label}: ${context.parsed.y}${slide.unit || ""}`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                    },
+                    border: {
+                        display: false,
+                    },
+                    ticks: {
+                        color: "#687068",
+                        font: {
+                            weight: 700,
+                        },
+                    },
+                },
+                y: {
+                    beginAtZero: true,
+                    max: slide.maxValue || 100,
                     border: {
                         display: false,
                     },

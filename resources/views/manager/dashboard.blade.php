@@ -115,24 +115,15 @@
                         <h2>Feed and Water Monitoring</h2>
                     </div>
 
-                    <div class="resource-grid" id="resourceGrid">
-                        <div class="resource-card">
-                            <div class="resource-bar-shell">
-                                <div class="resource-bar feed-bar" style="height: 0%;"></div>
-                            </div>
-                            <div class="resource-percent">60%</div>
-                            <div class="resource-label">Feed</div>
-                        </div>
+                    <div class="resource-chart-area">
+                        <canvas id="resourceChart"></canvas>
+                    </div>
 
-                        <div class="panel-divider"></div>
+                    <div class="graph-caption" id="resourceGraphCaption">Feed</div>
 
-                        <div class="resource-card">
-                            <div class="resource-bar-shell">
-                                <div class="resource-bar water-bar" style="height: 0%;"></div>
-                            </div>
-                            <div class="resource-percent water-text">30%</div>
-                            <div class="resource-label">Water</div>
-                        </div>
+                    <div class="graph-dots">
+                        <button type="button" class="graph-dot resource-dot active" data-slide="0"></button>
+                        <button type="button" class="graph-dot resource-dot" data-slide="1"></button>
                     </div>
                 </article>
             </section>

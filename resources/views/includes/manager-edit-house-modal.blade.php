@@ -44,12 +44,12 @@
 
             <div class="modal-row">
                 <div class="modal-group">
-                    <label for="editFeederCount">Feeders</label>
+                    <label for="editFeederCount">Number of Feeders</label>
                     <input type="number" id="editFeederCount" min="0" step="1">
                 </div>
 
                 <div class="modal-group">
-                    <label for="editDrinkerCount">Drinkers</label>
+                    <label for="editDrinkerCount">Number of Drinkers</label>
                     <input type="number" id="editDrinkerCount" min="0" step="1">
                 </div>
             </div>

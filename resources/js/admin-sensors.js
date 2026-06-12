@@ -20,6 +20,7 @@ const adminSensorAddRequiredFields = [
 ];
 
 let shouldTrackAdminSensorRequiredHighlights = false;
+let pendingAdminSensorAddPayload = null;
 
 async function renderAdminSensorSections() {
     const mount = document.getElementById("adminSensorSections");
@@ -57,12 +58,16 @@ async function renderAdminSensorSections() {
 function createAdminSectionMarkup(section) {
     const rows = Array.isArray(section.items) ? section.items : [];
     const firstItem = rows[0] || {};
+    const sensorType = section.sensor_type || section.title;
+    const showsResourceColumn = adminSensorShowsResourceColumn(sensorType);
+    const columnCount = showsResourceColumn ? 7 : 6;
 
     return `
         <section
             class="admin-sensor-section"
             data-section-id="${escapeHtml(section.id)}"
-            data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+            data-sensor-type="${escapeHtml(sensorType)}"
+            data-column-count="${columnCount}"
             data-lowest-threshold="${escapeHtml(firstItem.lowest_threshold || "")}"
             data-highest-threshold="${escapeHtml(firstItem.highest_threshold || "")}"
         >
@@ -102,6 +107,7 @@ function createAdminSectionMarkup(section) {
                             <th>Sensor Name</th>
                             <th>House Number</th>
                             <th>Pen Number</th>
+                            ${showsResourceColumn ? "<th>Resource No.</th>" : ""}
                             <th>Value</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -124,7 +130,7 @@ function createAdminSectionMarkup(section) {
                                         data-pen-id="${escapeHtml(item.pen_id ?? "")}"
                                         data-feeder-number="${escapeHtml(item.feeder_number ?? "")}"
                                         data-drinker-number="${escapeHtml(item.drinker_number ?? "")}"
-                                        data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+                                        data-sensor-type="${escapeHtml(sensorType)}"
                                         data-lowest-threshold="${escapeHtml(item.lowest_threshold || "")}"
                                         data-highest-threshold="${escapeHtml(item.highest_threshold || "")}"
                                         data-status="${escapeHtml(item.status || "Active")}"
@@ -132,6 +138,7 @@ function createAdminSectionMarkup(section) {
                                         <td>${escapeHtml(item.name)}</td>
                                         <td>${escapeHtml(item.house_number)}</td>
                                         <td>${escapeHtml(item.pen_number)}</td>
+                                        ${showsResourceColumn ? `<td>${escapeHtml(getAdminSensorResourceNumber(sensorType, item))}</td>` : ""}
                                         <td>
                                             <div class="admin-sensor-value">
                                                 ${escapeHtml(item.formatted_value || "No Data")}
@@ -202,7 +209,7 @@ function createAdminSectionMarkup(section) {
                                       .join("")
                                 : `
                                     <tr>
-                                        <td colspan="6">
+                                        <td colspan="${columnCount}">
                                             <div class="admin-sensor-empty">No placeholder sensors available.</div>
                                         </td>
                                     </tr>
@@ -213,6 +220,10 @@ function createAdminSectionMarkup(section) {
             </div>
         </section>
     `;
+}
+
+function adminSensorShowsResourceColumn(sensorType) {
+    return ["Feed Sensor", "Water Sensor"].includes(sensorType);
 }
 
 function getAdminSensorStatusClass(status) {
@@ -235,6 +246,18 @@ function getAdminSensorStatusRowClass(status) {
     return normalized === "inactive" ? "admin-sensor-row-inactive" : "";
 }
 
+function getAdminSensorResourceNumber(sensorType, item) {
+    if (sensorType === "Feed Sensor") {
+        return item.feeder_number ? `Feeder ${item.feeder_number}` : "--";
+    }
+
+    if (sensorType === "Water Sensor") {
+        return item.drinker_number ? `Drinker ${item.drinker_number}` : "--";
+    }
+
+    return "--";
+}
+
 async function loadAdminSensorFormOptions() {
     try {
         const response = await fetch("/api/admin/sensors/form-options");
@@ -251,6 +274,16 @@ async function loadAdminSensorFormOptions() {
 
         fillAdminSimpleSelect(addHouseSelect, data.houses || [], "Select house");
         fillAdminSimpleSelect(addPenSelect, [], "Select pen");
+        fillAdminSimpleSelect(
+            document.getElementById("adminSensorAddFeederNumber"),
+            [],
+            "Select house and pen first",
+        );
+        fillAdminSimpleSelect(
+            document.getElementById("adminSensorAddDrinkerNumber"),
+            [],
+            "Select house and pen first",
+        );
 
         const editHouseSelect = document.getElementById("adminSensorEditHouse");
         const editPenSelect = document.getElementById("adminSensorEditPen");
@@ -263,10 +296,21 @@ async function loadAdminSensorFormOptions() {
 
         fillAdminSimpleSelect(editHouseSelect, data.houses || [], "Select house");
         fillAdminSimpleSelect(editPenSelect, [], "Select pen");
+        resetAdminSensorEditResourceOptions();
 
         if (addHouseSelect) {
             addHouseSelect.addEventListener("change", async (event) => {
                 await loadAdminPensForHouse(event.target.value, addPenSelect);
+                fillAdminSimpleSelect(
+                    document.getElementById("adminSensorAddFeederNumber"),
+                    [],
+                    "Select pen first",
+                );
+                fillAdminSimpleSelect(
+                    document.getElementById("adminSensorAddDrinkerNumber"),
+                    [],
+                    "Select pen first",
+                );
                 setupAdminSensorSelectPlaceholderState();
                 syncAdminSensorRequiredFieldHighlight(
                     adminSensorAddRequiredFields.find((field) => field.id === "adminSensorAddPen"),
@@ -274,24 +318,162 @@ async function loadAdminSensorFormOptions() {
             });
         }
 
+        if (addPenSelect) {
+            addPenSelect.addEventListener("change", async () => {
+                await syncAdminAddFeederOptions();
+                await syncAdminAddDrinkerOptions();
+                setupAdminSensorSelectPlaceholderState();
+            });
+        }
+
         document
             .getElementById("adminSensorAddType")
-            ?.addEventListener("change", () => syncAdminSensorResourceFields("add"));
+            ?.addEventListener("change", async () => {
+                syncAdminSensorResourceFields("add");
+                await syncAdminAddFeederOptions();
+                await syncAdminAddDrinkerOptions();
+                setupAdminSensorSelectPlaceholderState();
+            });
 
         if (editHouseSelect) {
             editHouseSelect.addEventListener("change", async (event) => {
+                resetAdminSensorEditResourceOptions();
                 await loadAdminPensForHouse(event.target.value, editPenSelect);
+                if (editPenSelect) {
+                    editPenSelect.value = "";
+                }
+                setupAdminSensorSelectPlaceholderState();
+            });
+        }
+
+        if (editPenSelect) {
+            editPenSelect.addEventListener("change", async () => {
+                resetAdminSensorEditResourceOptions();
+                await syncAdminEditFeederOptions();
+                await syncAdminEditDrinkerOptions();
+                setupAdminSensorSelectPlaceholderState();
             });
         }
 
         document
             .getElementById("adminSensorEditType")
-            ?.addEventListener("change", () => syncAdminSensorResourceFields("edit"));
+            ?.addEventListener("change", async () => {
+                syncAdminSensorResourceFields("edit");
+                resetAdminSensorEditResourceOptions();
+                await syncAdminEditFeederOptions();
+                await syncAdminEditDrinkerOptions();
+                setupAdminSensorSelectPlaceholderState();
+            });
 
         syncAdminSensorResourceFields("add");
         syncAdminSensorResourceFields("edit");
     } catch (error) {
         console.error("Failed to load admin sensor form options.", error);
+    }
+}
+
+function resetAdminSensorEditResourceOptions() {
+    fillAdminSimpleSelect(
+        document.getElementById("adminSensorEditFeederNumber"),
+        [],
+        "Select pen first",
+    );
+    fillAdminSimpleSelect(
+        document.getElementById("adminSensorEditDrinkerNumber"),
+        [],
+        "Select pen first",
+    );
+}
+
+async function syncAdminAddFeederOptions() {
+    const type = document.getElementById("adminSensorAddType")?.value || "";
+    const houseId = document.getElementById("adminSensorAddHouse")?.value || "";
+    const penId = document.getElementById("adminSensorAddPen")?.value || "";
+    const feederSelect = document.getElementById("adminSensorAddFeederNumber");
+
+    if (!feederSelect || type !== "Feed Sensor") {
+        if (feederSelect) {
+            feederSelect.value = "";
+        }
+        return;
+    }
+
+    if (!houseId || !penId) {
+        fillAdminSimpleSelect(feederSelect, [], "Select house and pen first");
+        return;
+    }
+
+    await loadAdminAvailableFeedersForPen(houseId, penId, feederSelect);
+}
+
+async function syncAdminAddDrinkerOptions() {
+    const type = document.getElementById("adminSensorAddType")?.value || "";
+    const houseId = document.getElementById("adminSensorAddHouse")?.value || "";
+    const penId = document.getElementById("adminSensorAddPen")?.value || "";
+    const drinkerSelect = document.getElementById("adminSensorAddDrinkerNumber");
+
+    if (!drinkerSelect || type !== "Water Sensor") {
+        if (drinkerSelect) {
+            drinkerSelect.value = "";
+        }
+        return;
+    }
+
+    if (!houseId || !penId) {
+        fillAdminSimpleSelect(drinkerSelect, [], "Select house and pen first");
+        return;
+    }
+
+    await loadAdminAvailableDrinkersForPen(houseId, penId, drinkerSelect);
+}
+
+async function syncAdminEditFeederOptions(selectedValue = "") {
+    const type = document.getElementById("adminSensorEditType")?.value || "";
+    const houseId = document.getElementById("adminSensorEditHouse")?.value || "";
+    const penId = document.getElementById("adminSensorEditPen")?.value || "";
+    const sensorId = document.getElementById("adminSensorEditId")?.value || "";
+    const feederSelect = document.getElementById("adminSensorEditFeederNumber");
+
+    if (!feederSelect || type !== "Feed Sensor") {
+        if (feederSelect) {
+            feederSelect.value = "";
+        }
+        return;
+    }
+
+    if (!houseId || !penId) {
+        fillAdminSimpleSelect(feederSelect, [], "Select house and pen first");
+        return;
+    }
+
+    await loadAdminAvailableFeedersForPen(houseId, penId, feederSelect, sensorId);
+    if (selectedValue) {
+        feederSelect.value = selectedValue;
+    }
+}
+
+async function syncAdminEditDrinkerOptions(selectedValue = "") {
+    const type = document.getElementById("adminSensorEditType")?.value || "";
+    const houseId = document.getElementById("adminSensorEditHouse")?.value || "";
+    const penId = document.getElementById("adminSensorEditPen")?.value || "";
+    const sensorId = document.getElementById("adminSensorEditId")?.value || "";
+    const drinkerSelect = document.getElementById("adminSensorEditDrinkerNumber");
+
+    if (!drinkerSelect || type !== "Water Sensor") {
+        if (drinkerSelect) {
+            drinkerSelect.value = "";
+        }
+        return;
+    }
+
+    if (!houseId || !penId) {
+        fillAdminSimpleSelect(drinkerSelect, [], "Select house and pen first");
+        return;
+    }
+
+    await loadAdminAvailableDrinkersForPen(houseId, penId, drinkerSelect, sensorId);
+    if (selectedValue) {
+        drinkerSelect.value = selectedValue;
     }
 }
 
@@ -347,6 +529,52 @@ async function loadAdminPensForHouse(houseId, penSelect) {
     } catch (error) {
         console.error("Failed to load pens for selected house.", error);
         fillAdminSimpleSelect(penSelect, [], "Select pen");
+    }
+}
+
+async function loadAdminAvailableFeedersForPen(houseId, penId, feederSelect, ignoreSensorId = "") {
+    if (!feederSelect) return;
+
+    try {
+        const ignoreQuery = ignoreSensorId
+            ? `&ignore_sensor_id=${encodeURIComponent(ignoreSensorId)}`
+            : "";
+        const response = await fetch(
+            `/api/admin/sensors/pens/${penId}/available-feeders?house_id=${encodeURIComponent(houseId)}${ignoreQuery}`,
+        );
+        const data = await response.json();
+        const feeders = data.feeders || [];
+        fillAdminSimpleSelect(
+            feederSelect,
+            feeders,
+            feeders.length ? "Select feeder" : "No available feeders",
+        );
+    } catch (error) {
+        console.error("Failed to load available feeders.", error);
+        fillAdminSimpleSelect(feederSelect, [], "No available feeders");
+    }
+}
+
+async function loadAdminAvailableDrinkersForPen(houseId, penId, drinkerSelect, ignoreSensorId = "") {
+    if (!drinkerSelect) return;
+
+    try {
+        const ignoreQuery = ignoreSensorId
+            ? `&ignore_sensor_id=${encodeURIComponent(ignoreSensorId)}`
+            : "";
+        const response = await fetch(
+            `/api/admin/sensors/pens/${penId}/available-drinkers?house_id=${encodeURIComponent(houseId)}${ignoreQuery}`,
+        );
+        const data = await response.json();
+        const drinkers = data.drinkers || [];
+        fillAdminSimpleSelect(
+            drinkerSelect,
+            drinkers,
+            drinkers.length ? "Select drinker" : "No available drinkers",
+        );
+    } catch (error) {
+        console.error("Failed to load available drinkers.", error);
+        fillAdminSimpleSelect(drinkerSelect, [], "No available drinkers");
     }
 }
 
@@ -596,12 +824,13 @@ function bindAdminSensorFilters() {
 
         const updateNoMatchRow = (visibleCount) => {
             const existing = tbody.querySelector("tr.admin-sensor-filter-empty");
+            const columnCount = section.dataset.columnCount || "6";
             if (visibleCount === 0) {
                 if (!existing) {
                     const noMatchRow = document.createElement("tr");
                     noMatchRow.className = "admin-sensor-filter-empty";
                     noMatchRow.innerHTML = `
-                        <td colspan="6">
+                        <td colspan="${columnCount}">
                             <div class="admin-sensor-empty">No sensors match the filter.</div>
                         </td>
                     `;
@@ -672,19 +901,16 @@ function bindAdminEditButtons() {
             const name = document.getElementById("adminSensorEditName");
             const house = document.getElementById("adminSensorEditHouse");
             const pen = document.getElementById("adminSensorEditPen");
-            const feederNumber = document.getElementById("adminSensorEditFeederNumber");
-            const drinkerNumber = document.getElementById("adminSensorEditDrinkerNumber");
             const id = document.getElementById("adminSensorEditId");
 
             if (type) type.value = row.dataset.sensorType || "";
             if (name) name.value = row.dataset.name || "";
             if (house) house.value = row.dataset.houseId || row.dataset.houseNumber || "";
-            if (feederNumber) feederNumber.value = row.dataset.feederNumber || "";
-            if (drinkerNumber) drinkerNumber.value = row.dataset.drinkerNumber || "";
             if (id) id.value = row.dataset.id || "";
 
             clearAdminSensorEditFormError();
             syncAdminSensorResourceFields("edit");
+            resetAdminSensorEditResourceOptions();
 
             if (house && house.value) {
                 await loadAdminPensForHouse(house.value, pen);
@@ -695,6 +921,8 @@ function bindAdminEditButtons() {
                 pen.value = "";
             }
 
+            await syncAdminEditFeederOptions(row.dataset.feederNumber || "");
+            await syncAdminEditDrinkerOptions(row.dataset.drinkerNumber || "");
             setupAdminSensorSelectPlaceholderState();
             openAdminSensorModal("adminSensorEditModal");
         });
@@ -768,11 +996,17 @@ function bindAdminDeleteButtons() {
             const row = button.closest("tr[data-id]");
             const modal = document.getElementById("adminSensorDeleteModal");
             const deleteIdInput = document.getElementById("adminSensorDeleteId");
+            const deleteText = document.getElementById("adminSensorDeleteText");
 
             if (row && modal && deleteIdInput) {
                 deleteIdInput.value = row.dataset.id || "";
             }
 
+            if (deleteText) {
+                deleteText.textContent = `Are you sure you want to delete ${row?.dataset.name || "this sensor"}?`;
+            }
+
+            clearAdminSensorDeleteError();
             openAdminSensorModal("adminSensorDeleteModal");
         });
     });
@@ -783,6 +1017,8 @@ function bindAdminDeleteConfirmButton() {
         "#adminSensorDeleteModal .admin-sensor-btn.delete",
     );
     if (!deleteButton) return;
+    if (deleteButton._adminSensorDeleteHandlerSet) return;
+    deleteButton._adminSensorDeleteHandlerSet = true;
 
     deleteButton.addEventListener("click", async () => {
         const deleteIdInput = document.getElementById("adminSensorDeleteId");
@@ -794,13 +1030,36 @@ function bindAdminDeleteConfirmButton() {
         }
 
         try {
+            deleteButton.disabled = true;
+            clearAdminSensorDeleteError();
             await apiRequest(`/api/admin/sensors/${sensorId}`, "DELETE");
             closeAdminSensorModal("adminSensorDeleteModal");
+            if (deleteIdInput) deleteIdInput.value = "";
             await renderAdminSensorSections();
         } catch (error) {
+            showAdminSensorDeleteError(error.message || "Failed to delete sensor.");
             console.error("Failed to delete sensor.", error);
+        } finally {
+            deleteButton.disabled = false;
         }
     });
+}
+
+function showAdminSensorDeleteError(message = "Failed to delete sensor.") {
+    const formError = document.getElementById("adminSensorDeleteError");
+    if (!formError) return;
+
+    formError.textContent = message;
+    formError.classList.add("show");
+}
+
+function clearAdminSensorDeleteError() {
+    const formError = document.getElementById("adminSensorDeleteError");
+
+    formError?.classList.remove("show");
+    if (formError) {
+        formError.textContent = "";
+    }
 }
 
 function bindAdminAddButton() {
@@ -811,6 +1070,17 @@ function bindAdminAddButton() {
         const form = document.getElementById("adminSensorAddForm");
         if (form) form.reset();
 
+        fillAdminSimpleSelect(document.getElementById("adminSensorAddPen"), [], "Select pen");
+        fillAdminSimpleSelect(
+            document.getElementById("adminSensorAddFeederNumber"),
+            [],
+            "Select house and pen first",
+        );
+        fillAdminSimpleSelect(
+            document.getElementById("adminSensorAddDrinkerNumber"),
+            [],
+            "Select house and pen first",
+        );
         clearAdminSensorRequiredFieldHighlights();
         clearAdminSensorAddFormError();
         setupAdminSensorSelectPlaceholderState();
@@ -834,19 +1104,46 @@ function setupAdminSensorAddModal() {
         const payload = Object.fromEntries(formData.entries());
         normalizeAdminSensorResourcePayload(payload);
 
+        pendingAdminSensorAddPayload = payload;
+        setAdminSensorAddConfirmText(payload);
+        openAdminSensorModal("adminSensorAddConfirmModal");
+    });
+
+    const confirmButton = document.getElementById("adminSensorAddConfirm");
+    if (!confirmButton) return;
+
+    confirmButton.addEventListener("click", async () => {
+        if (!pendingAdminSensorAddPayload) return;
+
         try {
-            await apiRequest("/api/admin/sensors", "POST", payload);
+            confirmButton.disabled = true;
+            await apiRequest("/api/admin/sensors", "POST", pendingAdminSensorAddPayload);
+            closeAdminSensorModal("adminSensorAddConfirmModal");
             closeAdminSensorModal("adminSensorAddModal");
             form.reset();
+            pendingAdminSensorAddPayload = null;
             clearAdminSensorRequiredFieldHighlights();
             clearAdminSensorAddFormError();
             setupAdminSensorSelectPlaceholderState();
             await renderAdminSensorSections();
         } catch (error) {
+            closeAdminSensorModal("adminSensorAddConfirmModal");
             showAdminSensorAddFormError(error.message || "Failed to create sensor.");
             console.error("Failed to create sensor.", error);
+        } finally {
+            confirmButton.disabled = false;
         }
     });
+}
+
+function setAdminSensorAddConfirmText(payload) {
+    const text = document.getElementById("adminSensorAddConfirmText");
+    if (!text) return;
+
+    const sensorName = payload.sensor_name || "this sensor";
+    const sensorType = payload.sensor_type || "sensor";
+
+    text.textContent = `Add ${sensorName} as a ${sensorType}?`;
 }
 
 function setupAdminSensorEditModal() {
@@ -1009,12 +1306,13 @@ function bindAdminStatusFilters() {
 
         const updateNoMatchRow = (visibleCount) => {
             const existing = tbody.querySelector("tr.admin-sensor-filter-empty");
+            const columnCount = section.dataset.columnCount || "6";
             if (visibleCount === 0) {
                 if (!existing) {
                     const noMatchRow = document.createElement("tr");
                     noMatchRow.className = "admin-sensor-filter-empty";
                     noMatchRow.innerHTML = `
-                        <td colspan="6">
+                        <td colspan="${columnCount}">
                             <div class="admin-sensor-empty">No sensors match the selected status.</div>
                         </td>
                     `;

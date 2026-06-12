@@ -72,12 +72,14 @@
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorEditFeederNumber">Feeder Number</label>
-                    <input type="number" id="adminSensorEditFeederNumber" name="feeder_number" min="1" step="1">
+                    <select id="adminSensorEditFeederNumber" name="feeder_number"
+                        class="admin-sensor-select-placeholder"></select>
                 </div>
 
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorEditDrinkerNumber">Drinker Number</label>
-                    <input type="number" id="adminSensorEditDrinkerNumber" name="drinker_number" min="1" step="1">
+                    <select id="adminSensorEditDrinkerNumber" name="drinker_number"
+                        class="admin-sensor-select-placeholder"></select>
                 </div>
             </div>
 
@@ -127,12 +129,14 @@
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorAddFeederNumber">Feeder Number</label>
-                    <input type="number" id="adminSensorAddFeederNumber" name="feeder_number" min="1" step="1">
+                    <select id="adminSensorAddFeederNumber" name="feeder_number"
+                        class="admin-sensor-select-placeholder"></select>
                 </div>
 
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorAddDrinkerNumber">Drinker Number</label>
-                    <input type="number" id="adminSensorAddDrinkerNumber" name="drinker_number" min="1" step="1">
+                    <select id="adminSensorAddDrinkerNumber" name="drinker_number"
+                        class="admin-sensor-select-placeholder"></select>
                 </div>
             </div>
 
@@ -142,6 +146,29 @@
                 <button type="submit" class="admin-sensor-btn save">Save</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="admin-sensor-modal-backdrop" id="adminSensorAddConfirmModal">
+    <div class="admin-sensor-modal-card admin-sensor-delete-card">
+        <div class="admin-sensor-modal-header center">
+            <h2>Confirm Sensor</h2>
+            <div class="admin-sensor-header-line"></div>
+        </div>
+
+        <div class="admin-sensor-modal-body">
+            <p class="admin-sensor-delete-text" id="adminSensorAddConfirmText">
+                Add this sensor configuration?
+            </p>
+
+            <div class="admin-sensor-modal-actions">
+                <button type="button" class="admin-sensor-btn close"
+                    data-close-admin-sensor-modal="adminSensorAddConfirmModal">Cancel</button>
+                <button type="button" class="admin-sensor-btn save" id="adminSensorAddConfirm">
+                    Confirm
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -188,7 +215,10 @@
         </div>
 
         <div class="admin-sensor-modal-body">
-            <p class="admin-sensor-delete-text">This placeholder will later connect to backend delete confirmation.</p>
+            <p class="admin-sensor-delete-text" id="adminSensorDeleteText">
+                Are you sure you want to delete this sensor?
+            </p>
+            <div class="admin-sensor-form-error" id="adminSensorDeleteError" role="alert" aria-live="polite"></div>
 
             <input type="hidden" id="adminSensorDeleteId">
             <div class="admin-sensor-modal-actions">

@@ -504,6 +504,8 @@ Route::prefix('api/admin/sensors')->group(function () {
     Route::get('/health', [SensorController::class, 'sensorHealth']);
     Route::get('/form-options', [SensorController::class, 'formOptions']);
     Route::get('/houses/{houseId}/pens', [SensorController::class, 'getPensForHouse']);
+    Route::get('/pens/{penId}/available-feeders', [SensorController::class, 'getAvailableFeedersForPen']);
+    Route::get('/pens/{penId}/available-drinkers', [SensorController::class, 'getAvailableDrinkersForPen']);
     Route::post('/', [SensorController::class, 'store']);
     Route::put('/thresholds', [SensorController::class, 'updateThresholds']);
     Route::patch('/{sensorId}/status', [SensorController::class, 'updateStatus']);

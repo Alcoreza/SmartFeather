@@ -10,6 +10,7 @@ use App\Models\Pen;
 use App\Models\SensorConfiguration;
 use App\Models\SensorMaintenance;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class SensorController extends Controller
 {
@@ -128,6 +129,86 @@ class SensorController extends Controller
         return response()->json(['pens' => $pens]);
     }
 
+    public function getAvailableFeedersForPen(Request $request, $penId)
+    {
+        $houseId = $request->query('house_id');
+        $ignoreSensorId = $request->query('ignore_sensor_id');
+
+        $pen = Pen::where('id', $penId)
+            ->when($houseId, function ($query) use ($houseId) {
+                $query->where('house_id', $houseId);
+            })
+            ->whereNull('archived_at')
+            ->whereHas('runningBatch')
+            ->firstOrFail();
+
+        $usedFeeders = Sensor::where('sensortype', 'Feed Sensor')
+            ->where('house_houseid', $pen->house_id)
+            ->where('pen_penid', $pen->id)
+            ->whereNotNull('feeder_number')
+            ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
+                $query->where('sensorid', '!=', $ignoreSensorId);
+            })
+            ->pluck('feeder_number')
+            ->map(fn ($number) => (int) $number)
+            ->all();
+
+        $availableFeeders = [];
+        for ($number = 1; $number <= (int) $pen->feeder_count; $number++) {
+            if (!in_array($number, $usedFeeders, true)) {
+                $availableFeeders[] = [
+                    'value' => $number,
+                    'label' => 'Feeder ' . $number,
+                ];
+            }
+        }
+
+        return response()->json([
+            'feeders' => $availableFeeders,
+            'feeder_count' => (int) $pen->feeder_count,
+        ]);
+    }
+
+    public function getAvailableDrinkersForPen(Request $request, $penId)
+    {
+        $houseId = $request->query('house_id');
+        $ignoreSensorId = $request->query('ignore_sensor_id');
+
+        $pen = Pen::where('id', $penId)
+            ->when($houseId, function ($query) use ($houseId) {
+                $query->where('house_id', $houseId);
+            })
+            ->whereNull('archived_at')
+            ->whereHas('runningBatch')
+            ->firstOrFail();
+
+        $usedDrinkers = Sensor::where('sensortype', 'Water Sensor')
+            ->where('house_houseid', $pen->house_id)
+            ->where('pen_penid', $pen->id)
+            ->whereNotNull('drinker_number')
+            ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
+                $query->where('sensorid', '!=', $ignoreSensorId);
+            })
+            ->pluck('drinker_number')
+            ->map(fn ($number) => (int) $number)
+            ->all();
+
+        $availableDrinkers = [];
+        for ($number = 1; $number <= (int) $pen->drinker_count; $number++) {
+            if (!in_array($number, $usedDrinkers, true)) {
+                $availableDrinkers[] = [
+                    'value' => $number,
+                    'label' => 'Drinker ' . $number,
+                ];
+            }
+        }
+
+        return response()->json([
+            'drinkers' => $availableDrinkers,
+            'drinker_count' => (int) $pen->drinker_count,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -145,6 +226,7 @@ class SensorController extends Controller
         );
         $resourceNumbers = $this->validateSensorResourceNumber(
             $validated['sensor_type'],
+            $validated['house_houseid'],
             $validated['pen_penid'],
             $validated['feeder_number'] ?? null,
             $validated['drinker_number'] ?? null
@@ -201,9 +283,11 @@ class SensorController extends Controller
         );
         $resourceNumbers = $this->validateSensorResourceNumber(
             $validated['sensor_type'],
+            $validated['house_houseid'],
             $validated['pen_penid'],
             $validated['feeder_number'] ?? null,
-            $validated['drinker_number'] ?? null
+            $validated['drinker_number'] ?? null,
+            $sensor->sensorid
         );
 
         $sensor->update([
@@ -226,7 +310,13 @@ class SensorController extends Controller
     public function destroy($sensorId)
     {
         $sensor = Sensor::findOrFail($sensorId);
-        $sensor->delete();
+
+        DB::transaction(function () use ($sensor) {
+            $sensor->configuration()->delete();
+            $sensor->maintenances()->delete();
+            $sensor->readings()->delete();
+            $sensor->delete();
+        });
 
         return response()->json(['message' => 'Sensor deleted']);
     }
@@ -353,7 +443,7 @@ class SensorController extends Controller
         }
     }
 
-    private function validateSensorResourceNumber(string $sensorType, $penId, $feederNumber, $drinkerNumber): array
+    private function validateSensorResourceNumber(string $sensorType, $houseId, $penId, $feederNumber, $drinkerNumber, $ignoreSensorId = null): array
     {
         $pen = Pen::find($penId);
         $normalizedType = strtolower(trim($sensorType));
@@ -370,6 +460,21 @@ class SensorController extends Controller
                     'feeder_number' => [
                         'Feeder number cannot exceed this pen\'s configured feeder count (' . (int) ($pen?->feeder_count ?? 0) . ').',
                     ],
+                ]);
+            }
+
+            $feederIsAssigned = Sensor::where('sensortype', 'Feed Sensor')
+                ->where('house_houseid', $houseId)
+                ->where('pen_penid', $penId)
+                ->where('feeder_number', (int) $feederNumber)
+                ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
+                    $query->where('sensorid', '!=', $ignoreSensorId);
+                })
+                ->exists();
+
+            if ($feederIsAssigned) {
+                throw ValidationException::withMessages([
+                    'feeder_number' => ['This feeder already has an assigned feed sensor.'],
                 ]);
             }
 
@@ -394,10 +499,41 @@ class SensorController extends Controller
                 ]);
             }
 
+            $drinkerIsAssigned = Sensor::where('sensortype', 'Water Sensor')
+                ->where('house_houseid', $houseId)
+                ->where('pen_penid', $penId)
+                ->where('drinker_number', (int) $drinkerNumber)
+                ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
+                    $query->where('sensorid', '!=', $ignoreSensorId);
+                })
+                ->exists();
+
+            if ($drinkerIsAssigned) {
+                throw ValidationException::withMessages([
+                    'drinker_number' => ['This drinker already has an assigned water sensor.'],
+                ]);
+            }
+
             return [
                 'feeder_number' => null,
                 'drinker_number' => (int) $drinkerNumber,
             ];
+        }
+
+        if (in_array($normalizedType, ['temperature sensor', 'ammonia sensor'], true)) {
+            $sensorIsAssigned = Sensor::whereRaw('lower(sensortype) = ?', [$normalizedType])
+                ->where('house_houseid', $houseId)
+                ->where('pen_penid', $penId)
+                ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
+                    $query->where('sensorid', '!=', $ignoreSensorId);
+                })
+                ->exists();
+
+            if ($sensorIsAssigned) {
+                throw ValidationException::withMessages([
+                    'sensor_type' => [ucfirst(str_replace(' sensor', '', $normalizedType)) . ' sensor is already assigned to this pen.'],
+                ]);
+            }
         }
 
         return [

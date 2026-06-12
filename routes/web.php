@@ -72,7 +72,7 @@ Route::middleware(['web', 'auth.session', 'check.role:Manager', 'prevent.cache']
 */
 
 Route::middleware(['web', 'auth.session', 'check.role:Admin', 'prevent.cache'])->group(function () {
-    Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+    Route::get('/admin/dashboard', [ManagerDashboardController::class, 'adminIndex'])->name('admin.dashboard');
     Route::view('/admin/workers', 'admin.workers')->name('admin.workers');
     Route::view('/admin/houses', 'admin.houses')->name('admin.houses');
     Route::get('/admin/profile', [ProfileController::class, 'adminProfile'])->name('admin.profile');
@@ -365,8 +365,8 @@ Route::get('/api/manager/workers', function () {
 Route::get('/api/admin/dashboard/realtime', function () {
     return response()->json([
         'environment' => [
-            ['label' => 'Temperature', 'value' => 24, 'unit' => 'deg', 'min' => 0, 'max' => 50, 'status' => 'safe'],
-            ['label' => 'Ammonia', 'value' => 15, 'unit' => 'ppm', 'min' => 0, 'max' => 50, 'status' => 'warning'],
+            ['label' => 'Temperature', 'value' => 24, 'unit' => 'deg', 'min' => 0, 'max' => 35, 'status' => 'safe'],
+            ['label' => 'Ammonia', 'value' => 7, 'unit' => 'ppm', 'min' => 0, 'max' => 30, 'status' => 'warning'],
         ],
         'resources' => [
             ['label' => 'Feed', 'value' => 60, 'unit' => '%', 'type' => 'feed'],
@@ -396,6 +396,14 @@ Route::get('/api/admin/dashboard/monitoring-graphs', function () {
             ],
         ],
     ]);
+});
+
+Route::get('/api/admin/dashboard/environment-by-house', function () {
+    return redirect('/api/manager/dashboard/environment-by-house');
+});
+
+Route::get('/api/admin/dashboard/resources-by-house', function () {
+    return redirect('/api/manager/dashboard/resources-by-house');
 });
 
 /*

@@ -594,24 +594,25 @@ function populateTaskRowOptions(rowIndex) {
         "Select pen",
     );
 
-    // Set up house change event
-    if (houseSelect) {
-        houseSelect.addEventListener("change", async (event) => {
-            const selectedHouseId = event.target.value;
-            if (!selectedHouseId) {
-                fillSelect(penSelect, [], "number", "label", "Select pen");
-                return;
-            }
+    const refreshPens = async () => {
+        const selectedHouseId = houseSelect?.value;
+        if (!selectedHouseId) {
+            fillSelect(penSelect, [], "number", "label", "Select pen");
+            return;
+        }
 
-            try {
-                const response = await fetch(`/api/manager/tasks/houses/${selectedHouseId}/pens`);
-                const data = await response.json();
-                fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
-            } catch (error) {
-                console.error("Failed to load pens:", error);
-            }
-        });
-    }
+        try {
+            const response = await fetch(getTaskPensUrl(selectedHouseId, taskCategorySelect?.value));
+            const data = await response.json();
+            fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+            setupTaskSelectPlaceholderState();
+        } catch (error) {
+            console.error("Failed to load pens:", error);
+        }
+    };
+
+    houseSelect?.addEventListener("change", refreshPens);
+    taskCategorySelect?.addEventListener("change", refreshPens);
 }
 
 function setupAddTaskModal() {
@@ -1076,7 +1077,8 @@ async function loadPensForHouse(houseId) {
     }
 
     try {
-        const response = await fetch(`/api/manager/tasks/houses/${houseId}/pens`);
+        const taskType = document.getElementById("taskCategory")?.value || "";
+        const response = await fetch(getTaskPensUrl(houseId, taskType));
         const data = await response.json();
         fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
         setupTaskSelectPlaceholderState();
@@ -1085,6 +1087,16 @@ async function loadPensForHouse(houseId) {
         fillSelect(penSelect, [], "number", "label", "Select pen");
         setupTaskSelectPlaceholderState();
     }
+}
+
+function getTaskPensUrl(houseId, taskType = "") {
+    const params = new URLSearchParams();
+    if (taskType) {
+        params.set("task_type", taskType);
+    }
+
+    const query = params.toString();
+    return `/api/manager/tasks/houses/${houseId}/pens${query ? `?${query}` : ""}`;
 }
 
 async function updateTaskStatus(taskId, newStatus) {
@@ -1210,10 +1222,10 @@ function populateEditTaskForm(task) {
     setupTaskSelectPlaceholderState();
 
     // Load pens for the selected house
-    loadPensForEditForm(task.house_id, task.pen_id);
+    loadPensForEditForm(task.house_id, task.pen_id, taskCategorySelect.value);
 }
 
-async function loadPensForEditForm(houseId, penId) {
+async function loadPensForEditForm(houseId, penId, taskType = '') {
     const penSelect = document.querySelector('#editTaskModal .task-pen-select');
 
     if (!houseId) {
@@ -1223,7 +1235,7 @@ async function loadPensForEditForm(houseId, penId) {
     }
 
     try {
-        const response = await fetch(`/api/manager/tasks/houses/${houseId}/pens`);
+        const response = await fetch(getTaskPensUrl(houseId, taskType));
         const data = await response.json();
         fillSelect(penSelect, data.pens || [], 'number', 'label', 'Select pen');
 
@@ -1242,11 +1254,12 @@ async function loadPensForEditForm(houseId, penId) {
 
 function setupEditTaskHouseChange() {
     const houseSelect = document.querySelector('#editTaskModal .task-house-select');
+    const taskCategorySelect = document.querySelector('#editTaskModal .task-category-select');
+    const penSelect = document.querySelector('#editTaskModal .task-pen-select');
     if (!houseSelect) return;
 
-    houseSelect.addEventListener('change', async (event) => {
-        const selectedHouseId = event.target.value;
-        const penSelect = document.querySelector('#editTaskModal .task-pen-select');
+    const refreshPens = async () => {
+        const selectedHouseId = houseSelect.value;
 
         if (!selectedHouseId) {
             fillSelect(penSelect, [], 'number', 'label', 'Select pen');
@@ -1254,14 +1267,17 @@ function setupEditTaskHouseChange() {
         }
 
         try {
-            const response = await fetch(`/api/manager/tasks/houses/${selectedHouseId}/pens`);
+            const response = await fetch(getTaskPensUrl(selectedHouseId, taskCategorySelect?.value));
             const data = await response.json();
             fillSelect(penSelect, data.pens || [], 'number', 'label', 'Select pen');
             setupTaskSelectPlaceholderState();
         } catch (error) {
             console.error('Failed to load pens:', error);
         }
-    });
+    };
+
+    houseSelect.addEventListener('change', refreshPens);
+    taskCategorySelect?.addEventListener('change', refreshPens);
 }
 
 async function handleEditTaskSubmit(event) {

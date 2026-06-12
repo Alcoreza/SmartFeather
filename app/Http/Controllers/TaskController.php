@@ -83,6 +83,37 @@ class TaskController extends Controller
         );
     }
 
+    private function isChickPlacementTask(?string $taskType): bool
+    {
+        return strtolower(trim((string) $taskType)) === 'chick placement';
+    }
+
+    private function validateAssignablePen(int $houseId, int $penId, ?string $taskType): ?\Illuminate\Http\JsonResponse
+    {
+        $pen = Pen::where('id', $penId)
+            ->where('house_id', $houseId)
+            ->whereNull('archived_at')
+            ->first();
+
+        if (! $pen) {
+            return response()->json([
+                'errors' => [
+                    'pennumber' => ['Select a valid pen in the selected house.'],
+                ],
+            ], 422);
+        }
+
+        if (! $this->isChickPlacementTask($taskType) && ! $pen->runningBatch()->exists()) {
+            return response()->json([
+                'errors' => [
+                    'pennumber' => ['Select a pen with a running batch.'],
+                ],
+            ], 422);
+        }
+
+        return null;
+    }
+
     public function store(Request $request)
     {
         try {
@@ -114,6 +145,16 @@ class TaskController extends Controller
                 }
             }
 
+            $penError = $this->validateAssignablePen(
+                (int) $validated['house_houseid'],
+                (int) $validated['pennumber'],
+                $validated['tasktype'],
+            );
+
+            if ($penError) {
+                return $penError;
+            }
+
             $task = Task::create($validated);
 
             return response()->json($task, 201);
@@ -140,6 +181,21 @@ class TaskController extends Controller
             ]);
 
             $task = Task::findOrFail($taskId);
+
+            if (array_key_exists('tasktype', $validated)
+                || array_key_exists('house_houseid', $validated)
+                || array_key_exists('pennumber', $validated)
+            ) {
+                $nextTaskType = $validated['tasktype'] ?? $task->tasktype;
+                $nextHouseId = (int) ($validated['house_houseid'] ?? $task->house_houseid);
+                $nextPenId = (int) ($validated['pennumber'] ?? $task->pennumber);
+
+                $penError = $this->validateAssignablePen($nextHouseId, $nextPenId, $nextTaskType);
+
+                if ($penError) {
+                    return $penError;
+                }
+            }
 
             // Remove null values to only update provided fields
             $updateData = array_filter($validated, function($value) {
@@ -224,21 +280,23 @@ class TaskController extends Controller
         ]);
     }
 
-    public function getPensForHouse($houseId)
+    public function getPensForHouse(Request $request, $houseId)
     {
+        $allowWithoutRunningBatch = $this->isChickPlacementTask($request->query('task_type'));
+
         $pens = Pen::where('house_id', $houseId)
             ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get(['id', 'pen_name'])
-            ->map(function (Pen $pen) {
+            ->map(function (Pen $pen) use ($allowWithoutRunningBatch) {
                 // Check if pen has a running batch
                 $hasRunningBatch = $pen->runningBatch()->exists();
                 
                 return [
                     'number' => $pen->id,
                     'label' => $pen->pen_name,
-                    'disabled' => !$hasRunningBatch,
-                    'disabledReason' => !$hasRunningBatch ? 'no running batch' : null,
+                    'disabled' => !$allowWithoutRunningBatch && !$hasRunningBatch,
+                    'disabledReason' => !$allowWithoutRunningBatch && !$hasRunningBatch ? 'no running batch' : null,
                 ];
             });
 

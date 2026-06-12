@@ -21,7 +21,7 @@
             </div>
 
             <div class="pen-capacity-section" id="penCapacitySection" hidden>
-                <div class="pen-capacity-header">Pen Capacities*</div>
+                <div class="pen-capacity-header">Pen Setup*</div>
                 <div class="pen-capacity-fields" id="penCapacityFields"></div>
             </div>
 
@@ -30,5 +30,25 @@
                 <button type="submit" class="save-btn">Save</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="confirmAddHouseModal">
+    <div class="modal-card archive-house-card">
+        <div class="modal-header">
+            <h2>Confirm House</h2>
+            <button type="button" class="modal-close" id="closeConfirmAddHouseModal">&times;</button>
+        </div>
+
+        <div>
+            <p class="archive-house-text" id="confirmAddHouseMessage">
+                Create this house and its pen setup?
+            </p>
+
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" id="cancelConfirmAddHouseModal">Cancel</button>
+                <button type="button" class="save-btn" id="confirmAddHouseSave">Confirm</button>
+            </div>
+        </div>
     </div>
 </div>

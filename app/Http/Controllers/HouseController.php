@@ -23,6 +23,16 @@ class HouseController extends Controller
                 },
                 'pens.currentBatch:id,batch_code,started_at,status',
                 'pens.runningBatch:id,batch_code,pen_id,started_at,status',
+                'pens.latestWeightSamplingLog' => function ($query) {
+                    $query->select(
+                        'weight_sampling_logs.id',
+                        'weight_sampling_logs.pen_id',
+                        'weight_sampling_logs.status',
+                        'weight_sampling_logs.date',
+                        'weight_sampling_logs.time',
+                        'weight_sampling_logs.created_at'
+                    );
+                },
             ])
                 ->whereNull('archived_at')
                 ->orderBy('id', 'asc')
@@ -56,11 +66,17 @@ class HouseController extends Controller
                 'start_date' => 'nullable|date',
                 'pen_capacities' => 'nullable|array',
                 'pen_capacities.*' => 'nullable|integer|min:0',
+                'pen_feeder_counts' => 'required|array',
+                'pen_feeder_counts.*' => 'required|integer|min:0',
+                'pen_drinker_counts' => 'required|array',
+                'pen_drinker_counts.*' => 'required|integer|min:0',
             ]);
 
             $penCapacities = $validated['pen_capacities'] ?? [];
+            $penFeederCounts = $validated['pen_feeder_counts'] ?? [];
+            $penDrinkerCounts = $validated['pen_drinker_counts'] ?? [];
 
-            $house = DB::transaction(function () use ($validated, $penCapacities) {
+            $house = DB::transaction(function () use ($validated, $penCapacities, $penFeederCounts, $penDrinkerCounts) {
                 // Create the house
                 $house = House::create([
                     'house_number' => $validated['house_number'],
@@ -78,6 +94,8 @@ class HouseController extends Controller
                         'population' => 0,
                         'eggs_hatched' => 0,
                         'mortality' => 0,
+                        'feeder_count' => $penFeederCounts[$i - 1] ?? 0,
+                        'drinker_count' => $penDrinkerCounts[$i - 1] ?? 0,
                         'recorded_at' => now(),
                     ]);
                 }
@@ -91,7 +109,7 @@ class HouseController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $house,
-                'message' => 'House and pen capacities saved successfully.'
+                'message' => 'House and pen setup saved successfully.'
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -119,6 +137,16 @@ class HouseController extends Controller
                 },
                 'pens.currentBatch:id,batch_code,started_at,status',
                 'pens.runningBatch:id,batch_code,pen_id,started_at,status',
+                'pens.latestWeightSamplingLog' => function ($query) {
+                    $query->select(
+                        'weight_sampling_logs.id',
+                        'weight_sampling_logs.pen_id',
+                        'weight_sampling_logs.status',
+                        'weight_sampling_logs.date',
+                        'weight_sampling_logs.time',
+                        'weight_sampling_logs.created_at'
+                    );
+                },
             ])
                 ->whereNull('archived_at')
                 ->find($id);
@@ -214,6 +242,11 @@ class HouseController extends Controller
                     ->whereNull('archived_at')
                     ->update([
                         'archived_at' => $archivedAt,
+                    ]);
+
+                Sensor::where('house_houseid', $house->id)
+                    ->update([
+                        'status' => 'Inactive',
                     ]);
             });
 
@@ -363,6 +396,8 @@ class HouseController extends Controller
             $validated = $request->validate([
                 'capacity' => 'nullable|integer|min:0',
                 'population' => 'nullable|integer|min:0',
+                'feeder_count' => 'nullable|integer|min:0',
+                'drinker_count' => 'nullable|integer|min:0',
             ]);
 
             $pen->update($validated);

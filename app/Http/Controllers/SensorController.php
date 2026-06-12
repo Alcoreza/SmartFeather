@@ -9,6 +9,7 @@ use App\Models\House;
 use App\Models\Pen;
 use App\Models\SensorConfiguration;
 use App\Models\SensorMaintenance;
+use Illuminate\Validation\ValidationException;
 
 class SensorController extends Controller
 {
@@ -34,14 +35,16 @@ class SensorController extends Controller
                     'sensor_type' => $type,
                     'items' => $group->map(function (Sensor $sensor) {
 
-                        $status = $sensor->status ?? null;
+                        $status = $this->effectiveSensorStatus($sensor);
 
-                        if (!$status) {
+                        if (!$status || $status === 'Active') {
                             $latestMaintenance = $sensor->maintenances
                                 ->sortByDesc('startdate')
                                 ->first();
 
-                            $status = $latestMaintenance?->status;
+                            if ($latestMaintenance?->status) {
+                                $status = $latestMaintenance->status;
+                            }
                         }
 
                         $status = $this->normalizeSensorStatus($status);
@@ -89,6 +92,10 @@ class SensorController extends Controller
         ];
 
         $houses = House::whereNull('archived_at')
+            ->whereHas('pens', function ($query) {
+                $query->whereNull('archived_at')
+                    ->whereHas('runningBatch');
+            })
             ->orderBy('house_number')
             ->get()
             ->map(function (House $house) {
@@ -108,6 +115,7 @@ class SensorController extends Controller
     {
         $pens = Pen::where('house_id', $houseId)
             ->whereNull('archived_at')
+            ->whereHas('runningBatch')
             ->orderBy('pen_name')
             ->get()
             ->map(function (Pen $pen) {
@@ -131,14 +139,29 @@ class SensorController extends Controller
             'drinker_number' => 'nullable|integer|min:1',
         ]);
 
+        $this->ensureSensorAssignmentHasRunningBatch(
+            $validated['house_houseid'],
+            $validated['pen_penid']
+        );
+        $resourceNumbers = $this->validateSensorResourceNumber(
+            $validated['sensor_type'],
+            $validated['pen_penid'],
+            $validated['feeder_number'] ?? null,
+            $validated['drinker_number'] ?? null
+        );
+
         $sensor = Sensor::create([
             'sensortype' => $validated['sensor_type'],
             'sensorname' => $validated['sensor_name'],
             'house_houseid' => $validated['house_houseid'],
             'pen_penid' => $validated['pen_penid'],
-            'feeder_number' => $validated['feeder_number'] ?? null,
-            'drinker_number' => $validated['drinker_number'] ?? null,
-            'status' => 'Active',
+            'feeder_number' => $resourceNumbers['feeder_number'],
+            'drinker_number' => $resourceNumbers['drinker_number'],
+            'status' => $this->determineStoredSensorStatus(
+                $validated['house_houseid'] ?? null,
+                $validated['pen_penid'] ?? null,
+                'Active'
+            ),
         ]);
 
         $existingThreshold = SensorConfiguration::whereIn(
@@ -172,13 +195,29 @@ class SensorController extends Controller
 
         $sensor = Sensor::findOrFail($sensorId);
 
+        $this->ensureSensorAssignmentHasRunningBatch(
+            $validated['house_houseid'],
+            $validated['pen_penid']
+        );
+        $resourceNumbers = $this->validateSensorResourceNumber(
+            $validated['sensor_type'],
+            $validated['pen_penid'],
+            $validated['feeder_number'] ?? null,
+            $validated['drinker_number'] ?? null
+        );
+
         $sensor->update([
             'sensortype' => $validated['sensor_type'],
             'sensorname' => $validated['sensor_name'],
             'house_houseid' => $validated['house_houseid'],
             'pen_penid' => $validated['pen_penid'],
-            'feeder_number' => $validated['feeder_number'] ?? null,
-            'drinker_number' => $validated['drinker_number'] ?? null,
+            'feeder_number' => $resourceNumbers['feeder_number'],
+            'drinker_number' => $resourceNumbers['drinker_number'],
+            'status' => $this->determineStoredSensorStatus(
+                $validated['house_houseid'] ?? null,
+                $validated['pen_penid'] ?? null,
+                $sensor->status
+            ),
         ]);
 
         return response()->json($sensor);
@@ -201,7 +240,11 @@ class SensorController extends Controller
         $sensor = Sensor::findOrFail($sensorId);
 
         $sensor->update([
-            'status' => $validated['status'],
+            'status' => $this->determineStoredSensorStatus(
+                $sensor->house_houseid,
+                $sensor->pen_penid,
+                $validated['status']
+            ),
         ]);
 
         return response()->json([
@@ -260,11 +303,107 @@ class SensorController extends Controller
             return 'Active';
         }
 
+        if ($status === 'inactive') {
+            return 'Inactive';
+        }
+
         if (str_contains($status, 'maintenance')) {
             return 'Under Maintenance';
         }
 
         return 'Active';
+    }
+
+    private function effectiveSensorStatus(Sensor $sensor): string
+    {
+        return $this->determineStoredSensorStatus(
+            $sensor->house_houseid,
+            $sensor->pen_penid,
+            $sensor->status
+        );
+    }
+
+    private function determineStoredSensorStatus($houseId, $penId, $preferredStatus): string
+    {
+        $houseIsArchived = House::where('id', $houseId)
+            ->whereNotNull('archived_at')
+            ->exists();
+
+        if ($houseIsArchived) {
+            return 'Inactive';
+        }
+
+        $status = $this->normalizeSensorStatus($preferredStatus);
+
+        return $status === 'Inactive' ? 'Active' : $status;
+    }
+
+    private function ensureSensorAssignmentHasRunningBatch($houseId, $penId): void
+    {
+        $hasRunningBatch = Pen::where('id', $penId)
+            ->where('house_id', $houseId)
+            ->whereNull('archived_at')
+            ->whereHas('runningBatch')
+            ->exists();
+
+        if (!$hasRunningBatch) {
+            throw ValidationException::withMessages([
+                'pen_penid' => ['Select a pen with a running batch in the selected house.'],
+            ]);
+        }
+    }
+
+    private function validateSensorResourceNumber(string $sensorType, $penId, $feederNumber, $drinkerNumber): array
+    {
+        $pen = Pen::find($penId);
+        $normalizedType = strtolower(trim($sensorType));
+
+        if ($normalizedType === 'feed sensor') {
+            if (!$feederNumber) {
+                throw ValidationException::withMessages([
+                    'feeder_number' => ['Feeder number is required for feed sensors.'],
+                ]);
+            }
+
+            if ((int) $feederNumber > (int) ($pen?->feeder_count ?? 0)) {
+                throw ValidationException::withMessages([
+                    'feeder_number' => [
+                        'Feeder number cannot exceed this pen\'s configured feeder count (' . (int) ($pen?->feeder_count ?? 0) . ').',
+                    ],
+                ]);
+            }
+
+            return [
+                'feeder_number' => (int) $feederNumber,
+                'drinker_number' => null,
+            ];
+        }
+
+        if ($normalizedType === 'water sensor') {
+            if (!$drinkerNumber) {
+                throw ValidationException::withMessages([
+                    'drinker_number' => ['Drinker number is required for water sensors.'],
+                ]);
+            }
+
+            if ((int) $drinkerNumber > (int) ($pen?->drinker_count ?? 0)) {
+                throw ValidationException::withMessages([
+                    'drinker_number' => [
+                        'Drinker number cannot exceed this pen\'s configured drinker count (' . (int) ($pen?->drinker_count ?? 0) . ').',
+                    ],
+                ]);
+            }
+
+            return [
+                'feeder_number' => null,
+                'drinker_number' => (int) $drinkerNumber,
+            ];
+        }
+
+        return [
+            'feeder_number' => null,
+            'drinker_number' => null,
+        ];
     }
 
     private function formatHouseNumber($houseNumber)
@@ -369,10 +508,8 @@ class SensorController extends Controller
             $config = $sensor->configuration;
 
             // Determine status
-            $status = 'Active';
-            if ($sensor->status === 'Under Maintenance') {
-                $status = 'Under Maintenance';
-            } else {
+            $status = $this->effectiveSensorStatus($sensor);
+            if ($status === 'Active') {
                 $latestMaintenance = $sensor->maintenances->sortByDesc('startdate')->first();
                 if ($latestMaintenance?->status === 'Maintenance') {
                     $status = 'Under Maintenance';

@@ -835,8 +835,38 @@
 
 .pen-capacity-fields {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px 18px;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+.pen-setup-card {
+    padding: 14px;
+    border: 1px solid rgba(16, 92, 52, 0.12);
+    border-radius: 18px;
+    background: rgba(248, 251, 247, 0.86);
+}
+
+.pen-setup-title {
+    margin-bottom: 12px;
+    color: #17211b;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.pen-setup-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.pen-setup-grid .modal-group label {
+    font-size: 0.86rem;
+    margin-bottom: 6px;
+}
+
+.pen-setup-grid .modal-group input {
+    height: 38px;
+    padding: 0 12px;
 }
 
 .modal-group {
@@ -1092,7 +1122,8 @@
     }
 
     #addHouseForm .modal-row,
-    .pen-capacity-fields {
+    .pen-capacity-fields,
+    .pen-setup-grid {
         grid-template-columns: 1fr;
         flex-direction: column;
         gap: 14px;

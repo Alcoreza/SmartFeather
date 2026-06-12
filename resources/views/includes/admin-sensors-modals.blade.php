@@ -44,6 +44,8 @@
         </div>
 
         <form class="admin-sensor-form-body" id="adminSensorEditForm">
+            <div class="admin-sensor-form-error" id="adminSensorEditFormError" role="alert" aria-live="polite"></div>
+
             <div class="admin-sensor-form-field full">
                 <label for="adminSensorEditType">Sensor Type</label>
                 <select id="adminSensorEditType" name="sensor_type" class="admin-sensor-select-placeholder"></select>
@@ -64,6 +66,18 @@
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorEditPen">Pen Number</label>
                     <select id="adminSensorEditPen" name="pen_penid" class="admin-sensor-select-placeholder"></select>
+                </div>
+            </div>
+
+            <div class="admin-sensor-form-grid">
+                <div class="admin-sensor-form-field">
+                    <label for="adminSensorEditFeederNumber">Feeder Number</label>
+                    <input type="number" id="adminSensorEditFeederNumber" name="feeder_number" min="1" step="1">
+                </div>
+
+                <div class="admin-sensor-form-field">
+                    <label for="adminSensorEditDrinkerNumber">Drinker Number</label>
+                    <input type="number" id="adminSensorEditDrinkerNumber" name="drinker_number" min="1" step="1">
                 </div>
             </div>
 
@@ -107,6 +121,18 @@
                 <div class="admin-sensor-form-field">
                     <label for="adminSensorAddPen">Pen Number*</label>
                     <select id="adminSensorAddPen" name="pen_penid" class="admin-sensor-select-placeholder"></select>
+                </div>
+            </div>
+
+            <div class="admin-sensor-form-grid">
+                <div class="admin-sensor-form-field">
+                    <label for="adminSensorAddFeederNumber">Feeder Number</label>
+                    <input type="number" id="adminSensorAddFeederNumber" name="feeder_number" min="1" step="1">
+                </div>
+
+                <div class="admin-sensor-form-field">
+                    <label for="adminSensorAddDrinkerNumber">Drinker Number</label>
+                    <input type="number" id="adminSensorAddDrinkerNumber" name="drinker_number" min="1" step="1">
                 </div>
             </div>
 

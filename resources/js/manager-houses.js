@@ -25,6 +25,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const addHouseForm = document.getElementById("addHouseForm");
     const penCapacitySection = document.getElementById("penCapacitySection");
     const penCapacityFields = document.getElementById("penCapacityFields");
+    const confirmAddHouseModal = document.getElementById("confirmAddHouseModal");
+    const closeConfirmAddHouseModal = document.getElementById(
+        "closeConfirmAddHouseModal",
+    );
+    const cancelConfirmAddHouseModal = document.getElementById(
+        "cancelConfirmAddHouseModal",
+    );
+    const confirmAddHouseSave = document.getElementById("confirmAddHouseSave");
+    const confirmAddHouseMessage = document.getElementById(
+        "confirmAddHouseMessage",
+    );
 
     const editHouseButton = document.getElementById("openEditHouseModal");
     const editHouseModal = document.getElementById("editHouseModal");
@@ -33,6 +44,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         "cancelEditHouseModal",
     );
     const editHouseForm = document.getElementById("editHouseForm");
+    const confirmEditHouseModal = document.getElementById("confirmEditHouseModal");
+    const closeConfirmEditHouseModal = document.getElementById(
+        "closeConfirmEditHouseModal",
+    );
+    const cancelConfirmEditHouseModal = document.getElementById(
+        "cancelConfirmEditHouseModal",
+    );
+    const confirmEditHouseSave = document.getElementById("confirmEditHouseSave");
+    const confirmEditHouseMessage = document.getElementById(
+        "confirmEditHouseMessage",
+    );
 
     const endBatchButton = document.getElementById("openEndBatchModal");
     const endBatchModal = document.getElementById("endBatchModal");
@@ -53,6 +75,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let activeHouseIndex = 0;
     let activePenIndex = 0;
+    let pendingAddHousePayload = null;
+    let pendingEditHousePayload = null;
     const addHouseRequiredFields = [
         { id: "houseName", label: "House Number" },
         { id: "housePenCount", label: "Number of Pens" },
@@ -139,15 +163,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function getMissingAddHouseRequiredFields() {
-        const capacityFields = Array.from(
-            document.querySelectorAll(".pen-capacity-input"),
-        ).map((input, index) => ({
+        const penSetupFields = Array.from(
+            document.querySelectorAll(".pen-setup-input"),
+        ).map((input) => ({
             id: input.id,
-            label: `Pen ${index + 1} Capacity`,
+            label: input.dataset.fieldLabel || "Pen Setup",
             capacityField: true,
         }));
 
-        return [...addHouseRequiredFields, ...capacityFields].filter(
+        return [...addHouseRequiredFields, ...penSetupFields].filter(
             isAddHouseRequiredFieldEmpty,
         );
     }
@@ -183,6 +207,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
+    function getCurrentPenFeederCounts() {
+        return Array.from(document.querySelectorAll(".pen-feeder-count-input")).map(
+            (input) => input.value,
+        );
+    }
+
+    function getCurrentPenDrinkerCounts() {
+        return Array.from(document.querySelectorAll(".pen-drinker-count-input")).map(
+            (input) => input.value,
+        );
+    }
+
     function syncCapacityFieldHighlight(input) {
         if (!input) return;
 
@@ -209,36 +245,78 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!penCapacitySection || !penCapacityFields) return;
 
         const safeCount = Math.max(0, Math.min(Math.floor(Number(count) || 0), 100));
-        const previousValues = getCurrentPenCapacities();
+        const previousCapacities = getCurrentPenCapacities();
+        const previousFeederCounts = getCurrentPenFeederCounts();
+        const previousDrinkerCounts = getCurrentPenDrinkerCounts();
 
         penCapacitySection.hidden = safeCount <= 0;
         penCapacityFields.innerHTML = "";
 
         for (let index = 0; index < safeCount; index++) {
             const field = document.createElement("div");
-            field.className = "modal-group";
+            field.className = "pen-setup-card";
 
-            const label = document.createElement("label");
-            label.setAttribute("for", `penCapacity${index + 1}`);
-            label.textContent = `Pen ${index + 1} Capacity*`;
+            const title = document.createElement("div");
+            title.className = "pen-setup-title";
+            title.textContent = `Pen ${index + 1}`;
 
-            const input = document.createElement("input");
-            input.type = "number";
-            input.id = `penCapacity${index + 1}`;
-            input.className = "pen-capacity-input";
-            input.min = "0";
-            input.step = "1";
-            input.inputMode = "numeric";
-            input.value = previousValues[index] ?? "";
+            const fields = document.createElement("div");
+            fields.className = "pen-setup-grid";
 
-            input.addEventListener("input", () =>
-                syncCapacityFieldHighlight(input),
-            );
-            input.addEventListener("change", () =>
-                syncCapacityFieldHighlight(input),
-            );
+            const setupFields = [
+                {
+                    id: `penCapacity${index + 1}`,
+                    label: "Capacity*",
+                    className: "pen-capacity-input",
+                    value: previousCapacities[index] ?? "",
+                    fieldLabel: `Pen ${index + 1} Capacity`,
+                },
+                {
+                    id: `penFeederCount${index + 1}`,
+                    label: "Feeders*",
+                    className: "pen-feeder-count-input",
+                    value: previousFeederCounts[index] ?? "",
+                    fieldLabel: `Pen ${index + 1} Feeders`,
+                },
+                {
+                    id: `penDrinkerCount${index + 1}`,
+                    label: "Drinkers*",
+                    className: "pen-drinker-count-input",
+                    value: previousDrinkerCounts[index] ?? "",
+                    fieldLabel: `Pen ${index + 1} Drinkers`,
+                },
+            ];
 
-            field.append(label, input);
+            setupFields.forEach((setupField) => {
+                const group = document.createElement("div");
+                group.className = "modal-group";
+
+                const label = document.createElement("label");
+                label.setAttribute("for", setupField.id);
+                label.textContent = setupField.label;
+
+                const input = document.createElement("input");
+                input.type = "number";
+                input.id = setupField.id;
+                input.className = `pen-setup-input ${setupField.className}`;
+                input.min = "0";
+                input.step = "1";
+                input.inputMode = "numeric";
+                input.value = setupField.value;
+                input.dataset.fieldLabel = setupField.fieldLabel;
+
+                input.addEventListener("input", () =>
+                    syncCapacityFieldHighlight(input),
+                );
+                input.addEventListener("change", () =>
+                    syncCapacityFieldHighlight(input),
+                );
+
+                group.append(label, input);
+                fields.appendChild(group);
+            });
+
+            field.append(title, fields);
             penCapacityFields.appendChild(field);
         }
     }
@@ -264,18 +342,218 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    function buildAddHousePayload() {
+        const houseNameInput = document.getElementById("houseName");
+        const houseStatusInput = document.getElementById("houseStatusInput");
+        const penCountInput = document.getElementById("housePenCount");
+
+        const houseName = houseNameInput?.value.trim();
+        const houseStatusValue = houseStatusInput?.value || "Running";
+        const penCountValue = Number(penCountInput?.value || 0);
+        const penCapacities = Array.from(
+            document.querySelectorAll(".pen-capacity-input"),
+        ).map((input) => Number(input.value || 0));
+        const penFeederCounts = Array.from(
+            document.querySelectorAll(".pen-feeder-count-input"),
+        ).map((input) => Number(input.value || 0));
+        const penDrinkerCounts = Array.from(
+            document.querySelectorAll(".pen-drinker-count-input"),
+        ).map((input) => Number(input.value || 0));
+
+        return {
+            house_number: houseName,
+            status: houseStatusValue,
+            number_of_pens: penCountValue,
+            pen_capacities: penCapacities,
+            pen_feeder_counts: penFeederCounts,
+            pen_drinker_counts: penDrinkerCounts,
+        };
+    }
+
+    function openAddHouseConfirmModal(payload) {
+        pendingAddHousePayload = payload;
+
+        if (confirmAddHouseMessage) {
+            confirmAddHouseMessage.textContent = `Create ${payload.house_number} with ${payload.number_of_pens} pen${payload.number_of_pens === 1 ? "" : "s"}?`;
+        }
+
+        confirmAddHouseModal?.classList.add("show");
+    }
+
+    function closeAddHouseConfirmModal() {
+        confirmAddHouseModal?.classList.remove("show");
+        pendingAddHousePayload = null;
+    }
+
+    async function createHouse(payload) {
+        const response = await fetch("/api/houses", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Failed to create house");
+        }
+
+        return response.json();
+    }
+
+    function buildEditHousePayload() {
+        const editHouseName = document.getElementById("editHouseName");
+        const editStartDate = document.getElementById("editStartDate");
+        const editPen = document.getElementById("editPen");
+        const editCapacity = document.getElementById("editCapacity");
+        const editPopulation = document.getElementById("editPopulation");
+        const editFeederCount = document.getElementById("editFeederCount");
+        const editDrinkerCount = document.getElementById("editDrinkerCount");
+        const editEggsHatched = document.getElementById("editEggsHatched");
+        const editMortality = document.getElementById("editMortality");
+
+        const currentHouse = houses[activeHouseIndex];
+        if (!currentHouse) {
+            return null;
+        }
+
+        const selectedPenIndex = editPen
+            ? Number(editPen.value)
+            : activePenIndex;
+        const currentPen = currentHouse.pens[selectedPenIndex];
+        if (!currentPen) {
+            return null;
+        }
+
+        return {
+            currentHouse,
+            currentPen,
+            selectedPenIndex,
+            housePayload: {
+                house_number:
+                    editHouseName?.value.trim() ||
+                    currentHouse.name,
+                start_date:
+                    editStartDate?.value || currentHouse.start_date,
+            },
+            penPayload: {
+                capacity: parseInt(editCapacity?.value) || 0,
+                population: parseInt(editPopulation?.value) || 0,
+                feeder_count: parseInt(editFeederCount?.value) || 0,
+                drinker_count: parseInt(editDrinkerCount?.value) || 0,
+            },
+            productionPayload: {
+                eggs_hatched: parseInt(editEggsHatched?.value) || 0,
+                mortality: parseInt(editMortality?.value) || 0,
+            },
+        };
+    }
+
+    function openEditHouseConfirmModal(payload) {
+        pendingEditHousePayload = payload;
+
+        if (confirmEditHouseMessage) {
+            confirmEditHouseMessage.textContent = `Save changes to ${payload.currentHouse.name}, ${payload.currentPen.pen_name}?`;
+        }
+
+        confirmEditHouseModal?.classList.add("show");
+    }
+
+    function closeEditHouseConfirmModal() {
+        confirmEditHouseModal?.classList.remove("show");
+        pendingEditHousePayload = null;
+    }
+
+    async function updateHouseAndPen(payload) {
+        const houseResponse = await fetch(
+            `/api/houses/${payload.currentHouse.id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-TOKEN": getCsrfToken(),
+                },
+                body: JSON.stringify(payload.housePayload),
+            },
+        );
+
+        if (!houseResponse.ok) {
+            const error = await houseResponse.json();
+            throw new Error(error.message || "Failed to update house");
+        }
+
+        const penResponse = await fetch(`/api/pens/${payload.currentPen.id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": getCsrfToken(),
+            },
+            body: JSON.stringify(payload.penPayload),
+        });
+
+        if (!penResponse.ok) {
+            const error = await penResponse.json();
+            throw new Error(error.message || "Failed to update pen");
+        }
+
+        const productionResponse = await fetch(
+            `/api/pens/${payload.currentPen.id}/production`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-TOKEN": getCsrfToken(),
+                },
+                body: JSON.stringify(payload.productionPayload),
+            },
+        );
+
+        if (!productionResponse.ok) {
+            const error = await productionResponse.json();
+            throw new Error(
+                error.message || "Failed to update production data",
+            );
+        }
+    }
+
+    function populateEditPenFields(pen, house) {
+        const editBatchId = document.getElementById("editBatchId");
+        const editStartDate = document.getElementById("editStartDate");
+        const editCapacity = document.getElementById("editCapacity");
+        const editPopulation = document.getElementById("editPopulation");
+        const editFeederCount = document.getElementById("editFeederCount");
+        const editDrinkerCount = document.getElementById("editDrinkerCount");
+        const editEggsHatched = document.getElementById("editEggsHatched");
+        const editMortality = document.getElementById("editMortality");
+
+        if (!pen) return;
+
+        if (editBatchId) editBatchId.value = pen.batch || "";
+        if (editStartDate)
+            editStartDate.value =
+                pen.batch_started_at || house?.start_date || "";
+        if (editCapacity) editCapacity.value = pen.capacity || 0;
+        if (editPopulation)
+            editPopulation.value = pen.population || 0;
+        if (editFeederCount) editFeederCount.value = pen.feeder_count || 0;
+        if (editDrinkerCount) editDrinkerCount.value = pen.drinker_count || 0;
+        if (editEggsHatched)
+            editEggsHatched.value = pen.eggs_hatched || 0;
+        if (editMortality) editMortality.value = pen.mortality || 0;
+    }
+
     function openEditModal() {
         const currentHouse = houses[activeHouseIndex];
         if (!currentHouse || !editHouseModal) return;
 
         const editHouseName = document.getElementById("editHouseName");
-        const editBatchId = document.getElementById("editBatchId");
-        const editStartDate = document.getElementById("editStartDate");
         const editPen = document.getElementById("editPen");
-        const editCapacity = document.getElementById("editCapacity");
-        const editPopulation = document.getElementById("editPopulation");
-        const editEggsHatched = document.getElementById("editEggsHatched");
-        const editMortality = document.getElementById("editMortality");
 
         // Populate house fields
         if (editHouseName) editHouseName.value = currentHouse.name;
@@ -291,20 +569,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .join("");
         }
 
-        // Get current pen data
-        const currentPen = currentHouse.pens[activePenIndex];
-        if (currentPen) {
-            if (editBatchId) editBatchId.value = currentPen.batch || "";
-            if (editStartDate)
-                editStartDate.value =
-                    currentPen.batch_started_at || currentHouse.start_date || "";
-            if (editCapacity) editCapacity.value = currentPen.capacity || 0;
-            if (editPopulation)
-                editPopulation.value = currentPen.population || 0;
-            if (editEggsHatched)
-                editEggsHatched.value = currentPen.eggs_hatched || 0;
-            if (editMortality) editMortality.value = currentPen.mortality || 0;
-        }
+        populateEditPenFields(currentHouse.pens[activePenIndex], currentHouse);
 
         editHouseModal.classList.add("show");
     }
@@ -463,6 +728,69 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         return Number.isFinite(numberValue) ? numberValue : null;
     }
+
+    function formatDisplayDate(value, includeTime = false) {
+        if (!value) {
+            return "";
+        }
+
+        const normalizedValue =
+            typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+                ? `${value}T00:00:00`
+                : value;
+        const date = new Date(normalizedValue);
+
+        if (Number.isNaN(date.getTime())) {
+            return String(value);
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            ...(includeTime
+                ? {
+                      hour: "numeric",
+                      minute: "2-digit",
+                  }
+                : {}),
+        }).format(date);
+    }
+
+    function getWeightSamplingLogDetail(log) {
+        if (!log) {
+            return "No weight sampling record";
+        }
+
+        if (log.date) {
+            return `Recorded ${formatDisplayDate(log.date)}`;
+        }
+
+        if (log.created_at) {
+            return `Recorded ${formatDisplayDate(log.created_at, true)}`;
+        }
+
+        return "No weight sampling date";
+    }
+
+    function buildNumberedResourceReadings(readings, key, configuredCount, label) {
+        const resourceReadings = readings?.[key] || {};
+        const readingNumbers = Object.keys(resourceReadings)
+            .map((number) => Number(number))
+            .filter((number) => Number.isInteger(number) && number > 0);
+        const count = Math.max(Number(configuredCount) || 0, ...readingNumbers, 0);
+
+        return Array.from({ length: count }, (_, index) => {
+            const number = index + 1;
+            const value = Number(resourceReadings?.[number]?.value ?? 0);
+
+            return {
+                label: `${label} ${number}`,
+                value: Number.isFinite(value) ? value : 0,
+            };
+        });
+    }
+
     function populatePenOptions(house) {
         if (!housePen) return;
 
@@ -491,25 +819,38 @@ document.addEventListener("DOMContentLoaded", async () => {
                     pens: sortPensById((house.pens || []).map((pen) => {
                         const flockBatch = pen.running_batch || pen.current_batch || null;
                         const sensorReadings = pen.sensor_readings;
+                        const weightSamplingLog = pen.latest_weight_sampling_log || null;
+                        const weightSamplingLogDetail =
+                            getWeightSamplingLogDetail(weightSamplingLog);
+                        const batchStartDate =
+                            flockBatch?.started_at || pen.batch_started_at || null;
+                        const batchStartDetail = batchStartDate
+                            ? formatDisplayDate(batchStartDate, true)
+                            : "Start date not set";
 
-                        // Build feeders array from sensor readings
-                        const feeders = [
-                            { label: "Feeder 1", value: sensorReadings?.feeders?.[1]?.value ?? 0 },
-                            { label: "Feeder 2", value: sensorReadings?.feeders?.[2]?.value ?? 0 },
-                            { label: "Feeder 3", value: sensorReadings?.feeders?.[3]?.value ?? 0 },
-                        ];
-
-                        // Build drinkers array from sensor readings
-                        const drinkers = [
-                            { label: "Drinker 1", value: sensorReadings?.drinkers?.[1]?.value ?? 0 },
-                            { label: "Drinker 2", value: sensorReadings?.drinkers?.[2]?.value ?? 0 },
-                            { label: "Drinker 3", value: sensorReadings?.drinkers?.[3]?.value ?? 0 },
-                        ];
+                        const feeders = buildNumberedResourceReadings(
+                            sensorReadings,
+                            "feeders",
+                            pen.feeder_count,
+                            "Feeder",
+                        );
+                        const drinkers = buildNumberedResourceReadings(
+                            sensorReadings,
+                            "drinkers",
+                            pen.drinker_count,
+                            "Drinker",
+                        );
 
                         return {
                             id: pen.id,
                             name: pen.pen_name,
                             pen_name: pen.pen_name,
+                            feeder_count: pen.feeder_count || 0,
+                            drinker_count: pen.drinker_count || 0,
+                            batchStatus:
+                                weightSamplingLog?.status ||
+                                "No weight sampling",
+                            batchStatusDetail: weightSamplingLogDetail,
                             batch: flockBatch?.batch_code || null,
                             status: flockBatch?.status || "Inactive",
                             temperature: getSensorReadingDisplay(
@@ -535,7 +876,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             eggs_hatched: pen.eggs_hatched || 0,
                             mortality: pen.mortality || 0,
                             batch_started_at:
-                                flockBatch?.started_at || pen.batch_started_at || null,
+                                batchStartDate,
                             cards: [
                                 {
                                     icon: "🏠",
@@ -548,17 +889,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                                     icon: "📅",
                                     label: "Batch ID",
                                     value: flockBatch?.batch_code || "No active batch",
-                                    detail:
-                                        flockBatch?.started_at ||
-                                        pen.batch_started_at ||
-                                        "Start date not set",
+                                    detail: batchStartDetail,
                                     accent: "blue",
                                 },
                                 {
                                     icon: "💚",
                                     label: "Batch Status",
-                                    value: pen.status || "Unknown",
-                                    detail: flockBatch?.status || "Inactive",
+                                    value:
+                                        weightSamplingLog?.status ||
+                                        "No weight sampling",
+                                    detail: weightSamplingLogDetail,
                                     accent: "green",
                                 },
                                 {
@@ -782,63 +1122,59 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
 
-            const houseNameInput = document.getElementById("houseName");
-            const houseStatusInput =
-                document.getElementById("houseStatusInput");
-            const penCountInput = document.getElementById("housePenCount");
-
-            const houseName = houseNameInput?.value.trim();
-            const houseStatusValue = houseStatusInput?.value || "Running";
-            const penCountValue = Number(penCountInput?.value || 0);
-            const penCapacities = Array.from(
-                document.querySelectorAll(".pen-capacity-input"),
-            ).map((input) => Number(input.value || 0));
-
-            try {
-                const payload = {
-                    house_number: houseName,
-                    status: houseStatusValue,
-                    number_of_pens: penCountValue,
-                    pen_capacities: penCapacities,
-                };
-
-                const response = await fetch("/api/houses", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                        "X-CSRF-TOKEN": getCsrfToken(),
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message || "Failed to create house");
-                }
-
-                const result = await response.json();
-                alert(
-                    result.message ||
-                        "House and pen capacities saved successfully.",
-                );
-
-                resetAddHouseForm();
-                clearAddHouseRequiredFieldHighlights();
-                clearAddHouseFormError();
-                closeAddModal();
-
-                await fetchHouses();
-            } catch (error) {
-                console.error("Error creating house:", error);
-                alert("Error creating house: " + error.message);
-            }
+            openAddHouseConfirmModal(buildAddHousePayload());
         });
     }
+
+    [closeConfirmAddHouseModal, cancelConfirmAddHouseModal].forEach((button) => {
+        button?.addEventListener("click", closeAddHouseConfirmModal);
+    });
+
+    confirmAddHouseModal?.addEventListener("click", (event) => {
+        if (event.target === confirmAddHouseModal) {
+            closeAddHouseConfirmModal();
+        }
+    });
+
+    confirmAddHouseSave?.addEventListener("click", async () => {
+        if (!pendingAddHousePayload) return;
+
+        const payload = pendingAddHousePayload;
+        confirmAddHouseSave.disabled = true;
+
+        try {
+            const result = await createHouse(payload);
+
+            alert(
+                result.message ||
+                    "House and pen setup saved successfully.",
+            );
+
+            closeAddHouseConfirmModal();
+            resetAddHouseForm();
+            clearAddHouseRequiredFieldHighlights();
+            clearAddHouseFormError();
+            closeAddModal();
+
+            await fetchHouses();
+        } catch (error) {
+            console.error("Error creating house:", error);
+            alert("Error creating house: " + error.message);
+        } finally {
+            confirmAddHouseSave.disabled = false;
+        }
+    });
 
     if (editHouseButton) {
         editHouseButton.addEventListener("click", openEditModal);
     }
+
+    document.getElementById("editPen")?.addEventListener("change", (event) => {
+        const currentHouse = houses[activeHouseIndex];
+        const selectedPen = currentHouse?.pens?.[Number(event.target.value)];
+
+        populateEditPenFields(selectedPen, currentHouse);
+    });
 
     if (closeEditHouseModal) {
         closeEditHouseModal.addEventListener("click", closeEditModal);
@@ -860,103 +1196,43 @@ document.addEventListener("DOMContentLoaded", async () => {
         editHouseForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
-            const editHouseName = document.getElementById("editHouseName");
-            const editBatchId = document.getElementById("editBatchId");
-            const editStartDate = document.getElementById("editStartDate");
-            const editPen = document.getElementById("editPen");
-            const editCapacity = document.getElementById("editCapacity");
-            const editPopulation = document.getElementById("editPopulation");
-            const editEggsHatched = document.getElementById("editEggsHatched");
-            const editMortality = document.getElementById("editMortality");
+            const payload = buildEditHousePayload();
+            if (!payload) return;
 
-            const currentHouse = houses[activeHouseIndex];
-            if (!currentHouse) return;
-
-            const selectedPenIndex = editPen
-                ? Number(editPen.value)
-                : activePenIndex;
-            const currentPen = currentHouse.pens[selectedPenIndex];
-            if (!currentPen) return;
-
-            try {
-                // 1. Update house data
-                const houseResponse = await fetch(
-                    `/api/houses/${currentHouse.id}`,
-                    {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Requested-With": "XMLHttpRequest",
-                            "X-CSRF-TOKEN": getCsrfToken(),
-                        },
-                        body: JSON.stringify({
-                            house_number:
-                                editHouseName?.value.trim() ||
-                                currentHouse.name,
-                            start_date:
-                                editStartDate?.value || currentHouse.start_date,
-                        }),
-                    },
-                );
-
-                if (!houseResponse.ok) {
-                    const error = await houseResponse.json();
-                    throw new Error(error.message || "Failed to update house");
-                }
-
-                // 2. Update pen data (capacity, population)
-                const penResponse = await fetch(`/api/pens/${currentPen.id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                        "X-CSRF-TOKEN": getCsrfToken(),
-                    },
-                    body: JSON.stringify({
-                        capacity: parseInt(editCapacity?.value) || 0,
-                        population: parseInt(editPopulation?.value) || 0,
-                    }),
-                });
-
-                if (!penResponse.ok) {
-                    const error = await penResponse.json();
-                    throw new Error(error.message || "Failed to update pen");
-                }
-
-                // 3. Update pen production data
-                const productionResponse = await fetch(
-                    `/api/pens/${currentPen.id}/production`,
-                    {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Requested-With": "XMLHttpRequest",
-                            "X-CSRF-TOKEN": getCsrfToken(),
-                        },
-                        body: JSON.stringify({
-                            eggs_hatched: parseInt(editEggsHatched?.value) || 0,
-                            mortality: parseInt(editMortality?.value) || 0,
-                        }),
-                    },
-                );
-
-                if (!productionResponse.ok) {
-                    const error = await productionResponse.json();
-                    throw new Error(
-                        error.message || "Failed to update production data",
-                    );
-                }
-
-                alert("House and pen data updated successfully!");
-                activePenIndex = selectedPenIndex;
-                closeEditModal();
-                await fetchHouses();
-            } catch (error) {
-                console.error("Error updating data:", error);
-                alert("Error: " + error.message);
-            }
+            openEditHouseConfirmModal(payload);
         });
     }
+
+    [closeConfirmEditHouseModal, cancelConfirmEditHouseModal].forEach((button) => {
+        button?.addEventListener("click", closeEditHouseConfirmModal);
+    });
+
+    confirmEditHouseModal?.addEventListener("click", (event) => {
+        if (event.target === confirmEditHouseModal) {
+            closeEditHouseConfirmModal();
+        }
+    });
+
+    confirmEditHouseSave?.addEventListener("click", async () => {
+        if (!pendingEditHousePayload) return;
+
+        const payload = pendingEditHousePayload;
+        confirmEditHouseSave.disabled = true;
+
+        try {
+            await updateHouseAndPen(payload);
+
+            activePenIndex = payload.selectedPenIndex;
+            closeEditHouseConfirmModal();
+            closeEditModal();
+            await fetchHouses();
+        } catch (error) {
+            console.error("Error updating data:", error);
+            alert("Error: " + error.message);
+        } finally {
+            confirmEditHouseSave.disabled = false;
+        }
+    });
 
     // End Batch Modal Events
     if (endBatchButton) {

@@ -757,8 +757,17 @@ body {
     color: #a12727;
 }
 
+.admin-sensor-status-pill.inactive {
+    background: rgba(107, 114, 128, 0.14);
+    color: #4b5563;
+}
+
 .admin-sensor-row-maintenance td {
     background: linear-gradient(180deg, #fff5f5, #fdecec);
+}
+
+.admin-sensor-row-inactive td {
+    background: linear-gradient(180deg, #f8fafc, #eef2f7);
 }
 
 .admin-sensor-toggle-btn {
@@ -837,7 +846,7 @@ body {
     border-color: rgba(29, 106, 55, 0.24);
 }
 
-.admin-sensor-table tbody tr:not(.admin-sensor-row-maintenance):hover td {
+.admin-sensor-table tbody tr:not(.admin-sensor-row-maintenance):not(.admin-sensor-row-inactive):hover td {
     background: linear-gradient(180deg, #ffffff, #fcfdfb);
     box-shadow:
         0 14px 24px rgba(10, 24, 15, 0.06),
@@ -848,6 +857,13 @@ body {
     background: linear-gradient(180deg, #fff1f1, #fbe3e3);
     box-shadow:
         0 14px 24px rgba(120, 40, 40, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.admin-sensor-row-inactive:hover td {
+    background: linear-gradient(180deg, #f3f4f6, #e8edf3);
+    box-shadow:
+        0 14px 24px rgba(75, 85, 99, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 

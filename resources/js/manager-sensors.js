@@ -54,6 +54,7 @@ function createSectionMarkup(section, index) {
                     <select class="manager-sensor-filter" aria-label="Filter sensors by status">
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                         <option value="under maintenance">Under Maintenance</option>
                     </select>
 
@@ -86,7 +87,7 @@ function createSectionMarkup(section, index) {
                             rows.length
                                 ? rows.map(item => `
 <tr
-    class="${(item.status || "Active").toLowerCase() === "under maintenance" ? "manager-sensor-row-maintenance" : ""}"
+    class="${getManagerSensorStatusRowClass(item.status)}"
     data-name="${escapeHtml(item.name)}"
     data-house-number="${escapeHtml(item.house_number)}"
     data-pen-number="${escapeHtml(item.pen_number)}"
@@ -108,7 +109,7 @@ function createSectionMarkup(section, index) {
     </td>
 
     <td>
-        <span class="manager-sensor-status-pill ${(item.status || "Active").toLowerCase() === "under maintenance" ? "maintenance" : "active"}">
+        <span class="manager-sensor-status-pill ${getManagerSensorStatusClass(item.status)}">
             ${escapeHtml(item.status || "Active")}
         </span>
     </td>
@@ -147,6 +148,26 @@ function createSectionMarkup(section, index) {
             </div>
         </section>
     `;
+}
+
+function getManagerSensorStatusClass(status) {
+    const normalized = (status || "Active").toLowerCase();
+
+    if (normalized === "inactive") {
+        return "inactive";
+    }
+
+    return normalized === "under maintenance" ? "maintenance" : "active";
+}
+
+function getManagerSensorStatusRowClass(status) {
+    const normalized = (status || "").toLowerCase();
+
+    if (normalized === "under maintenance") {
+        return "manager-sensor-row-maintenance";
+    }
+
+    return normalized === "inactive" ? "manager-sensor-row-inactive" : "";
 }
 
 function bindManagerSensorFilters() {

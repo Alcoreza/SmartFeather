@@ -14,6 +14,9 @@ class MobileAuthController extends Controller
         $validated = $request->validate([
             'username' => 'required|string|max:100',
             'password' => 'required|string|max:255',
+            'device_id' => 'required|string|max:100',
+            'device_name' => 'nullable|string|max:255',
+            'platform' => 'nullable|string|max:50',
         ]);
 
         $user = User::where('Username', $validated['username'])->first();
@@ -41,12 +44,24 @@ class MobileAuthController extends Controller
             ], 403);
         }
 
+        DB::table('mobile_api_tokens')
+            ->where('employee_id', $user->EmployeeId)
+            ->where('device_id', $validated['device_id'])
+            ->whereNull('revoked_at')
+            ->update([
+                'revoked_at' => now(),
+                'updated_at' => now(),
+            ]);
+
         $plainToken = Str::random(80);
 
         DB::table('mobile_api_tokens')->insert([
             'employee_id' => $user->EmployeeId,
             'token_hash' => hash('sha256', $plainToken),
             'name' => 'android',
+            'device_id' => $validated['device_id'],
+            'device_name' => $validated['device_name'] ?? null,
+            'platform' => $validated['platform'] ?? 'android',
             'last_used_at' => now(),
             'expires_at' => now()->addDays(30),
             'created_at' => now(),

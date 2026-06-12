@@ -144,6 +144,8 @@ class SensorAlertService
                         'alert_type' => $alert['alert_type'],
                         'house_id' => (string) ($reading->house_houseid ?? ''),
                         'pen_id' => (string) ($reading->pen_penid ?? ''),
+                        'feeder_number' => (string) ($reading->feeder_number ?? ''),
+                        'drinker_number' => (string) ($reading->drinker_number ?? ''),
                     ]),
                     'channel_id' => 'sensor_alerts',
                     'fcm_token' => $tokenRow->fcm_token,
@@ -187,6 +189,8 @@ class SensorAlertService
             's.sensortype',
             's.house_houseid',
             's.pen_penid',
+            's.feeder_number',
+            's.drinker_number',
             'sc.lowestthreshold',
             'sc.highestthreshold',
             'h.house_number',
@@ -237,7 +241,13 @@ class SensorAlertService
         $sensorLabel = $this->sensorLabel((string) $reading->sensortype);
         $directionLabel = $alertType === 'above_threshold' ? 'High' : 'Low';
         $valueWithUnit = $this->formatValue((string) $reading->sensortype, $reading->value);
-        $location = $this->formatLocation($reading->house_number, $reading->pen_name);
+        $location = $this->formatLocation(
+            $reading->house_number,
+            $reading->pen_name,
+            (string) $reading->sensortype,
+            $reading->feeder_number ?? null,
+            $reading->drinker_number ?? null
+        );
 
         return [
             'alert_type' => $alertType,
@@ -337,11 +347,26 @@ class SensorAlertService
         return number_format($this->resourcePercentValue($value), 1) . '%';
     }
 
-    private function formatLocation($houseNumber, $penName): string
-    {
+    private function formatLocation(
+        $houseNumber,
+        $penName,
+        string $sensorType,
+        $feederNumber = null,
+        $drinkerNumber = null
+    ): string {
         $house = $houseNumber ?: 'Unknown House';
         $pen = $penName ?: 'Unknown Pen';
 
-        return "{$house}, {$pen}";
+        $parts = [$house, $pen];
+
+        if ($sensorType === 'Feed Sensor' && !empty($feederNumber)) {
+            $parts[] = 'Feeder ' . $feederNumber;
+        }
+
+        if ($sensorType === 'Water Sensor' && !empty($drinkerNumber)) {
+            $parts[] = 'Drinker ' . $drinkerNumber;
+        }
+
+        return implode(', ', $parts);
     }
 }

@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Services\FirebaseCloudMessagingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class NotificationQueueController extends Controller
 {
     private int $maxAttempts = 3;
+    private int $batchSize = 10;
 
     public function processOne(Request $request, FirebaseCloudMessagingService $firebase)
     {
@@ -22,20 +22,21 @@ class NotificationQueueController extends Controller
             ], 401);
         }
 
-        $job = DB::transaction(function () {
-            $job = DB::table('notification_queue')
+        $jobs = DB::transaction(function () {
+            $jobs = DB::table('notification_queue')
                 ->where('status', 'pending')
                 ->where('available_at', '<=', now())
                 ->orderBy('id')
+                ->limit($this->batchSize)
                 ->lock('FOR UPDATE SKIP LOCKED')
-                ->first();
+                ->get();
 
-            if (!$job) {
-                return null;
+            if ($jobs->isEmpty()) {
+                return collect();
             }
 
             DB::table('notification_queue')
-                ->where('id', $job->id)
+                ->whereIn('id', $jobs->pluck('id')->all())
                 ->update([
                     'status' => 'processing',
                     'attempts' => DB::raw('attempts + 1'),
@@ -43,17 +44,58 @@ class NotificationQueueController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            return $job;
+            return $jobs;
         });
 
-        if (!$job) {
+        if ($jobs->isEmpty()) {
             return response()->json([
                 'success' => true,
                 'message' => 'No pending notification.',
                 'processed' => false,
+                'processed_count' => 0,
+                'sent_count' => 0,
+                'failed_count' => 0,
+                'retry_count' => 0,
+                'invalid_token_count' => 0,
             ]);
         }
 
+        $sentCount = 0;
+        $failedCount = 0;
+        $retryCount = 0;
+        $invalidTokenCount = 0;
+        $results = [];
+
+        foreach ($jobs as $job) {
+            $result = $this->processJob($job, $firebase);
+
+            $sentCount += $result['sent'] ? 1 : 0;
+            $failedCount += $result['failed'] ? 1 : 0;
+            $retryCount += $result['retry'] ? 1 : 0;
+            $invalidTokenCount += $result['invalid_token'] ? 1 : 0;
+
+            $results[] = [
+                'job_id' => $job->id,
+                'status' => $result['status'],
+                'message' => $result['message'],
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification queue batch processed.',
+            'processed' => true,
+            'processed_count' => count($results),
+            'sent_count' => $sentCount,
+            'failed_count' => $failedCount,
+            'retry_count' => $retryCount,
+            'invalid_token_count' => $invalidTokenCount,
+            'results' => $results,
+        ]);
+    }
+
+    private function processJob($job, FirebaseCloudMessagingService $firebase): array
+    {
         $data = [];
 
         if (!empty($job->data)) {
@@ -80,12 +122,14 @@ class NotificationQueueController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            return response()->json([
-                'success' => true,
+            return [
+                'status' => 'sent',
                 'message' => 'Notification sent.',
-                'processed' => true,
-                'job_id' => $job->id,
-            ]);
+                'sent' => true,
+                'failed' => false,
+                'retry' => false,
+                'invalid_token' => false,
+            ];
         }
 
         $errorMessage = $result['message'] ?? 'Firebase send failed.';
@@ -108,13 +152,14 @@ class NotificationQueueController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Invalid FCM token deactivated.',
-                'processed' => true,
-                'job_id' => $job->id,
+            return [
                 'status' => 'failed',
-            ]);
+                'message' => 'Invalid FCM token deactivated.',
+                'sent' => false,
+                'failed' => true,
+                'retry' => false,
+                'invalid_token' => true,
+            ];
         }
 
         $attempts = ((int) $job->attempts) + 1;
@@ -130,12 +175,15 @@ class NotificationQueueController extends Controller
                 'updated_at' => now(),
             ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Notification send failed and was handled.',
-            'processed' => true,
-            'job_id' => $job->id,
+        return [
             'status' => $status,
-        ]);
+            'message' => $status === 'pending'
+                ? 'Notification send failed and was queued for retry.'
+                : 'Notification send failed permanently.',
+            'sent' => false,
+            'failed' => $status === 'failed',
+            'retry' => $status === 'pending',
+            'invalid_token' => false,
+        ];
     }
 }

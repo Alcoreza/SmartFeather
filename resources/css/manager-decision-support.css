@@ -37,8 +37,8 @@
     height: 40px;
     border: 0;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(87, 196, 81, 0.2), rgba(87, 196, 81, 0.1));
-    color: var(--manager-green-700);
+    background: linear-gradient(135deg, var(--manager-green-700), #2e9d44);
+    color: #ffffff;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -52,7 +52,7 @@
 }
 
 .decision-support-refresh:hover {
-    background: linear-gradient(135deg, rgba(87, 196, 81, 0.3), rgba(87, 196, 81, 0.2));
+    background: linear-gradient(135deg, var(--manager-green-800), var(--manager-green-700));
     transform: rotate(180deg);
 }
 
@@ -76,7 +76,9 @@
 
 .decision-card .decision-content {
     display: block;
+    max-height: clamp(320px, 44vh, 430px);
     overflow-y: auto;
+    padding-right: 4px;
 }
 
 .decision-card .decision-support-loading {
@@ -98,7 +100,7 @@
     min-height: 100%;
     width: 100%;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .decision-support-loading {
@@ -129,12 +131,12 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    padding: 14px;
+    padding: 10px;
     border: 1px solid rgba(16, 92, 52, 0.08);
-    border-left: 4px solid var(--manager-green-700);
-    border-radius: 14px;
+    border-left: 3px solid var(--manager-green-700);
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 10px 22px rgba(4, 35, 24, 0.1);
+    box-shadow: none;
     animation: slideIn 0.3s ease-out;
 }
 
@@ -166,7 +168,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .decision-support-item-house {
@@ -228,14 +230,14 @@
 
 .decision-support-pen-list {
     display: grid;
-    gap: 12px;
+    gap: 8px;
 }
 
 .decision-support-pen-card {
-    padding: 12px;
+    padding: 9px;
     border: 1px solid rgba(16, 92, 52, 0.08);
-    border-left: 4px solid #2e9d44;
-    border-radius: 12px;
+    border-left: 3px solid #2e9d44;
+    border-radius: 10px;
     background: rgba(255, 255, 255, 0.88);
 }
 
@@ -256,7 +258,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 10px;
-    margin-bottom: 9px;
+    margin-bottom: 7px;
 }
 
 .decision-support-pen-title {
@@ -285,9 +287,9 @@
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    font-size: 0.84rem;
-    line-height: 1.45;
+    gap: 7px;
+    font-size: 0.8rem;
+    line-height: 1.38;
     color: #111111;
     word-break: break-word;
 }
@@ -297,7 +299,7 @@
     overflow: hidden;
     margin: 0;
     border: 1px solid rgba(16, 92, 52, 0.08);
-    border-radius: 12px;
+    border-radius: 9px;
     background: #ffffff;
 }
 
@@ -308,10 +310,10 @@
 
 .decision-support-text-section h4 {
     margin: 0;
-    padding: 8px 10px;
+    padding: 6px 8px;
     background: rgba(245, 249, 245, 0.95);
     color: #173f29;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 900;
     line-height: 1.25;
 }
@@ -338,39 +340,39 @@
 
 .decision-support-text-body {
     display: grid;
-    gap: 7px;
-    padding: 9px 10px 10px;
+    gap: 5px;
+    padding: 7px 8px 8px;
 }
 
 .decision-support-fact-row {
     display: grid;
     grid-template-columns: minmax(110px, 0.6fr) minmax(0, 1fr);
-    gap: 8px;
+    gap: 6px;
     align-items: start;
-    padding: 6px 8px;
-    border-radius: 8px;
+    padding: 5px 7px;
+    border-radius: 7px;
     background: rgba(245, 249, 245, 0.82);
 }
 
 .decision-support-fact-row span {
     color: #66766b;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 800;
 }
 
 .decision-support-fact-row strong {
     color: #142218;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 900;
 }
 
 .decision-support-action-row {
     display: grid;
     grid-template-columns: 9px minmax(0, 1fr);
-    gap: 8px;
+    gap: 6px;
     align-items: start;
-    padding: 7px 8px;
-    border-radius: 8px;
+    padding: 6px 7px;
+    border-radius: 7px;
     background: rgba(247, 250, 247, 0.9);
     color: #142218;
     font-weight: 650;
@@ -403,7 +405,7 @@
 
 .decision-support-item-text p {
     max-width: none;
-    margin: 0 0 7px;
+    margin: 0 0 5px;
     color: #111111;
     font-size: inherit;
     font-weight: 500;
@@ -487,10 +489,10 @@
 
 .decision-support-pen-tabs {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     overflow-x: auto;
-    margin: 0 0 12px;
-    padding: 2px 2px 8px;
+    margin: 0 0 9px;
+    padding: 1px 2px 6px;
     scrollbar-width: thin;
 }
 
@@ -498,16 +500,16 @@
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    min-height: 34px;
+    gap: 6px;
+    min-height: 30px;
     max-width: 150px;
-    padding: 0 11px;
+    padding: 0 9px;
     border: 1px solid rgba(23, 100, 58, 0.14);
-    border-radius: 10px;
+    border-radius: 9px;
     background: rgba(245, 249, 245, 0.94);
     color: #435548;
     font: inherit;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 900;
     cursor: pointer;
     transition:
@@ -533,13 +535,13 @@
     border-color: rgba(23, 100, 58, 0.38);
     background: #ffffff;
     color: #173f29;
-    box-shadow: 0 8px 18px rgba(4, 35, 24, 0.1);
+    box-shadow: 0 4px 10px rgba(4, 35, 24, 0.08);
 }
 
 .decision-support-pen-tab-dot {
     flex: 0 0 auto;
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 999px;
     background: #2e9d44;
 }
@@ -595,6 +597,11 @@
         padding: 16px 18px 20px;
     }
 
+    .decision-card .decision-content {
+        max-height: min(58vh, 460px);
+        padding-right: 2px;
+    }
+
     .decision-support-title {
         font-size: 1.1rem;
     }
@@ -604,7 +611,7 @@
     }
 
     .decision-support-house-card {
-        padding: 12px;
+        padding: 9px;
     }
 
     .decision-support-pagination {
@@ -617,7 +624,7 @@
 
     .decision-support-item-text {
         grid-template-columns: 1fr;
-        font-size: 0.82rem;
+        font-size: 0.78rem;
     }
 
     .decision-support-text-section.temperature-status-analysis,

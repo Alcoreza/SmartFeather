@@ -423,7 +423,6 @@ class MobileTaskController extends Controller
             return array_merge($baseFields, [
                 ['label' => 'Eggs Hatched', 'value' => (string) ($record->eggs_hatched ?? 0)],
                 ['label' => 'Mortality', 'value' => (string) ($record->mortality ?? 0)],
-                ['label' => 'Running Population', 'value' => (string) ($record->running_population ?? '-')],
                 ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
@@ -441,8 +440,8 @@ class MobileTaskController extends Controller
             $fields = array_merge($baseFields, [
                 ['label' => 'Batch', 'value' => (string) ($record->batch ?? '-')],
                 ['label' => 'Age', 'value' => (string) ($record->age ?? '-')],
-                ['label' => 'Number of Flocks', 'value' => (string) ($record->number_of_flocks ?? '-')],
-                ['label' => 'Flocks With Cases', 'value' => (string) ($record->flocks_with_cases ?? '-')],
+                ['label' => 'Number of Chickens', 'value' => (string) ($record->number_of_flocks ?? '-')],
+                ['label' => 'Chickens With Cases', 'value' => (string) ($record->flocks_with_cases ?? '-')],
                 ['label' => 'Average Weight', 'value' => (string) ($record->average_weight ?? '-')],
                 ['label' => 'Target Weight', 'value' => (string) ($record->target ?? '-')],
                 ['label' => 'Status', 'value' => (string) ($record->status ?? '-')],
@@ -456,7 +455,7 @@ class MobileTaskController extends Controller
 
             foreach ($entries as $entry) {
                 $fields[] = [
-                    'label' => 'Flock ' . $entry->sequence_number . ' Weight',
+                    'label' => 'Chicken ' . $entry->sequence_number . ' Weight',
                     'value' => (string) $entry->weight,
                 ];
             }

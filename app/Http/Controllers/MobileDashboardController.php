@@ -196,8 +196,8 @@ class MobileDashboardController extends Controller
     private function buildSensorFilterOptions(array $sensorTypes): array
     {
         return DB::table('sensors as s')
-            ->leftJoin('house as h', 's.house_houseid', '=', 'h.id')
-            ->leftJoin('pen as p', function ($join) {
+            ->join('house as h', 's.house_houseid', '=', 'h.id')
+            ->join('pen as p', function ($join) {
                 $join->on('s.pen_penid', '=', 'p.id')
                     ->on('s.house_houseid', '=', 'p.house_id');
             })
@@ -224,6 +224,8 @@ class MobileDashboardController extends Controller
             ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
             ->whereNotNull('s.house_houseid')
             ->whereNotNull('s.pen_penid')
+            ->whereNull('h.archived_at')
+            ->whereNull('p.archived_at')
             ->select(
                 's.house_houseid',
                 's.pen_penid',

@@ -106,7 +106,7 @@
 
 .manager-maintenance-table {
     width: 100%;
-    min-width: 900px;
+    min-width: 720px;
     table-layout: fixed;
     border-collapse: collapse;
     border-spacing: 0;
@@ -161,21 +161,6 @@
 
 .manager-maintenance-table tbody tr:hover td {
     background: #f8fbf8;
-}
-
-.manager-maintenance-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 112px;
-    padding: 6px 10px;
-    border: 1px solid rgba(138, 106, 47, 0.18);
-    border-radius: 6px;
-    background: #fff7ed;
-    color: #8a3f28;
-    font-size: 0.84rem;
-    font-weight: 800;
-    line-height: 1;
 }
 
 .manager-maintenance-empty {

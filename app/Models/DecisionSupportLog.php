@@ -10,6 +10,7 @@ class DecisionSupportLog extends Model
 
     protected $fillable = [
         'house_id',
+        'pen_id',
         'recommendation_text',
         'data_snapshot',
         'status',
@@ -33,6 +34,11 @@ class DecisionSupportLog extends Model
         return $this->belongsTo(House::class, 'house_id');
     }
 
+    public function pen()
+    {
+        return $this->belongsTo(Pen::class, 'pen_id');
+    }
+
     /**
      * Scope to get active recommendations
      */
@@ -51,5 +57,10 @@ class DecisionSupportLog extends Model
     public function scopeForHouse($query, $houseId)
     {
         return $query->where('house_id', $houseId);
+    }
+
+    public function scopeForPen($query, $penId)
+    {
+        return $query->where('pen_id', $penId);
     }
 }

@@ -368,6 +368,71 @@
     font-style: normal;
 }
 
+.admin-house-graph-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.admin-house-graph-pager[hidden] {
+    display: none;
+}
+
+.admin-house-graph-page-btn {
+    min-width: 72px;
+    padding: 8px 16px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-house-graph-page-btn:hover:not(:disabled) {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    color: #062c17;
+    box-shadow: 0 4px 12px rgba(87, 196, 81, 0.15);
+}
+
+.admin-house-graph-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.admin-house-graph-page-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-house-graph-page-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 1px solid rgba(87, 196, 81, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-house-graph-page-dot:hover {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(87, 196, 81, 0.2);
+}
+
+.admin-house-graph-page-dot.active {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+}
+
 .admin-graph-dots {
     position: absolute;
     top: 22px;

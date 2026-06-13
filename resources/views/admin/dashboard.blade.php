@@ -145,6 +145,12 @@
 
                     <div class="admin-graph-caption" id="adminGraphCaption">Temperature</div>
 
+                    <div class="admin-house-graph-pager" id="adminHouseGraphPager" hidden>
+                        <button type="button" class="admin-house-graph-page-btn" id="adminHouseGraphPrev">Prev</button>
+                        <div class="admin-house-graph-page-dots" id="adminHouseGraphPageDots"></div>
+                        <button type="button" class="admin-house-graph-page-btn" id="adminHouseGraphNext">Next</button>
+                    </div>
+
                     <div class="admin-graph-dots">
                         <button type="button" class="admin-graph-dot admin-monitoring-dot active" data-slide="0"></button>
                         <button type="button" class="admin-graph-dot admin-monitoring-dot" data-slide="1"></button>

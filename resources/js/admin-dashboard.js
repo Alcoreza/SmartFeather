@@ -1,5 +1,7 @@
 let adminMonitoringChart = null;
 let adminMonitoringSlides = [];
+let activeAdminMonitoringSlideIndex = 0;
+let activeAdminMonitoringHouseIndex = 0;
 let adminEnvironmentChart = null;
 let adminEnvironmentSlides = [];
 let activeAdminEnvironmentSlideIndex = 0;
@@ -150,6 +152,10 @@ async function renderAdminMonitoringCarousel() {
     const canvas = document.getElementById("adminMonitoringChart");
     const caption = document.getElementById("adminGraphCaption");
     const dots = document.querySelectorAll(".admin-monitoring-dot");
+    const pager = document.getElementById("adminHouseGraphPager");
+    const pagerDots = document.getElementById("adminHouseGraphPageDots");
+    const prevButton = document.getElementById("adminHouseGraphPrev");
+    const nextButton = document.getElementById("adminHouseGraphNext");
 
     if (!canvas || typeof Chart === "undefined") {
         return;
@@ -162,8 +168,7 @@ async function renderAdminMonitoringCarousel() {
         adminMonitoringSlides = Array.isArray(data.slides) ? data.slides : [];
         if (!adminMonitoringSlides.length) return;
 
-        createOrUpdateAdminChart(canvas, adminMonitoringSlides[0]);
-        updateAdminGraphCaption(caption, adminMonitoringSlides[0]);
+        renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
         updateAdminDots(dots, 0);
 
         dots.forEach((dot) => {
@@ -172,13 +177,97 @@ async function renderAdminMonitoringCarousel() {
                 if (Number.isNaN(index) || !adminMonitoringSlides[index])
                     return;
 
-                createOrUpdateAdminChart(canvas, adminMonitoringSlides[index]);
-                updateAdminGraphCaption(caption, adminMonitoringSlides[index]);
+                activeAdminMonitoringSlideIndex = index;
+                renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
                 updateAdminDots(dots, index);
             });
         });
+
+        prevButton?.addEventListener("click", () => {
+            activeAdminMonitoringHouseIndex = Math.max(0, activeAdminMonitoringHouseIndex - 1);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        nextButton?.addEventListener("click", () => {
+            const houseCount = getAdminMonitoringHouseCount(adminMonitoringSlides[activeAdminMonitoringSlideIndex]);
+            activeAdminMonitoringHouseIndex = Math.min(houseCount - 1, activeAdminMonitoringHouseIndex + 1);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        pagerDots?.addEventListener("click", (event) => {
+            const dot = event.target.closest("[data-admin-house-graph-page]");
+
+            if (!dot) {
+                return;
+            }
+
+            activeAdminMonitoringHouseIndex = Number(dot.dataset.adminHouseGraphPage || 0);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
     } catch (error) {
         console.error("Failed to load admin monitoring graph data.", error);
+    }
+}
+
+function renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton) {
+    const slide = adminMonitoringSlides[activeAdminMonitoringSlideIndex];
+
+    if (!slide) {
+        return;
+    }
+
+    const houseCount = getAdminMonitoringHouseCount(slide);
+    activeAdminMonitoringHouseIndex = Math.max(0, Math.min(activeAdminMonitoringHouseIndex, houseCount - 1));
+
+    const pageSlide = getAdminMonitoringHousePageSlide(slide, activeAdminMonitoringHouseIndex);
+
+    createOrUpdateAdminChart(canvas, pageSlide);
+    updateAdminGraphCaption(caption, pageSlide);
+    updateAdminMonitoringHousePager(pager, pagerDots, prevButton, nextButton, pageSlide, houseCount);
+}
+
+function getAdminMonitoringHouseCount(slide) {
+    return Array.isArray(slide?.datasets) && slide.datasets.length ? slide.datasets.length : 1;
+}
+
+function getAdminMonitoringHousePageSlide(slide, houseIndex) {
+    if (!Array.isArray(slide.datasets) || !slide.datasets.length) {
+        return slide;
+    }
+
+    const dataset = slide.datasets[houseIndex] || slide.datasets[0];
+
+    return {
+        ...slide,
+        houseLabel: dataset.label,
+        datasets: [dataset],
+    };
+}
+
+function updateAdminMonitoringHousePager(pager, pagerDots, prevButton, nextButton, slide, houseCount) {
+    if (!pager) {
+        return;
+    }
+
+    pager.hidden = houseCount <= 1;
+
+    if (pagerDots) {
+        pagerDots.innerHTML = Array.from({ length: houseCount }, (_, index) => `
+            <button
+                type="button"
+                class="admin-house-graph-page-dot ${index === activeAdminMonitoringHouseIndex ? "active" : ""}"
+                data-admin-house-graph-page="${index}"
+                aria-label="Show house ${index + 1}"
+            ></button>
+        `).join("");
+    }
+
+    if (prevButton) {
+        prevButton.disabled = activeAdminMonitoringHouseIndex <= 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = activeAdminMonitoringHouseIndex >= houseCount - 1;
     }
 }
 
@@ -193,24 +282,27 @@ function createOrUpdateAdminChart(canvas, slide) {
 function createAdminBarChart(canvas, slide, maxValue = null) {
     const context = canvas.getContext("2d");
     const barGradient = createAdminBarGradient(context, canvas, slide.borderColor);
+    const datasets = Array.isArray(slide.datasets) && slide.datasets.length
+        ? slide.datasets
+        : [
+              {
+                  label: slide.label,
+                  data: slide.values,
+                  borderColor: slide.borderColor,
+                  backgroundColor: barGradient || slide.backgroundColor,
+                  hoverBackgroundColor: slide.borderColor,
+                  borderWidth: 0,
+                  borderRadius: 12,
+                  borderSkipped: false,
+                  maxBarThickness: 42,
+              },
+          ];
 
     return new Chart(canvas, {
         type: "bar",
         data: {
             labels: slide.labels,
-            datasets: [
-                {
-                    label: slide.label,
-                    data: slide.values,
-                    borderColor: slide.borderColor,
-                    backgroundColor: barGradient || slide.backgroundColor,
-                    hoverBackgroundColor: slide.borderColor,
-                    borderWidth: 0,
-                    borderRadius: 12,
-                    borderSkipped: false,
-                    maxBarThickness: 42,
-                },
-            ],
+            datasets,
         },
         options: {
             responsive: true,
@@ -238,7 +330,16 @@ function createAdminBarChart(canvas, slide, maxValue = null) {
             },
             plugins: {
                 legend: {
-                    display: false,
+                    display: datasets.length > 1,
+                    position: "bottom",
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        color: "#3f473f",
+                        font: {
+                            weight: 700,
+                        },
+                    },
                 },
                 tooltip: {
                     backgroundColor: "rgba(6, 51, 32, 0.94)",
@@ -251,7 +352,8 @@ function createAdminBarChart(canvas, slide, maxValue = null) {
                     bodyColor: "#e9f7ec",
                     callbacks: {
                         label(context) {
-                            return `${slide.label}: ${context.parsed.y}${slide.unit || ""}`;
+                            const label = context.dataset.label || slide.label;
+                            return `${label}: ${context.parsed.y}${slide.unit || ""}`;
                         },
                     },
                 },
@@ -313,7 +415,7 @@ function createAdminBarGradient(context, canvas, color) {
 
 function updateAdminGraphCaption(caption, slide) {
     if (caption) {
-        caption.textContent = slide.label;
+        caption.textContent = slide.houseLabel ? `${slide.label} - ${slide.houseLabel}` : slide.label;
     }
 }
 

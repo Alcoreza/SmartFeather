@@ -1,6 +1,7 @@
 let monitoringChart = null;
 let monitoringSlides = [];
 let activeSlideIndex = 0;
+let activeMonitoringHouseIndex = 0;
 
 let environmentChart = null;
 let environmentSlides = [];
@@ -174,6 +175,10 @@ async function renderMonitoringCarousel() {
     const canvas = document.getElementById("monitoringChart");
     const caption = document.getElementById("graphCaption");
     const dots = document.querySelectorAll(".graph-dot");
+    const pager = document.getElementById("houseGraphPager");
+    const pagerDots = document.getElementById("houseGraphPageDots");
+    const prevButton = document.getElementById("houseGraphPrev");
+    const nextButton = document.getElementById("houseGraphNext");
 
     if (!canvas || typeof Chart === "undefined") {
         return;
@@ -191,8 +196,7 @@ async function renderMonitoringCarousel() {
             return;
         }
 
-        createOrUpdateChart(canvas, monitoringSlides[0]);
-        updateGraphCaption(caption, monitoringSlides[0]);
+        renderMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
         updateDots(dots, 0);
 
         dots.forEach((dot) => {
@@ -203,13 +207,96 @@ async function renderMonitoringCarousel() {
                 }
 
                 activeSlideIndex = index;
-                createOrUpdateChart(canvas, monitoringSlides[index]);
-                updateGraphCaption(caption, monitoringSlides[index]);
+                renderMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
                 updateDots(dots, index);
             });
         });
+
+        prevButton?.addEventListener("click", () => {
+            activeMonitoringHouseIndex = Math.max(0, activeMonitoringHouseIndex - 1);
+            renderMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        nextButton?.addEventListener("click", () => {
+            const houseCount = getMonitoringHouseCount(monitoringSlides[activeSlideIndex]);
+            activeMonitoringHouseIndex = Math.min(houseCount - 1, activeMonitoringHouseIndex + 1);
+            renderMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        pagerDots?.addEventListener("click", (event) => {
+            const dot = event.target.closest("[data-house-graph-page]");
+
+            if (!dot) {
+                return;
+            }
+
+            activeMonitoringHouseIndex = Number(dot.dataset.houseGraphPage || 0);
+            renderMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
     } catch (error) {
         console.error("Failed to load monitoring graph data.", error);
+    }
+}
+
+function renderMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton) {
+    const slide = monitoringSlides[activeSlideIndex];
+
+    if (!slide) {
+        return;
+    }
+
+    const houseCount = getMonitoringHouseCount(slide);
+    activeMonitoringHouseIndex = Math.max(0, Math.min(activeMonitoringHouseIndex, houseCount - 1));
+
+    const pageSlide = getMonitoringHousePageSlide(slide, activeMonitoringHouseIndex);
+
+    createOrUpdateChart(canvas, pageSlide);
+    updateGraphCaption(caption, pageSlide);
+    updateMonitoringHousePager(pager, pagerDots, prevButton, nextButton, pageSlide, houseCount);
+}
+
+function getMonitoringHouseCount(slide) {
+    return Array.isArray(slide?.datasets) && slide.datasets.length ? slide.datasets.length : 1;
+}
+
+function getMonitoringHousePageSlide(slide, houseIndex) {
+    if (!Array.isArray(slide.datasets) || !slide.datasets.length) {
+        return slide;
+    }
+
+    const dataset = slide.datasets[houseIndex] || slide.datasets[0];
+
+    return {
+        ...slide,
+        houseLabel: dataset.label,
+        datasets: [dataset],
+    };
+}
+
+function updateMonitoringHousePager(pager, pagerDots, prevButton, nextButton, slide, houseCount) {
+    if (!pager) {
+        return;
+    }
+
+    pager.hidden = houseCount <= 1;
+
+    if (pagerDots) {
+        pagerDots.innerHTML = Array.from({ length: houseCount }, (_, index) => `
+            <button
+                type="button"
+                class="house-graph-page-dot ${index === activeMonitoringHouseIndex ? "active" : ""}"
+                data-house-graph-page="${index}"
+                aria-label="Show house ${index + 1}"
+            ></button>
+        `).join("");
+    }
+
+    if (prevButton) {
+        prevButton.disabled = activeMonitoringHouseIndex <= 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = activeMonitoringHouseIndex >= houseCount - 1;
     }
 }
 
@@ -220,24 +307,27 @@ function createOrUpdateChart(canvas, slide) {
 
     const context = canvas.getContext("2d");
     const barGradient = createBarGradient(context, canvas, slide.borderColor);
+    const datasets = Array.isArray(slide.datasets) && slide.datasets.length
+        ? slide.datasets
+        : [
+              {
+                  label: slide.label,
+                  data: slide.values,
+                  borderColor: slide.borderColor,
+                  backgroundColor: barGradient || slide.backgroundColor,
+                  hoverBackgroundColor: slide.borderColor,
+                  borderWidth: 0,
+                  borderRadius: 12,
+                  borderSkipped: false,
+                  maxBarThickness: 42,
+              },
+          ];
 
     monitoringChart = new Chart(canvas, {
         type: "bar",
         data: {
             labels: slide.labels,
-            datasets: [
-                {
-                    label: slide.label,
-                    data: slide.values,
-                    borderColor: slide.borderColor,
-                    backgroundColor: barGradient || slide.backgroundColor,
-                    hoverBackgroundColor: slide.borderColor,
-                    borderWidth: 0,
-                    borderRadius: 12,
-                    borderSkipped: false,
-                    maxBarThickness: 42,
-                },
-            ],
+            datasets,
         },
         options: {
             responsive: true,
@@ -265,7 +355,16 @@ function createOrUpdateChart(canvas, slide) {
             },
             plugins: {
                 legend: {
-                    display: false,
+                    display: datasets.length > 1,
+                    position: "bottom",
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        color: "#3f473f",
+                        font: {
+                            weight: 700,
+                        },
+                    },
                 },
                 tooltip: {
                     backgroundColor: "rgba(6, 51, 32, 0.94)",
@@ -278,7 +377,8 @@ function createOrUpdateChart(canvas, slide) {
                     bodyColor: "#e9f7ec",
                     callbacks: {
                         label(context) {
-                            return `${slide.label}: ${context.parsed.y}${slide.unit || ""}`;
+                            const label = context.dataset.label || slide.label;
+                            return `${label}: ${context.parsed.y}${slide.unit || ""}`;
                         },
                     },
                 },
@@ -342,7 +442,7 @@ function updateGraphCaption(caption, slide) {
         return;
     }
 
-    caption.textContent = slide.label;
+    caption.textContent = slide.houseLabel ? `${slide.label} - ${slide.houseLabel}` : slide.label;
 }
 
 function updateDots(dots, activeIndex) {

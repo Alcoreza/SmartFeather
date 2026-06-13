@@ -87,27 +87,124 @@ Route::middleware(['web', 'auth.session', 'check.role:Admin', 'prevent.cache'])-
 |--------------------------------------------------------------------------
 */
 
+if (! function_exists('dashboardMonitoringGraphsData')) {
+    function dashboardMonitoringGraphsData(): array
+    {
+        $days = collect(range(6, 0))->map(fn ($offset) => now()->subDays($offset)->startOfDay());
+        $dayKeys = $days->map(fn ($day) => $day->toDateString())->all();
+        $dayLabels = $days->map(fn ($day) => $day->format('D'))->all();
+        $seriesColors = ['#17643a', '#b7791f', '#2563eb', '#a855f7', '#dc2626', '#0891b2', '#4d7c0f', '#be185d'];
+
+        $houses = \App\Models\House::query()
+            ->whereNull('archived_at')
+            ->orderBy('id', 'asc')
+            ->get(['id', 'house_number']);
+
+        $penBuckets = [];
+
+        if ($houses->isNotEmpty()) {
+            $rows = DB::table('sensor_readings as sr')
+                ->join('sensors as s', 'sr.sensorid', '=', 's.sensorid')
+                ->join('house as h', 's.house_houseid', '=', 'h.id')
+                ->join('pen as p', function ($join) {
+                    $join->on('s.pen_penid', '=', 'p.id')
+                        ->on('s.house_houseid', '=', 'p.house_id');
+                })
+                ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
+                ->whereNull('h.archived_at')
+                ->whereNull('p.archived_at')
+                ->whereNotNull('s.pen_penid')
+                ->whereBetween('sr.recorded_at', [$days->first()->copy()->startOfDay(), $days->last()->copy()->endOfDay()])
+                ->select('s.house_houseid', 's.pen_penid', 's.sensortype', 'sr.value', 'sr.recorded_at')
+                ->get();
+
+            foreach ($rows as $row) {
+                $sensorType = strtolower(trim((string) $row->sensortype));
+
+                if (str_contains($sensorType, 'temp')) {
+                    $type = 'temperature';
+                } elseif (str_contains($sensorType, 'ammonia') || str_contains($sensorType, 'nh3')) {
+                    $type = 'ammonia';
+                } else {
+                    continue;
+                }
+
+                $dayKey = \Illuminate\Support\Carbon::parse($row->recorded_at)->toDateString();
+
+                if (! in_array($dayKey, $dayKeys, true)) {
+                    continue;
+                }
+
+                $houseId = (int) $row->house_houseid;
+                $penId = (int) $row->pen_penid;
+                $value = (float) $row->value;
+
+                if (! isset($penBuckets[$type][$houseId][$dayKey][$penId])) {
+                    $penBuckets[$type][$houseId][$dayKey][$penId] = ['total' => 0, 'count' => 0];
+                }
+
+                $penBuckets[$type][$houseId][$dayKey][$penId]['total'] += $value;
+                $penBuckets[$type][$houseId][$dayKey][$penId]['count']++;
+            }
+        }
+
+        $buildDatasets = function (string $type) use ($houses, $dayKeys, $seriesColors, $penBuckets) {
+            return $houses->values()->map(function ($house, $index) use ($type, $dayKeys, $seriesColors, $penBuckets) {
+                $color = $seriesColors[$index % count($seriesColors)];
+
+                $values = array_map(function ($dayKey) use ($type, $house, $penBuckets) {
+                    $penAverages = [];
+
+                    foreach (($penBuckets[$type][(int) $house->id][$dayKey] ?? []) as $bucket) {
+                        if (($bucket['count'] ?? 0) > 0) {
+                            $penAverages[] = $bucket['total'] / $bucket['count'];
+                        }
+                    }
+
+                    return count($penAverages) > 0
+                        ? round(array_sum($penAverages) / count($penAverages), 1)
+                        : 0;
+                }, $dayKeys);
+
+                return [
+                    'label' => $house->house_number,
+                    'data' => $values,
+                    'borderColor' => $color,
+                    'backgroundColor' => $color,
+                    'hoverBackgroundColor' => $color,
+                    'borderWidth' => 0,
+                    'borderRadius' => 10,
+                    'borderSkipped' => false,
+                    'maxBarThickness' => 28,
+                ];
+            })->all();
+        };
+
+        return [
+            'slides' => [
+                [
+                    'label' => 'Temperature',
+                    'unit' => 'deg',
+                    'labels' => $dayLabels,
+                    'datasets' => $buildDatasets('temperature'),
+                    'borderColor' => '#17643a',
+                    'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                ],
+                [
+                    'label' => 'Ammonia',
+                    'unit' => 'ppm',
+                    'labels' => $dayLabels,
+                    'datasets' => $buildDatasets('ammonia'),
+                    'borderColor' => '#b7791f',
+                    'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                ],
+            ],
+        ];
+    }
+}
+
 Route::get('/api/manager/dashboard/monitoring-graphs', function () {
-    return response()->json([
-        'slides' => [
-            [
-                'label' => 'Temperature',
-                'unit' => 'deg',
-                'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'values' => [22, 24, 23, 25, 24, 26, 24],
-                'borderColor' => '#17643a',
-                'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
-            ],
-            [
-                'label' => 'Ammonia',
-                'unit' => 'ppm',
-                'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'values' => [12, 14, 13, 15, 17, 16, 15],
-                'borderColor' => '#b7791f',
-                'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
-            ],
-        ],
-    ]);
+    return response()->json(dashboardMonitoringGraphsData());
 });
 
 Route::get('/api/manager/dashboard/realtime', function () {
@@ -321,17 +418,35 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
     }
 });
 
-Route::get('/api/manager/dashboard/decision-support', function () {
+Route::get('/api/manager/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
     $service = new \App\Services\DecisionSupportService();
+    $generated = $service->generateRecommendations(null, $request->boolean('refresh'));
     $recommendations = $service->getAllActiveRecommendations();
     
     return response()->json([
+        'generated' => $generated,
         'recommendations' => $recommendations->map(function ($rec) {
+            $ruleDecisions = collect($rec->data_snapshot['rule_decisions'] ?? []);
+            $severityRank = [
+                'normal' => 1,
+                'warning' => 2,
+                'critical' => 3,
+            ];
+            $severity = $ruleDecisions
+                ->pluck('severity')
+                ->sortByDesc(fn ($value) => $severityRank[$value] ?? 0)
+                ->first() ?? 'normal';
+
             return [
                 'id' => $rec->id,
                 'house_id' => $rec->house_id,
                 'house_name' => $rec->house?->house_number ?? "House {$rec->house_id}",
+                'pen_id' => $rec->pen_id,
+                'pen_name' => $rec->pen?->pen_name ?? ($rec->pen_id ? "Pen {$rec->pen_id}" : null),
                 'text' => $rec->recommendation_text,
+                'severity' => $severity,
+                'categories' => $ruleDecisions->pluck('category')->unique()->values()->all(),
+                'findings_count' => $ruleDecisions->count(),
                 'generated_at' => $rec->generated_at->toIso8601String(),
                 'expires_at' => $rec->expires_at?->toIso8601String(),
             ];
@@ -376,26 +491,7 @@ Route::get('/api/admin/dashboard/realtime', function () {
 });
 
 Route::get('/api/admin/dashboard/monitoring-graphs', function () {
-    return response()->json([
-        'slides' => [
-            [
-                'label' => 'Temperature',
-                'unit' => 'deg',
-                'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'values' => [22, 24, 23, 25, 24, 26, 24],
-                'borderColor' => '#17643a',
-                'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
-            ],
-            [
-                'label' => 'Ammonia',
-                'unit' => 'ppm',
-                'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'values' => [12, 14, 13, 15, 17, 16, 15],
-                'borderColor' => '#b7791f',
-                'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
-            ],
-        ],
-    ]);
+    return response()->json(dashboardMonitoringGraphsData());
 });
 
 Route::get('/api/admin/dashboard/environment-by-house', function () {
@@ -521,28 +617,7 @@ Route::prefix('api/admin/sensors')->group(function () {
     Route::delete('/{sensorId}', [SensorController::class, 'destroy']);
 });
 
-Route::get('/api/admin/sensors/maintenance-records', function () {
-    return response()->json([
-        'records' => [
-            [
-                'sensor_type' => 'Temperature',
-                'name' => 'Sensor 1',
-                'house_number' => '1',
-                'start_date' => '08-11-25',
-                'end_date' => '08-13-25',
-                'status' => 'Maintenance',
-            ],
-            [
-                'sensor_type' => 'Ammonia',
-                'name' => 'Sensor 5',
-                'house_number' => '2',
-                'start_date' => '07-24-25',
-                'end_date' => '07-27-25',
-                'status' => 'Maintenance',
-            ],
-        ],
-    ]);
-});
+Route::get('/api/admin/sensors/maintenance-records', [SensorController::class, 'adminMaintenanceRecords']);
 
 Route::view('/manager/biosecurity-logs', 'manager.biosecurity-logs')
     ->name('manager.biosecurity-logs');

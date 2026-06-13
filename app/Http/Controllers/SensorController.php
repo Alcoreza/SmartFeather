@@ -328,18 +328,23 @@ class SensorController extends Controller
         ]);
 
         $sensor = Sensor::findOrFail($sensorId);
+        $storedStatus = $this->determineStoredSensorStatus(
+            $sensor->house_houseid,
+            $sensor->pen_penid,
+            $validated['status']
+        );
 
-        $sensor->update([
-            'status' => $this->determineStoredSensorStatus(
-                $sensor->house_houseid,
-                $sensor->pen_penid,
-                $validated['status']
-            ),
-        ]);
+        DB::transaction(function () use ($sensor, $storedStatus) {
+            $sensor->update([
+                'status' => $storedStatus,
+            ]);
+
+            $this->recordSensorMaintenanceStatus($sensor, $storedStatus);
+        });
 
         return response()->json([
             'message' => 'Sensor status updated successfully.',
-            'sensor' => $sensor,
+            'sensor' => $sensor->fresh(),
         ]);
     }
 
@@ -368,21 +373,30 @@ class SensorController extends Controller
 
     public function managerMaintenanceRecords()
     {
-        $records = SensorMaintenance::with(['sensor.house'])
+        $this->syncCurrentMaintenanceSensorsToLog();
+
+        $records = SensorMaintenance::with(['sensor.house', 'sensor.pen'])
             ->orderByDesc('startdate')
+            ->orderByDesc('maintenanceid')
             ->get()
             ->map(function (SensorMaintenance $record) {
+                $sensor = $record->sensor;
+
                 return [
-                    'sensor_type' => $record->sensor?->sensortype ?? '',
-                    'name' => $record->sensor?->sensorname ?? '',
-                    'house_number' => $this->formatHouseNumber($record->sensor?->house?->house_number),
-                    'start_date' => $record->startdate,
-                    'end_date' => $record->enddate,
-                    'status' => $record->status,
+                    'name' => $sensor?->sensorname ?? '',
+                    'sensor_type' => $sensor?->sensortype ?? '',
+                    'house_number' => $this->formatHouseNumber($sensor?->house?->house_number),
+                    'pen_number' => $this->formatPenNumber($sensor?->pen?->pen_name),
+                    'maintenance_date' => $this->formatMaintenanceDate($record->startdate),
                 ];
             });
 
         return response()->json(['records' => $records]);
+    }
+
+    public function adminMaintenanceRecords()
+    {
+        return $this->managerMaintenanceRecords();
     }
 
     private function normalizeSensorStatus($status)
@@ -426,6 +440,55 @@ class SensorController extends Controller
         $status = $this->normalizeSensorStatus($preferredStatus);
 
         return $status === 'Inactive' ? 'Active' : $status;
+    }
+
+    private function recordSensorMaintenanceStatus(Sensor $sensor, string $status): void
+    {
+        if ($status === 'Under Maintenance') {
+            $this->createOpenMaintenanceLogIfMissing($sensor);
+
+            return;
+        }
+
+        if ($status === 'Active') {
+            $openMaintenance = SensorMaintenance::where('sensors_sensorid', $sensor->sensorid)
+                ->whereNull('enddate')
+                ->orderByDesc('startdate')
+                ->first();
+
+            $openMaintenance?->update([
+                'enddate' => now()->toDateString(),
+                'status' => 'Completed',
+            ]);
+        }
+    }
+
+    private function syncCurrentMaintenanceSensorsToLog(): void
+    {
+        Sensor::whereRaw('LOWER(TRIM(status)) = ?', ['under maintenance'])
+            ->get()
+            ->each(function (Sensor $sensor) {
+                $this->createOpenMaintenanceLogIfMissing($sensor);
+            });
+    }
+
+    private function createOpenMaintenanceLogIfMissing(Sensor $sensor): void
+    {
+        $openMaintenance = SensorMaintenance::where('sensors_sensorid', $sensor->sensorid)
+            ->whereNull('enddate')
+            ->orderByDesc('startdate')
+            ->first();
+
+        if ($openMaintenance) {
+            return;
+        }
+
+        SensorMaintenance::create([
+            'sensors_sensorid' => $sensor->sensorid,
+            'startdate' => now()->toDateString(),
+            'enddate' => null,
+            'status' => 'Maintenance',
+        ]);
     }
 
     private function ensureSensorAssignmentHasRunningBatch($houseId, $penId): void
@@ -566,6 +629,15 @@ class SensorController extends Controller
         }
 
         return $penName;
+    }
+
+    private function formatMaintenanceDate($date): string
+    {
+        if (!$date) {
+            return '';
+        }
+
+        return \Carbon\Carbon::parse($date)->toDateString();
     }
 
     // ✅ VALUE FORMATTER

@@ -144,7 +144,7 @@ class DecisionSupportService
                     $prompt = $this->buildPrompt($house, $dataSnapshot);
 
                     // Use AI only to summarize system-generated decisions.
-                    $recommendation = $this->getAIRecommendation($prompt, $dataSnapshot['rule_decisions']);
+                    $recommendation = $this->getAIRecommendation($prompt, $dataSnapshot['rule_decisions'], $dataSnapshot);
                     $recommendation = $this->ensureFlockEnvironmentStatusIsVisible($recommendation, $dataSnapshot);
 
                     // Store recommendation.
@@ -192,9 +192,12 @@ class DecisionSupportService
             
             if ($reading) {
                 $sensorData[] = [
+                    'sensor_id' => $sensor->sensorid,
                     'sensor_name' => $sensor->sensorname,
                     'sensor_type' => $sensor->sensortype,
                     'pen_id' => $sensor->pen_penid,
+                    'feeder_number' => $sensor->feeder_number,
+                    'drinker_number' => $sensor->drinker_number,
                     'value' => (float) $reading->value,
                     'lowest_threshold' => $sensor->configuration?->lowestthreshold,
                     'highest_threshold' => $sensor->configuration?->highestthreshold,
@@ -226,6 +229,7 @@ class DecisionSupportService
                 'temperature_celsius' => $this->currentHouseTemperature($sensorData),
                 'ammonia_ppm' => $this->currentHouseAmmonia($sensorData),
             ],
+            'resources' => $this->currentResourceSnapshot($sensorData),
             'inventory' => [
                 'feed_level' => $feedInventory,
                 'feed_critical_level' => $this->criticalLevelFor($feedItems, self::DEFAULT_FEED_CRITICAL_LEVEL),
@@ -254,46 +258,12 @@ class DecisionSupportService
             $decisions[] = $ammoniaDecision;
         }
 
-        $inventory = $dataSnapshot['inventory'];
-
-        if ((int) $inventory['feed_items_count'] === 0) {
-            $decisions[] = [
-                'category' => 'feed',
-                'severity' => 'warning',
-                'rule' => 'feed_inventory_missing',
-                'finding' => 'No feed inventory record is available for decision support.',
-                'evidence' => 'Feed items count: 0.',
-                'action' => 'Add or update feed inventory so stock-based recommendations can be generated.',
-            ];
-        } elseif ((float) $inventory['feed_level'] <= (float) $inventory['feed_critical_level']) {
-            $decisions[] = [
-                'category' => 'feed',
-                'severity' => 'critical',
-                'rule' => 'feed_at_or_below_critical_level',
-                'finding' => 'Feed stock is at or below the predefined critical level.',
-                'evidence' => "Current feed stock: {$inventory['feed_level']}; critical level: {$inventory['feed_critical_level']}.",
-                'action' => 'Schedule feed replenishment and verify feeding plans for the active flock.',
-            ];
+        foreach ($this->evaluateResourceLevels($dataSnapshot) as $resourceDecision) {
+            $decisions[] = $resourceDecision;
         }
 
-        if ((int) $inventory['water_items_count'] === 0) {
-            $decisions[] = [
-                'category' => 'water',
-                'severity' => 'warning',
-                'rule' => 'water_inventory_missing',
-                'finding' => 'No water inventory record is available for decision support.',
-                'evidence' => 'Water items count: 0.',
-                'action' => 'Add or update water inventory or water-supply tracking for decision support.',
-            ];
-        } elseif ((float) $inventory['water_level'] <= (float) $inventory['water_critical_level']) {
-            $decisions[] = [
-                'category' => 'water',
-                'severity' => 'critical',
-                'rule' => 'water_at_or_below_critical_level',
-                'finding' => 'Water stock is at or below the predefined critical level.',
-                'evidence' => "Current water stock: {$inventory['water_level']}; critical level: {$inventory['water_critical_level']}.",
-                'action' => 'Check water supply, refill storage, and inspect drinker lines for blockage or leaks.',
-            ];
+        foreach ($this->evaluateCrossEnvironmentalDiagnostics($dataSnapshot) as $diagnosticDecision) {
+            $decisions[] = $diagnosticDecision;
         }
 
         if (empty($decisions)) {
@@ -318,6 +288,8 @@ class DecisionSupportService
         $flock = $dataSnapshot['flock'];
         $thermal = $dataSnapshot['thermal_status'] ?? [];
         $ammonia = $dataSnapshot['ammonia_status'] ?? [];
+        $feed = $dataSnapshot['resources']['feed'] ?? [];
+        $water = $dataSnapshot['resources']['water'] ?? [];
         $pen = $dataSnapshot['pen'] ?? null;
         $penName = $pen['name'] ?? 'Unassigned Pen';
 
@@ -328,11 +300,18 @@ class DecisionSupportService
         $prompt .= "- Current Date: {$flock['current_date']}\n";
         $prompt .= "- Placement Date: " . ($flock['placement_date'] ?? 'No active placement date') . "\n";
         $prompt .= "- Flock Age: " . ($flock['age_days'] ?? 'Unknown') . " Days Old (" . ($flock['week_label'] ?? 'Unknown Week') . ")\n";
-        $prompt .= "- Current Temperature: " . ($dataSnapshot['environment']['temperature_celsius'] ?? 'Unknown') . "°C\n";
+        $prompt .= "- Current Feeder Level: " . $this->formatResourceLevel($feed) . "\n";
+        $prompt .= "- Feeder Critical Low Threshold: " . $this->formatThresholdSet($feed['critical_low_thresholds'] ?? []) . "\n";
+        $prompt .= "- Feeder Warning/Refill Threshold: " . $this->formatThresholdSet($feed['warning_refill_thresholds'] ?? []) . "\n";
+        $prompt .= "- Feeder Status Evaluation: " . $this->formatResourceStatus($feed['status'] ?? 'normal') . "\n";
+        $prompt .= "- Current Drinker Level: " . $this->formatResourceLevel($water) . "\n";
+        $prompt .= "- Drinker Critical Low Threshold: " . $this->formatThresholdSet($water['critical_low_thresholds'] ?? []) . "\n";
+        $prompt .= "- Drinker Warning/Refill Threshold: " . $this->formatThresholdSet($water['warning_refill_thresholds'] ?? []) . "\n";
+        $prompt .= "- Drinker Status Evaluation: " . $this->formatResourceStatus($water['status'] ?? 'normal') . "\n";
+        $prompt .= "- Current Temperature: " . $this->formatTemperatureStatus($dataSnapshot['environment']['temperature_celsius'] ?? null) . "\n";
         $prompt .= "- Thermal Condition: " . ($thermal['condition'] ?? 'Unknown') . "\n";
         $prompt .= "- Target Range: " . ($thermal['target_range'] ?? 'Unknown') . "\n";
-        $prompt .= "- Current Ammonia Level: " . ($dataSnapshot['environment']['ammonia_ppm'] ?? 'Unknown') . " ppm\n";
-        $prompt .= "- Ammonia Condition: " . ($ammonia['condition'] ?? 'Unknown') . "\n";
+        $prompt .= "- Ammonia Status: " . $this->formatAmmoniaStatus($dataSnapshot['environment']['ammonia_ppm'] ?? null, $ammonia['condition'] ?? 'Unknown') . "\n";
         $prompt .= "- House Type: tropical broiler house\n\n";
 
         $prompt .= "**Rule-Based Decisions:**\n";
@@ -344,19 +323,21 @@ class DecisionSupportService
         }
 
         $prompt .= "**Instructions:**\n";
-        $prompt .= "1. Calculate nothing new; use only the supplied House, Pen, Current Date, Placement Date, Flock Age, Week, Current Temperature, Thermal Condition, Current Ammonia Level, and Ammonia Condition.\n";
+        $prompt .= "1. Use only the supplied system facts and rule decisions. The flock age, week, thresholds, status evaluations, and consumption trends are already calculated by the system.\n";
         $prompt .= "2. If Thermal Condition is Heat Stress, Cold Stress, or Severe Heat Danger, or if Ammonia Condition is High Risk or Critical Danger, the first visible section must be **🚨 EMERGENCY ACTION REQUIRED** before any other text.\n";
-        $prompt .= "3. Use this exact structure and headings:\n";
-        $prompt .= "   1. **Flock Status Analysis:**\n";
+        $prompt .= "3. Apply this cross-environmental diagnostic logic exactly:\n";
+        $prompt .= "   - HIGH Water Use + LOW/DROPPING Feed Use = Indicates HEAT STRESS.\n";
+        $prompt .= "   - LOW Water Use + LOW Feed Use = Indicates COLD STRESS or HIGH AMMONIA LEVELS.\n";
+        $prompt .= "   - RAPID WATER DROP + WET BEDDING = Predicts an impending AMMONIA SPIKE. If wet bedding is not measured, tell the farmer to physically inspect bedding and drinker equipment.\n";
+        $prompt .= "4. Use the Final Output Contract below for section names and ordering.\n";
         $prompt .= "   2. **🚨 EMERGENCY ACTION REQUIRED (Only show this if condition is STRESS, HIGH RISK, or DANGER):**\n";
-        $prompt .= "   3. **Standard Management Actions (Next 1-2 Hours):**\n";
-        $prompt .= "   4. **Critical Warning / Observation Note:**\n";
-        $prompt .= "4. In Flock Status Analysis, always include Current Date, Placement Date, Flock Age, Current Temperature, and Thermal Condition.\n";
-        $prompt .= "5. Add a separate ammonia section with Current Ammonia Level and Ammonia Condition, even when ammonia data is missing.\n";
-        $prompt .= "6. Emergency actions must be 3-4 short, punchy, physical actions executable within 5 minutes. For ammonia High Risk or Critical Danger, focus on evacuating gas from the house.\n";
-        $prompt .= "7. Standard management actions must be 3-4 hyper-specific, bolded operational steps for longer-term stabilization.\n";
-        $prompt .= "8. Ammonia thresholds are: 0-10 ppm Safe, 11-19 ppm Moderate Risk, 20-24 ppm High Risk, 25+ ppm Critical Danger.\n";
-        $prompt .= "9. Do not mention OpenAI, prompts, or uncertainty. Do not invent unavailable data.\n";
+        $prompt .= "5. Do not mention OpenAI, prompts, or uncertainty. Do not invent unavailable data.\n";
+        $prompt .= "\n**Final Output Contract - overrides the legacy section list above:**\n";
+        $prompt .= "1. **REFILL ALERTS (Only display if levels breach or near system-configured thresholds):**\n";
+        $prompt .= "2. **Cross-Environmental Diagnostics (Temperature & Ammonia Analysis):**\n";
+        $prompt .= "3. **Immediate Actions (Next 5-30 Minutes):**\n";
+        $prompt .= "Omit the REFILL ALERTS section entirely when feeder and drinker statuses are both normal. Refill alerts must name the specific resource and reference the breached configured threshold directly. Immediate actions must be 3-4 short, bolded physical steps involving feeding, watering, or environmental correction.\n";
+        $prompt .= "When displaying ammonia, write it as [value]ppm - [condition], for example 11.7ppm - Moderate Risk. If ammonia has no reading, write No Reading.\n";
 
         return $prompt;
     }
@@ -364,7 +345,7 @@ class DecisionSupportService
     /**
      * Get AI recommendation from OpenAI
      */
-    protected function getAIRecommendation($prompt, array $ruleDecisions)
+    protected function getAIRecommendation($prompt, array $ruleDecisions, array $dataSnapshot)
     {
         try {
             $response = $this->getClient()->chat()->create([
@@ -372,7 +353,7 @@ class DecisionSupportService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You generate broiler poultry decision support from supplied rule calculations. Preserve the requested section order exactly and prioritize emergency mortality-prevention actions when thermal stress, ammonia high risk, or ammonia danger is present.',
+                        'content' => 'You generate broiler poultry decision support from supplied rule calculations. Preserve the requested section order exactly and prioritize configured feeder/drinker threshold alerts plus temperature and ammonia diagnostics.',
                     ],
                     [
                         'role' => 'user',
@@ -380,13 +361,13 @@ class DecisionSupportService
                     ],
                 ],
                 'temperature' => 0.3,
-                'max_tokens' => 500,
+                'max_tokens' => 700,
             ]);
 
             return $response->choices[0]->message->content;
         } catch (\Exception $e) {
             Log::error('OpenAI API Error: ' . $e->getMessage());
-            return $this->formatRuleRecommendations($ruleDecisions);
+            return $this->formatRuleRecommendations($ruleDecisions, $dataSnapshot);
         }
     }
 
@@ -399,8 +380,57 @@ class DecisionSupportService
         return $configuredCritical > 0 ? (float) $configuredCritical : $fallback;
     }
 
-    protected function formatRuleRecommendations(array $ruleDecisions): string
+    protected function formatResourceLevel(array $resource): string
     {
+        return is_numeric($resource['current_level'] ?? null)
+            ? $resource['current_level'] . '%'
+            : 'No sensor reading';
+    }
+
+    protected function formatThresholdSet(array $thresholds): string
+    {
+        $values = collect($thresholds)
+            ->filter(fn ($value) => is_numeric($value))
+            ->map(fn ($value) => ((float) $value) . '%')
+            ->values();
+
+        return $values->isEmpty() ? 'Not configured' : $values->implode(', ');
+    }
+
+    protected function formatResourceStatus(string $status): string
+    {
+        return match ($status) {
+            'critical' => 'Critical Low (Below System Threshold)',
+            'warning' => 'Warning (Nearing System Threshold)',
+            default => 'Normal',
+        };
+    }
+
+    protected function formatDropRate($dropRate): string
+    {
+        return is_numeric($dropRate) ? round((float) $dropRate, 2) . '%/hour' : 'Unknown';
+    }
+
+    protected function formatAmmoniaStatus($ammonia, string $condition): string
+    {
+        return is_numeric($ammonia)
+            ? round((float) $ammonia, 1) . 'ppm - ' . $condition
+            : 'No Reading';
+    }
+
+    protected function formatTemperatureStatus($temperature): string
+    {
+        return is_numeric($temperature)
+            ? round((float) $temperature, 1) . 'C'
+            : 'No Reading';
+    }
+
+    protected function formatRuleRecommendations(array $ruleDecisions, array $dataSnapshot = []): string
+    {
+        if ($dataSnapshot) {
+            return $this->formatEquipmentDecisionRecommendation($dataSnapshot, $ruleDecisions);
+        }
+
         $decisions = collect($ruleDecisions);
         $criticalAmmoniaDecision = $decisions
             ->where('category', 'broiler_ammonia')
@@ -453,25 +483,82 @@ class DecisionSupportService
             ->implode("\n");
     }
 
+    protected function formatEquipmentDecisionRecommendation(array $dataSnapshot, array $ruleDecisions): string
+    {
+        $feed = $dataSnapshot['resources']['feed'] ?? [];
+        $water = $dataSnapshot['resources']['water'] ?? [];
+        $temperature = $dataSnapshot['environment']['temperature_celsius'] ?? null;
+        $ammonia = $dataSnapshot['environment']['ammonia_ppm'] ?? null;
+        $thermalCondition = $dataSnapshot['thermal_status']['condition'] ?? 'Unknown';
+        $ammoniaCondition = $dataSnapshot['ammonia_status']['condition'] ?? 'Unknown';
+        $decisions = collect($ruleDecisions);
+        $resourceAlerts = $decisions
+            ->whereIn('category', ['feed', 'water'])
+            ->whereIn('severity', ['critical', 'warning'])
+            ->filter(fn ($decision) => str_contains((string) ($decision['rule'] ?? ''), '_level_'))
+            ->values();
+        $diagnostics = $decisions
+            ->where('category', 'cross_environmental_diagnostic')
+            ->values();
+        $actions = $decisions
+            ->sortByDesc(fn ($decision) => match ($decision['severity'] ?? 'normal') {
+                'critical' => 3,
+                'warning' => 2,
+                default => 1,
+            })
+            ->pluck('action')
+            ->filter()
+            ->unique()
+            ->take(4)
+            ->values();
+
+        if ($actions->isEmpty()) {
+            $actions = collect([
+                'Check feeder and drinker access in this pen.',
+                'Inspect bird distribution, panting, huddling, and respiratory signs.',
+                'Verify temperature, ventilation, ammonia, and litter condition at bird height.',
+            ]);
+        }
+
+        $lines = [];
+
+        if ($resourceAlerts->isNotEmpty()) {
+            $lines[] = '1. **REFILL ALERTS (Only display if levels breach or near system-configured thresholds):**';
+            foreach ($resourceAlerts as $alert) {
+                $lines[] = '   - ' . $alert['action'];
+            }
+            $lines[] = '';
+        }
+
+        $lines[] = '2. **Cross-Environmental Diagnostics (Temperature & Ammonia Analysis):**';
+        $lines[] = '   - Current Temperature: ' . $this->formatTemperatureStatus($temperature) . "; Thermal Condition: {$thermalCondition}.";
+        $lines[] = '   - Ammonia: ' . $this->formatAmmoniaStatus($ammonia, $ammoniaCondition) . '.';
+
+        if ($diagnostics->isNotEmpty()) {
+            foreach ($diagnostics as $diagnostic) {
+                $lines[] = '   - ' . $diagnostic['finding'] . ' ' . $diagnostic['action'];
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = '3. **Immediate Actions (Next 5-30 Minutes):**';
+        foreach ($actions as $action) {
+            $lines[] = '   - **' . $action . '**';
+        }
+
+        return implode("\n", $lines);
+    }
+
     protected function ensureFlockEnvironmentStatusIsVisible(string $recommendation, array $dataSnapshot): string
     {
-        $requiredLines = [
-            'Current Date:',
-            'Placement Date:',
-            'Flock Age:',
-            'Current Temperature:',
-            'Thermal Condition:',
-            'Current Ammonia Level:',
-            'Ammonia Condition:',
-        ];
-        $hasAllStatusLines = collect($requiredLines)
-            ->every(fn ($line) => str_contains($recommendation, $line));
-
-        if ($hasAllStatusLines) {
+        if (str_contains($recommendation, 'Cross-Environmental Diagnostics') && str_contains($recommendation, 'Immediate Actions')) {
             return $recommendation;
         }
 
-        return $this->formatFlockEnvironmentStatusBlock($dataSnapshot) . "\n" . ltrim($recommendation);
+        return $this->formatEquipmentDecisionRecommendation(
+            $dataSnapshot,
+            $dataSnapshot['rule_decisions'] ?? []
+        ) . "\n" . ltrim($recommendation);
     }
 
     protected function formatFlockEnvironmentStatusBlock(array $dataSnapshot): string
@@ -483,8 +570,8 @@ class DecisionSupportService
         $ammoniaCondition = $dataSnapshot['ammonia_status']['condition'] ?? 'Unknown';
         $age = $flock['age_days'] ?? 'Unknown';
         $week = $flock['week_label'] ?? 'Unknown Week';
-        $temperatureText = is_numeric($temperature) ? "{$temperature}°C" : 'No temperature reading';
-        $ammoniaText = is_numeric($ammonia) ? "{$ammonia} ppm" : 'No ammonia reading';
+        $temperatureText = $this->formatTemperatureStatus($temperature);
+        $ammoniaText = $this->formatAmmoniaStatus($ammonia, $ammoniaCondition);
 
         return implode("\n", [
             '1. **Flock Status Analysis:**',
@@ -495,8 +582,7 @@ class DecisionSupportService
             "   - Thermal Condition: {$thermalCondition}",
             '',
             '2. **Ammonia Status Analysis:**',
-            "   - Current Ammonia Level: {$ammoniaText}",
-            "   - Ammonia Condition: {$ammoniaCondition}",
+            "   - Ammonia: {$ammoniaText}",
             '',
         ]);
     }
@@ -577,6 +663,239 @@ class DecisionSupportService
         }
 
         return round($ammoniaReadings->avg(), 1);
+    }
+
+    protected function currentResourceSnapshot(array $sensorData): array
+    {
+        return [
+            'feed' => $this->resourceSnapshotForType($sensorData, 'feed'),
+            'water' => $this->resourceSnapshotForType($sensorData, 'water'),
+        ];
+    }
+
+    protected function resourceSnapshotForType(array $sensorData, string $type): array
+    {
+        $sensors = collect($sensorData)
+            ->filter(fn ($sensor) => $this->sensorMatchesResourceType($sensor, $type))
+            ->map(function ($sensor) use ($type) {
+                $previousReading = SensorReading::where('sensorid', $sensor['sensor_id'])
+                    ->orderBy('recorded_at', 'desc')
+                    ->skip(1)
+                    ->first();
+
+                $currentValue = (float) $sensor['value'];
+                $previousValue = $previousReading ? (float) $previousReading->value : null;
+                $hoursSincePrevious = null;
+                $dropPoints = null;
+                $dropRatePerHour = null;
+
+                if ($previousReading && $sensor['recorded_at']) {
+                    $currentRecordedAt = Carbon::parse($sensor['recorded_at']);
+                    $previousRecordedAt = Carbon::parse($previousReading->recorded_at);
+                    $minutes = max(1, $previousRecordedAt->diffInMinutes($currentRecordedAt, false));
+                    $hoursSincePrevious = round($minutes / 60, 2);
+                    $dropPoints = round(max(0, $previousValue - $currentValue), 2);
+                    $dropRatePerHour = round($dropPoints / max($hoursSincePrevious, 0.01), 2);
+                }
+
+                $criticalThreshold = is_numeric($sensor['lowest_threshold'] ?? null)
+                    ? (float) $sensor['lowest_threshold']
+                    : null;
+                $warningThreshold = is_numeric($sensor['highest_threshold'] ?? null)
+                    ? (float) $sensor['highest_threshold']
+                    : null;
+
+                return [
+                    'sensor_id' => $sensor['sensor_id'],
+                    'sensor_name' => $sensor['sensor_name'],
+                    'sensor_type' => $sensor['sensor_type'],
+                    'resource_number' => $type === 'feed'
+                        ? $sensor['feeder_number']
+                        : $sensor['drinker_number'],
+                    'value' => $currentValue,
+                    'previous_value' => $previousValue,
+                    'drop_points' => $dropPoints,
+                    'drop_rate_per_hour' => $dropRatePerHour,
+                    'hours_since_previous' => $hoursSincePrevious,
+                    'critical_low_threshold' => $criticalThreshold,
+                    'warning_refill_threshold' => $warningThreshold,
+                    'status' => $this->resourceLevelStatus($currentValue, $criticalThreshold, $warningThreshold),
+                    'recorded_at' => $sensor['recorded_at'],
+                ];
+            })
+            ->values();
+
+        $values = $sensors->pluck('value')->filter(fn ($value) => is_numeric($value))->values();
+        $dropRates = $sensors->pluck('drop_rate_per_hour')->filter(fn ($value) => is_numeric($value))->values();
+        $criticalThresholds = $sensors->pluck('critical_low_threshold')->filter(fn ($value) => is_numeric($value))->values();
+        $warningThresholds = $sensors->pluck('warning_refill_threshold')->filter(fn ($value) => is_numeric($value))->values();
+        $statuses = $sensors->pluck('status')->values();
+
+        return [
+            'type' => $type,
+            'label' => $type === 'feed' ? 'Feeder' : 'Drinker',
+            'current_level' => $values->isEmpty() ? null : round($values->avg(), 1),
+            'critical_low_threshold' => $criticalThresholds->isEmpty() ? null : round($criticalThresholds->max(), 1),
+            'warning_refill_threshold' => $warningThresholds->isEmpty() ? null : round($warningThresholds->max(), 1),
+            'critical_low_thresholds' => $criticalThresholds->unique()->sort()->values()->all(),
+            'warning_refill_thresholds' => $warningThresholds->unique()->sort()->values()->all(),
+            'drop_rate_per_hour' => $dropRates->isEmpty() ? null : round($dropRates->avg(), 2),
+            'trend' => $this->resourceTrend($dropRates->isEmpty() ? null : (float) $dropRates->avg()),
+            'status' => $this->highestResourceStatus($statuses->all()),
+            'sensors_count' => $sensors->count(),
+            'sensors' => $sensors->all(),
+        ];
+    }
+
+    protected function sensorMatchesResourceType(array $sensor, string $type): bool
+    {
+        $sensorType = strtolower((string) ($sensor['sensor_type'] ?? ''));
+
+        return $type === 'feed'
+            ? str_contains($sensorType, 'feed')
+            : str_contains($sensorType, 'water');
+    }
+
+    protected function resourceLevelStatus(float $value, ?float $criticalThreshold, ?float $warningThreshold): string
+    {
+        if ($criticalThreshold !== null && $value <= $criticalThreshold) {
+            return 'critical';
+        }
+
+        if ($warningThreshold !== null && $value <= $warningThreshold) {
+            return 'warning';
+        }
+
+        return 'normal';
+    }
+
+    protected function highestResourceStatus(array $statuses): string
+    {
+        if (in_array('critical', $statuses, true)) {
+            return 'critical';
+        }
+
+        if (in_array('warning', $statuses, true)) {
+            return 'warning';
+        }
+
+        return 'normal';
+    }
+
+    protected function resourceTrend(?float $dropRatePerHour): string
+    {
+        if ($dropRatePerHour === null) {
+            return 'unknown';
+        }
+
+        if ($dropRatePerHour >= 5) {
+            return 'rapid_drop';
+        }
+
+        if ($dropRatePerHour >= 1) {
+            return 'dropping';
+        }
+
+        return 'stable';
+    }
+
+    protected function evaluateResourceLevels(array &$dataSnapshot): array
+    {
+        $decisions = [];
+        $resources = $dataSnapshot['resources'] ?? [];
+
+        foreach (['feed' => 'feeder', 'water' => 'drinker'] as $type => $resourceName) {
+            $resource = $resources[$type] ?? null;
+
+            if (!$resource || (int) ($resource['sensors_count'] ?? 0) === 0) {
+                $decisions[] = [
+                    'category' => $type,
+                    'severity' => 'warning',
+                    'rule' => "{$type}_sensor_missing",
+                    'finding' => "No active {$resourceName} level sensor reading is available for this pen.",
+                    'evidence' => 'Sensor count: 0.',
+                    'action' => "Verify the {$resourceName} sensor assignment and latest telemetry before relying on automated refill guidance.",
+                ];
+                continue;
+            }
+
+            foreach ($resource['sensors'] as $sensor) {
+                if ($sensor['status'] === 'critical') {
+                    $decisions[] = [
+                        'category' => $type,
+                        'severity' => 'critical',
+                        'rule' => "{$type}_level_below_configured_critical_low_threshold",
+                        'finding' => ucfirst($resourceName) . " {$sensor['resource_number']} is below the configured critical low threshold.",
+                        'evidence' => "Current {$resourceName} level: {$sensor['value']}%; configured critical low threshold: {$sensor['critical_low_threshold']}%.",
+                        'action' => "Refill {$resourceName} {$sensor['resource_number']} immediately and confirm birds can access it.",
+                    ];
+                    continue;
+                }
+
+                if ($sensor['status'] === 'warning') {
+                    $decisions[] = [
+                        'category' => $type,
+                        'severity' => 'warning',
+                        'rule' => "{$type}_level_near_configured_warning_refill_threshold",
+                        'finding' => ucfirst($resourceName) . " {$sensor['resource_number']} is near the configured warning/refill threshold.",
+                        'evidence' => "Current {$resourceName} level: {$sensor['value']}%; configured warning/refill threshold: {$sensor['warning_refill_threshold']}%.",
+                        'action' => "Schedule refill for {$resourceName} {$sensor['resource_number']} before it reaches the critical low threshold.",
+                    ];
+                }
+            }
+        }
+
+        return $decisions;
+    }
+
+    protected function evaluateCrossEnvironmentalDiagnostics(array &$dataSnapshot): array
+    {
+        $feed = $dataSnapshot['resources']['feed'] ?? [];
+        $water = $dataSnapshot['resources']['water'] ?? [];
+        $feedDrop = $feed['drop_rate_per_hour'] ?? null;
+        $waterDrop = $water['drop_rate_per_hour'] ?? null;
+        $temperature = $dataSnapshot['environment']['temperature_celsius'] ?? null;
+        $ammonia = $dataSnapshot['environment']['ammonia_ppm'] ?? null;
+        $decisions = [];
+
+        if (!is_numeric($feedDrop) || !is_numeric($waterDrop)) {
+            return [];
+        }
+
+        if ($waterDrop >= 3 && $feedDrop <= 1) {
+            $decisions[] = [
+                'category' => 'cross_environmental_diagnostic',
+                'severity' => 'warning',
+                'rule' => 'high_water_use_low_feed_use_possible_heat_stress',
+                'finding' => 'High drinker drawdown with low feeder drawdown can indicate hidden heat stress.',
+                'evidence' => "Feeder drop rate: {$feedDrop}%/hour; drinker drop rate: {$waterDrop}%/hour; temperature: " . ($temperature ?? 'missing') . 'C.',
+                'action' => 'Physically inspect bird panting, wing spreading, airflow, drinker temperature, and hot zones around this pen.',
+            ];
+        }
+
+        if ($waterDrop <= 0.5 && $feedDrop <= 0.5) {
+            $decisions[] = [
+                'category' => 'cross_environmental_diagnostic',
+                'severity' => 'warning',
+                'rule' => 'low_water_use_low_feed_use_possible_cold_stress_or_ammonia',
+                'finding' => 'Low drinker and feeder drawdown can indicate cold stress or high ammonia limiting bird movement.',
+                'evidence' => "Feeder drop rate: {$feedDrop}%/hour; drinker drop rate: {$waterDrop}%/hour; ammonia: " . ($ammonia ?? 'missing') . ' ppm.',
+                'action' => 'Inspect huddling, chick distribution, eye irritation, respiratory distress, litter condition, and bird-level ammonia odor.',
+            ];
+        }
+
+        if ($waterDrop >= 8) {
+            $decisions[] = [
+                'category' => 'cross_environmental_diagnostic',
+                'severity' => 'warning',
+                'rule' => 'rapid_water_drop_possible_wet_bedding_ammonia_spike',
+                'finding' => 'Rapid drinker drawdown can indicate leakage or spillage that may create wet bedding and an ammonia spike.',
+                'evidence' => "Drinker drop rate: {$waterDrop}%/hour; current ammonia: " . ($ammonia ?? 'missing') . ' ppm.',
+                'action' => 'Check nipples, drinker height, loose fittings, wet bedding, and ammonia at bird height immediately.',
+            ];
+        }
+
+        return $decisions;
     }
 
     protected function evaluateBroilerThermalCondition(array &$dataSnapshot): ?array
@@ -754,7 +1073,7 @@ class DecisionSupportService
         $lines[] = "   - Current Date: {$flock['current_date']}";
         $lines[] = '   - Placement Date: ' . ($flock['placement_date'] ?? 'No active placement date');
         $lines[] = '   - Flock Age: ' . ($flock['age_days'] ?? 'Unknown') . ' Days Old (' . ($flock['week_label'] ?? 'Unknown Week') . ')';
-        $lines[] = '   - Current Temperature: ' . (is_numeric($temperature) ? "{$temperature}°C" : 'No temperature reading');
+        $lines[] = '   - Current Temperature: ' . $this->formatTemperatureStatus($temperature);
         $lines[] = "   - Thermal Condition: {$condition}";
         $lines[] = '';
         $lines[] = '3. **Standard Management Actions (Next 1-2 Hours):**';
@@ -789,8 +1108,7 @@ class DecisionSupportService
         $lines[] = "   - Current Date: {$flock['current_date']}";
         $lines[] = '   - Placement Date: ' . ($flock['placement_date'] ?? 'No active placement date');
         $lines[] = '   - Flock Age: ' . ($flock['age_days'] ?? 'Unknown') . ' Days Old (' . ($flock['week_label'] ?? 'Unknown Week') . ')';
-        $lines[] = '   - Current Ammonia Level: ' . (is_numeric($ammonia) ? "{$ammonia} ppm" : 'No ammonia reading');
-        $lines[] = "   - Ammonia Condition: {$condition}";
+        $lines[] = '   - Ammonia: ' . $this->formatAmmoniaStatus($ammonia, $condition);
         $lines[] = '';
         $lines[] = '3. **Standard Management Actions (Next 1-2 Hours):**';
         foreach ($this->ammoniaStandardActionsFor($condition) as $action) {
@@ -936,7 +1254,7 @@ class DecisionSupportService
             return true;
         }
 
-        return !isset($snapshot['flock'], $snapshot['environment'], $snapshot['thermal_status'], $snapshot['ammonia_status'], $snapshot['pen']);
+        return !isset($snapshot['flock'], $snapshot['environment'], $snapshot['resources'], $snapshot['thermal_status'], $snapshot['ammonia_status'], $snapshot['pen']);
     }
 
     /**

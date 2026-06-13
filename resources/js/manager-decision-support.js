@@ -115,10 +115,6 @@ function renderDecisionSupportPage(container) {
     decisionSupportPenPages[houseKey] = currentPenPage;
     const activePen = pens[currentPenPage] || null;
     const severity = highestSeverity(pens.map((pen) => pen.severity));
-    const categories = uniqueValues(pens.flatMap((pen) => (
-        Array.isArray(pen.categories) && pen.categories.length ? pen.categories : ['overall']
-    )));
-    const findingsCount = pens.reduce((total, pen) => total + Number(pen.findings_count || 0), 0);
     const latestGeneratedTime = latestDate(pens.map((pen) => pen.generated_at));
     const timeAgo = latestGeneratedTime ? getTimeAgo(latestGeneratedTime) : 'just now';
     const houseLabel = formatHouseName(house.house_name);
@@ -130,19 +126,7 @@ function renderDecisionSupportPage(container) {
                 <div class="decision-support-item-header">
                     <div>
                         <span class="decision-support-item-house">${escapeHtml(houseLabel)}</span>
-                        <span class="decision-support-item-meta">
-                            ${pens.length} pen${pens.length === 1 ? '' : 's'} - ${findingsCount || 1} finding${findingsCount === 1 ? '' : 's'} - ${timeAgo}
-                        </span>
                     </div>
-                    <span class="decision-support-severity ${severity}" title="Highest current severity">
-                        ${severity}
-                    </span>
-                </div>
-
-                <div class="decision-support-category-row">
-                    ${categories.map((category) => `
-                        <span class="decision-support-category">${escapeHtml(formatCategory(category))}</span>
-                    `).join('')}
                 </div>
 
                 ${renderPenTabs(house, pens, currentPenPage)}
@@ -201,30 +185,14 @@ function latestRecommendationPerPen(recommendations) {
 }
 
 function renderPenRecommendationCard(rec) {
-    const generatedTime = new Date(rec.generated_at);
     const severity = normalizeSeverity(rec.severity);
-    const categories = Array.isArray(rec.categories) && rec.categories.length
-        ? rec.categories
-        : ['overall'];
-    const findingsCount = Number(rec.findings_count || 0);
 
     return `
         <article class="decision-support-pen-card ${severity}">
             <div class="decision-support-pen-header">
                 <div>
                     <span class="decision-support-pen-title">${escapeHtml(formatPenName(rec.pen_name, rec.pen_id))}</span>
-                    <span class="decision-support-pen-meta">
-                        ${findingsCount || 1} finding${findingsCount === 1 ? '' : 's'} - ${getTimeAgo(generatedTime)}
-                    </span>
                 </div>
-                <span class="decision-support-severity ${severity}" title="Pen severity">
-                    ${severity}
-                </span>
-            </div>
-            <div class="decision-support-category-row">
-                ${categories.map((category) => `
-                    <span class="decision-support-category">${escapeHtml(formatCategory(category))}</span>
-                `).join('')}
             </div>
             <div class="decision-support-item-text">${formatRecommendationText(rec.text)}</div>
         </article>
@@ -332,10 +300,6 @@ function highestSeverity(severities) {
         .sort((a, b) => rank[b] - rank[a])[0] || 'normal';
 }
 
-function uniqueValues(values) {
-    return [...new Set(values.filter(Boolean))];
-}
-
 function latestDate(values) {
     const dates = values
         .map((value) => new Date(value))
@@ -362,7 +326,7 @@ function formatRecommendationText(text) {
 }
 
 function parseRecommendationSections(text) {
-    const lines = String(text || '')
+    const lines = stripHiddenRecommendationSections(text)
         .split(/\n+/)
         .map((line) => line.trim())
         .filter(Boolean);
@@ -403,6 +367,58 @@ function parseRecommendationSections(text) {
     });
 
     return splitStatusSections(sections);
+}
+
+function stripHiddenRecommendationSections(text) {
+    const hiddenHeadings = [
+        'flock & equipment status',
+        'flock and equipment status',
+    ];
+    const hiddenLinePatterns = [
+        /^[-*]?\s*feeder trend\s*:/i,
+        /^[-*]?\s*no abnormal feed-water consumption correlation was detected/i,
+        /^[-*]?\s*current (feeder|drinker) level: .*configured (critical low|warning\/refill) threshold:/i,
+    ];
+    const visibleHeadings = [
+        'refill alerts',
+        'cross-environmental diagnostics',
+        'immediate actions',
+        'emergency action required',
+        'flock status analysis',
+        'temperature status analysis',
+        'thermal status analysis',
+        'standard management actions',
+        'critical warning',
+        'observation note',
+        'ammonia',
+    ];
+    let skipping = false;
+
+    return String(text || '')
+        .split(/\n+/)
+        .filter((line) => {
+            if (hiddenLinePatterns.some((pattern) => pattern.test(stripMarkdownBold(line).trim()))) {
+                return false;
+            }
+
+            const heading = stripMarkdownBold(line)
+                .replace(/^\d+[\).\s-]+/, '')
+                .replace(/:$/, '')
+                .trim()
+                .toLowerCase();
+
+            if (hiddenHeadings.some((hiddenHeading) => heading.includes(hiddenHeading))) {
+                skipping = true;
+                return false;
+            }
+
+            if (skipping && visibleHeadings.some((visibleHeading) => heading.includes(visibleHeading))) {
+                skipping = false;
+            }
+
+            return !skipping;
+        })
+        .join('\n');
 }
 
 function splitStatusSections(sections) {
@@ -501,6 +517,18 @@ function parseRecommendationHeading(line) {
         return { title: 'Emergency Action Required', type: 'emergency' };
     }
 
+    if (lower.includes('refill alerts')) {
+        return { title: 'Refill Alerts', type: 'warning-note' };
+    }
+
+    if (lower.includes('cross-environmental diagnostics')) {
+        return { title: 'Cross-Environmental Diagnostics', type: 'status' };
+    }
+
+    if (lower.includes('immediate actions')) {
+        return { title: 'Immediate Actions', type: 'actions' };
+    }
+
     if (lower.includes('flock status analysis')) {
         return { title: 'Flock Status Analysis', type: 'status' };
     }
@@ -529,6 +557,16 @@ function parseRecommendationRow(line) {
         .replace(/^\d+[\).\s-]+/, '')
         .replace(/^[-*]\s+/, '')
         .trim();
+    const temperatureRow = normalizeTemperatureRecommendationRow(withoutBullet);
+    if (temperatureRow) {
+        return temperatureRow;
+    }
+
+    const ammoniaRow = normalizeAmmoniaRecommendationRow(withoutBullet);
+    if (ammoniaRow) {
+        return ammoniaRow;
+    }
+
     const labelMatch = stripMarkdownBold(withoutBullet).match(/^([^:]{2,44}):\s*(.+)$/);
 
     if (labelMatch) {
@@ -542,6 +580,46 @@ function parseRecommendationRow(line) {
     return {
         kind: 'text',
         text: withoutBullet,
+    };
+}
+
+function normalizeTemperatureRecommendationRow(line) {
+    const normalized = stripMarkdownBold(line).trim();
+    const match = normalized.match(/^Current Temperature:\s*([^;]+)(?:;\s*Thermal Condition:\s*(.+))?\.?$/i);
+    if (!match) {
+        return null;
+    }
+
+    const reading = match[1].trim();
+    const condition = (match[2] || '').replace(/\.$/, '').trim();
+    const numericReading = reading.match(/-?\d+(?:\.\d+)?/);
+
+    return {
+        kind: 'fact',
+        label: 'Current Temperature',
+        value: numericReading
+            ? `${numericReading[0]}C${condition ? ` - ${condition}` : ''}`
+            : 'No Reading',
+    };
+}
+
+function normalizeAmmoniaRecommendationRow(line) {
+    const normalized = stripMarkdownBold(line).trim();
+    const match = normalized.match(/^Current Ammonia Level:\s*([^;]+)(?:;\s*Ammonia Condition:\s*(.+))?\.?$/i);
+    if (!match) {
+        return null;
+    }
+
+    const reading = match[1].trim();
+    const condition = (match[2] || '').replace(/\.$/, '').trim();
+    const numericReading = reading.match(/-?\d+(?:\.\d+)?/);
+
+    return {
+        kind: 'fact',
+        label: 'Ammonia',
+        value: numericReading
+            ? `${numericReading[0]}ppm${condition ? ` - ${condition}` : ''}`
+            : 'No Reading',
     };
 }
 

@@ -1141,6 +1141,7 @@ function fillSelect(select, items, valueKey, labelKey, placeholder) {
 }
 
 let editingTaskId = null;
+let pendingEditTaskPayload = null;
 
 function setupEditTaskModal() {
     document.addEventListener('click', (event) => {
@@ -1154,6 +1155,12 @@ function setupEditTaskModal() {
     const editForm = document.getElementById('editTaskForm');
     if (editForm) {
         editForm.addEventListener('submit', handleEditTaskSubmit);
+    }
+
+    const confirmEditTaskButton = document.getElementById('confirmEditTask');
+    if (confirmEditTaskButton && !confirmEditTaskButton._taskEditConfirmHandlerSet) {
+        confirmEditTaskButton._taskEditConfirmHandlerSet = true;
+        confirmEditTaskButton.addEventListener('click', submitPendingEditTask);
     }
 
     setupEditTaskHouseChange();
@@ -1306,21 +1313,50 @@ async function handleEditTaskSubmit(event) {
 
     const finishBy = dateAssigned && timeAssigned ? `${dateAssigned} ${timeAssigned}:00` : null;
 
+    pendingEditTaskPayload = {
+        taskId: editingTaskId,
+        formError,
+        tasktype: taskCategory,
+        prioritylevel: priorityLevel,
+        house_houseid: houseNumber,
+        pennumber: penNumber,
+        finishby: finishBy,
+        detailedtask: detailedTask,
+    };
+
+    const confirmText = document.getElementById('confirmEditTaskText');
+    if (confirmText) {
+        confirmText.textContent = `Save changes to ${taskCategory}?`;
+    }
+
+    openTaskModal('confirmEditTaskModal');
+}
+
+async function submitPendingEditTask() {
+    if (!pendingEditTaskPayload) {
+        closeTaskModal('confirmEditTaskModal');
+        return;
+    }
+
+    const confirmButton = document.getElementById('confirmEditTask');
+    const payload = pendingEditTaskPayload;
+
     try {
+        confirmButton.disabled = true;
         const token = document.querySelector('meta[name="csrf-token"]')?.content;
-        const response = await fetch(`/api/manager/tasks/${editingTaskId}`, {
+        const response = await fetch(`/api/manager/tasks/${payload.taskId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': token || '',
             },
             body: JSON.stringify({
-                tasktype: taskCategory,
-                prioritylevel: priorityLevel,
-                house_houseid: houseNumber,
-                pennumber: penNumber,
-                finishby: finishBy,
-                detailedtask: detailedTask,
+                tasktype: payload.tasktype,
+                prioritylevel: payload.prioritylevel,
+                house_houseid: payload.house_houseid,
+                pennumber: payload.pennumber,
+                finishby: payload.finishby,
+                detailedtask: payload.detailedtask,
             }),
         });
 
@@ -1330,14 +1366,19 @@ async function handleEditTaskSubmit(event) {
         }
 
         await renderManagerTasks();
+        closeTaskModal('confirmEditTaskModal');
         closeTaskModal('editTaskModal');
         editingTaskId = null;
-        formError.classList.remove('show');
-        formError.textContent = '';
+        pendingEditTaskPayload = null;
+        payload.formError.classList.remove('show');
+        payload.formError.textContent = '';
     } catch (error) {
         console.error('Failed to update task:', error);
-        formError.textContent = 'Unable to update task. Please try again.';
-        formError.classList.add('show');
+        closeTaskModal('confirmEditTaskModal');
+        payload.formError.textContent = 'Unable to update task. Please try again.';
+        payload.formError.classList.add('show');
+    } finally {
+        confirmButton.disabled = false;
     }
 }
 

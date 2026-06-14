@@ -676,6 +676,50 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    function showHouseConfirmModal(message, title = "Confirm Action", confirmText = "Confirm") {
+        return new Promise((resolve) => {
+            document.getElementById("managerHouseGenericConfirmModal")?.remove();
+
+            const modal = document.createElement("div");
+            modal.className = "modal-overlay confirm-modal-top show";
+            modal.id = "managerHouseGenericConfirmModal";
+            modal.innerHTML = `
+                <div class="modal-card archive-house-card">
+                    <div class="modal-header">
+                        <h2></h2>
+                        <button type="button" class="modal-close" data-confirm-cancel>&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="archive-house-text"></p>
+                        <div class="modal-actions">
+                            <button type="button" class="cancel-btn" data-confirm-cancel>Cancel</button>
+                            <button type="button" class="save-btn" data-confirm-ok></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.querySelector("h2").textContent = title;
+            modal.querySelector("p").textContent = message;
+            modal.querySelector("[data-confirm-ok]").textContent = confirmText;
+
+            const close = (confirmed) => {
+                modal.remove();
+                resolve(confirmed);
+            };
+
+            modal.querySelectorAll("[data-confirm-cancel]").forEach((button) => {
+                button.addEventListener("click", () => close(false));
+            });
+            modal.querySelector("[data-confirm-ok]").addEventListener("click", () => close(true));
+            modal.addEventListener("click", (event) => {
+                if (event.target === modal) close(false);
+            });
+
+            document.body.appendChild(modal);
+        });
+    }
+
     function buildInfoCards(cards) {
         return cards
             .map(
@@ -1363,6 +1407,19 @@ document.addEventListener("DOMContentLoaded", async () => {
                 console.log('Ending pen with URL:', url);
             } else {
                 alert("Please select an action.");
+                return;
+            }
+
+            const confirmMessage = endOption === 'house'
+                ? `End all active pens in ${currentHouse.name}?`
+                : 'End this pen?';
+
+            const confirmed = await showHouseConfirmModal(
+                confirmMessage,
+                "Confirm End Batch",
+            );
+
+            if (!confirmed) {
                 return;
             }
 

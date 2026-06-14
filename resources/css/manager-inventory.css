@@ -623,6 +623,43 @@
     animation: inventoryModalPop 0.22s ease;
 }
 
+.inventory-confirm-overlay {
+    background: rgba(0, 0, 0, 0.42);
+}
+
+.inventory-confirm-card {
+    max-width: 430px;
+    text-align: center;
+}
+
+.inventory-confirm-card .inventory-modal-header {
+    margin-bottom: 14px;
+}
+
+.inventory-confirm-card .inventory-modal-header h2 {
+    font-size: 1.75rem;
+}
+
+.inventory-confirm-text {
+    margin: 0;
+    color: #333333;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.inventory-confirm-actions {
+    justify-content: center;
+    margin-top: 22px;
+}
+
+.inventory-save-btn.inventory-confirm-danger {
+    background: linear-gradient(180deg, #b42318 0%, #8a1a12 100%);
+}
+
+.inventory-save-btn.inventory-confirm-danger:hover {
+    background: linear-gradient(180deg, #c7352b 0%, #9f2017 100%);
+}
+
 @keyframes inventoryModalPop {
     from {
         opacity: 0;

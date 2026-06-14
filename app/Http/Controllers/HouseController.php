@@ -7,6 +7,7 @@ use App\Models\Pen;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 
 class HouseController extends Controller
@@ -60,7 +61,12 @@ class HouseController extends Controller
     {
         try {
             $validated = $request->validate([
-                'house_number' => 'required|string|max:255',
+                'house_number' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('house', 'house_number')->whereNull('archived_at'),
+                ],
                 'number_of_pens' => 'required|integer|min:1|max:100',
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
@@ -189,7 +195,12 @@ class HouseController extends Controller
             }
 
             $validated = $request->validate([
-                'house_number' => 'nullable|string|max:255',
+                'house_number' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    Rule::unique('house', 'house_number')->whereNull('archived_at')->ignore($house->id),
+                ],
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
             ]);

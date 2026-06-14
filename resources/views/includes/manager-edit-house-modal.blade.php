@@ -74,7 +74,7 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="confirmEditHouseModal">
+<div class="modal-overlay confirm-modal-top" id="confirmEditHouseModal">
     <div class="modal-card archive-house-card">
         <div class="modal-header">
             <h2>Confirm Changes</h2>

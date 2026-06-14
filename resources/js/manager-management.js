@@ -10,6 +10,50 @@ const createTaskTypeForm = document.getElementById("createTaskTypeForm");
 const newTaskTypeInput = document.getElementById("newTaskType");
 const createTaskTypeMessage = document.getElementById("createTaskTypeMessage");
 
+function showManagementConfirmModal(message, title = "Confirm Save", confirmText = "Confirm") {
+    return new Promise((resolve) => {
+        document.getElementById("managerManagementGenericConfirmModal")?.remove();
+
+        const modal = document.createElement("div");
+        modal.className = "manager-management-modal-backdrop confirm-modal-top show";
+        modal.id = "managerManagementGenericConfirmModal";
+        modal.innerHTML = `
+            <div class="manager-management-modal-card">
+                <div class="manager-management-modal-header">
+                    <div>
+                        <p class="manager-management-modal-eyebrow">Management</p>
+                        <h2></h2>
+                    </div>
+                </div>
+                <div class="manager-management-modal-form">
+                    <p class="manager-management-modal-help"></p>
+                    <div class="manager-management-modal-actions">
+                        <button type="button" class="manager-management-modal-secondary-btn" data-confirm-cancel>Cancel</button>
+                        <button type="button" class="manager-management-modal-primary-btn" data-confirm-ok></button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector("h2").textContent = title;
+        modal.querySelector(".manager-management-modal-help").textContent = message;
+        modal.querySelector("[data-confirm-ok]").textContent = confirmText;
+
+        const close = (confirmed) => {
+            modal.remove();
+            resolve(confirmed);
+        };
+
+        modal.querySelector("[data-confirm-cancel]").addEventListener("click", () => close(false));
+        modal.querySelector("[data-confirm-ok]").addEventListener("click", () => close(true));
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) close(false);
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
 function setMessage(message, type = "error") {
     if (!createTaskTypeMessage) {
         return;
@@ -89,6 +133,15 @@ async function handleCreateTaskTypeSubmit(event) {
 
     if (!taskType) {
         setMessage("Please enter a new task type.", "error");
+        return;
+    }
+
+    const confirmed = await showManagementConfirmModal(
+        `Create "${taskType}" as a new task type?`,
+        "Confirm Task Type",
+    );
+
+    if (!confirmed) {
         return;
     }
 

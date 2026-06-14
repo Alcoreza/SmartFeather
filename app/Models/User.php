@@ -29,7 +29,8 @@ class User extends Authenticatable
         'Birthday',
         'Gender',
         'Password',
-        'Username'
+        'Username',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -42,6 +43,7 @@ class User extends Authenticatable
         return [
             'Birthday' => 'date',
             'Password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
     public $timestamps = false;

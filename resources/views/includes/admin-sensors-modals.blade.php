@@ -149,7 +149,7 @@
     </div>
 </div>
 
-<div class="admin-sensor-modal-backdrop" id="adminSensorAddConfirmModal">
+<div class="admin-sensor-modal-backdrop confirm-modal-top" id="adminSensorAddConfirmModal">
     <div class="admin-sensor-modal-card admin-sensor-delete-card">
         <div class="admin-sensor-modal-header center">
             <h2>Confirm Sensor</h2>
@@ -207,7 +207,7 @@
     </div>
 </div>
 
-<div class="admin-sensor-modal-backdrop" id="adminSensorDeleteModal">
+<div class="admin-sensor-modal-backdrop confirm-modal-top" id="adminSensorDeleteModal">
     <div class="admin-sensor-modal-card admin-sensor-delete-card">
         <div class="admin-sensor-modal-header center">
             <h2>Delete Sensor</h2>
@@ -230,7 +230,7 @@
     </div>
 </div>
 
-<div class="admin-sensor-modal-backdrop" id="adminSensorStatusModal">
+<div class="admin-sensor-modal-backdrop confirm-modal-top" id="adminSensorStatusModal">
     <div class="admin-sensor-modal-card admin-sensor-delete-card">
         <div class="admin-sensor-modal-header center">
             <h2>Update Sensor Status</h2>

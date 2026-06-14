@@ -52,8 +52,10 @@ class BiosecurityLogController extends Controller
     public function store(Request $request)
     {
         $type = $request->input('type', 'Cleaning');
+        $request->merge(['type' => $type]);
 
         $validated = $request->validate($this->getValidationRules($type));
+        unset($validated['type']);
 
         // If a captured photo was attached (DataURL), upload it now and set photo_url
         if ($type === 'Visitors' && $request->filled('photo_data')) {
@@ -84,9 +86,14 @@ class BiosecurityLogController extends Controller
      */
     public function uploadVisitorPhoto(Request $request)
     {
-        $data = $request->input('photo_data');
+        $validated = $request->validate([
+            'photo_data' => ['required', 'string'],
+            'mime_type' => ['nullable', 'string', 'in:image/jpeg,image/png,image/webp'],
+        ]);
+        $data = $validated['photo_data'];
+
         try {
-            $path = $this->uploadPhotoFromData($data, $request->input('mime_type'));
+            $path = $this->uploadPhotoFromData($data, $validated['mime_type'] ?? null);
             return response()->json([
                 'success' => true,
                 'photo_path' => $path,
@@ -158,11 +165,13 @@ class BiosecurityLogController extends Controller
     public function update(Request $request, $id)
     {
         $type = $request->input('type');
-
-        // Find the log based on type
-        $log = $this->findLog($type, $id);
+        $request->merge(['type' => $type]);
 
         $validated = $request->validate($this->getValidationRules($type, true));
+        unset($validated['type']);
+
+        // Find the log based on type after validating the submitted category.
+        $log = $this->findLog($type, $id);
 
         // Convert IDs to display values
         $validated = $this->convertIdsToValues($type, $validated, $log);
@@ -195,6 +204,10 @@ class BiosecurityLogController extends Controller
      */
     private function getValidationRules($type, $isUpdate = false)
     {
+        $baseRules = [
+            'type' => 'required|in:Cleaning,Personnel Biosecurity Logs,Visitors,Personnel Entry Logs,Weight Sampling',
+        ];
+
         $rules = [
             'Cleaning' => [
                 'house' => 'nullable|string|max:50',
@@ -202,40 +215,42 @@ class BiosecurityLogController extends Controller
                 'activity' => 'nullable|string|max:255',
                 'disinfectant_used' => 'nullable|string|max:255',
                 'performed_by' => 'nullable|string|max:100',
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'date' => 'nullable|date|before_or_equal:today',
+                'time' => 'nullable|date_format:H:i',
             ],
             'Personnel Biosecurity Logs' => [
-                'name' => 'nullable|string|max:100',
-                'role' => 'nullable|string|max:100',
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'name' => 'required|string|max:100',
+                'role' => 'required|string|max:100',
+                'date' => 'required|date|before_or_equal:today',
+                'time' => 'required|date_format:H:i',
+                'status' => 'required|string|in:IN,OUT',
                 'foot_bath' => 'nullable|string|max:10',
                 'boots_changed' => 'nullable|string|max:10',
                 'protective_clothing' => 'nullable|string|max:10',
             ],
             'Visitors' => [
-                'date' => 'nullable|date',
-                'time_in' => 'nullable',
-                'time_out' => 'nullable',
-                'name' => 'nullable|string|max:100',
-                'purpose' => 'nullable|string|max:255',
-                'foot_bath' => 'nullable|string|max:10',
-                'sanitation' => 'nullable|string|max:10',
-                'ppe' => 'nullable|string|max:10',
-                'monitored_by' => 'nullable|string|max:100',
+                'date' => 'required|date|before_or_equal:today',
+                'time_in' => 'required|date_format:H:i',
+                'time_out' => 'required|date_format:H:i|after_or_equal:time_in',
+                'name' => 'required|string|max:100',
+                'purpose' => 'required|string|max:255',
+                'foot_bath' => 'required|string|in:Yes,No',
+                'sanitation' => 'required|string|in:Yes,No',
+                'ppe' => 'required|string|in:Yes,No',
+                'monitored_by' => 'required|string|max:100',
                 'photo_url' => 'nullable|string|max:255',
+                'photo_data' => 'nullable|string',
             ],
             'Personnel Entry Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
                 'house' => 'nullable|string|max:50',
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'date' => 'nullable|date|before_or_equal:today',
+                'time' => 'nullable|date_format:H:i',
             ],
             'Weight Sampling' => [
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'date' => 'nullable|date|before_or_equal:today',
+                'time' => 'nullable|date_format:H:i',
                 'house' => 'nullable|string|max:50',
                 'pen' => 'nullable|string|max:50',
                 'batch' => 'nullable|string|max:50',
@@ -247,7 +262,7 @@ class BiosecurityLogController extends Controller
             ],
         ];
 
-        return $rules[$type] ?? [];
+        return array_merge($baseRules, $rules[$type] ?? []);
     }
 
     /**

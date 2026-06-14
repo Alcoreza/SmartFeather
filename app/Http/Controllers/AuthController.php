@@ -26,6 +26,7 @@ class AuthController extends Controller
 
         if (
             !$user ||
+            !$user->is_active ||
             !$normalizedHash ||
             !password_verify($request->password, $normalizedHash)
         ) {

@@ -22,6 +22,49 @@ const adminSensorAddRequiredFields = [
 let shouldTrackAdminSensorRequiredHighlights = false;
 let pendingAdminSensorAddPayload = null;
 
+function showAdminSensorConfirmModal(message, title = "Confirm Save", confirmText = "Confirm") {
+    return new Promise((resolve) => {
+        const existing = document.getElementById("adminSensorGenericConfirmModal");
+        existing?.remove();
+
+        const modal = document.createElement("div");
+        modal.className = "admin-sensor-modal-backdrop confirm-modal-top show";
+        modal.id = "adminSensorGenericConfirmModal";
+        modal.innerHTML = `
+            <div class="admin-sensor-modal-card admin-sensor-delete-card">
+                <div class="admin-sensor-modal-header center">
+                    <h2></h2>
+                    <div class="admin-sensor-header-line"></div>
+                </div>
+                <div class="admin-sensor-modal-body">
+                    <p class="admin-sensor-delete-text"></p>
+                    <div class="admin-sensor-modal-actions">
+                        <button type="button" class="admin-sensor-btn close" data-confirm-cancel>Cancel</button>
+                        <button type="button" class="admin-sensor-btn save" data-confirm-ok></button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector("h2").textContent = title;
+        modal.querySelector("p").textContent = message;
+        modal.querySelector("[data-confirm-ok]").textContent = confirmText;
+
+        const close = (confirmed) => {
+            modal.remove();
+            resolve(confirmed);
+        };
+
+        modal.querySelector("[data-confirm-cancel]").addEventListener("click", () => close(false));
+        modal.querySelector("[data-confirm-ok]").addEventListener("click", () => close(true));
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) close(false);
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
 async function renderAdminSensorSections() {
     const mount = document.getElementById("adminSensorSections");
     if (!mount) return;
@@ -972,6 +1015,15 @@ function bindAdminThresholdButtons() {
                 return;
             }
 
+            const confirmed = await showAdminSensorConfirmModal(
+                "Save these sensor threshold changes?",
+                "Confirm Threshold",
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
             try {
                 const payload = {
                     sensor_type: type.value,
@@ -1160,6 +1212,15 @@ function setupAdminSensorEditModal() {
 
         if (!sensorId) {
             console.error("Missing sensor id for update");
+            return;
+        }
+
+        const confirmed = await showAdminSensorConfirmModal(
+            "Save changes to this sensor configuration?",
+            "Confirm Sensor Changes",
+        );
+
+        if (!confirmed) {
             return;
         }
 

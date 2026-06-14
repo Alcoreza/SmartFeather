@@ -33,7 +33,7 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="confirmAddHouseModal">
+<div class="modal-overlay confirm-modal-top" id="confirmAddHouseModal">
     <div class="modal-card archive-house-card">
         <div class="modal-header">
             <h2>Confirm House</h2>

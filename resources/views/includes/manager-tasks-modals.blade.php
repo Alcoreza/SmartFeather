@@ -1,4 +1,4 @@
-<div class="manager-task-modal-backdrop" id="deleteTaskModal">
+<div class="manager-task-modal-backdrop confirm-modal-top" id="deleteTaskModal">
     <div class="manager-task-confirm-modal">
         <div class="manager-task-modal-header center">
             <h2>Delete Task</h2>
@@ -30,7 +30,7 @@
     </div>
 </div>
 
-<div class="manager-task-modal-backdrop" id="taskVerifyModal">
+<div class="manager-task-modal-backdrop confirm-modal-top" id="taskVerifyModal">
     <div class="manager-task-confirm-modal">
         <div class="manager-task-modal-header center">
             <h2>Mark as Complete</h2>
@@ -49,7 +49,7 @@
     </div>
 </div>
 
-<div class="manager-task-modal-backdrop" id="confirmAddTaskModal">
+<div class="manager-task-modal-backdrop confirm-modal-top" id="confirmAddTaskModal">
     <div class="manager-task-confirm-modal">
         <div class="manager-task-modal-header center">
             <h2>Assign Task</h2>
@@ -63,6 +63,25 @@
                 <button type="button" class="manager-task-btn cancel"
                     data-close-task-modal="confirmAddTaskModal">Cancel</button>
                 <button type="button" class="manager-task-btn confirm" id="confirmAddTask">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="manager-task-modal-backdrop confirm-modal-top" id="confirmEditTaskModal">
+    <div class="manager-task-confirm-modal">
+        <div class="manager-task-modal-header center">
+            <h2>Save Task Changes</h2>
+            <div class="manager-task-header-line"></div>
+        </div>
+
+        <div class="manager-task-confirm-body">
+            <p id="confirmEditTaskText">Save changes to this task?</p>
+
+            <div class="manager-task-confirm-actions">
+                <button type="button" class="manager-task-btn cancel"
+                    data-close-task-modal="confirmEditTaskModal">Cancel</button>
+                <button type="button" class="manager-task-btn confirm" id="confirmEditTask">Confirm</button>
             </div>
         </div>
     </div>

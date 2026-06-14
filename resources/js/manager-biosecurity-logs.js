@@ -17,6 +17,48 @@ let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
 let shouldTrackAddBioRequiredHighlights = false;
 
+function showBioConfirmModal(message, title = 'Confirm Save', confirmText = 'Confirm') {
+    return new Promise((resolve) => {
+        document.getElementById('bioGenericConfirmModal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'bio-modal-overlay confirm-modal-top show';
+        modal.id = 'bioGenericConfirmModal';
+        modal.innerHTML = `
+            <div class="bio-modal">
+                <div class="bio-modal-header">
+                    <h2></h2>
+                    <div class="bio-modal-line"></div>
+                </div>
+                <div class="bio-modal-form">
+                    <p class="bio-form-confirm-text"></p>
+                    <div class="bio-modal-actions">
+                        <button type="button" class="bio-btn bio-btn-cancel" data-confirm-cancel>Cancel</button>
+                        <button type="button" class="bio-btn bio-btn-save" data-confirm-ok></button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector('h2').textContent = title;
+        modal.querySelector('p').textContent = message;
+        modal.querySelector('[data-confirm-ok]').textContent = confirmText;
+
+        const close = (confirmed) => {
+            modal.remove();
+            resolve(confirmed);
+        };
+
+        modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
+        modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close(false);
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
 const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
     'Personnel Biosecurity Logs': [
         { name: 'name', label: 'Name' },
@@ -162,6 +204,17 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function getReadableBioError(error) {
+    if (!error) return 'Unable to save log. Please try again.';
+
+    if (error.errors) {
+        const messages = Object.values(error.errors).flat().filter(Boolean);
+        if (messages.length) return messages.join(' ');
+    }
+
+    return error.message || error.error || 'Unable to save log. Please try again.';
 }
 
 function formatDateForDisplay(isoDate) {
@@ -741,6 +794,15 @@ function setupEditModal() {
                 return;
             }
 
+            const confirmed = await showBioConfirmModal(
+                'Save changes to this biosecurity log?',
+                'Confirm Biosecurity Log',
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/manager/biosecurity-logs/${logId}`, {
                     method: 'POST',
@@ -754,7 +816,7 @@ function setupEditModal() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Server error:', errorData);
-                    throw new Error(`Failed to update: ${response.status}`);
+                    throw new Error(getReadableBioError(errorData));
                 }
 
                 const result = await response.json();
@@ -766,7 +828,7 @@ function setupEditModal() {
                 loadBiosecurityLogs();
             } catch (error) {
                 console.error('Error updating log:', error);
-                alert('Failed to update log. Please try again.');
+                alert(error.message || 'Failed to update log. Please try again.');
             }
         });
     }
@@ -900,6 +962,15 @@ function setupAddModal() {
                 return;
             }
 
+            const confirmed = await showBioConfirmModal(
+                `Add this ${payload.type || 'biosecurity log'}?`,
+                'Confirm Biosecurity Log',
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
             try {
                 const response = await fetch('/api/manager/biosecurity-logs', {
                     method: 'POST',
@@ -912,7 +983,7 @@ function setupAddModal() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Server error:', errorData);
-                    throw new Error(`Failed to save: ${response.status}`);
+                    throw new Error(getReadableBioError(errorData));
                 }
 
                 const result = await response.json();
@@ -926,7 +997,7 @@ function setupAddModal() {
                 loadBiosecurityLogs();
             } catch (error) {
                 console.error('Error saving log:', error);
-                showAddBioFormError(formError, 'Failed to save log. Please try again.');
+                showAddBioFormError(formError, error.message || 'Failed to save log. Please try again.');
             }
         });
     }

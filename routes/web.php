@@ -547,6 +547,7 @@ Route::get('/api/admin/dashboard/resources-by-house', function () {
 Route::prefix('api/admin/workers')->group(function () {
     Route::get('/', [EmployeeController::class, 'index']);
     Route::post('/', [EmployeeController::class, 'store']);
+    Route::post('/check-phone', [EmployeeController::class, 'checkPhone']);
     Route::get('/{id}', [EmployeeController::class, 'show']);
     Route::put('/{id}', [EmployeeController::class, 'update']);
     Route::delete('/{id}', [EmployeeController::class, 'destroy']);

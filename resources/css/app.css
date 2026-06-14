@@ -16,6 +16,10 @@ body {
     font-family: "Poppins", sans-serif;
 }
 
+.confirm-modal-top {
+    z-index: 100000 !important;
+}
+
 :root {
     --sf-button-green-950: #042318;
     --sf-button-green-900: #063320;

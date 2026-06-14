@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -59,8 +60,18 @@ class ProfileController extends Controller
         }
 
         $validated = $request->validate([
-            'PhoneNumber' => ['required', 'string', 'max:255'],
+            'PhoneNumber' => [
+                'required',
+                'string',
+                'size:11',
+                'regex:/^09\d{9}$/',
+                Rule::unique('user', 'PhoneNumber')->ignore($user->EmployeeId, 'EmployeeId'),
+            ],
             'Address' => ['required', 'string', 'max:255'],
+        ], [
+            'PhoneNumber.regex' => 'Phone number must use 09XXXXXXXXX format.',
+            'PhoneNumber.size' => 'Phone number must be exactly 11 digits.',
+            'PhoneNumber.unique' => 'This phone number is already assigned to another employee.',
         ]);
 
         $user->update($validated);

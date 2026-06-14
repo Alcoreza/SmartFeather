@@ -247,6 +247,7 @@ class SensorAlertService
         return DB::table('mobile_device_tokens as mdt')
             ->join('user as u', 'mdt.employee_id', '=', 'u.EmployeeId')
             ->where('u.Role', 'Flockman')
+            ->whereRaw('u.is_active is true')
             ->where('mdt.is_active', DB::raw('true'))
             ->whereNotNull('mdt.fcm_token')
             ->where('mdt.fcm_token', '!=', '')

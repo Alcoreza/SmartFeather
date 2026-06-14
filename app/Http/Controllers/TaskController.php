@@ -235,6 +235,7 @@ class TaskController extends Controller
             ->toArray();
 
         $workers = Employee::where('Role', 'Flockman')
+            ->whereRaw('is_active is true')
             ->get()
             ->map(function (Employee $employee) use ($pendingWorkerIds) {
                 $fullName = trim(sprintf(
@@ -308,7 +309,8 @@ class TaskController extends Controller
      */
     public function getAllWorkers()
     {
-        $workers = Employee::all()
+        $workers = Employee::whereRaw('is_active is true')
+            ->get()
             ->map(function (Employee $employee) {
                 $fullName = trim(sprintf(
                     '%s %s %s %s',

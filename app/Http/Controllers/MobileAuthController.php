@@ -36,7 +36,7 @@ class MobileAuthController extends Controller
             'password_matches' => $passwordMatches,
         ]);
 
-        if (!$user || !$normalizedHash || !$passwordMatches) {
+        if (!$user || !$user->is_active || !$normalizedHash || !$passwordMatches) {
             return response()->json([
                 'message' => 'Invalid username or password.'
             ], 401);

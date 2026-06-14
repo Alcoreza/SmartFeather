@@ -23,6 +23,11 @@ class Employee extends Model
         'Address',
         'Password',
         'Username',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     protected static function booted(): void

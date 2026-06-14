@@ -5,12 +5,14 @@
 @push('styles')
     @vite([
         'resources/css/admin-shared.css',
-        'resources/css/admin-dashboard.css'
+        'resources/css/admin-dashboard.css',
+        'resources/css/manager-decision-support.css'
     ])
 @endpush
 
 @push('scripts')
     @vite('resources/js/admin-dashboard.js')
+    @vite('resources/js/manager-decision-support.js')
 @endpush
 
 @section('content')
@@ -68,29 +70,25 @@
                     </div>
                 </section>
 
-                <article class="admin-dashboard-card admin-decision-card">
-                    <div class="admin-decision-header">
+                <article class="admin-dashboard-card admin-decision-card decision-card">
+                    <div class="admin-decision-header decision-header">
                         <h2>Decision Support</h2>
 
-                        <select class="admin-decision-select">
-                            <option>Mortality</option>
-                            <option>Temperature</option>
-                            <option>Water</option>
-                        </select>
+                        <button type="button" class="decision-support-refresh" id="refreshDecisionSupport" title="Refresh recommendations">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M20 12a8 8 0 0 1-13.7 5.7"></path>
+                                <path d="M4 12A8 8 0 0 1 17.7 6.3"></path>
+                                <path d="M7 18H4v3"></path>
+                                <path d="M17 6h3V3"></path>
+                            </svg>
+                        </button>
                     </div>
 
-                    <div class="admin-decision-content">
-                        <div class="admin-decision-stars">
-                            <span class="admin-star admin-star-lg"></span>
-                            <span class="admin-star admin-star-md"></span>
-                            <span class="admin-star admin-star-sm"></span>
+                    <div class="admin-decision-content decision-content" id="decisionSupportContent" data-decision-support-api="/api/admin/dashboard/decision-support">
+                        <div class="decision-support-loading">
+                            <div class="spinner"></div>
+                            <p>Loading recommendations...</p>
                         </div>
-
-                        <p>
-                            Mortality count has increased beyond the normal daily range.
-                            Conduct flock inspection, review environmental conditions,
-                            and verify feed and water availability to identify possible causes.
-                        </p>
                     </div>
                 </article>
             </section>

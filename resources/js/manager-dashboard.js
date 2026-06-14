@@ -174,7 +174,7 @@ function getGaugeDegrees(value, min, max) {
 async function renderMonitoringCarousel() {
     const canvas = document.getElementById("monitoringChart");
     const caption = document.getElementById("graphCaption");
-    const dots = document.querySelectorAll(".graph-dot");
+    const dots = document.querySelectorAll(".monitoring-dot");
     const pager = document.getElementById("houseGraphPager");
     const pagerDots = document.getElementById("houseGraphPageDots");
     const prevButton = document.getElementById("houseGraphPrev");

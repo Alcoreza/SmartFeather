@@ -3,7 +3,7 @@
  * Loads AI-powered farm management recommendations
  */
 
-const DECISION_SUPPORT_API = '/api/manager/dashboard/decision-support';
+const DEFAULT_DECISION_SUPPORT_API = '/api/manager/dashboard/decision-support';
 let decisionSupportAutoRefresh = null;
 let decisionSupportHouses = [];
 let decisionSupportPage = 0;
@@ -28,7 +28,8 @@ async function loadDecisionSupport(forceRefresh = false) {
             </div>
         `;
 
-        const url = forceRefresh ? `${DECISION_SUPPORT_API}?refresh=1` : DECISION_SUPPORT_API;
+        const apiUrl = getDecisionSupportApi(container);
+        const url = forceRefresh ? `${apiUrl}?refresh=1` : apiUrl;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch recommendations');
 
@@ -51,6 +52,10 @@ async function loadDecisionSupport(forceRefresh = false) {
             refreshBtn.classList.remove('is-loading');
         }
     }
+}
+
+function getDecisionSupportApi(container) {
+    return container?.dataset?.decisionSupportApi || DEFAULT_DECISION_SUPPORT_API;
 }
 
 function renderDecisionSupport(container, recommendations) {

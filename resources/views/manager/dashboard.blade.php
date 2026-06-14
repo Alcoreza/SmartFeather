@@ -147,8 +147,8 @@
                     </div>
 
                     <div class="graph-dots">
-                        <button type="button" class="graph-dot active" data-slide="0"></button>
-                        <button type="button" class="graph-dot" data-slide="1"></button>
+                        <button type="button" class="graph-dot monitoring-dot active" data-slide="0"></button>
+                        <button type="button" class="graph-dot monitoring-dot" data-slide="1"></button>
                     </div>
                 </article>
 

@@ -454,6 +454,42 @@ Route::get('/api/manager/dashboard/decision-support', function (\Illuminate\Http
     ]);
 });
 
+Route::get('/api/admin/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
+    $service = new \App\Services\DecisionSupportService();
+    $generated = $service->generateRecommendations(null, $request->boolean('refresh'));
+    $recommendations = $service->getAllActiveRecommendations();
+
+    return response()->json([
+        'generated' => $generated,
+        'recommendations' => $recommendations->map(function ($rec) {
+            $ruleDecisions = collect($rec->data_snapshot['rule_decisions'] ?? []);
+            $severityRank = [
+                'normal' => 1,
+                'warning' => 2,
+                'critical' => 3,
+            ];
+            $severity = $ruleDecisions
+                ->pluck('severity')
+                ->sortByDesc(fn ($value) => $severityRank[$value] ?? 0)
+                ->first() ?? 'normal';
+
+            return [
+                'id' => $rec->id,
+                'house_id' => $rec->house_id,
+                'house_name' => $rec->house?->house_number ?? "House {$rec->house_id}",
+                'pen_id' => $rec->pen_id,
+                'pen_name' => $rec->pen?->pen_name ?? ($rec->pen_id ? "Pen {$rec->pen_id}" : null),
+                'text' => $rec->recommendation_text,
+                'severity' => $severity,
+                'categories' => $ruleDecisions->pluck('category')->unique()->values()->all(),
+                'findings_count' => $ruleDecisions->count(),
+                'generated_at' => $rec->generated_at->toIso8601String(),
+                'expires_at' => $rec->expires_at?->toIso8601String(),
+            ];
+        })->toArray(),
+    ]);
+});
+
 Route::get('/api/manager/workers', function () {
     return response()->json([
         [

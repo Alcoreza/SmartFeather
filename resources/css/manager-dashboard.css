@@ -515,15 +515,15 @@
     height: 100% !important;
 }
 
-.graph-dot {
+.manager-main .graph-dot {
     width: 32px;
     height: 8px;
     padding: 0;
     border: 1px solid rgba(23, 100, 58, 0.1);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.8) !important;
     cursor: pointer;
-    box-shadow: 0 5px 12px rgba(8, 38, 22, 0.08);
+    box-shadow: 0 5px 12px rgba(8, 38, 22, 0.08) !important;
     transition:
         width 0.22s ease,
         background 0.22s ease,
@@ -531,14 +531,15 @@
         transform 0.22s ease;
 }
 
-.graph-dot:hover {
+.manager-main .graph-dot:hover {
     transform: translateY(-1px);
     border-color: rgba(23, 100, 58, 0.28);
 }
 
-.graph-dot.active {
+.manager-main .graph-dot.active {
     width: 44px;
-    background: var(--manager-green-700);
+    border-color: rgba(23, 100, 58, 0.72);
+    background: var(--manager-green-700) !important;
 }
 
 .decision-card {

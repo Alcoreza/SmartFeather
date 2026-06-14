@@ -30,9 +30,7 @@ function showPopup(message, type = "success", callback = null) {
         <h2 style="margin:0 0 10px;color:${type === "success" ? "#1f7a3f" : "#b42318"};">
             ${type === "success" ? "Success" : "Error"}
         </h2>
-        <p style="margin:0 0 22px;color:#333;font-size:15px;">
-            ${message}
-        </p>
+        <p id="inventoryPopupMessage" style="margin:0 0 22px;color:#333;font-size:15px;"></p>
         <button id="inventoryPopupOkBtn" style="
             border: none;
             background: ${type === "success" ? "#1f7a3f" : "#b42318"};
@@ -45,6 +43,8 @@ function showPopup(message, type = "success", callback = null) {
             OK
         </button>
     `;
+
+    box.querySelector("#inventoryPopupMessage").textContent = message || "";
 
     overlay.appendChild(box);
     document.body.appendChild(overlay);
@@ -116,7 +116,7 @@ function showConfirmPopup(message, callback, options = {}) {
     box.innerHTML = `
         <div class="inventory-modal-header">
             <div>
-                <h2>${title}</h2>
+                <h2></h2>
                 <div class="inventory-modal-line"></div>
             </div>
         </div>
@@ -128,12 +128,13 @@ function showConfirmPopup(message, callback, options = {}) {
                 Cancel
             </button>
             <button type="button" class="inventory-save-btn ${isDanger ? "inventory-confirm-danger" : ""}" id="confirmArchiveBtn">
-                ${confirmText}
             </button>
         </div>
     `;
 
+    box.querySelector("h2").textContent = title;
     box.querySelector(".inventory-confirm-text").textContent = message;
+    box.querySelector("#confirmArchiveBtn").textContent = confirmText;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 

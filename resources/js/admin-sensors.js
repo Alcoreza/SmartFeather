@@ -65,6 +65,45 @@ function showAdminSensorConfirmModal(message, title = "Confirm Save", confirmTex
     });
 }
 
+function showAdminSensorNoticeModal(message, title = "Notice") {
+    return new Promise((resolve) => {
+        document.getElementById("adminSensorGenericNoticeModal")?.remove();
+
+        const modal = document.createElement("div");
+        modal.className = "admin-sensor-modal-backdrop confirm-modal-top show";
+        modal.id = "adminSensorGenericNoticeModal";
+        modal.innerHTML = `
+            <div class="admin-sensor-modal-card admin-sensor-delete-card">
+                <div class="admin-sensor-modal-header center">
+                    <h2></h2>
+                    <div class="admin-sensor-header-line"></div>
+                </div>
+                <div class="admin-sensor-modal-body">
+                    <p class="admin-sensor-delete-text"></p>
+                    <div class="admin-sensor-modal-actions">
+                        <button type="button" class="admin-sensor-btn save" data-notice-ok>OK</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector("h2").textContent = title;
+        modal.querySelector("p").textContent = message;
+
+        const close = () => {
+            modal.remove();
+            resolve();
+        };
+
+        modal.querySelector("[data-notice-ok]").addEventListener("click", close);
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) close();
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
 async function renderAdminSensorSections() {
     const mount = document.getElementById("adminSensorSections");
     if (!mount) return;
@@ -1000,7 +1039,7 @@ function bindAdminThresholdButtons() {
             const high = document.getElementById("adminSensorThresholdHigh");
 
             if (!type || !type.value) {
-                alert("Sensor type is required");
+                await showAdminSensorNoticeModal("Sensor type is required.", "Missing Sensor Type");
                 return;
             }
 
@@ -1011,7 +1050,7 @@ function bindAdminThresholdButtons() {
                 (low && low.value.trim() && isNaN(lowestThreshold)) ||
                 (high && high.value.trim() && isNaN(highestThreshold))
             ) {
-                alert("Threshold values must be valid numbers");
+                await showAdminSensorNoticeModal("Threshold values must be valid numbers.", "Invalid Threshold");
                 return;
             }
 
@@ -1035,8 +1074,8 @@ function bindAdminThresholdButtons() {
                 closeAdminSensorModal("adminSensorThresholdModal");
                 await renderAdminSensorSections();
             } catch (error) {
-                alert(`Failed to save sensor thresholds: ${error.message}`);
                 console.error("Failed to save sensor thresholds.", error);
+                await showAdminSensorNoticeModal(`Failed to save sensor thresholds: ${error.message}`, "Unable to Save Thresholds");
             }
         });
     }
@@ -1453,7 +1492,7 @@ function bindAdminStatusConfirmButton() {
             await renderAdminSensorSections();
         } catch (error) {
             console.error("Failed to update sensor status.", error);
-            alert(`Failed to update sensor status: ${error.message}`);
+            await showAdminSensorNoticeModal(`Failed to update sensor status: ${error.message}`, "Unable to Update Status");
         }
     });
 }

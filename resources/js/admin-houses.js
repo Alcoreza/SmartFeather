@@ -563,7 +563,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             editPen.innerHTML = currentHouse.pens
                 .map(
                     (pen, index) => `
-                <option value="${index}" ${index === activePenIndex ? "selected" : ""}>${pen.pen_name}</option>
+                <option value="${index}" ${index === activePenIndex ? "selected" : ""}>${escapeHtml(pen.pen_name)}</option>
             `,
                 )
                 .join("");
@@ -720,15 +720,62 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    function showHouseNoticeModal(message, title = "Notice") {
+        return new Promise((resolve) => {
+            document.getElementById("adminHouseGenericNoticeModal")?.remove();
+
+            const modal = document.createElement("div");
+            modal.className = "modal-overlay confirm-modal-top show";
+            modal.id = "adminHouseGenericNoticeModal";
+            modal.innerHTML = `
+                <div class="modal-card archive-house-card">
+                    <div class="modal-header">
+                        <h2></h2>
+                    </div>
+                    <div class="modal-body">
+                        <p class="archive-house-text"></p>
+                        <div class="modal-actions">
+                            <button type="button" class="save-btn" data-notice-ok>OK</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.querySelector("h2").textContent = title;
+            modal.querySelector("p").textContent = message;
+
+            const close = () => {
+                modal.remove();
+                resolve();
+            };
+
+            modal.querySelector("[data-notice-ok]").addEventListener("click", close);
+            modal.addEventListener("click", (event) => {
+                if (event.target === modal) close();
+            });
+
+            document.body.appendChild(modal);
+        });
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
     function buildInfoCards(cards) {
         return cards
             .map(
                 (card) => `
             <article class="info-card card-animate">
                 <div class="info-text">
-                    <div class="info-title">${card.label}</div>
-                    <div class="info-value">${card.value}</div>
-                    <div class="info-subtitle">${card.detail}</div>
+                    <div class="info-title">${escapeHtml(card.label)}</div>
+                    <div class="info-value">${escapeHtml(card.value)}</div>
+                    <div class="info-subtitle">${escapeHtml(card.detail)}</div>
                 </div>
             </article>
         `,
@@ -744,8 +791,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="resource-bar-box">
                     <div class="resource-bar ${type === "feed" ? "feed-bar" : "water-bar"}" style="width: ${item.value}%;"></div>
                 </div>
-                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"}">${item.value}%</div>
-                <div class="resource-label">${item.label}</div>
+                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"}">${escapeHtml(item.value)}%</div>
+                <div class="resource-label">${escapeHtml(item.label)}</div>
             </div>
             ${index < items.length - 1 ? '<div class="resource-line"></div>' : ""}
         `,
@@ -841,7 +888,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         housePen.innerHTML = sortPensById(house.pens)
             .map(
                 (pen, index) => `
-            <option value="${index}">${pen.pen_name}</option>
+            <option value="${index}">${escapeHtml(pen.pen_name)}</option>
         `,
             )
             .join("");
@@ -973,7 +1020,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (error) {
             console.error("Error fetching houses:", error);
-            alert("Error loading houses: " + error.message);
+            showHouseNoticeModal(`Error loading houses: ${error.message}`, "Unable to Load Houses");
         }
     }
 
@@ -1096,7 +1143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 class="house-tab ${index === activeHouseIndex ? "active" : ""}"
                 data-house-index="${index}"
             >
-                ${house.name}
+                ${escapeHtml(house.name)}
             </button>
         `,
             )
@@ -1189,9 +1236,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const result = await createHouse(payload);
 
-            alert(
+            await showHouseNoticeModal(
                 result.message ||
                     "House and pen setup saved successfully.",
+                "House Saved",
             );
 
             closeAddHouseConfirmModal();
@@ -1203,7 +1251,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await fetchHouses();
         } catch (error) {
             console.error("Error creating house:", error);
-            alert("Error creating house: " + error.message);
+            await showHouseNoticeModal(`Error creating house: ${error.message}`, "Unable to Save House");
         } finally {
             confirmAddHouseSave.disabled = false;
         }
@@ -1272,7 +1320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await fetchHouses();
         } catch (error) {
             console.error("Error updating data:", error);
-            alert("Error: " + error.message);
+            await showHouseNoticeModal(`Error: ${error.message}`, "Unable to Update House");
         } finally {
             confirmEditHouseSave.disabled = false;
         }
@@ -1334,12 +1382,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                     throw new Error(result.message || "Failed to archive house");
                 }
 
-                alert(result.message || "House archived successfully.");
+                await showHouseNoticeModal(result.message || "House archived successfully.", "House Archived");
                 closeArchiveModal();
                 await fetchHouses();
             } catch (error) {
                 console.error("Error archiving house:", error);
-                alert("Error archiving house: " + error.message);
+                await showHouseNoticeModal(`Error archiving house: ${error.message}`, "Unable to Archive House");
             }
         });
     }
@@ -1377,12 +1425,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Validate form inputs
             if (!endOption) {
-                alert('Please select an action.');
+                await showHouseNoticeModal("Please select an action.", "Missing Selection");
                 return;
             }
 
             if (endOption === 'pen' && (!penId || penId === '')) {
-                alert('Please select a pen to end.');
+                await showHouseNoticeModal("Please select a pen to end.", "Missing Selection");
                 return;
             }
 
@@ -1400,13 +1448,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 console.log('Ending all pens in house with URL:', url);
             } else if (endOption === 'pen') {
                 if (!penId) {
-                    alert("Please select a pen to end.");
+                    await showHouseNoticeModal("Please select a pen to end.", "Missing Selection");
                     return;
                 }
                 url = `/api/houses/pen/${penId}`;
                 console.log('Ending pen with URL:', url);
             } else {
-                alert("Please select an action.");
+                await showHouseNoticeModal("Please select an action.", "Missing Selection");
                 return;
             }
 
@@ -1445,14 +1493,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 const result = await response.json();
                 console.log('Success response:', result);
-                alert(result.message || "Batch ended successfully!");
+                await showHouseNoticeModal(result.message || "Batch ended successfully.", "Batch Ended");
 
                 closeEndModal();
                 // Reload the page to refresh the data
                 window.location.reload();
             } catch (error) {
                 console.error('Fetch error:', error);
-                alert("Error: " + error.message);
+                await showHouseNoticeModal(`Error: ${error.message}`, "Unable to End Batch");
             }
         });
     }

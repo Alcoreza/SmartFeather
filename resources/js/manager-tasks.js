@@ -132,8 +132,8 @@ function fillSimpleSelect(select, items, placeholder) {
     if (!select) return;
 
     select.innerHTML = `
-        <option value="">${placeholder}</option>
-        ${items.map((item) => `<option value="${item}">${item}</option>`).join("")}
+        <option value="">${escapeHtml(placeholder)}</option>
+        ${items.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}
     `;
 }
 
@@ -384,10 +384,10 @@ function renderTaskCell(key, item, section) {
             ? `<button
                 type="button"
                 class="manager-task-photo-link"
-                data-photo-name="${item.photo_name}"
-                data-photo-url="${item.photo_url}"
+                data-photo-name="${escapeHtml(item.photo_name)}"
+                data-photo-url="${escapeHtml(item.photo_url)}"
             >
-                <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
+                <img src="${escapeHtml(item.photo_url)}" alt="${escapeHtml(item.photo_name)}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
             </button>`
             : "No photo";
     }
@@ -406,7 +406,7 @@ function renderTaskCell(key, item, section) {
         return `<button
             type="button"
             class="manager-task-action-btn manager-task-edit-btn"
-            data-task-id="${item.id}"
+            data-task-id="${escapeHtml(item.id)}"
             title="Edit task"
         >
             ✎
@@ -414,14 +414,14 @@ function renderTaskCell(key, item, section) {
         <button
             type="button"
             class="manager-task-action-btn manager-task-delete-btn"
-            data-task-id="${item.id}"
+            data-task-id="${escapeHtml(item.id)}"
             title="Delete task"
         >
             ✕
         </button>`;
     }
 
-    return item[key] ?? "";
+    return escapeHtml(item[key] ?? "");
 }
 
 function encodeTaskPayload(item) {
@@ -443,6 +443,15 @@ function decodeTaskPayload(value) {
         console.error("Failed to parse task payload.", error);
         return null;
     }
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function bindPhotoButtons() {
@@ -956,6 +965,49 @@ function closeTaskModal(id) {
     }
 }
 
+function showTaskNoticeModal(message, title = "Notice") {
+    return new Promise((resolve) => {
+        document.getElementById("taskNoticeModal")?.remove();
+
+        const modal = document.createElement("div");
+        modal.className = "manager-task-modal-backdrop confirm-modal-top show";
+        modal.id = "taskNoticeModal";
+        modal.innerHTML = `
+            <div class="manager-task-confirm-modal">
+                <div class="manager-task-modal-header center">
+                    <h2></h2>
+                    <div class="manager-task-header-line"></div>
+                </div>
+                <div class="manager-task-confirm-body">
+                    <p></p>
+                    <div class="manager-task-confirm-actions">
+                        <button type="button" class="manager-task-btn confirm" data-notice-ok>OK</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector("h2").textContent = title;
+        modal.querySelector("p").textContent = message;
+
+        const close = () => {
+            modal.remove();
+            if (!document.querySelector(".manager-task-modal-backdrop.show")) {
+                document.body.style.overflow = "";
+            }
+            resolve();
+        };
+
+        document.body.style.overflow = "hidden";
+        modal.querySelector("[data-notice-ok]").addEventListener("click", close);
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) close();
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
 function animateTaskSections() {
     const sections = document.querySelectorAll(".manager-task-section");
 
@@ -1117,10 +1169,10 @@ async function updateTaskStatus(taskId, newStatus) {
         }
 
         await renderManagerTasks();
-        alert(`Task marked as ${newStatus}!`);
+        await showTaskNoticeModal(`Task marked as ${newStatus}.`, "Task Updated");
     } catch (error) {
         console.error("Failed to update task status:", error);
-        alert("Error updating task: " + error.message);
+        await showTaskNoticeModal(`Error updating task: ${error.message}`, "Unable to Update Task");
     }
 }
 
@@ -1128,14 +1180,14 @@ function fillSelect(select, items, valueKey, labelKey, placeholder) {
     if (!select) return;
 
     select.innerHTML = `
-        <option value="">${placeholder}</option>
+        <option value="">${escapeHtml(placeholder)}</option>
         ${items.map((item) => {
             const value = item[valueKey];
             const label = item.label ?? item[labelKey];
             const disabled = item.disabled ? 'disabled' : '';
             const note = item.disabled ? ` (${item.disabledReason || 'pending task'})` : '';
             const style = item.disabled ? 'style="color:#999;"' : '';
-            return `<option value="${value}" ${disabled} ${style}>${label}${note}</option>`;
+            return `<option value="${escapeHtml(value)}" ${disabled} ${style}>${escapeHtml(label)}${escapeHtml(note)}</option>`;
         }).join("")}
     `;
 }
@@ -1291,7 +1343,7 @@ async function handleEditTaskSubmit(event) {
     event.preventDefault();
 
     if (!editingTaskId) {
-        alert('Error: Task ID not found');
+        await showTaskNoticeModal('Error: Task ID not found.', "Unable to Edit Task");
         return;
     }
 
@@ -1401,7 +1453,7 @@ function setupDeleteTaskModal() {
 
 async function handleDeleteTaskConfirm() {
     if (!deletingTaskId) {
-        alert('Error: Task ID not found');
+        await showTaskNoticeModal('Error: Task ID not found.', "Unable to Delete Task");
         return;
     }
 
@@ -1424,6 +1476,6 @@ async function handleDeleteTaskConfirm() {
         deletingTaskId = null;
     } catch (error) {
         console.error('Failed to delete task:', error);
-        alert('Unable to delete task. Please try again.');
+        await showTaskNoticeModal('Unable to delete task. Please try again.', "Unable to Delete Task");
     }
 }

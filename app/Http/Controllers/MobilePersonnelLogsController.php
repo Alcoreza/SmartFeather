@@ -64,7 +64,7 @@ class MobilePersonnelLogsController extends Controller
                 'house_id' => $previousBiosecurity->house_id ? (int) $previousBiosecurity->house_id : null,
                 'pen_id' => $previousBiosecurity->pen_id ? (int) $previousBiosecurity->pen_id : null,
                 'foot_bath' => $this->isYes($previousBiosecurity->foot_bath ?? null),
-                'boots_changed' => $this->isYes($previousBiosecurity->boots_changed ?? null),
+                'sanitation' => $this->isYes($previousBiosecurity->sanitation ?? null),
                 'protective_clothing' => $this->isYes($previousBiosecurity->protective_clothing ?? null),
             ] : null,
         ]);
@@ -80,11 +80,11 @@ class MobilePersonnelLogsController extends Controller
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'nullable|integer|exists:pen,id',
             'foot_bath' => 'required|boolean',
-            'boots_changed' => 'required|boolean',
+            'sanitation' => 'required|boolean',
             'protective_clothing' => 'required|boolean',
         ]);
 
-        if (!$validated['foot_bath'] || !$validated['boots_changed'] || !$validated['protective_clothing']) {
+        if (!$validated['foot_bath'] || !$validated['sanitation'] || !$validated['protective_clothing']) {
             return response()->json([
                 'message' => 'All biosecurity checks must be completed before submission.',
             ], 422);
@@ -190,7 +190,7 @@ class MobilePersonnelLogsController extends Controller
             'date' => $latestEntry->date,
             'time' => $latestEntry->time,
             'foot_bath' => 'Yes',
-            'boots_changed' => 'Yes',
+            'sanitation' => 'Yes',
             'protective_clothing' => 'Yes',
             'created_at' => now(),
             'updated_at' => now(),

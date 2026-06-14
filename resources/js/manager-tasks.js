@@ -343,7 +343,11 @@ function applyTaskFilters(items, filters) {
 function renderUnifiedTaskTable(section, items) {
     const thead = document.getElementById("managerTasksTableHead");
     const tbody = document.getElementById("managerTasksTableBody");
+    const table = tbody?.closest(".manager-task-table");
     if (!tbody) return;
+
+    table?.classList.toggle("manager-task-table-for-approval", section === "for_approval");
+    table?.classList.toggle("manager-task-table-completed", section === "completed");
 
     const columns = TASK_TABLE_COLUMNS[section] || TASK_TABLE_COLUMNS.pending;
     if (thead) {

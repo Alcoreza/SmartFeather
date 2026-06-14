@@ -402,6 +402,104 @@ body {
     border-spacing: 0;
 }
 
+.manager-task-table-for-approval {
+    min-width: 1220px;
+}
+
+.manager-task-table-for-approval th:nth-child(1),
+.manager-task-table-for-approval td:nth-child(1) {
+    width: 12%;
+}
+
+.manager-task-table-for-approval th:nth-child(2),
+.manager-task-table-for-approval td:nth-child(2) {
+    width: 12%;
+}
+
+.manager-task-table-for-approval th:nth-child(3),
+.manager-task-table-for-approval td:nth-child(3),
+.manager-task-table-for-approval th:nth-child(4),
+.manager-task-table-for-approval td:nth-child(4) {
+    width: 7%;
+}
+
+.manager-task-table-for-approval th:nth-child(5),
+.manager-task-table-for-approval td:nth-child(5) {
+    width: 17%;
+}
+
+.manager-task-table-for-approval th:nth-child(6),
+.manager-task-table-for-approval td:nth-child(6) {
+    width: 12%;
+}
+
+.manager-task-table-for-approval th:nth-child(7),
+.manager-task-table-for-approval td:nth-child(7) {
+    width: 8%;
+}
+
+.manager-task-table-for-approval th:nth-child(8),
+.manager-task-table-for-approval td:nth-child(8),
+.manager-task-table-for-approval th:nth-child(9),
+.manager-task-table-for-approval td:nth-child(9) {
+    width: 9%;
+}
+
+.manager-task-table-for-approval th:nth-child(10),
+.manager-task-table-for-approval td:nth-child(10) {
+    width: 7%;
+}
+
+.manager-task-table-completed {
+    min-width: 1360px;
+}
+
+.manager-task-table-completed th:nth-child(1),
+.manager-task-table-completed td:nth-child(1) {
+    width: 11%;
+}
+
+.manager-task-table-completed th:nth-child(2),
+.manager-task-table-completed td:nth-child(2) {
+    width: 11%;
+}
+
+.manager-task-table-completed th:nth-child(3),
+.manager-task-table-completed td:nth-child(3),
+.manager-task-table-completed th:nth-child(4),
+.manager-task-table-completed td:nth-child(4) {
+    width: 6%;
+}
+
+.manager-task-table-completed th:nth-child(5),
+.manager-task-table-completed td:nth-child(5) {
+    width: 15%;
+}
+
+.manager-task-table-completed th:nth-child(6),
+.manager-task-table-completed td:nth-child(6) {
+    width: 10%;
+}
+
+.manager-task-table-completed th:nth-child(7),
+.manager-task-table-completed td:nth-child(7) {
+    width: 7%;
+}
+
+.manager-task-table-completed th:nth-child(8),
+.manager-task-table-completed td:nth-child(8) {
+    width: 13%;
+}
+
+.manager-task-table-completed th:nth-child(9),
+.manager-task-table-completed td:nth-child(9),
+.manager-task-table-completed th:nth-child(10),
+.manager-task-table-completed td:nth-child(10),
+.manager-task-table-completed th:nth-child(11),
+.manager-task-table-completed td:nth-child(11) {
+    width: 7%;
+}
+
 .manager-task-table th {
     padding: 11px 8px;
     color: #4f5f55;

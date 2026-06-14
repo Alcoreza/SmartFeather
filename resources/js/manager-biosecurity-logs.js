@@ -434,9 +434,9 @@ function renderTableRows(type, rows) {
 
         const encodedRow = encodeURIComponent(JSON.stringify(row));
 
-        return `
-            <tr>
-                ${cells}
+        const actionCell = row.can_edit === false
+            ? '<td></td>'
+            : `
                 <td>
                     <button
                         type="button"
@@ -450,6 +450,12 @@ function renderTableRows(type, rows) {
                         </svg>
                     </button>
                 </td>
+            `;
+
+        return `
+            <tr>
+                ${cells}
+                ${actionCell}
             </tr>
         `;
     }).join('');

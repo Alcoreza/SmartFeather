@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CleaningLog;
+use App\Models\Employee;
 use App\Models\PersonnelBiosecurityLog;
 use App\Models\VisitorLog;
 use App\Models\PersonnelEntryLog;
@@ -23,7 +24,7 @@ class BiosecurityLogController extends Controller
             $groupedLogs = [
                 'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
                 'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLogs(
-                    PersonnelBiosecurityLog::orderByDesc('date')->orderByDesc('time')->orderByDesc('id')->get(),
+                    PersonnelEntryLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
                 ),
                 'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
                 'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
@@ -392,15 +393,115 @@ class BiosecurityLogController extends Controller
 
     private function formatPersonnelBiosecurityLogs($logs)
     {
-        $entryStatuses = PersonnelEntryLog::whereIn(
-            'id',
-            $logs->pluck('personnel_entry_log_id')->filter()->unique()->values(),
-        )->pluck('status', 'id');
+        $employees = Employee::whereIn(
+            'EmployeeId',
+            $logs->pluck('employee_id')->filter()->unique()->values(),
+        )->get()->keyBy('EmployeeId');
 
-        return $logs->map(function ($log) use ($entryStatuses) {
-            $log->entry_status = $entryStatuses[$log->personnel_entry_log_id] ?? 'IN';
-            return $this->formatPersonnelBiosecurityLog($log);
-        })->values();
+        $rows = [];
+        $openRowsByPerson = [];
+
+        foreach ($logs as $log) {
+            $employee = $log->employee_id ? $employees->get($log->employee_id) : null;
+            $personKey = $this->getPersonnelEntryPersonKey($log);
+            $status = strtoupper(trim((string) ($log->status ?: 'IN')));
+            $date = $log->date ? $log->date->format('Y-m-d') : '';
+            $time = $log->time ? Carbon::parse($log->time)->format('h:i A') : '';
+            $sortValue = sprintf('%s %s %010d', $date, $log->time ? Carbon::parse($log->time)->format('H:i:s') : '00:00:00', $log->id);
+
+            if ($status === 'OUT') {
+                $openIndex = null;
+                if (!empty($openRowsByPerson[$personKey])) {
+                    $openIndex = array_shift($openRowsByPerson[$personKey]);
+                }
+
+                if ($openIndex !== null && isset($rows[$openIndex])) {
+                    $rows[$openIndex]['time_out'] = $time;
+                    $rows[$openIndex]['remarks'] = '';
+                    $rows[$openIndex]['out_entry_id'] = $log->id;
+                    $rows[$openIndex]['sort_value'] = $sortValue;
+                    continue;
+                }
+
+                $rows[] = [
+                    'id' => $log->id,
+                    'type' => 'Personnel Biosecurity Logs',
+                    'name' => $this->getPersonnelEntryName($log, $employee),
+                    'role' => $this->getPersonnelEntryRole($log, $employee),
+                    'date' => $date,
+                    'time' => $time,
+                    'time_in' => '',
+                    'time_out' => $time,
+                    'status' => 'OUT',
+                    'remarks' => '',
+                    'sort_value' => $sortValue,
+                    'can_edit' => false,
+                ];
+                continue;
+            }
+
+            $rows[] = [
+                'id' => $log->id,
+                'type' => 'Personnel Biosecurity Logs',
+                'name' => $this->getPersonnelEntryName($log, $employee),
+                'role' => $this->getPersonnelEntryRole($log, $employee),
+                'date' => $date,
+                'time' => $time,
+                'time_in' => $time,
+                'time_out' => '',
+                'status' => 'IN',
+                'remarks' => 'Pending Out',
+                'sort_value' => $sortValue,
+                'can_edit' => false,
+            ];
+
+            $openRowsByPerson[$personKey][] = array_key_last($rows);
+        }
+
+        return collect($rows)
+            ->sortByDesc('sort_value')
+            ->map(function ($row) {
+                unset($row['sort_value']);
+                return $row;
+            })
+            ->values();
+    }
+
+    private function getPersonnelEntryPersonKey($log): string
+    {
+        if ($log->employee_id) {
+            return 'employee:' . $log->employee_id;
+        }
+
+        return 'name:' . mb_strtolower(trim(($log->name ?? '') . '|' . ($log->role ?? '')));
+    }
+
+    private function getPersonnelEntryName($log, $employee): string
+    {
+        if (!blank($log->name)) {
+            return $log->name;
+        }
+
+        if (!$employee) {
+            return '';
+        }
+
+        return trim(sprintf(
+            '%s %s %s %s',
+            $employee->FirstName ?? '',
+            $employee->MiddleName ?? '',
+            $employee->LastName ?? '',
+            $employee->Suffix ?? '',
+        ));
+    }
+
+    private function getPersonnelEntryRole($log, $employee): string
+    {
+        if (!blank($log->role)) {
+            return $log->role;
+        }
+
+        return $employee->Role ?? '';
     }
 
     private function formatVisitorLog($log)

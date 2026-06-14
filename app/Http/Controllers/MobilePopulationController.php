@@ -11,12 +11,10 @@ class MobilePopulationController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -33,6 +31,7 @@ class MobilePopulationController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -84,12 +83,13 @@ class MobilePopulationController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'nullable|integer|exists:pen,id',
-            'pen_name' => 'nullable|string',
+            'pen_name' => 'nullable|string|max:100',
             'eggs_hatched' => 'required|integer|min:0',
             'mortality' => 'required|integer|min:0',
             'recorded_at' => 'required|date',
@@ -103,7 +103,7 @@ class MobilePopulationController extends Controller
         }
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -116,12 +116,10 @@ class MobilePopulationController extends Controller
             ], 403);
         }
 
-        $task = null;
-
         if (!empty($validated['task_id'])) {
             $task = DB::table('tasks')
                 ->where('taskid', $validated['task_id'])
-                ->where('user_employeeid', $validated['employee_id'])
+                ->where('user_employeeid', $employeeId)
                 ->where('status', 'Pending')
                 ->first();
 
@@ -157,7 +155,7 @@ class MobilePopulationController extends Controller
         }
 
         $biosecurityQuery = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('house_id', $validated['house_id']);
 

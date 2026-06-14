@@ -12,11 +12,9 @@ class MobileWeightSamplingController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
-        $latestEntry = $this->latestEntryLog($validated['employee_id']);
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -29,6 +27,7 @@ class MobileWeightSamplingController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -83,8 +82,9 @@ class MobileWeightSamplingController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
@@ -110,12 +110,10 @@ class MobileWeightSamplingController extends Controller
             ], 422);
         }
 
-        $task = null;
-
         if (!empty($validated['task_id'])) {
             $task = DB::table('tasks')
                 ->where('taskid', $validated['task_id'])
-                ->where('user_employeeid', $validated['employee_id'])
+                ->where('user_employeeid', $employeeId)
                 ->first();
 
             if (!$task) {
@@ -149,7 +147,7 @@ class MobileWeightSamplingController extends Controller
             }
         }
 
-        $latestEntry = $this->latestEntryLog($validated['employee_id']);
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -159,7 +157,7 @@ class MobileWeightSamplingController extends Controller
 
         $biosecurityQuery = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('house_id', $validated['house_id'])
             ->orderByDesc('id');
 
@@ -219,8 +217,7 @@ class MobileWeightSamplingController extends Controller
         $average = round(array_sum($weights) / count($weights), 2);
         $targetValue = round((float) $validated['target_weight'], 2);
 
-        $normalMarginPercent = 5;
-
+        $normalMarginPercent = 3;
         $lowerNormalLimit = $targetValue * (1 - ($normalMarginPercent / 100));
         $upperNormalLimit = $targetValue * (1 + ($normalMarginPercent / 100));
 
@@ -229,6 +226,7 @@ class MobileWeightSamplingController extends Controller
             $average > $upperNormalLimit => 'Overweight',
             default => 'Normal',
         };
+
         DB::transaction(function () use ($validated, $weights, $average, $targetValue, $status, $house, $pen, $recordedAt, $ageDays) {
             $logId = DB::table('weight_sampling_logs')->insertGetId([
                 'task_id' => $validated['task_id'] ?? null,

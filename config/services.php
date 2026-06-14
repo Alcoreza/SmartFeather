@@ -47,4 +47,9 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
 
+        'task_alerts' => [
+        'webhook_secret' => env('TASK_ALERT_WEBHOOK_SECRET'),
+        'channel_id' => env('TASK_ALERT_CHANNEL_ID', 'task_alerts'),
+    ],
+
 ];

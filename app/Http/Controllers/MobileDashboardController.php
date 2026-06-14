@@ -10,8 +10,9 @@ class MobileDashboardController extends Controller
 {
     public function show(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'environment_house_id' => 'nullable|integer',
             'environment_pen_id' => 'nullable|integer',
             'resource_house_id' => 'nullable|integer',
@@ -49,7 +50,7 @@ class MobileDashboardController extends Controller
                 $join->on('t.pennumber', '=', 'p.id')
                     ->on('t.house_houseid', '=', 'p.house_id');
             })
-            ->where('t.user_employeeid', $validated['employee_id'])
+            ->where('t.user_employeeid', $employeeId)
             ->where('t.status', 'Pending');
 
         $pendingTasks = (int) $pendingTasksQuery->count();
@@ -60,7 +61,7 @@ class MobileDashboardController extends Controller
                 $join->on('t.pennumber', '=', 'p.id')
                     ->on('t.house_houseid', '=', 'p.house_id');
             })
-            ->where('t.user_employeeid', $validated['employee_id'])
+            ->where('t.user_employeeid', $employeeId)
             ->where('t.status', 'Pending')
             ->orderByRaw("
                 CASE
@@ -166,24 +167,10 @@ class MobileDashboardController extends Controller
                     'recorded_at' => $environmentReadings['ammonia']['recorded_at'],
                 ],
             ],
-            'resources' => [
-                [
-                    'label' => 'Feed',
-                    'value' => $resourceReadings['feed']['value'],
-                    'unit' => '%',
-                    'max' => 100,
-                    'color' => '#C88A3D',
-                    'recorded_at' => $resourceReadings['feed']['recorded_at'],
-                ],
-                [
-                    'label' => 'Water',
-                    'value' => $resourceReadings['water']['value'],
-                    'unit' => '%',
-                    'max' => 100,
-                    'color' => '#6CDDE5',
-                    'recorded_at' => $resourceReadings['water']['recorded_at'],
-                ],
-            ],
+            'resources' => $this->latestResourceReadings(
+                $resourceSelection['house_id'],
+                $resourceSelection['pen_id']
+            ),
             'pending_task_count' => $pendingTasks,
             'pending_task' => $pendingTask ? [
                 'title' => $pendingTask->tasktype,
@@ -209,8 +196,8 @@ class MobileDashboardController extends Controller
     private function buildSensorFilterOptions(array $sensorTypes): array
     {
         return DB::table('sensors as s')
-            ->leftJoin('house as h', 's.house_houseid', '=', 'h.id')
-            ->leftJoin('pen as p', function ($join) {
+            ->join('house as h', 's.house_houseid', '=', 'h.id')
+            ->join('pen as p', function ($join) {
                 $join->on('s.pen_penid', '=', 'p.id')
                     ->on('s.house_houseid', '=', 'p.house_id');
             })
@@ -237,6 +224,8 @@ class MobileDashboardController extends Controller
             ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
             ->whereNotNull('s.house_houseid')
             ->whereNotNull('s.pen_penid')
+            ->whereNull('h.archived_at')
+            ->whereNull('p.archived_at')
             ->select(
                 's.house_houseid',
                 's.pen_penid',
@@ -284,6 +273,91 @@ class MobileDashboardController extends Controller
             'house_id' => (int) $options[0]['house_id'],
             'pen_id' => (int) $options[0]['pen_id'],
         ];
+    }
+
+    private function latestResourceReadings(?int $houseId, ?int $penId): array
+    {
+        if (!$houseId || !$penId) {
+            return [];
+        }
+
+        $containerHeightInches = 8.5;
+
+        $latestReadingIds = DB::table('sensor_readings')
+            ->selectRaw('sensorid, max(reading_id) as latest_reading_id')
+            ->groupBy('sensorid');
+
+        return DB::table('sensors as s')
+            ->leftJoinSub($latestReadingIds, 'latest', function ($join) {
+                $join->on('s.sensorid', '=', 'latest.sensorid');
+            })
+            ->leftJoin('sensor_readings as sr', 'sr.reading_id', '=', 'latest.latest_reading_id')
+            ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
+            ->where('s.house_houseid', $houseId)
+            ->where('s.pen_penid', $penId)
+            ->where(function ($query) {
+                $query->whereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%feed%'])
+                    ->orWhereRaw("LOWER(TRIM(s.sensortype)) LIKE ?", ['%water%']);
+            })
+            ->select(
+                's.sensorid',
+                's.sensorname',
+                's.sensortype',
+                's.feeder_number',
+                's.drinker_number',
+                'sr.value',
+                'sr.recorded_at',
+                'sr.reading_id'
+            )
+            ->orderByRaw("
+            CASE
+                WHEN LOWER(TRIM(s.sensortype)) LIKE '%feed%' THEN 1
+                WHEN LOWER(TRIM(s.sensortype)) LIKE '%water%' THEN 2
+                ELSE 3
+            END
+        ")
+            ->orderBy('s.feeder_number')
+            ->orderBy('s.drinker_number')
+            ->orderBy('s.sensorid')
+            ->get()
+            ->map(function ($row) use ($containerHeightInches) {
+                $sensorType = strtolower(trim((string) $row->sensortype));
+                $isFeed = str_contains($sensorType, 'feed');
+                $isWater = str_contains($sensorType, 'water');
+
+                if ($isFeed) {
+                    $label = !empty($row->feeder_number)
+                        ? 'Feeder ' . $row->feeder_number
+                        : ($row->sensorname ?: 'Feed');
+                } elseif ($isWater) {
+                    $label = !empty($row->drinker_number)
+                        ? 'Drinker ' . $row->drinker_number
+                        : ($row->sensorname ?: 'Water');
+                } else {
+                    $label = $row->sensorname ?: 'Resource';
+                }
+
+                $rawInches = (float) ($row->value ?? 0);
+
+                $percent = $containerHeightInches > 0
+                    ? ($rawInches / $containerHeightInches) * 100
+                    : 0;
+
+                $percent = round(max(0, min(100, $percent)), 1);
+
+                return [
+                    'label' => $label,
+                    'value' => $percent,
+                    'unit' => '%',
+                    'max' => 100,
+                    'color' => $isFeed ? '#C88A3D' : '#3EA7B3',
+                    'recorded_at' => $row->recorded_at
+                        ? Carbon::parse($row->recorded_at)->toDateTimeString()
+                        : null,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function latestReadingsByType(array $sensorTypes, ?int $houseId, ?int $penId): array

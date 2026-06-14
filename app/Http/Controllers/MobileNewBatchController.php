@@ -15,29 +15,11 @@ class MobileNewBatchController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ], [
-            'employee_id.required' => 'Employee is required.',
-            'employee_id.exists' => 'Employee account was not found.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'access_allowed' => false,
-                'message' => $validator->errors()->first(),
-                'house_id' => null,
-                'house_number' => null,
-                'pen_options' => [],
-            ], 422);
-        }
-
-        $validated = $validator->validated();
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
         try {
             $latestEntry = DB::table('personnel_entry_logs')
-                ->where('employee_id', $validated['employee_id'])
+                ->where('employee_id', $employeeId)
                 ->orderByDesc('date')
                 ->orderByDesc('time')
                 ->orderByDesc('id')
@@ -55,6 +37,7 @@ class MobileNewBatchController extends Controller
             }
 
             $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+                ->where('employee_id', $employeeId)
                 ->where('personnel_entry_log_id', $latestEntry->id)
                 ->orderByDesc('id')
                 ->first();
@@ -128,8 +111,9 @@ class MobileNewBatchController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'task_id' => 'nullable|integer|exists:tasks,taskid',
             'batch_code' => 'required|string|max:100',
             'house_id' => 'required|integer|exists:house,id',
@@ -138,8 +122,6 @@ class MobileNewBatchController extends Controller
             'date' => 'required|date',
             'time' => 'required|date_format:H:i',
         ], [
-            'employee_id.required' => 'Employee is required.',
-            'employee_id.exists' => 'Employee account was not found.',
             'task_id.exists' => 'Assigned task was not found.',
             'batch_code.required' => 'Batch code is required.',
             'batch_code.max' => 'Batch code is too long.',
@@ -182,7 +164,7 @@ class MobileNewBatchController extends Controller
             if (!empty($validated['task_id'])) {
                 $task = DB::table('tasks')
                     ->where('taskid', $validated['task_id'])
-                    ->where('user_employeeid', $validated['employee_id'])
+                    ->where('user_employeeid', $employeeId)
                     ->first();
 
                 if (!$task) {
@@ -228,7 +210,7 @@ class MobileNewBatchController extends Controller
             }
 
             $latestEntry = DB::table('personnel_entry_logs')
-                ->where('employee_id', $validated['employee_id'])
+                ->where('employee_id', $employeeId)
                 ->orderByDesc('date')
                 ->orderByDesc('time')
                 ->orderByDesc('id')
@@ -243,7 +225,7 @@ class MobileNewBatchController extends Controller
             }
 
             $biosecurityQuery = DB::table('personnel_biosecurity_logs')
-                ->where('employee_id', $validated['employee_id'])
+                ->where('employee_id', $employeeId)
                 ->where('personnel_entry_log_id', $latestEntry->id)
                 ->where('house_id', $validated['house_id']);
 

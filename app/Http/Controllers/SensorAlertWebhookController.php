@@ -9,30 +9,28 @@ class SensorAlertWebhookController extends Controller
 {
     public function readingCreated(Request $request, SensorAlertService $sensorAlertService)
     {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reading-created webhook is disabled. Use /sensor-alerts/check-latest instead.',
+        ], 410);
+    }
+
+    public function checkLatest(Request $request, SensorAlertService $sensorAlertService)
+    {
         $expectedSecret = env('SENSOR_ALERT_WEBHOOK_SECRET');
 
         if (!$expectedSecret || $request->header('X-Sensor-Webhook-Secret') !== $expectedSecret) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized webhook request.',
+                'message' => 'Unauthorized alert check request.',
             ], 401);
         }
 
-        $record = $request->input('record', []);
-        $readingId = $record['reading_id'] ?? $request->input('reading_id');
-
-        if (!$readingId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Missing reading_id from webhook payload.',
-            ], 422);
-        }
-
-        $result = $sensorAlertService->processReadingId((int) $readingId);
+        $result = $sensorAlertService->checkAndSendAlerts();
 
         return response()->json([
             'success' => true,
-            'message' => 'Sensor reading processed.',
+            'message' => 'Latest sensor readings checked.',
             'result' => $result,
         ]);
     }

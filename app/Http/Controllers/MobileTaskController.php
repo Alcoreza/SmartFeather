@@ -13,14 +13,14 @@ class MobileTaskController extends Controller
 {
     public function getFlockmanTasks(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer',
             'status' => 'nullable|string|in:Pending,For Approval,Completed',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:20',
         ]);
 
-        $employeeId = (int) $validated['employee_id'];
         $status = $validated['status'] ?? 'Pending';
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 10);
@@ -37,10 +37,13 @@ class MobileTaskController extends Controller
         $clearedTaskIds = collect();
 
         if ($latestEntry) {
+            $validBiosecurityFrom = Carbon::now()->subHours(24);
+
             $clearedTaskIds = DB::table('personnel_biosecurity_logs')
                 ->where('employee_id', $employeeId)
                 ->where('personnel_entry_log_id', $latestEntry->id)
                 ->whereNotNull('task_id')
+                ->where('created_at', '>=', $validBiosecurityFrom)
                 ->pluck('task_id')
                 ->map(fn($taskId) => (int) $taskId)
                 ->unique()
@@ -131,9 +134,10 @@ class MobileTaskController extends Controller
 
     public function getSubmittedTaskDetail(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
         ]);
 
         $task = Task::query()
@@ -143,7 +147,7 @@ class MobileTaskController extends Controller
                     ->on('tasks.pennumber', '=', 'pen.id');
             })
             ->where('tasks.taskid', $validated['task_id'])
-            ->where('tasks.user_employeeid', $validated['employee_id'])
+            ->where('tasks.user_employeeid', $employeeId)
             ->first([
                 'tasks.taskid',
                 'tasks.tasktype',
@@ -167,13 +171,14 @@ class MobileTaskController extends Controller
 
     public function checkTaskAccess(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -191,7 +196,7 @@ class MobileTaskController extends Controller
         $assignedPenId = $task->pennumber;
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -203,11 +208,14 @@ class MobileTaskController extends Controller
             ], 403);
         }
 
+        $validBiosecurityFrom = Carbon::now()->subHours(24);
+
         $hasBiosecurity = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)
+            ->where('created_at', '>=', $validBiosecurityFrom)
             ->when(!empty($assignedPenId), function ($query) use ($assignedPenId) {
                 $query->where('pen_id', $assignedPenId);
             })
@@ -215,7 +223,7 @@ class MobileTaskController extends Controller
 
         if (!$hasBiosecurity) {
             return response()->json([
-                'message' => 'Complete biosecurity again before opening this task.'
+                'message' => 'Biosecurity for this task has expired. Please submit the form again before opening this task.'
             ], 403);
         }
 
@@ -228,14 +236,15 @@ class MobileTaskController extends Controller
 
     public function createTaskPhotoUploadUrl(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
             'mime_type' => 'required|string|in:image/jpeg,image/png,image/webp',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -262,7 +271,7 @@ class MobileTaskController extends Controller
 
         $path = sprintf(
             'employee-%d/task-%d/%s.%s',
-            $validated['employee_id'],
+            $employeeId,
             $validated['task_id'],
             Str::uuid()->toString(),
             $extension
@@ -311,15 +320,16 @@ class MobileTaskController extends Controller
 
     public function submitTaskForApproval(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
             'task_id' => 'required|integer|exists:tasks,taskid',
-            'employee_id' => 'required|integer',
-            'notes' => 'nullable|string',
-            'photo_path' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
+            'photo_path' => 'nullable|string|max:500',
         ]);
 
         $task = Task::where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -334,10 +344,21 @@ class MobileTaskController extends Controller
             ], 422);
         }
 
+        if (!empty($validated['photo_path'])) {
+            $photoPath = ltrim($validated['photo_path'], '/');
+            $expectedPrefix = sprintf('employee-%d/task-%d/', $employeeId, $task->taskid);
+
+            if (!str_starts_with($photoPath, $expectedPrefix)) {
+                return response()->json([
+                    'message' => 'Invalid task photo path.'
+                ], 422);
+            }
+        }
+
         $assignedPenId = $task->pennumber;
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -350,7 +371,7 @@ class MobileTaskController extends Controller
         }
 
         $taskBiosecurity = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $task->taskid)
             ->where('house_id', $task->house_houseid)
@@ -402,7 +423,6 @@ class MobileTaskController extends Controller
             return array_merge($baseFields, [
                 ['label' => 'Eggs Hatched', 'value' => (string) ($record->eggs_hatched ?? 0)],
                 ['label' => 'Mortality', 'value' => (string) ($record->mortality ?? 0)],
-                ['label' => 'Running Population', 'value' => (string) ($record->running_population ?? '-')],
                 ['label' => 'Started', 'value' => $this->formatSubmittedFieldDateTime($record->recorded_at)],
             ]);
         }
@@ -420,8 +440,8 @@ class MobileTaskController extends Controller
             $fields = array_merge($baseFields, [
                 ['label' => 'Batch', 'value' => (string) ($record->batch ?? '-')],
                 ['label' => 'Age', 'value' => (string) ($record->age ?? '-')],
-                ['label' => 'Number of Flocks', 'value' => (string) ($record->number_of_flocks ?? '-')],
-                ['label' => 'Flocks With Cases', 'value' => (string) ($record->flocks_with_cases ?? '-')],
+                ['label' => 'Number of Chickens', 'value' => (string) ($record->number_of_flocks ?? '-')],
+                ['label' => 'Chickens With Cases', 'value' => (string) ($record->flocks_with_cases ?? '-')],
                 ['label' => 'Average Weight', 'value' => (string) ($record->average_weight ?? '-')],
                 ['label' => 'Target Weight', 'value' => (string) ($record->target ?? '-')],
                 ['label' => 'Status', 'value' => (string) ($record->status ?? '-')],
@@ -435,7 +455,7 @@ class MobileTaskController extends Controller
 
             foreach ($entries as $entry) {
                 $fields[] = [
-                    'label' => 'Flock ' . $entry->sequence_number . ' Weight',
+                    'label' => 'Chicken ' . $entry->sequence_number . ' Weight',
                     'value' => (string) $entry->weight,
                 ];
             }

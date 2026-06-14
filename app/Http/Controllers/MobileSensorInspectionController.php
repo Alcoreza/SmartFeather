@@ -9,8 +9,9 @@ class MobileSensorInspectionController extends Controller
 {
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'task_id' => 'required|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
@@ -24,7 +25,7 @@ class MobileSensorInspectionController extends Controller
 
         $task = DB::table('tasks')
             ->where('taskid', $validated['task_id'])
-            ->where('user_employeeid', $validated['employee_id'])
+            ->where('user_employeeid', $employeeId)
             ->first();
 
         if (!$task) {
@@ -59,7 +60,7 @@ class MobileSensorInspectionController extends Controller
         }
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -72,7 +73,7 @@ class MobileSensorInspectionController extends Controller
         }
 
         $taskBiosecurity = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('task_id', $validated['task_id'])
             ->where('house_id', $validated['house_id'])
@@ -109,7 +110,7 @@ class MobileSensorInspectionController extends Controller
             ) values (?, ?, ?, ?, ?::boolean, ?::boolean, ?::boolean, ?::boolean, ?::boolean, ?, now(), now())',
             [
                 $validated['task_id'],
-                $validated['employee_id'],
+                $employeeId,
                 $validated['house_id'],
                 $validated['pen_id'],
                 $sensorPresent ? 'true' : 'false',

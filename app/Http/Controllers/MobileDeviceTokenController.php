@@ -9,34 +9,39 @@ class MobileDeviceTokenController extends Controller
 {
     public function store(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-            'fcm_token' => 'required|string',
+            'fcm_token' => 'required|string|max:4096',
             'platform' => 'nullable|string|max:50',
             'device_name' => 'nullable|string|max:255',
+            'device_id' => 'required|string|max:100',
         ]);
 
         $existingToken = DB::table('mobile_device_tokens')
-            ->where('fcm_token', $validated['fcm_token'])
+            ->where('employee_id', $employeeId)
+            ->where('device_id', $validated['device_id'])
             ->first();
 
         if ($existingToken) {
             DB::table('mobile_device_tokens')
                 ->where('id', $existingToken->id)
                 ->update([
-                    'employee_id' => $validated['employee_id'],
+                    'fcm_token' => $validated['fcm_token'],
                     'platform' => $validated['platform'] ?? 'android',
                     'device_name' => $validated['device_name'] ?? null,
+                    'device_id' => $validated['device_id'],
                     'is_active' => DB::raw('true'),
                     'last_used_at' => now(),
                     'updated_at' => now(),
                 ]);
         } else {
             DB::table('mobile_device_tokens')->insert([
-                'employee_id' => $validated['employee_id'],
+                'employee_id' => $employeeId,
                 'fcm_token' => $validated['fcm_token'],
                 'platform' => $validated['platform'] ?? 'android',
                 'device_name' => $validated['device_name'] ?? null,
+                'device_id' => $validated['device_id'],
                 'is_active' => DB::raw('true'),
                 'last_used_at' => now(),
                 'created_at' => now(),

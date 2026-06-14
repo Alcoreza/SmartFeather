@@ -12,12 +12,10 @@ class MobilePenCleaningController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -34,6 +32,7 @@ class MobilePenCleaningController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -82,8 +81,9 @@ class MobilePenCleaningController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
@@ -92,12 +92,10 @@ class MobilePenCleaningController extends Controller
             'recorded_time' => 'required|date_format:H:i:s',
         ]);
 
-        $task = null;
-
         if (!empty($validated['task_id'])) {
             $task = DB::table('tasks')
                 ->where('taskid', $validated['task_id'])
-                ->where('user_employeeid', $validated['employee_id'])
+                ->where('user_employeeid', $employeeId)
                 ->first();
 
             if (!$task) {
@@ -133,7 +131,7 @@ class MobilePenCleaningController extends Controller
         }
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -146,7 +144,7 @@ class MobilePenCleaningController extends Controller
         }
 
         $biosecurityQuery = DB::table('personnel_biosecurity_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->where('house_id', $validated['house_id']);
 
@@ -179,7 +177,7 @@ class MobilePenCleaningController extends Controller
             ], 422);
         }
 
-        $employee = Employee::find($validated['employee_id']);
+        $employee = Employee::find($employeeId);
 
         $performedBy = null;
         if ($employee) {
@@ -202,7 +200,7 @@ class MobilePenCleaningController extends Controller
             'pen' => $pen->pen_name,
             'activity' => 'Pen Cleaning',
             'disinfectant_used' => $validated['materials_used'],
-            'performed_by' => $performedBy ?: (string) $validated['employee_id'],
+            'performed_by' => $performedBy ?: (string) $employeeId,
             'date' => $validated['recorded_date'],
             'time' => $validated['recorded_time'],
             'created_at' => $createdAt,

@@ -81,6 +81,24 @@ class FirebaseCloudMessagingService
 
     private function firebaseCredentials(): array|string
     {
+        $credentialsBase64 = env('FIREBASE_CREDENTIALS_BASE64');
+
+        if (!empty($credentialsBase64)) {
+            $json = base64_decode($credentialsBase64, true);
+
+            if ($json === false) {
+                throw new \RuntimeException('FIREBASE_CREDENTIALS_BASE64 is not valid base64.');
+            }
+
+            $decoded = json_decode($json, true);
+
+            if (!is_array($decoded)) {
+                throw new \RuntimeException('Decoded FIREBASE_CREDENTIALS_BASE64 is not valid JSON.');
+            }
+
+            return $decoded;
+        }
+
         $credentialsJson = env('FIREBASE_CREDENTIALS_JSON');
 
         if (!empty($credentialsJson)) {

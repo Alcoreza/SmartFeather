@@ -77,6 +77,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     let activePenIndex = 0;
     let pendingAddHousePayload = null;
     let pendingEditHousePayload = null;
+    let houseSensorRefreshTimer = null;
+    let isRefreshingHouseSensors = false;
+    const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 8000;
     const addHouseRequiredFields = [
         { id: "houseName", label: "House Number" },
         { id: "housePenCount", label: "Number of Pens" },
@@ -882,6 +885,85 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    function applyLatestSensorReadings(apiHouses) {
+        (apiHouses || []).forEach((apiHouse) => {
+            const house = houses.find(
+                (item) => Number(item.id) === Number(apiHouse.id),
+            );
+
+            if (!house) return;
+
+            (apiHouse.pens || []).forEach((apiPen) => {
+                const pen = house.pens.find(
+                    (item) => Number(item.id) === Number(apiPen.id),
+                );
+
+                if (!pen) return;
+
+                const sensorReadings = apiPen.sensor_readings;
+
+                pen.feeder_count = apiPen.feeder_count || pen.feeder_count || 0;
+                pen.drinker_count = apiPen.drinker_count || pen.drinker_count || 0;
+                pen.temperature = getSensorReadingDisplay(
+                    sensorReadings,
+                    "temperature",
+                    "0 deg",
+                );
+                pen.ammonia = getSensorReadingDisplay(
+                    sensorReadings,
+                    "ammonia",
+                    "0 ppm",
+                );
+                pen.temperatureValue = getSensorReadingValue(
+                    sensorReadings,
+                    "temperature",
+                );
+                pen.ammoniaValue = getSensorReadingValue(
+                    sensorReadings,
+                    "ammonia",
+                );
+                pen.feeders = buildNumberedResourceReadings(
+                    sensorReadings,
+                    "feeders",
+                    pen.feeder_count,
+                    "Feeder",
+                );
+                pen.drinkers = buildNumberedResourceReadings(
+                    sensorReadings,
+                    "drinkers",
+                    pen.drinker_count,
+                    "Drinker",
+                );
+            });
+        });
+    }
+
+    function renderActiveSensorReadings() {
+        const currentPen = houses[activeHouseIndex]?.pens?.[activePenIndex];
+
+        if (!currentPen) return;
+
+        if (houseTemperature) houseTemperature.textContent = currentPen.temperature;
+        if (houseAmmonia) houseAmmonia.textContent = currentPen.ammonia;
+        if (feedRow) feedRow.innerHTML = buildResourceRow(currentPen.feeders, "feed");
+        if (waterRow) waterRow.innerHTML = buildResourceRow(currentPen.drinkers, "water");
+    }
+
+    async function refreshHouseSensorReadings() {
+        const response = await fetch("/api/houses", {
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+
+        if (!response.ok) throw new Error("Failed to refresh sensor readings");
+
+        const result = await response.json();
+
+        applyLatestSensorReadings(result.data || []);
+        renderActiveSensorReadings();
+    }
+
     function populatePenOptions(house) {
         if (!housePen) return;
 
@@ -894,7 +976,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             .join("");
     }
 
-    async function fetchHouses() {
+    async function fetchHouses(options = {}) {
+        const { preserveSelection = false, silent = false } = options;
+        const selectedHouseId = preserveSelection
+            ? houses[activeHouseIndex]?.id
+            : null;
+        const selectedPenId = preserveSelection
+            ? houses[activeHouseIndex]?.pens?.[activePenIndex]?.id
+            : null;
+
         try {
             const response = await fetch("/api/houses");
             if (!response.ok) throw new Error("Failed to fetch houses");
@@ -1009,9 +1099,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .sort((a, b) => Number(a.id) - Number(b.id));
 
             if (houses.length > 0) {
-                activeHouseIndex = 0;
+                if (preserveSelection && selectedHouseId) {
+                    const nextHouseIndex = houses.findIndex(
+                        (house) => Number(house.id) === Number(selectedHouseId),
+                    );
+
+                    activeHouseIndex = nextHouseIndex >= 0 ? nextHouseIndex : 0;
+                } else {
+                    activeHouseIndex = 0;
+                }
+
+                if (preserveSelection && selectedPenId) {
+                    const nextPenIndex = houses[activeHouseIndex]?.pens?.findIndex(
+                        (pen) => Number(pen.id) === Number(selectedPenId),
+                    );
+
+                    activePenIndex = nextPenIndex >= 0 ? nextPenIndex : 0;
+                } else {
+                    activePenIndex = 0;
+                }
+
                 rebuildHouseTabs();
-                renderHouse(0);
+                renderHouse(activeHouseIndex, activePenIndex);
             } else {
                 activeHouseIndex = 0;
                 activePenIndex = 0;
@@ -1020,8 +1129,28 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (error) {
             console.error("Error fetching houses:", error);
-            showHouseNoticeModal(`Error loading houses: ${error.message}`, "Unable to Load Houses");
+            if (!silent) {
+                showHouseNoticeModal(`Error loading houses: ${error.message}`, "Unable to Load Houses");
+            }
         }
+    }
+
+    function startHouseSensorRefresh() {
+        if (houseSensorRefreshTimer) return;
+
+        houseSensorRefreshTimer = setInterval(async () => {
+            if (isRefreshingHouseSensors) return;
+
+            isRefreshingHouseSensors = true;
+
+            try {
+                await refreshHouseSensorReadings();
+            } catch (error) {
+                console.error("Error refreshing house sensor readings:", error);
+            } finally {
+                isRefreshingHouseSensors = false;
+            }
+        }, HOUSE_SENSOR_REFRESH_INTERVAL_MS);
     }
 
     function renderNoHouses() {
@@ -1100,12 +1229,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         animateStats();
     }
 
-    function renderHouse(houseIndex) {
+    function renderHouse(houseIndex, penIndex = 0) {
         const house = houses[houseIndex];
         if (!house) return;
 
         activeHouseIndex = houseIndex;
-        activePenIndex = 0;
+        activePenIndex = Math.max(
+            0,
+            Math.min(Number(penIndex) || 0, (house.pens?.length || 1) - 1),
+        );
 
         populatePenOptions(house);
         renderPen(activeHouseIndex, activePenIndex);
@@ -1506,4 +1638,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await fetchHouses();
+    startHouseSensorRefresh();
 });

@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.session' => \App\Http\Middleware\AuthenticateSession::class,
             'check.role' => \App\Http\Middleware\CheckRole::class,
             'prevent.cache' => \App\Http\Middleware\PreventCaching::class,
+            'mobile.detect' => \App\Http\Middleware\MobileTokenAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -35,10 +35,8 @@ class FirebaseCloudMessagingService
         string $channelId = 'sensor_alerts'
     ): array {
         try {
-            $credentials = base_path(env('FIREBASE_CREDENTIALS'));
-
             $messaging = (new Factory)
-                ->withServiceAccount($credentials)
+                ->withServiceAccount($this->firebaseCredentials())
                 ->createMessaging();
 
             $androidConfig = AndroidConfig::fromArray([
@@ -79,6 +77,29 @@ class FirebaseCloudMessagingService
                 'invalid_token' => $invalidToken,
             ];
         }
+    }
+
+    private function firebaseCredentials(): array|string
+    {
+        $credentialsJson = env('FIREBASE_CREDENTIALS_JSON');
+
+        if (!empty($credentialsJson)) {
+            $decoded = json_decode($credentialsJson, true);
+
+            if (!is_array($decoded)) {
+                throw new \RuntimeException('FIREBASE_CREDENTIALS_JSON is not valid JSON.');
+            }
+
+            return $decoded;
+        }
+
+        $credentialsPath = env('FIREBASE_CREDENTIALS');
+
+        if (empty($credentialsPath)) {
+            throw new \RuntimeException('Firebase credentials are not configured.');
+        }
+
+        return base_path($credentialsPath);
     }
 
     private function isInvalidTokenError(string $message): bool

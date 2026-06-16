@@ -82,11 +82,11 @@ Route::middleware(['throttle:170,1', 'mobile.auth'])->group(function () {
     Route::post('/mobile/device-token', [MobileDeviceTokenController::class, 'store']);
 });
 
-Route::post('/sensor-alerts/check-latest', [SensorAlertWebhookController::class, 'checkLatest'])
-    ->middleware('throttle:30,1');
-
 Route::post('/notification-queue/process-one', [NotificationQueueController::class, 'processOne'])
     ->middleware('throttle:30,1');
+
+Route::post('/notification-queue/process-job', [NotificationQueueController::class, 'processJob'])
+    ->middleware('throttle:120,1');
 
 Route::post('/task-alerts/check-overdue', [TaskOverdueWebhookController::class, 'checkOverdue'])
     ->middleware('throttle:30,1');

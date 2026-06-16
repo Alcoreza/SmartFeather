@@ -340,7 +340,7 @@ class MobileDashboardController extends Controller
                 $rawInches = (float) ($row->value ?? 0);
 
                 $percent = $containerHeightInches > 0
-                    ? ($rawInches / $containerHeightInches) * 100
+                    ? (($containerHeightInches - $rawInches) / $containerHeightInches) * 100
                     : 0;
 
                 $percent = round(max(0, min(100, $percent)), 1);

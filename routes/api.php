@@ -80,6 +80,7 @@ Route::middleware(['throttle:170,1', 'mobile.auth'])->group(function () {
     Route::post('/mobile/sensor-inspection', [MobileSensorInspectionController::class, 'submit']);
 
     Route::post('/mobile/device-token', [MobileDeviceTokenController::class, 'store']);
+    Route::post('/mobile/device-token/deactivate', [MobileDeviceTokenController::class, 'deactivate']);
 });
 
 Route::post('/notification-queue/process-one', [NotificationQueueController::class, 'processOne'])

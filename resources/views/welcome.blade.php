@@ -28,12 +28,12 @@
                         <p class="landing-kicker">Poultry risk intelligence and farm operations</p>
                         <h1 id="landingHeroTitle">SmartFeather for MJBJ Corporation</h1>
                         <p class="landing-hero-text">
-                            A green-coded operations hub built around the pressure points affecting poultry farms today:
-                            disease control, heat stress, ammonia exposure, inventory movement, and field accountability.
+                            A focused farm operations platform for monitoring house conditions, coordinating work,
+                            and keeping poultry records ready for review.
                         </p>
                         <div class="landing-hero-actions" aria-label="Landing page actions">
                             <a href="{{ route('login') }}">Login to system</a>
-                            <span>Monitor risks, assign work, record farm actions</span>
+                            <span>Monitor conditions, assign tasks, review records</span>
                         </div>
                     </div>
 
@@ -67,18 +67,17 @@
             <section class="landing-about" aria-labelledby="landingAboutTitle">
                 <div class="landing-section-copy">
                     <span class="landing-section-label">Why this matters</span>
-                    <h2 id="landingAboutTitle">SmartFeather keeps MJBJ farm operations visible, organized, and ready to act.</h2>
+                    <h2 id="landingAboutTitle">SmartFeather gives MJBJ a clearer view of daily farm work.</h2>
                 </div>
                 <div class="landing-about-body">
                     <p>
-                        SmartFeather brings environment readings, house activity, worker tasks, inventory movement,
-                        biosecurity logs, mortality records, and reports into one operational system for MJBJ
-                        Corporation.
+                        Managers can see house conditions, responsibilities, and records in one place instead of
+                        piecing together separate updates.
                     </p>
                     <div class="landing-about-metrics" aria-label="SmartFeather coverage areas">
-                        <div><strong>24/7</strong><span>Farm visibility</span></div>
-                        <div><strong>Tasks</strong><span>Worker coordination</span></div>
-                        <div><strong>Logs</strong><span>Traceable records</span></div>
+                        <div><strong>Live</strong><span>Farm status</span></div>
+                        <div><strong>Tasks</strong><span>Assigned work</span></div>
+                        <div><strong>Logs</strong><span>Reviewable records</span></div>
                     </div>
                 </div>
             </section>
@@ -86,28 +85,65 @@
             <section class="landing-specialties" aria-labelledby="landingSpecialtiesTitle">
                 <div class="landing-section-copy">
                     <span class="landing-section-label">Risk response modules</span>
-                    <h2 id="landingSpecialtiesTitle">SmartFeather turns poultry issues into records managers can act on.</h2>
+                    <h2 id="landingSpecialtiesTitle">Core modules cover the signals managers need most.</h2>
                 </div>
                 <div class="landing-specialty-grid">
                     <article>
-                        <span>01</span>
+                        <div class="landing-module-top">
+                            <span class="landing-module-number">01</span>
+                            <span class="landing-module-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z"></path>
+                                    <path d="M10 5v12"></path>
+                                    <path d="M10 17h.01"></path>
+                                </svg>
+                            </span>
+                        </div>
                         <h3>Heat & Ammonia Monitoring</h3>
-                        <p>Temperature and ammonia readings help managers spot uncomfortable houses before stress affects feeding and growth.</p>
+                        <p>Track house readings so heat and air-quality concerns are easier to spot.</p>
                     </article>
                     <article>
-                        <span>02</span>
+                        <div class="landing-module-top">
+                            <span class="landing-module-number">02</span>
+                            <span class="landing-module-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+                                    <path d="m9 12 2 2 4-4"></path>
+                                </svg>
+                            </span>
+                        </div>
                         <h3>Biosecurity Task Control</h3>
-                        <p>Cleaning, disinfection, inspection, and visitor-related tasks can be assigned by house and pen for traceable action.</p>
+                        <p>Assign cleaning, inspection, and visitor-related work by house or pen.</p>
                     </article>
                     <article>
-                        <span>03</span>
+                        <div class="landing-module-top">
+                            <span class="landing-module-number">03</span>
+                            <span class="landing-module-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                                    <path d="m3.3 7 8.7 5 8.7-5"></path>
+                                    <path d="M12 22V12"></path>
+                                </svg>
+                            </span>
+                        </div>
                         <h3>Feed & Vitamin Stock Visibility</h3>
-                        <p>Inventory histories make stock movement clearer when feed costs rise or farm supply becomes unpredictable.</p>
+                        <p>Keep stock movement visible when farm supplies need closer attention.</p>
                     </article>
                     <article>
-                        <span>04</span>
+                        <div class="landing-module-top">
+                            <span class="landing-module-number">04</span>
+                            <span class="landing-module-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                                    <path d="M14 2v6h6"></path>
+                                    <path d="M8 13h2"></path>
+                                    <path d="M13 13h3"></path>
+                                    <path d="M8 17h8"></path>
+                                </svg>
+                            </span>
+                        </div>
                         <h3>Mortality & Population Records</h3>
-                        <p>Population updates, mortality notes, and flock activity records support faster review when disease risk is suspected.</p>
+                        <p>Record flock changes for faster review during health or production checks.</p>
                     </article>
                 </div>
             </section>
@@ -115,11 +151,10 @@
             <section class="landing-services" aria-labelledby="landingServicesTitle">
                 <div class="landing-services-copy">
                     <span class="landing-section-label">Operational coverage</span>
-                    <h2 id="landingServicesTitle">From outbreaks to heat waves, SmartFeather is framed as farm protection software.</h2>
+                    <h2 id="landingServicesTitle">Built around the everyday flow of poultry management.</h2>
                     <p>
-                        SmartFeather connects dashboards, sensors, tasks, inventory, biosecurity logs, and reports
-                        into one farm record system for faster action during outbreaks, heat stress, or supply
-                        disruption.
+                        SmartFeather helps managers move from farm readings to assigned work and management review
+                        without scattering information across separate updates.
                     </p>
                 </div>
             </section>
@@ -127,15 +162,15 @@
             <section class="landing-flow" aria-label="SmartFeather process">
                 <div>
                     <span>Detect</span>
-                    <strong>Read heat, air-quality, house status, and flock movement signals.</strong>
+                    <strong>Surface house conditions that need attention.</strong>
                 </div>
                 <div>
                     <span>Contain</span>
-                    <strong>Log visitors, cleaning, disinfection, mortality, and assigned response tasks.</strong>
+                    <strong>Assign the right farm action to the right area.</strong>
                 </div>
                 <div>
                     <span>Review</span>
-                    <strong>Compare reports, histories, and inventory movement before decisions are made.</strong>
+                    <strong>Use records to support the next decision.</strong>
                 </div>
             </section>
         </main>

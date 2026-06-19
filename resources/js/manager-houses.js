@@ -80,6 +80,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let houseSensorRefreshTimer = null;
     let isRefreshingHouseSensors = false;
     const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+    const HOUSE_FETCH_TIMEOUT_MS = 30000;
     const addHouseRequiredFields = [
         { id: "houseName", label: "House Number" },
         { id: "housePenCount", label: "Number of Pens" },
@@ -1065,8 +1066,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    async function fetchHousesResponse(options = {}) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(
+            () => controller.abort(),
+            HOUSE_FETCH_TIMEOUT_MS,
+        );
+
+        try {
+            return await fetch("/api/houses", {
+                ...options,
+                signal: controller.signal,
+            });
+        } catch (error) {
+            if (error.name === "AbortError") {
+                throw new Error("House data request timed out");
+            }
+
+            throw error;
+        } finally {
+            window.clearTimeout(timeoutId);
+        }
+    }
+
     async function refreshHouseSensorReadings() {
-        const response = await fetch("/api/houses", {
+        const response = await fetchHousesResponse({
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
             },
@@ -1102,7 +1126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             : null;
 
         try {
-            const response = await fetch("/api/houses");
+            const response = await fetchHousesResponse();
             if (!response.ok) throw new Error("Failed to fetch houses");
             const result = await response.json();
 
@@ -1760,8 +1784,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await showHouseNoticeModal(result.message || "Batch ended successfully.", "Batch Ended");
 
                 closeEndModal();
-                // Reload the page to refresh the data
-                window.location.reload();
+                await fetchHouses({ preserveSelection: true });
             } catch (error) {
                 console.error('Fetch error:', error);
                 await showHouseNoticeModal(`Error: ${error.message}`, "Unable to End Batch");

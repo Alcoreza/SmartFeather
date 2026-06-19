@@ -26,7 +26,8 @@ Route::get('/api/user', [ProfileController::class, 'getCurrentUser']);
 |--------------------------------------------------------------------------
 */
 
-Route::view('/', 'auth.login')->name('login');
+Route::view('/', 'welcome')->name('landing');
+Route::view('/login', 'auth.login')->name('login');
 
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 

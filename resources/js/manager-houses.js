@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let pendingEditHousePayload = null;
     let houseSensorRefreshTimer = null;
     let isRefreshingHouseSensors = false;
-    const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 8000;
+    const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
     const addHouseRequiredFields = [
         { id: "houseName", label: "House Number" },
         { id: "housePenCount", label: "Number of Pens" },
@@ -786,8 +786,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             .join("");
     }
 
-    function buildResourceRow(items, type) {
-        return items
+    function buildResourceRow(items, type, configuredCount = 0, label = "") {
+        const resourceItems = Array.isArray(items) ? items : [];
+        const count = Math.max(
+            resourceItems.length,
+            Number(configuredCount) || 0,
+        );
+        const visibleItems = count > resourceItems.length
+            ? [
+                ...resourceItems,
+                ...Array.from({ length: count - resourceItems.length }, (_, index) => ({
+                    label: `${label} ${resourceItems.length + index + 1}`,
+                    value: 0,
+                })),
+            ]
+            : resourceItems;
+
+        return visibleItems
             .map(
                 (item, index) => `
             <div class="resource-item stat-animate">
@@ -797,10 +812,40 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"}">${escapeHtml(item.value)}%</div>
                 <div class="resource-label">${escapeHtml(item.label)}</div>
             </div>
-            ${index < items.length - 1 ? '<div class="resource-line"></div>' : ""}
+            ${index < visibleItems.length - 1 ? '<div class="resource-line"></div>' : ""}
         `,
             )
             .join("");
+    }
+
+    function updateResourceRowValues(row, items, type) {
+        if (!row) return false;
+
+        const resourceItems = Array.isArray(items) ? items : [];
+        const itemElements = Array.from(row.querySelectorAll(".resource-item"));
+
+        if (!itemElements.length || itemElements.length !== resourceItems.length) {
+            return false;
+        }
+
+        itemElements.forEach((element, index) => {
+            const value = Number(resourceItems[index]?.value ?? 0);
+            const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+            const bar = element.querySelector(".resource-bar");
+            const valueElement = element.querySelector(".resource-value");
+
+            if (bar) {
+                bar.style.width = `${safeValue}%`;
+            }
+
+            if (valueElement) {
+                valueElement.textContent = `${safeValue}%`;
+                valueElement.classList.toggle("feed-text", type === "feed");
+                valueElement.classList.toggle("water-text", type !== "feed");
+            }
+        });
+
+        return true;
     }
 
     function sortPensById(pens) {
@@ -879,10 +924,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             const value = Number(resourceReadings?.[number]?.value ?? 0);
 
             return {
-                label: `${label} ${number}`,
+                label: resourceReadings?.[number]?.label || `${label} ${number}`,
                 value: Number.isFinite(value) ? value : 0,
             };
         });
+    }
+
+    function stableResourceCount(apiCount, currentCount, currentItems) {
+        return Math.max(
+            Number(apiCount) || 0,
+            Number(currentCount) || 0,
+            Array.isArray(currentItems) ? currentItems.length : 0,
+        );
     }
 
     function applyLatestSensorReadings(apiHouses) {
@@ -902,8 +955,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 const sensorReadings = apiPen.sensor_readings;
 
-                pen.feeder_count = apiPen.feeder_count || pen.feeder_count || 0;
-                pen.drinker_count = apiPen.drinker_count || pen.drinker_count || 0;
+                pen.feeder_count = stableResourceCount(
+                    apiPen.feeder_count,
+                    pen.feeder_count,
+                    pen.feeders,
+                );
+                pen.drinker_count = stableResourceCount(
+                    apiPen.drinker_count,
+                    pen.drinker_count,
+                    pen.drinkers,
+                );
                 pen.temperature = getSensorReadingDisplay(
                     sensorReadings,
                     "temperature",
@@ -945,8 +1006,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (houseTemperature) houseTemperature.textContent = currentPen.temperature;
         if (houseAmmonia) houseAmmonia.textContent = currentPen.ammonia;
-        if (feedRow) feedRow.innerHTML = buildResourceRow(currentPen.feeders, "feed");
-        if (waterRow) waterRow.innerHTML = buildResourceRow(currentPen.drinkers, "water");
+        if (
+            feedRow &&
+            !updateResourceRowValues(feedRow, currentPen.feeders, "feed")
+        ) {
+            feedRow.innerHTML = buildResourceRow(
+                currentPen.feeders,
+                "feed",
+                currentPen.feeder_count,
+                "Feeder",
+            );
+        }
+        if (
+            waterRow &&
+            !updateResourceRowValues(waterRow, currentPen.drinkers, "water")
+        ) {
+            waterRow.innerHTML = buildResourceRow(
+                currentPen.drinkers,
+                "water",
+                currentPen.drinker_count,
+                "Drinker",
+            );
+        }
     }
 
     async function refreshHouseSensorReadings() {
@@ -1207,9 +1288,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
-        if (feedRow) feedRow.innerHTML = buildResourceRow(pen.feeders, "feed");
+        if (feedRow) {
+            feedRow.innerHTML = buildResourceRow(
+                pen.feeders,
+                "feed",
+                pen.feeder_count,
+                "Feeder",
+            );
+        }
         if (waterRow)
-            waterRow.innerHTML = buildResourceRow(pen.drinkers, "water");
+            waterRow.innerHTML = buildResourceRow(
+                pen.drinkers,
+                "water",
+                pen.drinker_count,
+                "Drinker",
+            );
 
         if (houseStatus) {
             if (pen.status.toLowerCase() === "running") {

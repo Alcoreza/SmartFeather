@@ -73,7 +73,11 @@ function generateUsername(firstName, lastName, suffix = '') {
     const surname = usernamePart(lastName);
     const suffixPart = usernameSuffixPart(suffix);
 
-    return `${initial}${surname}${suffixPart}`.toUpperCase();
+    return `${initial}${surname}${suffixPart}`.toLowerCase();
+}
+
+function normalizeUsername(value) {
+    return String(value || '').trim().toLowerCase();
 }
 
 function syncUsernamePreview() {
@@ -776,7 +780,7 @@ function populateEditModal(user) {
     document.getElementById('MiddleName').value = user.MiddleName ?? '';
     document.getElementById('LastName').value = user.LastName;
     document.getElementById('Suffix').value = user.Suffix ?? '';
-    document.getElementById('Username').value = user.Username ?? '';
+    document.getElementById('Username').value = normalizeUsername(user.Username);
     document.getElementById('Username').readOnly = false;
     document.getElementById('usernameHint').style.display = 'none';
     document.getElementById('Role').value = user.Role;
@@ -833,7 +837,7 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         MiddleName: document.getElementById('MiddleName').value || null,
         LastName: document.getElementById('LastName').value,
         Suffix: document.getElementById('Suffix').value || null,
-        Username: document.getElementById('Username').value,
+        Username: normalizeUsername(document.getElementById('Username').value),
         Role: document.getElementById('Role').value,
         PhoneNumber: document.getElementById('PhoneNumber').value || null,
         Birthday: document.getElementById('Birthday').value || null,
@@ -1047,7 +1051,7 @@ function populateViewModal(user) {
     const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
     document.getElementById('view_name').innerText = fullName;
-    document.getElementById('view_username').innerText = user.Username ?? '';
+    document.getElementById('view_username').innerText = normalizeUsername(user.Username);
     document.getElementById('view_role').innerText = user.Role;
     document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
     document.getElementById('view_birthday').innerText = user.Birthday ?? '';

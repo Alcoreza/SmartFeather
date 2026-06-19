@@ -131,6 +131,14 @@ class TaskController extends Controller
 
             $validated['timeassigned'] = now()->format('Y-m-d\TH:i:s');
 
+            if ($this->finishDateIsPast($validated['finishby'] ?? null)) {
+                return response()->json([
+                    'errors' => [
+                        'finishby' => ['Date to finish cannot be earlier than today.'],
+                    ],
+                ], 422);
+            }
+
             // Ensure the chosen task type exists in the task_type table.
             $taskTypeName = trim($validated['tasktype']);
             if ($taskTypeName !== '') {
@@ -181,6 +189,14 @@ class TaskController extends Controller
             ]);
 
             $task = Task::findOrFail($taskId);
+
+            if ($this->finishDateIsPast($validated['finishby'] ?? null)) {
+                return response()->json([
+                    'errors' => [
+                        'finishby' => ['Date to finish cannot be earlier than today.'],
+                    ],
+                ], 422);
+            }
 
             if (array_key_exists('tasktype', $validated)
                 || array_key_exists('house_houseid', $validated)
@@ -279,6 +295,15 @@ class TaskController extends Controller
             'task_categories' => $taskCategories,
             'priority_levels' => ['Low', 'Medium', 'High'],
         ]);
+    }
+
+    private function finishDateIsPast(?string $finishBy): bool
+    {
+        if (blank($finishBy)) {
+            return false;
+        }
+
+        return Carbon::parse($finishBy)->toDateString() < now()->toDateString();
     }
 
     public function getPensForHouse(Request $request, $houseId)

@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([renderManagerTasks(), loadTaskFormOptions()]);
 
+    document.querySelectorAll(".task-date-input").forEach(applyTaskDateMinimum);
     setupTaskFilters();
     setupTaskRowPaginationControls();
     setupTaskSelectPlaceholderState();
@@ -84,6 +85,24 @@ let taskFilters = {
     house: ALL_HOUSES_OPTION,
     priority: ALL_PRIORITY_OPTION,
 };
+
+function getTodayDateValue() {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${today.getFullYear()}-${month}-${day}`;
+}
+
+function applyTaskDateMinimum(input) {
+    if (input) {
+        input.min = getTodayDateValue();
+    }
+}
+
+function isPastTaskDate(value) {
+    return Boolean(value) && value < getTodayDateValue();
+}
 
 async function renderManagerTasks() {
     try {
@@ -559,7 +578,7 @@ function generateTaskRowHtml(rowIndex) {
                 </div>
                 <div class="manager-task-form-field">
                     <label>Date to finish*</label>
-                    <input type="date" name="date_assigned_${rowIndex}" class="task-date-input">
+                    <input type="date" name="date_assigned_${rowIndex}" class="task-date-input" min="${getTodayDateValue()}">
                 </div>
             </div>
             <div class="manager-task-form-field full">
@@ -671,6 +690,8 @@ function setupAddTaskModal() {
 
         // Set up field listeners for error clearing
         const row = tasksContainer.querySelector(`[data-row-index="${rowIndex}"]`);
+        applyTaskDateMinimum(row.querySelector(".task-date-input"));
+
         row.querySelectorAll("input, select, textarea").forEach((field) => {
             field.addEventListener("input", () => clearTaskFieldError(field));
             field.addEventListener("change", () => clearTaskFieldError(field));
@@ -760,6 +781,12 @@ function setupAddTaskModal() {
                     return;
                 }
 
+                if (isPastTaskDate(dateAssigned)) {
+                    hasScheduleErrors = true;
+                    dateAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
+                    return;
+                }
+
                 const toLocalDateTimeString = (dateObj) => {
                     const pad = (value) => String(value).padStart(2, "0");
                     return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}` +
@@ -798,7 +825,7 @@ function setupAddTaskModal() {
             }
 
             if (hasScheduleErrors) {
-                showAddTaskFormError(formError, "There is a conflict in time.");
+                showAddTaskFormError(formError, "Date to finish cannot be earlier than today.");
                 return;
             }
 
@@ -1245,6 +1272,8 @@ function populateEditTaskForm(task) {
     const dateInput = document.querySelector('#editTaskModal .task-date-input');
     const detailedTaskTextarea = document.querySelector('#editTaskModal .task-detailed-textarea');
 
+    applyTaskDateMinimum(dateInput);
+
     // Populate worker name (read-only)
     if (workerNameInput) {
         workerNameInput.value = task.name || 'Unknown';
@@ -1363,6 +1392,14 @@ async function handleEditTaskSubmit(event) {
 
     if (!taskCategory || !priorityLevel || !houseNumber || !penNumber || !timeAssigned || !dateAssigned) {
         formError.textContent = 'Please fill in all required fields.';
+        formError.classList.add('show');
+        return;
+    }
+
+    if (isPastTaskDate(dateAssigned)) {
+        const dateField = form.querySelector('[name="date_assigned"]');
+        dateField?.closest('.manager-task-form-field')?.classList.add('has-error');
+        formError.textContent = 'Date to finish cannot be earlier than today.';
         formError.classList.add('show');
         return;
     }

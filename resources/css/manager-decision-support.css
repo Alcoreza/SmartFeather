@@ -375,11 +375,12 @@
     border-radius: 7px;
     background: rgba(247, 250, 247, 0.9);
     color: #142218;
-    font-weight: 650;
+    font-weight: 400;
 }
 
 .decision-support-text-section.emergency .decision-support-action-row {
     background: rgba(223, 61, 50, 0.08);
+    font-weight: 650;
 }
 
 .decision-support-action-marker {
@@ -451,20 +452,9 @@
     opacity: 0.45;
 }
 
-.decision-support-page-status {
-    min-width: 54px;
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 0.82rem;
-    font-weight: 800;
-    text-align: center;
-}
-
-.decision-support-page-status span {
-    color: #ffffff;
-}
-
 .decision-support-page-dots {
     display: flex;
+    align-items: center;
     justify-content: center;
     gap: 6px;
 }

@@ -45,6 +45,7 @@ class ReportsController extends Controller
         if (Schema::hasTable('feed_refill_records')) {
             $query = FeedRefillRecord::query();
             $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+            $this->applyActiveHouseAndPenModelFilter($query);
 
             if (!empty($filters['house'])) {
                 $query->whereHas('house', function ($houseQuery) use ($filters) {
@@ -62,6 +63,7 @@ class ReportsController extends Controller
                 ->leftJoin('house as h', 'h.id', '=', 'p.house_id');
 
             $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+            $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
 
             if (!empty($filters['house'])) {
                 $houseNumbers = $this->getHouseFilterValues($filters['house']);
@@ -75,6 +77,7 @@ class ReportsController extends Controller
         if (Schema::hasTable('weight_sampling_logs')) {
             $query = WeightSamplingLog::query();
             $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+            $this->applyActiveHouseStringFilter($query, 'house');
 
             if (!empty($filters['house'])) {
                 $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
@@ -128,6 +131,7 @@ class ReportsController extends Controller
             ->orderByDesc('id');
 
         $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseStringFilter($query, 'house');
 
         if (!empty($filters['house'])) {
             $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
@@ -151,6 +155,7 @@ class ReportsController extends Controller
             ->orderByDesc('recorded_at');
 
         $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseAndPenModelFilter($query);
 
         if (!empty($filters['house'])) {
             $query->whereHas('house', function ($houseQuery) use ($filters) {
@@ -183,6 +188,7 @@ class ReportsController extends Controller
             ->orderByDesc('pr.recorded_at');
 
         $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
 
         if (!empty($filters['house'])) {
             $houseNumbers = $this->getHouseFilterValues($filters['house']);
@@ -271,6 +277,7 @@ class ReportsController extends Controller
             ->orderBy('p.pen_name');
 
         $this->applyDateRange($query, 'pr.recorded_at', $startDate, $endDate);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
 
         return $query->get()->map(function ($row) {
             return [
@@ -308,6 +315,7 @@ class ReportsController extends Controller
                 ->orderByDesc('f.recorded_at');
 
             $this->applyDateRange($query, 'f.recorded_at', $startDate, $endDate);
+            $this->applyActiveHouseAndPenJoinFilter($query, 'house', 'pen');
 
             $feeds = $query->get()->map(function ($row) {
                 return [
@@ -402,6 +410,7 @@ class ReportsController extends Controller
             ->orderBy('time', 'desc');
 
         $this->applyDateRange($query, 'date', $startDate, $endDate);
+        $this->applyActiveHouseStringFilter($query, 'house');
 
         $logs = $query->get();
 
@@ -483,6 +492,7 @@ class ReportsController extends Controller
             ->orderBy('time', 'desc');
 
         $this->applyDateRange($query, 'date', $startDate, $endDate);
+        $this->applyActiveHouseStringFilter($query, 'house');
 
         return $query->get()->map(function ($log) {
             return [
@@ -529,6 +539,7 @@ class ReportsController extends Controller
             ->orderByDesc('tasks.timeassigned');
 
         $this->applyDateRange($query, 'tasks.timeassigned', $startDate, $endDate);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'house', 'pen');
 
         return $query->get()->map(function ($row) {
             $name = trim(collect([
@@ -622,6 +633,54 @@ class ReportsController extends Controller
         if ($endDate) {
             $query->whereDate($column, '<=', $endDate);
         }
+    }
+
+    private function applyActiveHouseAndPenModelFilter($query): void
+    {
+        $query->whereHas('house', function ($houseQuery) {
+            $houseQuery->whereNull('archived_at');
+        });
+
+        $query->where(function ($recordQuery) {
+            $recordQuery
+                ->whereDoesntHave('pen')
+                ->orWhereHas('pen', function ($penQuery) {
+                    $penQuery->whereNull('archived_at');
+                });
+        });
+    }
+
+    private function applyActiveHouseAndPenJoinFilter($query, string $houseAlias = 'house', string $penAlias = 'pen'): void
+    {
+        $query
+            ->whereNotNull($houseAlias . '.id')
+            ->whereNull($houseAlias . '.archived_at')
+            ->whereNull($penAlias . '.archived_at');
+    }
+
+    private function applyActiveHouseStringFilter($query, string $column): void
+    {
+        $activeHouses = $this->getActiveHouseFilterValues();
+
+        if (empty($activeHouses)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereIn($column, $activeHouses);
+    }
+
+    private function getActiveHouseFilterValues(): array
+    {
+        return House::query()
+            ->whereNull('archived_at')
+            ->whereNotNull('house_number')
+            ->pluck('house_number')
+            ->flatMap(fn ($houseNumber) => $this->getHouseFilterValues($houseNumber))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function formatDate($value): string

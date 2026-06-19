@@ -15,8 +15,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 const adminSensorAddRequiredFields = [
     { id: "adminSensorAddType", label: "Sensor Type" },
     { id: "adminSensorAddName", label: "Sensor Name" },
-    { id: "adminSensorAddHouse", label: "House Number" },
-    { id: "adminSensorAddPen", label: "Pen Number" },
 ];
 
 let shouldTrackAdminSensorRequiredHighlights = false;
@@ -250,29 +248,7 @@ function createAdminSectionMarkup(section) {
                                                     </svg>
                                                 </button>
 
-                                                <button
-                                                    type="button"
-                                                    class="admin-sensor-toggle-btn ${(item.status || "Active").toLowerCase() === "under maintenance" ? "activate" : "maintenance"}"
-                                                    data-toggle-status
-                                                    aria-label="${(item.status || "Active").toLowerCase() === "under maintenance" ? `Mark ${escapeHtml(item.name)} as active` : `Mark ${escapeHtml(item.name)} as under maintenance`}"
-                                                >
-                                                    ${
-                                                        (item.status || "Active").toLowerCase() === "under maintenance"
-                                                            ? `
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <circle cx="12" cy="12" r="9"></circle>
-                                                                    <path d="M8 12.5l2.5 2.5L16 9.5"></path>
-                                                                </svg>
-                                                            `
-                                                            : `
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <circle cx="12" cy="12" r="9"></circle>
-                                                                    <path d="M9.5 9.5v5"></path>
-                                                                    <path d="M14.5 9.5v5"></path>
-                                                                </svg>
-                                                            `
-                                                    }
-                                                </button>
+                                                ${getAdminSensorStatusActionMarkup(item)}
 
                                                 <button type="button" class="admin-sensor-delete-btn" data-open-delete aria-label="Delete ${escapeHtml(item.name)}">
                                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -306,6 +282,60 @@ function createAdminSectionMarkup(section) {
 
 function adminSensorShowsResourceColumn(sensorType) {
     return ["Feed Sensor", "Water Sensor"].includes(sensorType);
+}
+
+function getAdminSensorStatusActionMarkup(item) {
+    const status = (item.status || "Active").toLowerCase();
+
+    if (status === "inactive") {
+        return "";
+    }
+
+    const isMaintenance = status === "under maintenance";
+    const actionLabel = isMaintenance
+        ? `Mark ${escapeHtml(item.name)} as active`
+        : `Mark ${escapeHtml(item.name)} as under maintenance`;
+    const icon = isMaintenance
+        ? `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M8 12.5l2.5 2.5L16 9.5"></path>
+            </svg>
+        `
+        : `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M9.5 9.5v5"></path>
+                <path d="M14.5 9.5v5"></path>
+            </svg>
+        `;
+
+    const maintenanceButton = `
+        <button
+            type="button"
+            class="admin-sensor-toggle-btn ${isMaintenance ? "activate" : "maintenance"}"
+            data-toggle-status
+            aria-label="${actionLabel}"
+        >
+            ${icon}
+        </button>
+    `;
+    const inactiveButton = `
+        <button
+            type="button"
+            class="admin-sensor-toggle-btn inactive"
+            data-toggle-status
+            data-next-status="Inactive"
+            aria-label="Make ${escapeHtml(item.name)} inactive"
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v10"></path>
+                <path d="M18.4 6.6a9 9 0 1 1-12.8 0"></path>
+            </svg>
+        </button>
+    `;
+
+    return `${maintenanceButton}${inactiveButton}`;
 }
 
 function getAdminSensorStatusClass(status) {
@@ -354,8 +384,8 @@ async function loadAdminSensorFormOptions() {
         const addHouseSelect = document.getElementById("adminSensorAddHouse");
         const addPenSelect = document.getElementById("adminSensorAddPen");
 
-        fillAdminSimpleSelect(addHouseSelect, data.houses || [], "Select house");
-        fillAdminSimpleSelect(addPenSelect, [], "Select pen");
+        fillAdminSimpleSelect(addHouseSelect, data.houses || [], "No house (inactive)");
+        fillAdminSimpleSelect(addPenSelect, [], "No pen (inactive)");
         fillAdminSimpleSelect(
             document.getElementById("adminSensorAddFeederNumber"),
             [],
@@ -376,8 +406,8 @@ async function loadAdminSensorFormOptions() {
             "Select sensor type",
         );
 
-        fillAdminSimpleSelect(editHouseSelect, data.houses || [], "Select house");
-        fillAdminSimpleSelect(editPenSelect, [], "Select pen");
+        fillAdminSimpleSelect(editHouseSelect, data.houses || [], "No house (inactive)");
+        fillAdminSimpleSelect(editPenSelect, [], "No pen (inactive)");
         resetAdminSensorEditResourceOptions();
 
         if (addHouseSelect) {
@@ -587,6 +617,14 @@ function syncAdminSensorResourceFields(mode) {
 }
 
 function normalizeAdminSensorResourcePayload(payload) {
+    const hasHouse = Boolean(payload.house_houseid);
+    const hasPen = Boolean(payload.pen_penid);
+
+    if (!hasHouse || !hasPen) {
+        payload.feeder_number = "";
+        payload.drinker_number = "";
+    }
+
     if (payload.sensor_type !== "Feed Sensor") {
         payload.feeder_number = "";
     }
@@ -600,17 +638,17 @@ async function loadAdminPensForHouse(houseId, penSelect) {
     if (!penSelect) return;
 
     if (!houseId) {
-        fillAdminSimpleSelect(penSelect, [], "Select pen");
+        fillAdminSimpleSelect(penSelect, [], "No pen (inactive)");
         return;
     }
 
     try {
         const response = await fetch(`/api/admin/sensors/houses/${houseId}/pens`);
         const data = await response.json();
-        fillAdminSimpleSelect(penSelect, data.pens || [], "Select pen");
+        fillAdminSimpleSelect(penSelect, data.pens || [], "No pen (inactive)");
     } catch (error) {
         console.error("Failed to load pens for selected house.", error);
-        fillAdminSimpleSelect(penSelect, [], "Select pen");
+        fillAdminSimpleSelect(penSelect, [], "No pen (inactive)");
     }
 }
 
@@ -1161,7 +1199,7 @@ function bindAdminAddButton() {
         const form = document.getElementById("adminSensorAddForm");
         if (form) form.reset();
 
-        fillAdminSimpleSelect(document.getElementById("adminSensorAddPen"), [], "Select pen");
+        fillAdminSimpleSelect(document.getElementById("adminSensorAddPen"), [], "No pen (inactive)");
         fillAdminSimpleSelect(
             document.getElementById("adminSensorAddFeederNumber"),
             [],
@@ -1233,6 +1271,11 @@ function setAdminSensorAddConfirmText(payload) {
 
     const sensorName = payload.sensor_name || "this sensor";
     const sensorType = payload.sensor_type || "sensor";
+
+    if (!payload.house_houseid && !payload.pen_penid) {
+        text.textContent = `Add ${sensorName} as an inactive ${sensorType}?`;
+        return;
+    }
 
     text.textContent = `Add ${sensorName} as a ${sensorType}?`;
 }
@@ -1452,8 +1495,8 @@ function bindAdminToggleStatusButtons() {
             const sensorId = row.dataset.id;
             const sensorName = row.dataset.name || "this sensor";
             const currentStatus = (row.dataset.status || "Active").trim().toLowerCase();
-            const nextStatus =
-                currentStatus === "under maintenance" ? "Active" : "Under Maintenance";
+            const nextStatus = button.dataset.nextStatus ||
+                (currentStatus === "under maintenance" ? "Active" : "Under Maintenance");
 
             const idInput = document.getElementById("adminSensorStatusId");
             const statusInput = document.getElementById("adminSensorStatusValue");
@@ -1462,10 +1505,14 @@ function bindAdminToggleStatusButtons() {
             if (idInput) idInput.value = sensorId;
             if (statusInput) statusInput.value = nextStatus;
             if (text) {
-                text.textContent =
-                    nextStatus === "Under Maintenance"
-                        ? `Are you sure you want to mark ${sensorName} as under maintenance?`
-                        : `Are you sure you want to mark ${sensorName} as active?`;
+                if (nextStatus === "Inactive") {
+                    text.textContent = `Make ${sensorName} inactive and remove its house and pen assignment?`;
+                } else {
+                    text.textContent =
+                        nextStatus === "Under Maintenance"
+                            ? `Are you sure you want to mark ${sensorName} as under maintenance?`
+                            : `Are you sure you want to mark ${sensorName} as active?`;
+                }
             }
 
             openAdminSensorModal("adminSensorStatusModal");

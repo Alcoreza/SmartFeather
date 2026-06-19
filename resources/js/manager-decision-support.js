@@ -4,7 +4,13 @@
  */
 
 const DEFAULT_DECISION_SUPPORT_API = '/api/manager/dashboard/decision-support';
+const DECISION_SUPPORT_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+const DECISION_SUPPORT_CRITICAL_CHECK_INTERVAL_MS = 60 * 1000;
+const DECISION_SUPPORT_CRITICAL_REGEN_COOLDOWN_MS = 5 * 60 * 1000;
 let decisionSupportAutoRefresh = null;
+let decisionSupportCriticalCheckInterval = null;
+let isDecisionSupportCriticalCheckRunning = false;
+let lastDecisionSupportCriticalRefreshAt = 0;
 let decisionSupportHouses = [];
 let decisionSupportPage = 0;
 let decisionSupportPenPages = {};
@@ -54,8 +60,48 @@ async function loadDecisionSupport(forceRefresh = false) {
     }
 }
 
+async function checkCriticalDecisionSupportReadings() {
+    const container = document.getElementById('decisionSupportContent');
+    if (!container || isDecisionSupportCriticalCheckRunning) {
+        return;
+    }
+
+    isDecisionSupportCriticalCheckRunning = true;
+
+    try {
+        const response = await fetch(getDecisionSupportCriticalCheckApi(container));
+        if (!response.ok) {
+            throw new Error('Failed to check critical sensor readings');
+        }
+
+        const data = await response.json();
+        if (data.has_critical) {
+            const now = Date.now();
+            if (lastDecisionSupportCriticalRefreshAt && now - lastDecisionSupportCriticalRefreshAt < DECISION_SUPPORT_CRITICAL_REGEN_COOLDOWN_MS) {
+                return;
+            }
+
+            lastDecisionSupportCriticalRefreshAt = now;
+            decisionSupportPage = 0;
+            decisionSupportPenPages = {};
+            await loadDecisionSupport(true);
+            return;
+        }
+
+        lastDecisionSupportCriticalRefreshAt = 0;
+    } catch (error) {
+        console.error('Decision Support Critical Check Error:', error);
+    } finally {
+        isDecisionSupportCriticalCheckRunning = false;
+    }
+}
+
 function getDecisionSupportApi(container) {
     return container?.dataset?.decisionSupportApi || DEFAULT_DECISION_SUPPORT_API;
+}
+
+function getDecisionSupportCriticalCheckApi(container) {
+    return container?.dataset?.decisionSupportCriticalCheckApi || `${getDecisionSupportApi(container)}/critical-check`;
 }
 
 function renderDecisionSupport(container, recommendations) {
@@ -148,22 +194,20 @@ function renderDecisionSupportPage(container) {
                     <button type="button" class="decision-support-page-btn" data-decision-page-prev ${decisionSupportPage === 0 ? 'disabled' : ''}>
                         Previous
                     </button>
-                    <div class="decision-support-page-status">
-                        <span>${decisionSupportPage + 1}</span> / ${totalPages}
+                    <div class="decision-support-page-dots" aria-label="Decision support pages">
+                        ${decisionSupportHouses.map((pageHouse, index) => `
+                            <button
+                                type="button"
+                                class="decision-support-page-dot ${index === decisionSupportPage ? 'active' : ''}"
+                                data-decision-page="${index}"
+                                aria-label="Show ${escapeHtml(formatHouseName(pageHouse.house_name))}"
+                                aria-current="${index === decisionSupportPage ? 'page' : 'false'}"
+                            ></button>
+                        `).join('')}
                     </div>
                     <button type="button" class="decision-support-page-btn" data-decision-page-next ${decisionSupportPage >= totalPages - 1 ? 'disabled' : ''}>
                         Next
                     </button>
-                </div>
-                <div class="decision-support-page-dots">
-                    ${decisionSupportHouses.map((pageHouse, index) => `
-                        <button
-                            type="button"
-                            class="decision-support-page-dot ${index === decisionSupportPage ? 'active' : ''}"
-                            data-decision-page="${index}"
-                            aria-label="Show ${escapeHtml(formatHouseName(pageHouse.house_name))}"
-                        ></button>
-                    `).join('')}
                 </div>
             ` : ''}
         </div>
@@ -371,7 +415,7 @@ function parseRecommendationSections(text) {
         addRecommendationRow(currentSection, parseRecommendationRow(line));
     });
 
-    return splitStatusSections(sections);
+    return splitStatusSections(sections).filter((section) => section.title !== 'Refill Alerts');
 }
 
 function stripHiddenRecommendationSections(text) {
@@ -629,7 +673,19 @@ function normalizeAmmoniaRecommendationRow(line) {
 }
 
 function renderRecommendationSection(section) {
-    const rowsHtml = section.rows.map((row) => renderRecommendationRow(row, section.type)).join('');
+    if (section.title === 'Cross-Environmental Diagnostics') {
+        return renderCrossEnvironmentalFindings(section);
+    }
+
+    const rows = section.type === 'actions'
+        ? section.rows.filter((row) => !shouldHideImmediateAction(row))
+        : section.rows;
+
+    if (section.type === 'actions' && !rows.length) {
+        return '';
+    }
+
+    const rowsHtml = rows.map((row) => renderRecommendationRow(row, section.type)).join('');
     const titleHtml = escapeHtml(section.title);
     const sectionClass = `${section.type} ${sectionTitleClass(section.title)}`.trim();
 
@@ -641,6 +697,147 @@ function renderRecommendationSection(section) {
             </div>
         </section>
     `;
+}
+
+function shouldHideImmediateAction(row) {
+    const text = stripMarkdownBold(row?.text || '')
+        .replace(/^[-*]\s+/, '')
+        .trim();
+
+    return /^refill\s+(feeder|drinker)\s+\d+\s+immediately\b/i.test(text);
+}
+
+function renderCrossEnvironmentalFindings(section) {
+    const paragraph = buildCrossEnvironmentalReport(section.rows);
+
+    return `
+        <section class="decision-support-text-section ${section.type} ${sectionTitleClass(section.title)}">
+            <div class="decision-support-text-body">
+                <p>${paragraph ? formatInlineMarkdown(paragraph) : 'No details provided.'}</p>
+            </div>
+        </section>
+    `;
+}
+
+function buildCrossEnvironmentalReport(rows) {
+    const facts = rows.filter((row) => row.kind === 'fact');
+    const findings = rows
+        .filter((row) => row.kind !== 'fact')
+        .map((row) => supervisorFindingSentence(row.text))
+        .filter(Boolean);
+    const factSentence = supervisorFactSentence(facts);
+    const findingSentence = findings.length
+        ? `Based on these conditions, ${sentenceCase(findings.join(' '))}`
+        : '';
+
+    return [factSentence, findingSentence].filter(Boolean).join(' ');
+}
+
+function supervisorFactSentence(facts) {
+    const temperature = facts.find((row) => String(row.label || '').toLowerCase().includes('temperature'));
+    const ammonia = facts.find((row) => String(row.label || '').toLowerCase().includes('ammonia'));
+    const parts = [];
+
+    if (temperature) {
+        parts.push(readingReportPart('temperature', temperature.value));
+    }
+
+    if (ammonia) {
+        parts.push(readingReportPart('ammonia', ammonia.value));
+    }
+
+    const otherFacts = facts
+        .filter((row) => row !== temperature && row !== ammonia)
+        .map((row) => `${String(row.label || '').toLowerCase()} at ${cleanStatusValue(row.value)}`);
+
+    parts.push(...otherFacts);
+
+    if (!parts.length) {
+        return '';
+    }
+
+    return `Current readings show ${joinReportParts(parts)}.`;
+}
+
+function readingReportPart(label, value) {
+    const status = splitStatusValue(value);
+
+    if (status.reading === 'no reading') {
+        return `${label} with no active reading`;
+    }
+
+    return status.condition
+        ? `${label} at ${status.reading}, which is reported as ${status.condition}`
+        : `${label} at ${status.reading}`;
+}
+
+function cleanStatusValue(value) {
+    return String(value || '')
+        .trim()
+        .replace(/\s+-\s+/g, ', ')
+        .toLowerCase() === 'no reading'
+        ? 'no reading'
+        : String(value || '').trim().replace(/\s+-\s+/g, ', ');
+}
+
+function splitStatusValue(value) {
+    const cleaned = cleanStatusValue(value);
+    const [reading, ...conditionParts] = cleaned.split(',').map((part) => part.trim()).filter(Boolean);
+
+    return {
+        reading: reading || 'no reading',
+        condition: conditionParts.join(', '),
+    };
+}
+
+function supervisorFindingSentence(text) {
+    const softened = String(text || '')
+        .trim()
+        .replace(/^(finding|evidence|action):\s*/i, '')
+        .replace(/\bcan indicate\b/gi, 'may point to')
+        .replace(/\bDecision Support needs\b/gi, 'the assessment still needs')
+        .replace(/\bwas detected during this decision-support run\b/gi, 'was detected')
+        .replace(/\bNo broiler thermal stress condition was detected\b/gi, 'no broiler thermal stress was detected')
+        .replace(/\bThe current broiler temperature is\b/gi, 'the broiler temperature is')
+        .replace(/\bPhysically inspect\b/gi, 'a physical check should cover')
+        .replace(/\bCheck\b/gi, 'checking')
+        .replace(/\bVerify\b/gi, 'verification of');
+
+    if (!softened) {
+        return '';
+    }
+
+    if (/[.!?]$/.test(stripMarkdownBold(softened))) {
+        return softened;
+    }
+
+    return `${softened}.`;
+}
+
+function joinReportParts(parts) {
+    if (parts.length <= 1) {
+        return parts[0] || '';
+    }
+
+    return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+function sentenceCase(text) {
+    const trimmed = String(text || '').trim();
+    return trimmed ? trimmed.charAt(0).toLowerCase() + trimmed.slice(1) : '';
+}
+
+function recommendationRowSentence(row) {
+    const text = row.kind === 'fact'
+        ? `${row.label}: ${row.value}`
+        : row.text;
+    const trimmed = String(text || '').trim();
+
+    if (!trimmed || /[.!?]$/.test(stripMarkdownBold(trimmed))) {
+        return trimmed;
+    }
+
+    return `${trimmed}.`;
 }
 
 function sectionTitleClass(title) {
@@ -664,7 +861,7 @@ function renderRecommendationRow(row, sectionType) {
         return `
             <div class="decision-support-action-row">
                 <span class="decision-support-action-marker"></span>
-                <span>${formatInlineMarkdown(row.text)}</span>
+                <span>${sectionType === 'actions' ? escapeHtml(stripMarkdownBold(row.text)) : formatInlineMarkdown(row.text)}</span>
             </div>
         `;
     }
@@ -714,12 +911,25 @@ function setupDecisionSupportRefresh() {
         });
     }
 
-    decisionSupportAutoRefresh = setInterval(loadDecisionSupport, 30 * 60 * 1000);
+    decisionSupportAutoRefresh = setInterval(() => {
+        decisionSupportPage = 0;
+        decisionSupportPenPages = {};
+        loadDecisionSupport(true);
+    }, DECISION_SUPPORT_REFRESH_INTERVAL_MS);
+
+    decisionSupportCriticalCheckInterval = setInterval(
+        checkCriticalDecisionSupportReadings,
+        DECISION_SUPPORT_CRITICAL_CHECK_INTERVAL_MS,
+    );
 }
 
 function cleanupDecisionSupport() {
     if (decisionSupportAutoRefresh) {
         clearInterval(decisionSupportAutoRefresh);
+    }
+
+    if (decisionSupportCriticalCheckInterval) {
+        clearInterval(decisionSupportCriticalCheckInterval);
     }
 }
 

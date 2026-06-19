@@ -49,6 +49,7 @@ class SensorController extends Controller
                         }
 
                         $status = $this->normalizeSensorStatus($status);
+                        $isInactive = $status === 'Inactive';
 
                         // ✅ latest reading
                         $latestValue = $sensor->latestReading?->value;
@@ -56,10 +57,10 @@ class SensorController extends Controller
                         return [
                             'id' => $sensor->sensorid,
                             'name' => $sensor->sensorname,
-                            'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
-                            'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
-                            'feeder_number' => $sensor->feeder_number,
-                            'drinker_number' => $sensor->drinker_number,
+                            'house_number' => $isInactive ? '' : $this->formatHouseNumber($sensor->house?->house_number),
+                            'pen_number' => $isInactive ? '' : $this->formatPenNumber($sensor->pen?->pen_name),
+                            'feeder_number' => $isInactive ? null : $sensor->feeder_number,
+                            'drinker_number' => $isInactive ? null : $sensor->drinker_number,
 
                             // ✅ VALUE FIELDS
                             'value' => $latestValue,
@@ -69,8 +70,8 @@ class SensorController extends Controller
                             'timestamp' => $sensor->latestReading?->recorded_at,
 
                             'status' => $status,
-                            'house_id' => $sensor->house?->id,
-                            'pen_id' => $sensor->pen?->id,
+                            'house_id' => $isInactive ? null : $sensor->house?->id,
+                            'pen_id' => $isInactive ? null : $sensor->pen?->id,
                             'lowest_threshold' => $sensor->configuration?->lowestthreshold,
                             'highest_threshold' => $sensor->configuration?->highestthreshold,
                         ];
@@ -146,6 +147,7 @@ class SensorController extends Controller
             ->where('house_houseid', $pen->house_id)
             ->where('pen_penid', $pen->id)
             ->whereNotNull('feeder_number')
+            ->whereRaw("COALESCE(NULLIF(LOWER(TRIM(status)), ''), 'active') != 'inactive'")
             ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
                 $query->where('sensorid', '!=', $ignoreSensorId);
             })
@@ -186,6 +188,7 @@ class SensorController extends Controller
             ->where('house_houseid', $pen->house_id)
             ->where('pen_penid', $pen->id)
             ->whereNotNull('drinker_number')
+            ->whereRaw("COALESCE(NULLIF(LOWER(TRIM(status)), ''), 'active') != 'inactive'")
             ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
                 $query->where('sensorid', '!=', $ignoreSensorId);
             })
@@ -214,34 +217,39 @@ class SensorController extends Controller
         $validated = $request->validate([
             'sensor_type' => 'required|string|max:255',
             'sensor_name' => 'required|string|max:255',
-            'house_houseid' => 'required|integer|exists:house,id',
-            'pen_penid' => 'required|integer|exists:pen,id',
+            'house_houseid' => 'nullable|integer|exists:house,id',
+            'pen_penid' => 'nullable|integer|exists:pen,id',
             'feeder_number' => 'nullable|integer|min:1',
             'drinker_number' => 'nullable|integer|min:1',
         ]);
 
-        $this->ensureSensorAssignmentHasRunningBatch(
-            $validated['house_houseid'],
-            $validated['pen_penid']
-        );
-        $resourceNumbers = $this->validateSensorResourceNumber(
-            $validated['sensor_type'],
-            $validated['house_houseid'],
-            $validated['pen_penid'],
-            $validated['feeder_number'] ?? null,
-            $validated['drinker_number'] ?? null
-        );
+        $assignment = $this->normalizeSensorAssignment($validated);
+        $resourceNumbers = ['feeder_number' => null, 'drinker_number' => null];
+
+        if ($this->sensorHasAssignment($assignment)) {
+            $this->ensureSensorAssignmentHasRunningBatch(
+                $assignment['house_houseid'],
+                $assignment['pen_penid']
+            );
+            $resourceNumbers = $this->validateSensorResourceNumber(
+                $validated['sensor_type'],
+                $assignment['house_houseid'],
+                $assignment['pen_penid'],
+                $validated['feeder_number'] ?? null,
+                $validated['drinker_number'] ?? null
+            );
+        }
 
         $sensor = Sensor::create([
             'sensortype' => $validated['sensor_type'],
             'sensorname' => $validated['sensor_name'],
-            'house_houseid' => $validated['house_houseid'],
-            'pen_penid' => $validated['pen_penid'],
+            'house_houseid' => $assignment['house_houseid'],
+            'pen_penid' => $assignment['pen_penid'],
             'feeder_number' => $resourceNumbers['feeder_number'],
             'drinker_number' => $resourceNumbers['drinker_number'],
             'status' => $this->determineStoredSensorStatus(
-                $validated['house_houseid'] ?? null,
-                $validated['pen_penid'] ?? null,
+                $assignment['house_houseid'],
+                $assignment['pen_penid'],
                 'Active'
             ),
         ]);
@@ -269,37 +277,41 @@ class SensorController extends Controller
         $validated = $request->validate([
             'sensor_type' => 'required|string|max:255',
             'sensor_name' => 'required|string|max:255',
-            'house_houseid' => 'required|integer|exists:house,id',
-            'pen_penid' => 'required|integer|exists:pen,id',
+            'house_houseid' => 'nullable|integer|exists:house,id',
+            'pen_penid' => 'nullable|integer|exists:pen,id',
             'feeder_number' => 'nullable|integer|min:1',
             'drinker_number' => 'nullable|integer|min:1',
         ]);
 
         $sensor = Sensor::findOrFail($sensorId);
+        $assignment = $this->normalizeSensorAssignment($validated);
+        $resourceNumbers = ['feeder_number' => null, 'drinker_number' => null];
 
-        $this->ensureSensorAssignmentHasRunningBatch(
-            $validated['house_houseid'],
-            $validated['pen_penid']
-        );
-        $resourceNumbers = $this->validateSensorResourceNumber(
-            $validated['sensor_type'],
-            $validated['house_houseid'],
-            $validated['pen_penid'],
-            $validated['feeder_number'] ?? null,
-            $validated['drinker_number'] ?? null,
-            $sensor->sensorid
-        );
+        if ($this->sensorHasAssignment($assignment)) {
+            $this->ensureSensorAssignmentHasRunningBatch(
+                $assignment['house_houseid'],
+                $assignment['pen_penid']
+            );
+            $resourceNumbers = $this->validateSensorResourceNumber(
+                $validated['sensor_type'],
+                $assignment['house_houseid'],
+                $assignment['pen_penid'],
+                $validated['feeder_number'] ?? null,
+                $validated['drinker_number'] ?? null,
+                $sensor->sensorid
+            );
+        }
 
         $sensor->update([
             'sensortype' => $validated['sensor_type'],
             'sensorname' => $validated['sensor_name'],
-            'house_houseid' => $validated['house_houseid'],
-            'pen_penid' => $validated['pen_penid'],
+            'house_houseid' => $assignment['house_houseid'],
+            'pen_penid' => $assignment['pen_penid'],
             'feeder_number' => $resourceNumbers['feeder_number'],
             'drinker_number' => $resourceNumbers['drinker_number'],
             'status' => $this->determineStoredSensorStatus(
-                $validated['house_houseid'] ?? null,
-                $validated['pen_penid'] ?? null,
+                $assignment['house_houseid'],
+                $assignment['pen_penid'],
                 $sensor->status
             ),
         ]);
@@ -324,17 +336,33 @@ class SensorController extends Controller
     public function updateStatus(Request $request, $sensorId)
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:Active,Under Maintenance',
+            'status' => 'required|string|in:Active,Under Maintenance,Inactive',
         ]);
 
         $sensor = Sensor::findOrFail($sensorId);
-        $storedStatus = $this->determineStoredSensorStatus(
-            $sensor->house_houseid,
-            $sensor->pen_penid,
-            $validated['status']
-        );
+        $requestedStatus = $this->normalizeSensorStatus($validated['status']);
 
-        DB::transaction(function () use ($sensor, $storedStatus) {
+        DB::transaction(function () use ($sensor, $requestedStatus) {
+            if ($requestedStatus === 'Inactive') {
+                $sensor->update([
+                    'house_houseid' => null,
+                    'pen_penid' => null,
+                    'feeder_number' => null,
+                    'drinker_number' => null,
+                    'status' => 'Inactive',
+                ]);
+
+                $this->recordSensorMaintenanceStatus($sensor, 'Inactive');
+
+                return;
+            }
+
+            $storedStatus = $this->determineStoredSensorStatus(
+                $sensor->house_houseid,
+                $sensor->pen_penid,
+                $requestedStatus
+            );
+
             $sensor->update([
                 'status' => $storedStatus,
             ]);
@@ -429,6 +457,10 @@ class SensorController extends Controller
 
     private function determineStoredSensorStatus($houseId, $penId, $preferredStatus): string
     {
+        if (!$houseId && !$penId) {
+            return 'Inactive';
+        }
+
         $houseIsArchived = House::where('id', $houseId)
             ->whereNotNull('archived_at')
             ->exists();
@@ -442,6 +474,31 @@ class SensorController extends Controller
         return $status === 'Inactive' ? 'Active' : $status;
     }
 
+    private function normalizeSensorAssignment(array $validated): array
+    {
+        $houseId = $validated['house_houseid'] ?? null;
+        $penId = $validated['pen_penid'] ?? null;
+
+        $houseId = $houseId === '' ? null : $houseId;
+        $penId = $penId === '' ? null : $penId;
+
+        if (($houseId && !$penId) || (!$houseId && $penId)) {
+            throw ValidationException::withMessages([
+                'pen_penid' => ['Select both a house and pen, or leave both blank to keep the sensor inactive.'],
+            ]);
+        }
+
+        return [
+            'house_houseid' => $houseId ? (int) $houseId : null,
+            'pen_penid' => $penId ? (int) $penId : null,
+        ];
+    }
+
+    private function sensorHasAssignment(array $assignment): bool
+    {
+        return !empty($assignment['house_houseid']) && !empty($assignment['pen_penid']);
+    }
+
     private function recordSensorMaintenanceStatus(Sensor $sensor, string $status): void
     {
         if ($status === 'Under Maintenance') {
@@ -450,17 +507,22 @@ class SensorController extends Controller
             return;
         }
 
-        if ($status === 'Active') {
-            $openMaintenance = SensorMaintenance::where('sensors_sensorid', $sensor->sensorid)
-                ->whereNull('enddate')
-                ->orderByDesc('startdate')
-                ->first();
-
-            $openMaintenance?->update([
-                'enddate' => now()->toDateString(),
-                'status' => 'Completed',
-            ]);
+        if (in_array($status, ['Active', 'Inactive'], true)) {
+            $this->closeOpenMaintenanceLog($sensor);
         }
+    }
+
+    private function closeOpenMaintenanceLog(Sensor $sensor): void
+    {
+        $openMaintenance = SensorMaintenance::where('sensors_sensorid', $sensor->sensorid)
+            ->whereNull('enddate')
+            ->orderByDesc('startdate')
+            ->first();
+
+        $openMaintenance?->update([
+            'enddate' => now()->toDateString(),
+            'status' => 'Completed',
+        ]);
     }
 
     private function syncCurrentMaintenanceSensorsToLog(): void
@@ -530,6 +592,7 @@ class SensorController extends Controller
                 ->where('house_houseid', $houseId)
                 ->where('pen_penid', $penId)
                 ->where('feeder_number', (int) $feederNumber)
+                ->whereRaw("COALESCE(NULLIF(LOWER(TRIM(status)), ''), 'active') != 'inactive'")
                 ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
                     $query->where('sensorid', '!=', $ignoreSensorId);
                 })
@@ -566,6 +629,7 @@ class SensorController extends Controller
                 ->where('house_houseid', $houseId)
                 ->where('pen_penid', $penId)
                 ->where('drinker_number', (int) $drinkerNumber)
+                ->whereRaw("COALESCE(NULLIF(LOWER(TRIM(status)), ''), 'active') != 'inactive'")
                 ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
                     $query->where('sensorid', '!=', $ignoreSensorId);
                 })
@@ -587,6 +651,7 @@ class SensorController extends Controller
             $sensorIsAssigned = Sensor::whereRaw('lower(sensortype) = ?', [$normalizedType])
                 ->where('house_houseid', $houseId)
                 ->where('pen_penid', $penId)
+                ->whereRaw("COALESCE(NULLIF(LOWER(TRIM(status)), ''), 'active') != 'inactive'")
                 ->when($ignoreSensorId, function ($query) use ($ignoreSensorId) {
                     $query->where('sensorid', '!=', $ignoreSensorId);
                 })
@@ -680,15 +745,17 @@ class SensorController extends Controller
 
         $readings = $sensors->map(function (Sensor $sensor) {
             $latestValue = $sensor->latestReading?->value;
+            $status = $this->normalizeSensorStatus($this->effectiveSensorStatus($sensor));
+            $isInactive = $status === 'Inactive';
 
             return [
                 'sensor_id' => $sensor->sensorid,
                 'sensor_name' => $sensor->sensorname,
                 'sensor_type' => $sensor->sensortype,
-                'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
-                'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
-                'feeder_number' => $sensor->feeder_number,
-                'drinker_number' => $sensor->drinker_number,
+                'house_number' => $isInactive ? '' : $this->formatHouseNumber($sensor->house?->house_number),
+                'pen_number' => $isInactive ? '' : $this->formatPenNumber($sensor->pen?->pen_name),
+                'feeder_number' => $isInactive ? null : $sensor->feeder_number,
+                'drinker_number' => $isInactive ? null : $sensor->drinker_number,
                 'value' => $latestValue,
                 'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
                 'recorded_at' => $sensor->latestReading?->recorded_at,
@@ -723,6 +790,8 @@ class SensorController extends Controller
                     $status = 'Under Maintenance';
                 }
             }
+            $status = $this->normalizeSensorStatus($status);
+            $isInactive = $status === 'Inactive';
 
             // Determine alert level based on thresholds
             $alertLevel = 'normal'; // normal, warning, critical
@@ -748,10 +817,10 @@ class SensorController extends Controller
                 'sensor_id' => $sensor->sensorid,
                 'sensor_name' => $sensor->sensorname,
                 'sensor_type' => $sensor->sensortype,
-                'house_number' => $this->formatHouseNumber($sensor->house?->house_number),
-                'pen_number' => $this->formatPenNumber($sensor->pen?->pen_name),
-                'feeder_number' => $sensor->feeder_number,
-                'drinker_number' => $sensor->drinker_number,
+                'house_number' => $isInactive ? '' : $this->formatHouseNumber($sensor->house?->house_number),
+                'pen_number' => $isInactive ? '' : $this->formatPenNumber($sensor->pen?->pen_name),
+                'feeder_number' => $isInactive ? null : $sensor->feeder_number,
+                'drinker_number' => $isInactive ? null : $sensor->drinker_number,
                 'current_value' => $latestValue,
                 'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
                 'lowest_threshold' => $config?->lowestthreshold,

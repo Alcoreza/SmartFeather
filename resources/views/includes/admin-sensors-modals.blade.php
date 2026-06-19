@@ -115,13 +115,13 @@
 
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
-                    <label for="adminSensorAddHouse">House Number*</label>
+                    <label for="adminSensorAddHouse">House Number</label>
                     <select id="adminSensorAddHouse" name="house_houseid"
                         class="admin-sensor-select-placeholder"></select>
                 </div>
 
                 <div class="admin-sensor-form-field">
-                    <label for="adminSensorAddPen">Pen Number*</label>
+                    <label for="adminSensorAddPen">Pen Number</label>
                     <select id="adminSensorAddPen" name="pen_penid" class="admin-sensor-select-placeholder"></select>
                 </div>
             </div>

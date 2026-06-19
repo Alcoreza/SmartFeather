@@ -454,6 +454,16 @@ Route::get('/api/manager/dashboard/decision-support', function (\Illuminate\Http
     ]);
 });
 
+Route::get('/api/manager/dashboard/decision-support/critical-check', function () {
+    $service = new \App\Services\DecisionSupportService();
+    $criticalFindings = $service->currentCriticalSensorFindings();
+
+    return response()->json([
+        'has_critical' => !empty($criticalFindings),
+        'critical_findings' => $criticalFindings,
+    ]);
+});
+
 Route::get('/api/admin/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
     $service = new \App\Services\DecisionSupportService();
     $generated = $service->generateRecommendations(null, $request->boolean('refresh'));
@@ -487,6 +497,16 @@ Route::get('/api/admin/dashboard/decision-support', function (\Illuminate\Http\R
                 'expires_at' => $rec->expires_at?->toIso8601String(),
             ];
         })->toArray(),
+    ]);
+});
+
+Route::get('/api/admin/dashboard/decision-support/critical-check', function () {
+    $service = new \App\Services\DecisionSupportService();
+    $criticalFindings = $service->currentCriticalSensorFindings();
+
+    return response()->json([
+        'has_critical' => !empty($criticalFindings),
+        'critical_findings' => $criticalFindings,
     ]);
 });
 

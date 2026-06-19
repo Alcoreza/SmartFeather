@@ -225,6 +225,12 @@ class EmployeeController extends Controller
 
     private function trimEmployeeRequest(Request $request): void
     {
-        $request->merge($this->trimEmployeeData($request->all()));
+        $data = $this->trimEmployeeData($request->all());
+
+        if (array_key_exists('Username', $data)) {
+            $data['Username'] = mb_strtolower((string) $data['Username'], 'UTF-8');
+        }
+
+        $request->merge($data);
     }
 }

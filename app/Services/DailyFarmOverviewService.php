@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Pen;
 use App\Models\PopulationRecord;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 class DailyFarmOverviewService
 {
@@ -51,6 +52,12 @@ class DailyFarmOverviewService
         try {
             $total = Pen::whereNotNull('current_batch_id')
                 ->whereNull('archived_at')
+                ->whereHas('currentBatch', function ($query) {
+                    $query->where('status', 'Running');
+                })
+                ->whereHas('house', function ($query) {
+                    $query->whereNull('archived_at');
+                })
                 ->sum('population');
             
             return (int) ($total ?? 0);
@@ -62,7 +69,6 @@ class DailyFarmOverviewService
 
     /**
      * Get today's total eggs hatched and mortalities
-     * If no records for today, get the most recent records
      * 
      * @param Carbon $today
      * @return array
@@ -71,24 +77,15 @@ class DailyFarmOverviewService
     {
         try {
             // Get records for today
-            $todaysRecords = PopulationRecord::whereBetween('recorded_at', [
-                $today->startOfDay(),
-                $today->endOfDay(),
-            ])->get();
+            $todaysRecords = $this->activePopulationRecordsQuery()
+                ->whereBetween('recorded_at', [
+                    $today->copy()->startOfDay(),
+                    $today->copy()->endOfDay(),
+                ])
+                ->get();
 
             $totalEggs = (int) ($todaysRecords->sum('eggs_hatched') ?? 0);
             $totalMortalities = (int) ($todaysRecords->sum('mortality') ?? 0);
-
-            // If no records for today, get the most recent records
-            if ($todaysRecords->isEmpty()) {
-                $latestRecords = PopulationRecord::orderBy('recorded_at', 'desc')
-                    ->first();
-
-                if ($latestRecords) {
-                    $totalEggs = (int) ($latestRecords->eggs_hatched ?? 0);
-                    $totalMortalities = (int) ($latestRecords->mortality ?? 0);
-                }
-            }
 
             return [
                 'totalEggs' => $totalEggs,
@@ -102,5 +99,20 @@ class DailyFarmOverviewService
                 'totalMortalities' => 0,
             ];
         }
+    }
+
+    private function activePopulationRecordsQuery(): Builder
+    {
+        return PopulationRecord::query()
+            ->whereHas('pen', function ($query) {
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    })
+                    ->whereHas('house', function ($houseQuery) {
+                        $houseQuery->whereNull('archived_at');
+                    });
+            });
     }
 }

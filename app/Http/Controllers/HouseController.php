@@ -594,7 +594,7 @@ class HouseController extends Controller
             $reading = $sensor->latestReading;
             $sensorType = $this->normalizeSensorReadingType($sensor->sensortype);
 
-            if (!$reading || !$sensorType || $sensor->house_houseid === null) {
+            if (!$sensorType || $sensor->house_houseid === null) {
                 continue;
             }
 
@@ -602,9 +602,9 @@ class HouseController extends Controller
                 'sensor_id' => $sensor->sensorid,
                 'sensor_name' => $sensor->sensorname,
                 'sensor_type' => $sensorType,
-                'value' => (float) $reading->value,
-                'formatted_value' => $this->formatSensorReadingValue($sensorType, $reading->value),
-                'recorded_at' => $reading->recorded_at,
+                'value' => $this->sensorReadingDisplayValue($sensorType, $reading?->value),
+                'formatted_value' => $this->formatSensorReadingValue($sensorType, $reading?->value),
+                'recorded_at' => $reading?->recorded_at,
             ];
 
             $houseId = (int) $sensor->house_houseid;
@@ -617,7 +617,11 @@ class HouseController extends Controller
                 }
                 $feederNum = $sensor->feeder_number ?? 0;
                 if ($feederNum > 0) {
-                    $readingsByPen[$penId]['feeders'][$feederNum] = $readingData;
+                    $readingData['label'] = 'Feeder ' . $feederNum;
+                    $readingsByPen[$penId]['feeders'][$feederNum] = $this->newerSensorReading(
+                        $readingsByPen[$penId]['feeders'][$feederNum] ?? null,
+                        $readingData
+                    );
                 }
             } elseif ($sensorType === 'water' && $penId !== null) {
                 if (!isset($readingsByPen[$penId]['drinkers'])) {
@@ -625,9 +629,13 @@ class HouseController extends Controller
                 }
                 $drinkerNum = $sensor->drinker_number ?? 0;
                 if ($drinkerNum > 0) {
-                    $readingsByPen[$penId]['drinkers'][$drinkerNum] = $readingData;
+                    $readingData['label'] = 'Drinker ' . $drinkerNum;
+                    $readingsByPen[$penId]['drinkers'][$drinkerNum] = $this->newerSensorReading(
+                        $readingsByPen[$penId]['drinkers'][$drinkerNum] ?? null,
+                        $readingData
+                    );
                 }
-            } else {
+            } elseif ($reading) {
                 // Temperature and ammonia sensors
                 $readingsByHouse[$houseId][$sensorType] = $this->newerSensorReading(
                     $readingsByHouse[$houseId][$sensorType] ?? null,
@@ -648,20 +656,58 @@ class HouseController extends Controller
             $house->setAttribute('sensor_readings', $houseReadings);
 
             foreach ($house->pens as $pen) {
-                $penReadings = $this->sensorReadingDefaults($readingsByPen[(int) $pen->id] ?? []);
+                $penReadings = $this->sensorReadingDefaults(
+                    $readingsByPen[(int) $pen->id] ?? [],
+                    (int) ($pen->feeder_count ?? 0),
+                    (int) ($pen->drinker_count ?? 0)
+                );
                 $pen->setAttribute('sensor_readings', $penReadings);
             }
         }
     }
 
-    private function sensorReadingDefaults(array $readings): array
+    private function sensorReadingDefaults(array $readings, int $feederCount = 0, int $drinkerCount = 0): array
     {
         return [
             'temperature' => $readings['temperature'] ?? null,
             'ammonia' => $readings['ammonia'] ?? null,
-            'feeders' => $readings['feeders'] ?? [],
-            'drinkers' => $readings['drinkers'] ?? [],
+            'feeders' => $this->numberedResourceReadingDefaults(
+                $readings['feeders'] ?? [],
+                $feederCount,
+                'feed'
+            ),
+            'drinkers' => $this->numberedResourceReadingDefaults(
+                $readings['drinkers'] ?? [],
+                $drinkerCount,
+                'water'
+            ),
         ];
+    }
+
+    private function numberedResourceReadingDefaults(array $readings, int $configuredCount, string $sensorType): array
+    {
+        $labelPrefix = $sensorType === 'feed' ? 'Feeder' : 'Drinker';
+        $readingNumbers = array_filter(
+            array_map('intval', array_keys($readings)),
+            fn ($number) => $number > 0
+        );
+        $count = max($configuredCount, empty($readingNumbers) ? 0 : max($readingNumbers));
+        $defaults = [];
+
+        for ($number = 1; $number <= $count; $number++) {
+            $defaults[$number] = array_merge([
+                'label' => $labelPrefix . ' ' . $number,
+            ], $readings[$number] ?? [
+                'sensor_id' => null,
+                'sensor_name' => null,
+                'sensor_type' => $sensorType,
+                'value' => 0,
+                'formatted_value' => $this->formatSensorReadingValue($sensorType, null),
+                'recorded_at' => null,
+            ]);
+        }
+
+        return $defaults;
     }
 
     private function normalizeSensorReadingType(?string $type): ?string
@@ -703,10 +749,36 @@ class HouseController extends Controller
         }
 
         if ($type === 'feed' || $type === 'water') {
-            return number_format((float) $value, 0) . '%';
+            return number_format($this->resourceLevelPercent($value), 0) . '%';
         }
 
         return number_format((float) $value, 1) . ' ppm';
+    }
+
+    private function sensorReadingDisplayValue(string $type, $value): float
+    {
+        if ($value === null) {
+            return 0;
+        }
+
+        if ($type === 'feed' || $type === 'water') {
+            return $this->resourceLevelPercent($value);
+        }
+
+        return (float) $value;
+    }
+
+    private function resourceLevelPercent($value): float
+    {
+        $containerHeightInches = 8.5;
+
+        if ($containerHeightInches <= 0) {
+            return 0;
+        }
+
+        $percent = ((float) $value / $containerHeightInches) * 100;
+
+        return round(max(0, min(100, $percent)), 1);
     }
 
     private function newerSensorReading(?array $current, array $candidate): array

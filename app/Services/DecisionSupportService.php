@@ -129,13 +129,22 @@ class DecisionSupportService
                         $existingRec = null;
                     }
 
+                    // Gather current data for this pen.
+                    $dataSnapshot = $this->gatherHouseData($house, $pen);
+
+                    if (! $this->snapshotHasSensorReadings($dataSnapshot)) {
+                        if ($existingRec) {
+                            $existingRec->update(['status' => 'archived']);
+                        }
+
+                        Log::info("Decision support skipped for house {$house->id}, pen {$pen->id}: no current sensor readings.");
+                        continue;
+                    }
+
                     // If a valid recommendation exists and is not expired, skip.
                     if ($existingRec && $existingRec->expires_at > now()) {
                         continue;
                     }
-
-                    // Gather current data for this pen.
-                    $dataSnapshot = $this->gatherHouseData($house, $pen);
 
                     // Apply predefined rules before AI summarization.
                     $dataSnapshot['rule_decisions'] = $this->evaluateRules($dataSnapshot);
@@ -176,7 +185,8 @@ class DecisionSupportService
     {
         // Get all sensors for this pen with their configured thresholds.
         $sensorQuery = Sensor::with('configuration')
-            ->where('house_houseid', $house->id);
+            ->where('house_houseid', $house->id)
+            ->whereRaw("COALESCE(NULLIF(LOWER(TRIM(status)), ''), 'active') = 'active'");
 
         if ($pen) {
             $sensorQuery->where('pen_penid', $pen->id);
@@ -1257,6 +1267,13 @@ class DecisionSupportService
         return !isset($snapshot['flock'], $snapshot['environment'], $snapshot['resources'], $snapshot['thermal_status'], $snapshot['ammonia_status'], $snapshot['pen']);
     }
 
+    protected function snapshotHasSensorReadings(?array $snapshot): bool
+    {
+        return !empty($snapshot['sensors']) && collect($snapshot['sensors'])->contains(function ($sensor) {
+            return array_key_exists('value', $sensor) && is_numeric($sensor['value']);
+        });
+    }
+
     /**
      * Get latest active recommendation for a house
      */
@@ -1286,7 +1303,53 @@ class DecisionSupportService
                 $query->whereNull('archived_at');
             })
             ->orderBy('generated_at', 'desc')
-            ->get();
+            ->get()
+            ->filter(fn (DecisionSupportLog $recommendation) => $this->snapshotHasSensorReadings($recommendation->data_snapshot))
+            ->values();
+    }
+
+    public function currentCriticalSensorFindings(): array
+    {
+        $criticalFindings = [];
+
+        $houses = House::whereNull('archived_at')->get();
+
+        foreach ($houses as $house) {
+            $pens = $house->pens()
+                ->whereNull('archived_at')
+                ->orderBy('pen_name')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($pens as $pen) {
+                $dataSnapshot = $this->gatherHouseData($house, $pen);
+
+                if (! $this->snapshotHasSensorReadings($dataSnapshot)) {
+                    continue;
+                }
+
+                $ruleDecisions = $this->evaluateRules($dataSnapshot);
+
+                foreach ($ruleDecisions as $decision) {
+                    if (($decision['severity'] ?? null) !== 'critical') {
+                        continue;
+                    }
+
+                    $criticalFindings[] = [
+                        'house_id' => $house->id,
+                        'house_name' => $house->house_number ?? "House {$house->id}",
+                        'pen_id' => $pen->id,
+                        'pen_name' => $pen->pen_name ?? "Pen {$pen->id}",
+                        'category' => $decision['category'] ?? 'overall',
+                        'rule' => $decision['rule'] ?? '',
+                        'finding' => $decision['finding'] ?? '',
+                        'evidence' => $decision['evidence'] ?? '',
+                    ];
+                }
+            }
+        }
+
+        return $criticalFindings;
     }
 }
 

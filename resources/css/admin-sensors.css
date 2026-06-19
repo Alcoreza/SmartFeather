@@ -795,6 +795,11 @@ body {
     color: #fff;
 }
 
+.admin-sensor-toggle-btn.inactive {
+    background: linear-gradient(180deg, #64748b, #475569);
+    color: #fff;
+}
+
 .admin-sensor-toggle-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 22px rgba(10, 24, 15, 0.12);

@@ -93,11 +93,10 @@ function renderWorkersTable() {
     if (!filteredWorkers.length) {
         table.innerHTML = `
             <tr>
-                <td colspan="4" class="workers-empty-row">No employees match the selected filter.</td>
+                <td colspan="3" class="workers-empty-row">No employees match the selected filter.</td>
             </tr>
             ${Array.from({ length: WORKERS_ROWS_PER_PAGE - 1 }, () => `
                 <tr class="workers-placeholder-row" aria-hidden="true">
-                    <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
@@ -118,7 +117,6 @@ function renderWorkersTable() {
         return `
             <tr data-id="${escapeHtml(user.EmployeeId)}">
                 <td>${escapeHtml(fullName)}</td>
-                <td>${escapeHtml(user.EmployeeId)}</td>
                 <td>${escapeHtml(user.Role)}</td>
                 <td class="text-center">
                     <button class="view-worker-btn icon-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
@@ -132,7 +130,6 @@ function renderWorkersTable() {
         `;
     }).join('') + Array.from({ length: placeholderRows }, () => `
         <tr class="workers-placeholder-row" aria-hidden="true">
-            <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>

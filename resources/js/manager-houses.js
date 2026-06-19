@@ -592,7 +592,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const currentHouse = houses[activeHouseIndex];
         const currentPen = currentHouse?.pens?.[activePenIndex];
-        const hasActiveBatch = Boolean(currentPen?.batch?.toString().trim());
+        const hasActiveBatch = penHasActiveBatch(currentPen);
 
         endBatchButton.disabled = !hasActiveBatch;
         endBatchButton.setAttribute("aria-disabled", String(!hasActiveBatch));
@@ -601,15 +601,36 @@ document.addEventListener("DOMContentLoaded", async () => {
             : "No active batch to end";
     }
 
+    function penHasActiveBatch(pen) {
+        const hasBatchCode = Boolean(pen?.batch?.toString().trim());
+        const isRunning = String(pen?.status || "").toLowerCase() === "running";
+
+        return hasBatchCode || isRunning;
+    }
+
+    function houseHasActiveBatch(house) {
+        return (house?.pens || []).some((pen) => penHasActiveBatch(pen));
+    }
+
     function updateHouseActionButtonState() {
-        const hasHouse = Boolean(houses[activeHouseIndex]);
+        const currentHouse = houses[activeHouseIndex];
+        const hasHouse = Boolean(currentHouse);
+        const hasActiveBatch = houseHasActiveBatch(currentHouse);
 
-        [editHouseButton, archiveHouseButton].forEach((button) => {
-            if (!button) return;
+        if (editHouseButton) {
+            editHouseButton.disabled = !hasHouse;
+            editHouseButton.setAttribute("aria-disabled", String(!hasHouse));
+        }
 
-            button.disabled = !hasHouse;
-            button.setAttribute("aria-disabled", String(!hasHouse));
-        });
+        if (archiveHouseButton) {
+            const shouldDisableArchive = !hasHouse || hasActiveBatch;
+
+            archiveHouseButton.disabled = shouldDisableArchive;
+            archiveHouseButton.setAttribute("aria-disabled", String(shouldDisableArchive));
+            archiveHouseButton.title = hasActiveBatch
+                ? "End all active batches before archiving this house"
+                : "Archive this house";
+        }
 
         updateEndBatchButtonState();
     }
@@ -661,6 +682,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     function openArchiveModal() {
         const currentHouse = houses[activeHouseIndex];
         if (!currentHouse || !archiveHouseModal) return;
+
+        if (houseHasActiveBatch(currentHouse)) {
+            return;
+        }
 
         if (archiveHouseMessage) {
             archiveHouseMessage.textContent = `Archive ${currentHouse.name}? It will be hidden from active house lists, but its data will remain saved.`;
@@ -772,17 +797,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function buildInfoCards(cards) {
         return cards
-            .map(
-                (card) => `
+            .map((card) => {
+                const detailsHtml = Array.isArray(card.details)
+                    ? card.details
+                          .filter((detail) => detail !== undefined && detail !== null && String(detail).trim() !== "")
+                          .map((detail) => `<div class="info-subtitle">${escapeHtml(detail)}</div>`)
+                          .join("")
+                    : card.detail !== undefined && card.detail !== null && String(card.detail).trim() !== ""
+                      ? `
+                    <div class="info-value">${escapeHtml(card.value)}</div>
+                    <div class="info-subtitle">${escapeHtml(card.detail)}</div>`
+                      : `<div class="info-value">${escapeHtml(card.value)}</div>`;
+
+                return `
             <article class="info-card card-animate">
                 <div class="info-text">
                     <div class="info-title">${escapeHtml(card.label)}</div>
-                    <div class="info-value">${escapeHtml(card.value)}</div>
-                    <div class="info-subtitle">${escapeHtml(card.detail)}</div>
+                    ${detailsHtml}
                 </div>
             </article>
-        `,
-            )
+        `;
+            })
             .join("");
     }
 
@@ -1160,14 +1195,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                                     value:
                                         weightSamplingLog?.status ||
                                         "No weight sampling",
-                                    detail: weightSamplingLogDetail,
+                                    detail: weightSamplingLog
+                                        ? weightSamplingLogDetail
+                                        : "",
                                     accent: "green",
                                 },
                                 {
                                     icon: "📊",
                                     label: "Hatch & Mortality",
-                                    value: pen.eggs_hatched || 0,
-                                    detail: `${pen.mortality || 0} mortality recorded`,
+                                    details: [
+                                        `${pen.eggs_hatched || 0} eggs recorded`,
+                                        `${pen.mortality || 0} mortality recorded`,
+                                    ],
                                     accent: "orange",
                                 },
                             ],

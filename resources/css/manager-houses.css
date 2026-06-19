@@ -1056,6 +1056,23 @@
     box-shadow: 0 10px 20px rgba(200, 35, 51, 0.22);
 }
 
+#endBatchModal .modal-actions {
+    margin-top: 28px;
+    gap: 12px;
+}
+
+#endBatchModal .cancel-btn,
+#endBatchModal .delete-btn {
+    min-width: 96px;
+    padding: 9px 22px;
+    font-size: 0.96rem;
+    line-height: 1.15;
+}
+
+#endBatchModal .delete-btn {
+    box-shadow: 0 5px 12px rgba(220, 53, 69, 0.16);
+}
+
 .edit-data-modal .modal-header {
     margin-bottom: 14px;
     padding-bottom: 14px;

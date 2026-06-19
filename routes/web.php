@@ -90,13 +90,21 @@ Route::middleware(['web', 'auth.session', 'check.role:Admin', 'prevent.cache'])-
 if (! function_exists('dashboardMonitoringGraphsData')) {
     function dashboardMonitoringGraphsData(): array
     {
-        $days = collect(range(6, 0))->map(fn ($offset) => now()->subDays($offset)->startOfDay());
+        $weekStart = now()->startOfWeek(\Carbon\CarbonInterface::SUNDAY);
+        $days = collect(range(0, 6))->map(fn ($offset) => $weekStart->copy()->addDays($offset)->startOfDay());
         $dayKeys = $days->map(fn ($day) => $day->toDateString())->all();
         $dayLabels = $days->map(fn ($day) => $day->format('D'))->all();
         $seriesColors = ['#17643a', '#b7791f', '#2563eb', '#a855f7', '#dc2626', '#0891b2', '#4d7c0f', '#be185d'];
 
         $houses = \App\Models\House::query()
             ->whereNull('archived_at')
+            ->whereHas('pens', function ($query) {
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
+            })
             ->orderBy('id', 'asc')
             ->get(['id', 'house_number']);
 
@@ -110,9 +118,11 @@ if (! function_exists('dashboardMonitoringGraphsData')) {
                     $join->on('s.pen_penid', '=', 'p.id')
                         ->on('s.house_houseid', '=', 'p.house_id');
                 })
+                ->join('flock_batches as fb', 'p.current_batch_id', '=', 'fb.id')
                 ->whereRaw("LOWER(TRIM(s.status)) = 'active'")
                 ->whereNull('h.archived_at')
                 ->whereNull('p.archived_at')
+                ->where('fb.status', 'Running')
                 ->whereNotNull('s.pen_penid')
                 ->whereBetween('sr.recorded_at', [$days->first()->copy()->startOfDay(), $days->last()->copy()->endOfDay()])
                 ->select('s.house_houseid', 's.pen_penid', 's.sensortype', 'sr.value', 'sr.recorded_at')
@@ -224,10 +234,21 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
     try {
         $houses = \App\Models\House::with([
             'pens' => function ($query) {
-                $query->whereNull('archived_at');
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
             }
         ])
             ->whereNull('archived_at')
+            ->whereHas('pens', function ($query) {
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
+            })
             ->orderBy('id', 'asc')
             ->get();
 
@@ -318,10 +339,21 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
     try {
         $houses = \App\Models\House::with([
             'pens' => function ($query) {
-                $query->whereNull('archived_at');
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
             }
         ])
             ->whereNull('archived_at')
+            ->whereHas('pens', function ($query) {
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
+            })
             ->orderBy('id', 'asc')
             ->get();
 

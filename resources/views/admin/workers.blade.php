@@ -50,14 +50,12 @@
                 <table class="admin-workers-table">
                     <colgroup>
                         <col class="admin-workers-name-col">
-                        <col class="admin-workers-id-col">
                         <col class="admin-workers-role-col">
                         <col class="admin-workers-actions-col">
                     </colgroup>
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>ID</th>
                             <th>Role</th>
                             <th class="text-center">Actions</th>
                         </tr>

@@ -242,6 +242,21 @@ class HouseController extends Controller
                 ], 404);
             }
 
+            $hasActiveBatch = Pen::where('house_id', $house->id)
+                ->whereNull('archived_at')
+                ->whereNotNull('current_batch_id')
+                ->whereHas('currentBatch', function ($query) {
+                    $query->where('status', 'Running');
+                })
+                ->exists();
+
+            if ($hasActiveBatch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'End all active batches before archiving this house.'
+                ], 422);
+            }
+
             DB::transaction(function () use ($house) {
                 $archivedAt = now();
 
@@ -258,6 +273,14 @@ class HouseController extends Controller
                 Sensor::where('house_houseid', $house->id)
                     ->update([
                         'status' => 'Inactive',
+                    ]);
+
+                DB::table('decision_support_logs')
+                    ->where('house_id', $house->id)
+                    ->where('status', 'active')
+                    ->update([
+                        'status' => 'archived',
+                        'updated_at' => $archivedAt,
                     ]);
             });
 

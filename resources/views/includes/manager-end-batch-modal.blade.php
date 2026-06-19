@@ -24,7 +24,7 @@
 
             <div class="modal-actions">
                 <button type="button" class="cancel-btn" id="cancelEndBatchModal">Cancel</button>
-                <button type="submit" class="delete-btn">End Batch</button>
+                <button type="submit" class="delete-btn">End</button>
             </div>
         </form>
     </div>

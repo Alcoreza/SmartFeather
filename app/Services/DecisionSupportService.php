@@ -95,13 +95,35 @@ class DecisionSupportService
             }
 
             foreach ($houses as $house) {
+                $runningPenIds = $house->pens()
+                    ->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($query) {
+                        $query->where('status', 'Running');
+                    })
+                    ->pluck('id');
+
+                DecisionSupportLog::forHouse($house->id)
+                    ->active()
+                    ->whereNotNull('pen_id')
+                    ->whereNotIn('pen_id', $runningPenIds)
+                    ->update(['status' => 'archived']);
+
                 $pens = $house->pens()
                     ->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($query) {
+                        $query->where('status', 'Running');
+                    })
                     ->orderBy('pen_name')
                     ->orderBy('id')
                     ->get();
 
                 if ($pens->isEmpty()) {
+                    DecisionSupportLog::forHouse($house->id)
+                        ->active()
+                        ->update(['status' => 'archived']);
+
                     Log::info("No active pens found for decision support in house {$house->id}");
                     continue;
                 }
@@ -1300,7 +1322,11 @@ class DecisionSupportService
                 $query->whereNull('archived_at');
             })
             ->whereHas('pen', function ($query) {
-                $query->whereNull('archived_at');
+                $query->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
             })
             ->orderBy('generated_at', 'desc')
             ->get()
@@ -1317,6 +1343,10 @@ class DecisionSupportService
         foreach ($houses as $house) {
             $pens = $house->pens()
                 ->whereNull('archived_at')
+                ->whereNotNull('current_batch_id')
+                ->whereHas('currentBatch', function ($query) {
+                    $query->where('status', 'Running');
+                })
                 ->orderBy('pen_name')
                 ->orderBy('id')
                 ->get();

@@ -44,14 +44,12 @@
                     <table class="workers-table">
                         <colgroup>
                             <col class="workers-name-col">
-                            <col class="workers-id-col">
                             <col class="workers-role-col">
                             <col class="workers-actions-col">
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>ID</th>
                                 <th>Role</th>
                                 <th class="text-center">Actions</th>
                             </tr>

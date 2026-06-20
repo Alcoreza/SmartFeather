@@ -678,10 +678,10 @@ Route::get('/api/manager/tasks/all-workers', [TaskController::class, 'getAllWork
 |--------------------------------------------------------------------------
 */
 
-Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
-
-Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
-Route::view('/manager/sensors/maintenance-records', 'manager.sensor-maintenance')->name('manager.sensor-maintenance');
+Route::middleware(['web', 'auth.session', 'check.role:Manager', 'prevent.cache'])->group(function () {
+    Route::view('/manager/sensors', 'manager.sensors')->name('manager.sensors');
+    Route::view('/manager/sensors/maintenance-records', 'manager.sensor-maintenance')->name('manager.sensor-maintenance');
+});
 
 Route::get('/api/manager/sensors', [SensorController::class, 'index']);
 Route::get('/api/manager/sensors/readings', [SensorController::class, 'sensorReadings']);
@@ -689,8 +689,10 @@ Route::get('/api/manager/sensors/health', [SensorController::class, 'sensorHealt
 
 Route::get('/api/manager/sensors/maintenance-records', [SensorController::class, 'managerMaintenanceRecords']);
 
-Route::view('/admin/sensors', 'admin.sensors')->name('admin.sensors');
-Route::view('/admin/sensors/maintenance-records', 'admin.sensor-maintenance')->name('admin.sensor-maintenance');
+Route::middleware(['web', 'auth.session', 'check.role:Admin', 'prevent.cache'])->group(function () {
+    Route::view('/admin/sensors', 'admin.sensors')->name('admin.sensors');
+    Route::view('/admin/sensors/maintenance-records', 'admin.sensor-maintenance')->name('admin.sensor-maintenance');
+});
 
 Route::prefix('api/admin/sensors')->group(function () {
     Route::get('/', [SensorController::class, 'index']);
@@ -709,8 +711,10 @@ Route::prefix('api/admin/sensors')->group(function () {
 
 Route::get('/api/admin/sensors/maintenance-records', [SensorController::class, 'adminMaintenanceRecords']);
 
-Route::view('/manager/biosecurity-logs', 'manager.biosecurity-logs')
-    ->name('manager.biosecurity-logs');
+Route::middleware(['web', 'auth.session', 'check.role:Manager', 'prevent.cache'])->group(function () {
+    Route::view('/manager/biosecurity-logs', 'manager.biosecurity-logs')
+        ->name('manager.biosecurity-logs');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -724,9 +728,11 @@ Route::post('/api/manager/biosecurity-logs/visitor-photo', [BiosecurityLogContro
 Route::put('/api/manager/biosecurity-logs/{id}', [BiosecurityLogController::class, 'update']);
 Route::delete('/api/manager/biosecurity-logs/{id}', [BiosecurityLogController::class, 'destroy']);
 
-Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
+Route::middleware(['web', 'auth.session', 'check.role:Manager', 'prevent.cache'])->group(function () {
+    Route::view('/manager/reports', 'manager.reports')->name('manager.reports');
+    Route::get('/manager/reports/generate', [ReportsController::class, 'generate'])->name('manager.reports.generate');
+});
 Route::get('/api/manager/reports', [ReportsController::class, 'index']);
-Route::get('/manager/reports/generate', [ReportsController::class, 'generate'])->name('manager.reports.generate');
 
 Route::get('/api/manager/farm-activity/pens', [FarmActivityController::class, 'pens']);
 Route::get('/api/manager/farm-activity/weight-sampling-logs', [FarmActivityController::class, 'weightSamplingLogs']);

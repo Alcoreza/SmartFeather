@@ -50,6 +50,7 @@ class SensorController extends Controller
 
                         $status = $this->normalizeSensorStatus($status);
                         $isInactive = $status === 'Inactive';
+                        $usesLiveReading = $status === 'Active';
 
                         // ✅ latest reading
                         $latestValue = $sensor->latestReading?->value;
@@ -63,11 +64,11 @@ class SensorController extends Controller
                             'drinker_number' => $isInactive ? null : $sensor->drinker_number,
 
                             // ✅ VALUE FIELDS
-                            'value' => $latestValue,
-                            'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
+                            'value' => $usesLiveReading ? $latestValue : null,
+                            'formatted_value' => $this->formatSensorValue($sensor->sensortype, $usesLiveReading ? $latestValue : null),
 
                             // ✅ FIX: expose timestamp
-                            'timestamp' => $sensor->latestReading?->recorded_at,
+                            'timestamp' => $usesLiveReading ? $sensor->latestReading?->recorded_at : null,
 
                             'status' => $status,
                             'house_id' => $isInactive ? null : $sensor->house?->id,
@@ -747,6 +748,7 @@ class SensorController extends Controller
             $latestValue = $sensor->latestReading?->value;
             $status = $this->normalizeSensorStatus($this->effectiveSensorStatus($sensor));
             $isInactive = $status === 'Inactive';
+            $usesLiveReading = $status === 'Active';
 
             return [
                 'sensor_id' => $sensor->sensorid,
@@ -756,9 +758,10 @@ class SensorController extends Controller
                 'pen_number' => $isInactive ? '' : $this->formatPenNumber($sensor->pen?->pen_name),
                 'feeder_number' => $isInactive ? null : $sensor->feeder_number,
                 'drinker_number' => $isInactive ? null : $sensor->drinker_number,
-                'value' => $latestValue,
-                'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
-                'recorded_at' => $sensor->latestReading?->recorded_at,
+                'value' => $usesLiveReading ? $latestValue : null,
+                'formatted_value' => $this->formatSensorValue($sensor->sensortype, $usesLiveReading ? $latestValue : null),
+                'recorded_at' => $usesLiveReading ? $sensor->latestReading?->recorded_at : null,
+                'status' => $status,
                 'lowest_threshold' => $sensor->configuration?->lowestthreshold,
                 'highest_threshold' => $sensor->configuration?->highestthreshold,
             ];
@@ -792,10 +795,11 @@ class SensorController extends Controller
             }
             $status = $this->normalizeSensorStatus($status);
             $isInactive = $status === 'Inactive';
+            $usesLiveReading = $status === 'Active';
 
             // Determine alert level based on thresholds
             $alertLevel = 'normal'; // normal, warning, critical
-            if ($latestValue !== null && $config) {
+            if ($usesLiveReading && $latestValue !== null && $config) {
                 if ($latestValue < $config->lowestthreshold || $latestValue > $config->highestthreshold) {
                     $alertLevel = 'critical';
                 } elseif (
@@ -808,7 +812,7 @@ class SensorController extends Controller
 
             // Check if sensor is stale (no readings in 30 minutes)
             $isStaleFeed = false;
-            if ($latestReading) {
+            if ($usesLiveReading && $latestReading) {
                 $lastReadingMinutesAgo = $latestReading->recorded_at->diffInMinutes(now());
                 $isStaleFeed = $lastReadingMinutesAgo > 30;
             }
@@ -821,15 +825,15 @@ class SensorController extends Controller
                 'pen_number' => $isInactive ? '' : $this->formatPenNumber($sensor->pen?->pen_name),
                 'feeder_number' => $isInactive ? null : $sensor->feeder_number,
                 'drinker_number' => $isInactive ? null : $sensor->drinker_number,
-                'current_value' => $latestValue,
-                'formatted_value' => $this->formatSensorValue($sensor->sensortype, $latestValue),
+                'current_value' => $usesLiveReading ? $latestValue : null,
+                'formatted_value' => $this->formatSensorValue($sensor->sensortype, $usesLiveReading ? $latestValue : null),
                 'lowest_threshold' => $config?->lowestthreshold,
                 'highest_threshold' => $config?->highestthreshold,
                 'status' => $status,
                 'alert_level' => $alertLevel,
                 'is_stale' => $isStaleFeed,
-                'last_reading_at' => $latestReading?->recorded_at,
-                'minutes_since_last_reading' => $latestReading ? $latestReading->recorded_at->diffInMinutes(now()) : null,
+                'last_reading_at' => $usesLiveReading ? $latestReading?->recorded_at : null,
+                'minutes_since_last_reading' => $usesLiveReading && $latestReading ? $latestReading->recorded_at->diffInMinutes(now()) : null,
             ];
         });
 

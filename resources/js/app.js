@@ -1,4 +1,69 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const LOGGED_OUT_FLAG = "smartfeather:logged-out";
+
+    function isProtectedAppPage() {
+        return window.location.pathname.startsWith("/manager/")
+            || window.location.pathname.startsWith("/admin/");
+    }
+
+    function hideProtectedPage() {
+        if (isProtectedAppPage()) {
+            document.documentElement.style.visibility = "hidden";
+        }
+    }
+
+    function showProtectedPage() {
+        document.documentElement.style.visibility = "";
+    }
+
+    async function redirectIfSessionExpired(options = {}) {
+        if (!isProtectedAppPage()) return;
+
+        if (options.hideWhileChecking) {
+            hideProtectedPage();
+        }
+
+        if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") {
+            window.location.replace("/login");
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/user", {
+                headers: {
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                cache: "no-store",
+                credentials: "same-origin",
+            });
+
+            if (response.status === 401) {
+                sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
+                window.location.replace("/login");
+                return;
+            }
+
+            showProtectedPage();
+        } catch (error) {
+            console.error("Session check failed.", error);
+            window.location.replace("/login");
+        }
+    }
+
+    window.addEventListener("pagehide", () => {
+        hideProtectedPage();
+    });
+
+    window.addEventListener("pageshow", (event) => {
+        const navigationEntry = performance.getEntriesByType("navigation")[0];
+        const restoredFromHistory = event.persisted || navigationEntry?.type === "back_forward";
+
+        if (restoredFromHistory) {
+            redirectIfSessionExpired({ hideWhileChecking: true });
+        }
+    });
+
     document.querySelectorAll(".sidebar-nav, .admin-sidebar-nav").forEach((nav) => {
         let scrollTimer = null;
 
@@ -172,6 +237,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     confirmLogoutBtn?.addEventListener("click", () => {
         if (pendingLogoutUrl) {
+            sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
+            hideProtectedPage();
             window.location.href = pendingLogoutUrl;
         }
     });

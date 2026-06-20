@@ -103,6 +103,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             return;
         }
 
+        sessionStorage.removeItem('smartfeather:logged-out');
+
         if (data.user.Role === 'Admin') {
             // Use replace() instead of href to replace history entry
             window.location.replace('/admin/dashboard');

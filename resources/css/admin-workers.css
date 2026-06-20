@@ -85,29 +85,41 @@
 }
 
 .admin-workers-card {
-    min-height: 500px;
+    height: 585px;
     padding: 18px 18px 28px;
-    border: 1px solid rgba(10, 51, 27, 0.06);
+    border: 1px solid var(--admin-green-700);
     border-radius: 34px;
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.96),
-        rgba(248, 250, 248, 0.94)
-    );
-    box-shadow:
-        0 20px 48px rgba(10, 24, 15, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(10px);
+    background: var(--admin-panel-bg);
+    box-shadow: var(--admin-shadow-soft);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
 }
 
 .admin-workers-table-wrap {
     overflow-x: auto;
+    overflow-y: hidden;
+    flex: 1;
+    min-height: 0;
 }
 
 .admin-workers-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: separate;
-    border-spacing: 0 12px;
+    border-spacing: 0 10px;
+}
+
+.admin-workers-name-col {
+    width: 52%;
+}
+
+.admin-workers-role-col {
+    width: 24%;
+}
+
+.admin-workers-actions-col {
+    width: 24%;
 }
 
 .admin-workers-table thead th {
@@ -126,25 +138,34 @@
 }
 
 .admin-workers-table tbody td {
+    height: 62px;
     padding: 14px 12px;
     font-size: 1.02rem;
     color: var(--admin-text-main);
-    background: linear-gradient(
-        180deg,
-        rgba(252, 252, 252, 0.98),
-        rgba(246, 248, 246, 0.96)
-    );
-    box-shadow: 0 10px 22px rgba(10, 24, 15, 0.04);
+    background: rgba(250, 251, 250, 0.94);
 }
 
 .admin-workers-table tbody td:first-child {
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
 }
 
 .admin-workers-table tbody td:last-child {
-    border-top-right-radius: 18px;
-    border-bottom-right-radius: 18px;
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
+
+.admin-workers-placeholder-row td {
+    background: transparent;
+    color: transparent;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+.admin-workers-empty-row {
+    text-align: center;
+    font-weight: 700;
+    color: var(--admin-text-soft) !important;
 }
 
 .admin-worker-action-group {
@@ -188,6 +209,74 @@
 
 .admin-delete-btn {
     background: linear-gradient(180deg, #d53129, #bf1c16);
+}
+
+/* Pagination */
+.admin-workers-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid rgba(10, 51, 27, 0.08);
+}
+
+.admin-workers-pagination.is-hidden {
+    visibility: hidden;
+}
+
+.admin-workers-page-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(10, 51, 27, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #0a3319;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.admin-workers-page-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4a9b5e, #398a4c);
+    color: #fff;
+    border-color: rgba(58, 138, 76, 0.6);
+    box-shadow: 0 4px 12px rgba(58, 138, 76, 0.15);
+}
+
+.admin-workers-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.admin-workers-page-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin-workers-page-dot {
+    width: 10px;
+    height: 10px;
+    border: 1px solid rgba(58, 138, 76, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.admin-workers-page-dot:hover {
+    background: rgba(58, 138, 76, 0.2);
+    border-color: rgba(58, 138, 76, 0.6);
+}
+
+.admin-workers-page-dot.active {
+    background: linear-gradient(135deg, #4a9b5e, #398a4c);
+    border-color: rgba(58, 138, 76, 0.6);
+    box-shadow: 0 2px 6px rgba(58, 138, 76, 0.2);
 }
 
 .admin-worker-modal-backdrop {
@@ -417,5 +506,118 @@
     .admin-worker-modal-card {
         padding: 20px 18px 22px;
         border-radius: 24px;
+    }
+}
+
+.admin-workers-topbar,
+.admin-workers-divider,
+.admin-workers-toolbar,
+.admin-workers-card {
+    animation: adminWorkersFadeUp 0.5s ease both;
+}
+
+.admin-workers-topbar {
+    animation-delay: 0.03s;
+}
+
+.admin-workers-divider {
+    animation-delay: 0.08s;
+}
+
+.admin-workers-toolbar {
+    animation-delay: 0.13s;
+}
+
+.admin-workers-card {
+    animation-delay: 0.18s;
+}
+
+.admin-workers-table tbody tr {
+    animation: adminWorkersRowIn 0.34s ease both;
+}
+
+.admin-workers-table tbody tr:nth-child(1) {
+    animation-delay: 0.22s;
+}
+
+.admin-workers-table tbody tr:nth-child(2) {
+    animation-delay: 0.25s;
+}
+
+.admin-workers-table tbody tr:nth-child(3) {
+    animation-delay: 0.28s;
+}
+
+.admin-workers-table tbody tr:nth-child(4) {
+    animation-delay: 0.31s;
+}
+
+.admin-workers-table tbody tr:nth-child(5) {
+    animation-delay: 0.34s;
+}
+
+.admin-worker-modal-backdrop.show,
+.admin-worker-modal-backdrop[style*="display: flex"] {
+    animation: adminWorkersBackdropIn 0.18s ease both;
+}
+
+.admin-worker-modal-backdrop.show .admin-worker-modal-card,
+.admin-worker-modal-backdrop[style*="display: flex"] .admin-worker-modal-card {
+    animation: adminWorkersModalIn 0.24s ease both;
+}
+
+@keyframes adminWorkersFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes adminWorkersRowIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes adminWorkersBackdropIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes adminWorkersModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-workers-topbar,
+    .admin-workers-divider,
+    .admin-workers-toolbar,
+    .admin-workers-card,
+    .admin-workers-table tbody tr,
+    .admin-worker-modal-backdrop.show,
+    .admin-worker-modal-backdrop[style*="display: flex"],
+    .admin-worker-modal-backdrop.show .admin-worker-modal-card,
+    .admin-worker-modal-backdrop[style*="display: flex"] .admin-worker-modal-card {
+        animation: none;
     }
 }

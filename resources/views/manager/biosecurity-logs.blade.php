@@ -30,47 +30,32 @@
 
                 <div class="bio-overview-grid">
                     <article class="bio-stat-card">
-                        <div class="bio-stat-icon">
-                            <img src="{{ asset('images/biosecurity/violation.png') }}" alt="Violation Icon">
+                        <div class="bio-stat-icon personnel" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9.5" cy="7" r="4"></circle>
+                                <path d="m16 11 2 2 4-4"></path>
+                            </svg>
                         </div>
 
                         <div class="bio-stat-content">
-                            <div class="bio-stat-label">Violations:</div>
-                            <div class="bio-stat-value" id="bioViolations">2</div>
+                            <div class="bio-stat-label">Personnel Entered</div>
+                            <div class="bio-stat-value" id="bioPersonnelEntered">0</div>
                         </div>
                     </article>
 
                     <article class="bio-stat-card">
-                        <div class="bio-stat-icon">
-                            <img src="{{ asset('images/biosecurity/disinfection.png') }}" alt="Disinfection Icon">
-                        </div>
-
-                        <div class="bio-stat-content stacked">
-                            <div class="bio-stat-label">Last Disinfection</div>
-                            <div class="bio-mini-text" id="bioDisinfectionDate">1-21-26</div>
-                            <div class="bio-mini-text" id="bioDisinfectionTime">11:58 AM</div>
-                        </div>
-                    </article>
-
-                    <article class="bio-stat-card">
-                        <div class="bio-stat-icon">
-                            <img src="{{ asset('images/biosecurity/visitor.png') }}" alt="Visitor Icon">
+                        <div class="bio-stat-icon visitor" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="m17 11 2 2 4-4"></path>
+                            </svg>
                         </div>
 
                         <div class="bio-stat-content">
-                            <div class="bio-stat-label">Visitors:</div>
-                            <div class="bio-stat-value" id="bioVisitors">1</div>
-                        </div>
-                    </article>
-
-                    <article class="bio-stat-card">
-                        <div class="bio-stat-icon">
-                            <img src="{{ asset('images/biosecurity/mortality.png') }}" alt="Mortality Icon">
-                        </div>
-
-                        <div class="bio-stat-content">
-                            <div class="bio-stat-label">Mortalities:</div>
-                            <div class="bio-stat-value" id="bioMortalities">1</div>
+                            <div class="bio-stat-label">Visitors Entered</div>
+                            <div class="bio-stat-value" id="bioVisitorsEntered">0</div>
                         </div>
                     </article>
                 </div>
@@ -146,7 +131,7 @@
                     </div>
                 </div>
 
-                <button type="button" class="bio-circle-btn add" id="openAddBioModal" aria-label="Add log">
+                <button type="button" class="bio-circle-btn add" id="openAddBioModal" aria-label="Add log" hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
                         <path d="M12 5v14"></path>
                         <path d="M5 12h14"></path>

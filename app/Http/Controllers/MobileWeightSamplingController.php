@@ -12,16 +12,9 @@ class MobileWeightSamplingController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -34,6 +27,7 @@ class MobileWeightSamplingController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -88,8 +82,10 @@ class MobileWeightSamplingController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
+            'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
             'number_of_flocks' => 'required|integer|min:1',
@@ -97,16 +93,61 @@ class MobileWeightSamplingController extends Controller
             'target_weight' => 'required|numeric|min:0.01',
             'weights' => 'required|array|min:1',
             'weights.*' => 'required|numeric|min:0.01',
-            'recorded_date' => 'required|date',
-            'recorded_time' => 'required|date_format:H:i:s',
+            'recorded_at' => 'nullable|date',
+            'recorded_date' => 'nullable|date',
+            'recorded_time' => 'nullable|date_format:H:i:s',
         ]);
 
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
+        if (count($validated['weights']) !== (int) $validated['number_of_flocks']) {
+            return response()->json([
+                'message' => 'Weight count must match number of flocks.'
+            ], 422);
+        }
+
+        if ((int) $validated['flocks_with_cases'] > (int) $validated['number_of_flocks']) {
+            return response()->json([
+                'message' => 'Flocks with cases cannot be greater than the number of flocks sampled.'
+            ], 422);
+        }
+
+        if (!empty($validated['task_id'])) {
+            $task = DB::table('tasks')
+                ->where('taskid', $validated['task_id'])
+                ->where('user_employeeid', $employeeId)
+                ->first();
+
+            if (!$task) {
+                return response()->json([
+                    'message' => 'Selected task was not found for this employee.'
+                ], 404);
+            }
+
+            if (strtolower((string) $task->status) !== 'pending') {
+                return response()->json([
+                    'message' => 'This task is no longer pending.'
+                ], 422);
+            }
+
+            if (!$this->isWeightMonitoringTask((string) $task->tasktype)) {
+                return response()->json([
+                    'message' => 'This task is not a weight monitoring task.'
+                ], 422);
+            }
+
+            if ((int) $task->house_houseid !== (int) $validated['house_id']) {
+                return response()->json([
+                    'message' => 'Selected house does not match the assigned task house.'
+                ], 403);
+            }
+
+            if ((int) $task->pennumber !== (int) $validated['pen_id']) {
+                return response()->json([
+                    'message' => 'Selected pen does not match the assigned task pen.',
+                ], 403);
+            }
+        }
+
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -114,27 +155,26 @@ class MobileWeightSamplingController extends Controller
             ], 403);
         }
 
-        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+        $biosecurityQuery = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->orderByDesc('id')
-            ->first();
+            ->where('employee_id', $employeeId)
+            ->where('house_id', $validated['house_id'])
+            ->orderByDesc('id');
+
+        if (!empty($validated['task_id'])) {
+            $biosecurityQuery
+                ->where('task_id', $validated['task_id'])
+                ->where('pen_id', $validated['pen_id']);
+        }
+
+        $latestBiosecurity = $biosecurityQuery->first();
 
         if (!$latestBiosecurity) {
             return response()->json([
-                'message' => 'Please submit the personnel biosecurity form first before recording weight sampling.'
+                'message' => !empty($validated['task_id'])
+                    ? 'Please complete personnel biosecurity for this assigned task before recording weight monitoring.'
+                    : 'Please submit the personnel biosecurity form first before recording weight sampling.'
             ], 403);
-        }
-
-        if ((int) $latestBiosecurity->house_id !== (int) $validated['house_id']) {
-            return response()->json([
-                'message' => 'You can only record weight sampling for the house selected in your personnel biosecurity form.'
-            ], 403);
-        }
-
-        if (count($validated['weights']) !== (int) $validated['number_of_flocks']) {
-            return response()->json([
-                'message' => 'Weight count must match number of flocks.'
-            ], 422);
         }
 
         $pen = Pen::with('currentBatch')
@@ -155,7 +195,14 @@ class MobileWeightSamplingController extends Controller
         }
 
         $house = House::find($validated['house_id']);
-        $recordedAt = Carbon::parse($validated['recorded_date'] . ' ' . $validated['recorded_time']);
+        $recordedAt = $this->resolveRecordedAt($validated);
+
+        if (!$recordedAt) {
+            return response()->json([
+                'message' => 'Please provide a valid recorded date and time.'
+            ], 422);
+        }
+
         $startedAt = Carbon::parse($pen->currentBatch->started_at);
 
         if ($recordedAt->lt($startedAt)) {
@@ -170,14 +217,21 @@ class MobileWeightSamplingController extends Controller
         $average = round(array_sum($weights) / count($weights), 2);
         $targetValue = round((float) $validated['target_weight'], 2);
 
+        $normalMarginPercent = 3;
+        $lowerNormalLimit = $targetValue * (1 - ($normalMarginPercent / 100));
+        $upperNormalLimit = $targetValue * (1 + ($normalMarginPercent / 100));
+
         $status = match (true) {
-            $average < $targetValue => 'Underweight',
-            $average > $targetValue => 'Overweight',
+            $average < $lowerNormalLimit => 'Underweight',
+            $average > $upperNormalLimit => 'Overweight',
             default => 'Normal',
         };
 
         DB::transaction(function () use ($validated, $weights, $average, $targetValue, $status, $house, $pen, $recordedAt, $ageDays) {
             $logId = DB::table('weight_sampling_logs')->insertGetId([
+                'task_id' => $validated['task_id'] ?? null,
+                'house_id' => $validated['house_id'],
+                'pen_id' => $validated['pen_id'],
                 'date' => $recordedAt->toDateString(),
                 'time' => $recordedAt->format('H:i:s'),
                 'house' => $house?->house_number,
@@ -214,5 +268,36 @@ class MobileWeightSamplingController extends Controller
             'age_days' => $ageDays,
             'batch_code' => $pen->currentBatch?->batch_code,
         ]);
+    }
+
+    private function latestEntryLog(int $employeeId)
+    {
+        return DB::table('personnel_entry_logs')
+            ->where('employee_id', $employeeId)
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function resolveRecordedAt(array $validated): ?Carbon
+    {
+        if (!empty($validated['recorded_at'])) {
+            return Carbon::parse($validated['recorded_at']);
+        }
+
+        if (!empty($validated['recorded_date']) && !empty($validated['recorded_time'])) {
+            return Carbon::parse($validated['recorded_date'] . ' ' . $validated['recorded_time']);
+        }
+
+        return null;
+    }
+
+    private function isWeightMonitoringTask(string $taskType): bool
+    {
+        $normalized = strtolower(trim($taskType));
+
+        return $normalized === 'weight monitoring' ||
+            str_contains($normalized, 'weight') && str_contains($normalized, 'monitoring');
     }
 }

@@ -32,12 +32,33 @@
 
             <section class="manager-task-section">
                 <div class="manager-task-section-head">
-                    <div class="manager-task-chip pending">Pending</div>
+                    <div class="manager-task-status-buttons" aria-label="Task status">
+                        <button type="button" class="manager-task-status-btn is-selected" data-task-status="pending">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                <circle cx="12" cy="12" r="8"></circle>
+                                <path d="M12 8v4l3 2"></path>
+                            </svg>
+                            Pending
+                        </button>
+                        <button type="button" class="manager-task-status-btn" data-task-status="for_approval">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                <path d="M9 11l2 2 4-5"></path>
+                                <path d="M21 12a9 9 0 1 1-3.3-7"></path>
+                            </svg>
+                            For Approval
+                        </button>
+                        <button type="button" class="manager-task-status-btn" data-task-status="completed">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                <path d="M20 6L9 17l-5-5"></path>
+                            </svg>
+                            Completed
+                        </button>
+                    </div>
 
                     <div class="manager-task-header-actions">
                         <div class="manager-task-filter-row">
                             <div class="manager-task-filter-wrap">
-                                <select id="taskHouseFilter-pending" class="manager-task-filter-select" data-task-section="pending" data-filter-type="house">
+                                <select id="taskHouseFilter" class="manager-task-filter-select" data-filter-type="house" aria-label="Filter tasks by house">
                                     <option value="All houses">All houses</option>
                                 </select>
                             </div>
@@ -45,73 +66,17 @@
 
                         <div class="manager-task-filter-row">
                             <div class="manager-task-filter-wrap">
-                                <select id="taskPriorityFilter-pending" class="manager-task-filter-select" data-task-section="pending" data-filter-type="priority">
+                                <select id="taskPriorityFilter" class="manager-task-filter-select" data-filter-type="priority" aria-label="Filter tasks by priority">
                                     <option value="All priority">All priority</option>
                                 </select>
                             </div>
-                        </div>
-                    </div>
 
-                    <button type="button" class="manager-task-add-btn" id="openAddTaskModal" aria-label="Add task">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                            <path d="M12 5v14"></path>
-                            <path d="M5 12h14"></path>
-                        </svg>
-                    </button>
-                </div>
-
-
-                <div class="manager-task-card">
-                    <div class="manager-task-table-wrap">
-                        <table class="manager-task-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Task<br>Assigned</th>
-                                    <th>House<br>Number</th>
-                                    <th>Pen<br>Number</th>
-                                    <th>Detailed<br>Task</th>
-                                    <th>Priority</th>
-                                    <th>Time<br>Assigned</th>
-                                    <th>Finish<br>By</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="pendingTasksTable"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="manager-task-row-pagination" data-task-pagination="pending">
-                        <button type="button" class="manager-task-page-btn" data-task-row-prev="pending">
-                            Previous
-                        </button>
-                        <div class="manager-task-page-dots" data-task-row-dots="pending"></div>
-                        <button type="button" class="manager-task-page-btn" data-task-row-next="pending">
-                            Next
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="manager-task-section">
-                <div class="manager-task-section-head">
-                    <div class="manager-task-chip approval">For Approval</div>
-
-                    <div class="manager-task-header-actions">
-                        <div class="manager-task-filter-row">
-                            <div class="manager-task-filter-wrap">
-                                <select id="taskHouseFilter-for_approval" class="manager-task-filter-select" data-task-section="for_approval" data-filter-type="house">
-                                    <option value="All houses">All houses</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="manager-task-filter-row">
-                            <div class="manager-task-filter-wrap">
-                                <select id="taskPriorityFilter-for_approval" class="manager-task-filter-select" data-task-section="for_approval" data-filter-type="priority">
-                                    <option value="All priority">All priority</option>
-                                </select>
-                            </div>
+                            <button type="button" class="manager-task-add-btn" id="openAddTaskModal" aria-label="Add task">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                    <path d="M12 5v14"></path>
+                                    <path d="M5 12h14"></path>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -120,90 +85,18 @@
                 <div class="manager-task-card">
                     <div class="manager-task-table-wrap">
                         <table class="manager-task-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Task<br>Assigned</th>
-                                    <th>House<br>Number</th>
-                                    <th>Pen<br>Number</th>
-                                    <th>Detailed<br>Task</th>
-                                    <th>Photo</th>
-                                    <th>Priority</th>
-                                    <th>Time<br>Assigned</th>
-                                    <th>Finish<br>By</th>
-                                    <th>Mark</th>
-                                </tr>
-                            </thead>
+                            <thead id="managerTasksTableHead"></thead>
 
-                            <tbody id="approvalTasksTable"></tbody>
+                            <tbody id="managerTasksTableBody"></tbody>
                         </table>
                     </div>
 
-                    <div class="manager-task-row-pagination" data-task-pagination="for_approval">
-                        <button type="button" class="manager-task-page-btn" data-task-row-prev="for_approval">
+                    <div class="manager-task-row-pagination" data-task-pagination>
+                        <button type="button" class="manager-task-page-btn" data-task-row-prev>
                             Previous
                         </button>
-                        <div class="manager-task-page-dots" data-task-row-dots="for_approval"></div>
-                        <button type="button" class="manager-task-page-btn" data-task-row-next="for_approval">
-                            Next
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="manager-task-section">
-                <div class="manager-task-section-head">
-                    <div class="manager-task-chip completed">Completed</div>
-
-                    <div class="manager-task-header-actions">
-                        <div class="manager-task-filter-row">
-                            <div class="manager-task-filter-wrap">
-                                <select id="taskHouseFilter-completed" class="manager-task-filter-select" data-task-section="completed" data-filter-type="house">
-                                    <option value="All houses">All houses</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="manager-task-filter-row">
-                            <div class="manager-task-filter-wrap">
-                                <select id="taskPriorityFilter-completed" class="manager-task-filter-select" data-task-section="completed" data-filter-type="priority">
-                                    <option value="All priority">All priority</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="manager-task-card">
-
-                    <div class="manager-task-table-wrap">
-                        <table class="manager-task-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Task<br>Assigned</th>
-                                    <th>House<br>Number</th>
-                                    <th>Pen<br>Number</th>
-                                    <th>Detailed<br>Task</th>
-                                    <th>Photo</th>
-                                    <th>Priority</th>
-                                    <th>Notes</th>
-                                    <th>Time<br>Assigned</th>
-                                    <th>Finish<br>By</th>
-                                    <th>Time<br>Completed</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="completedTasksTable"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="manager-task-row-pagination" data-task-pagination="completed">
-                        <button type="button" class="manager-task-page-btn" data-task-row-prev="completed">
-                            Previous
-                        </button>
-                        <div class="manager-task-page-dots" data-task-row-dots="completed"></div>
-                        <button type="button" class="manager-task-page-btn" data-task-row-next="completed">
+                        <div class="manager-task-page-dots" data-task-row-dots></div>
+                        <button type="button" class="manager-task-page-btn" data-task-row-next>
                             Next
                         </button>
                     </div>

@@ -36,31 +36,6 @@ body {
     box-sizing: border-box;
 }
 
-.admin-shell {
-    min-height: 100vh;
-    display: flex;
-}
-
-.admin-sidebar {
-    width: 220px;
-    min-height: 100vh;
-    padding: 28px 20px;
-    background: linear-gradient(
-        180deg,
-        #022713 0%,
-        var(--admin-green-950) 100%
-    );
-    color: #fff;
-    position: sticky;
-    top: 0;
-    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
-}
-
-.admin-main {
-    flex: 1;
-    padding: 28px 34px 34px;
-}
-
 .admin-profile {
     width: 62px;
     height: 62px;
@@ -782,8 +757,17 @@ body {
     color: #a12727;
 }
 
+.admin-sensor-status-pill.inactive {
+    background: rgba(107, 114, 128, 0.14);
+    color: #4b5563;
+}
+
 .admin-sensor-row-maintenance td {
     background: linear-gradient(180deg, #fff5f5, #fdecec);
+}
+
+.admin-sensor-row-inactive td {
+    background: linear-gradient(180deg, #f8fafc, #eef2f7);
 }
 
 .admin-sensor-toggle-btn {
@@ -808,6 +792,11 @@ body {
 
 .admin-sensor-toggle-btn.activate {
     background: linear-gradient(180deg, #2c8748, #1f6f2b);
+    color: #fff;
+}
+
+.admin-sensor-toggle-btn.inactive {
+    background: linear-gradient(180deg, #64748b, #475569);
     color: #fff;
 }
 
@@ -862,7 +851,7 @@ body {
     border-color: rgba(29, 106, 55, 0.24);
 }
 
-.admin-sensor-table tbody tr:not(.admin-sensor-row-maintenance):hover td {
+.admin-sensor-table tbody tr:not(.admin-sensor-row-maintenance):not(.admin-sensor-row-inactive):hover td {
     background: linear-gradient(180deg, #ffffff, #fcfdfb);
     box-shadow:
         0 14px 24px rgba(10, 24, 15, 0.06),
@@ -873,6 +862,13 @@ body {
     background: linear-gradient(180deg, #fff1f1, #fbe3e3);
     box-shadow:
         0 14px 24px rgba(120, 40, 40, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.admin-sensor-row-inactive:hover td {
+    background: linear-gradient(180deg, #f3f4f6, #e8edf3);
+    box-shadow:
+        0 14px 24px rgba(75, 85, 99, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
@@ -897,16 +893,6 @@ body {
 }
 
 @media (max-width: 992px) {
-    .admin-shell {
-        flex-direction: column;
-    }
-
-    .admin-sidebar {
-        width: 100%;
-        min-height: auto;
-        position: relative;
-    }
-
     .admin-sensor-section-head {
         grid-template-columns: 1fr;
     }
@@ -925,10 +911,6 @@ body {
 }
 
 @media (max-width: 768px) {
-    .admin-main {
-        padding: 22px 16px 28px;
-    }
-
     .admin-sensors-title {
         text-align: left;
         font-size: 2.15rem;

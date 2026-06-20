@@ -24,4 +24,14 @@ class CleaningLog extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    public function house()
+    {
+        return $this->belongsTo(House::class, 'house_id');
+    }
+
+    public function pen()
+    {
+        return $this->belongsTo(Pen::class, 'pen_id');
+    }
 }

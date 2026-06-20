@@ -42,5 +42,14 @@ return [
         'visitor_photos_bucket' => env('SUPABASE_VISITOR_PHOTOS_BUCKET', 'visitor-photos'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+    ],
+
+        'task_alerts' => [
+        'webhook_secret' => env('TASK_ALERT_WEBHOOK_SECRET'),
+        'channel_id' => env('TASK_ALERT_CHANNEL_ID', 'task_alerts'),
+    ],
 
 ];

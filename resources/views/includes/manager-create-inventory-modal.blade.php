@@ -1,17 +1,15 @@
-<div class="manager-management-modal-backdrop" id="createInventoryTypeModal">
-    <div class="manager-management-modal-card">
-        <div class="manager-management-modal-header">
+<div class="inventory-modal-overlay" id="createInventoryTypeModal">
+    <div class="inventory-modal-card">
+        <div class="inventory-modal-header">
             <div>
-                <p class="manager-management-modal-eyebrow">Management</p>
                 <h2>Add Inventory</h2>
+                <div class="inventory-modal-line"></div>
             </div>
-
-            <button type="button" class="manager-management-modal-close" id="closeCreateInventoryTypeModal">×</button>
         </div>
 
-        <form id="createInventoryTypeForm" class="manager-management-modal-form">
-            <div class="management-form-row">
-                <div class="management-form-group">
+        <form id="createInventoryTypeForm" class="inventory-modal-form">
+            <div class="inventory-form-row">
+                <div class="inventory-form-group">
                     <label for="inventoryCategory">Inventory Type</label>
                     <select id="inventoryCategory" name="category" required>
                         <option value="">Select type</option>
@@ -20,7 +18,7 @@
                     </select>
                 </div>
 
-                <div class="management-form-group">
+                <div class="inventory-form-group">
                     <label for="newInventoryTypeName" id="inventoryTypeNameLabel">Type of Vitamins</label>
                     <input
                         type="text"
@@ -33,8 +31,8 @@
                 </div>
             </div>
 
-            <div class="management-form-row">
-                <div class="management-form-group">
+            <div class="inventory-form-row">
+                <div class="inventory-form-group">
                     <label for="newInventoryInitialStock">Initial Stock</label>
                     <input
                         type="number"
@@ -47,7 +45,7 @@
                     >
                 </div>
 
-                <div class="management-form-group">
+                <div class="inventory-form-group">
                     <label for="newInventoryCritical">Critical Level</label>
                     <input
                         type="number"
@@ -61,19 +59,19 @@
                 </div>
             </div>
 
-            <p class="manager-management-modal-help">
+            <p class="inventory-modal-help">
                 This adds a new inventory item to the inventory list.
                 Initial stock and critical level will be managed from this item.
             </p>
 
-            <p class="manager-management-modal-message" id="createInventoryTypeMessage"></p>
+            <p class="inventory-modal-message" id="createInventoryTypeMessage"></p>
 
-            <div class="manager-management-modal-actions">
-                <button type="button" class="manager-management-modal-secondary-btn" id="cancelCreateInventoryTypeModal">
+            <div class="inventory-modal-actions">
+                <button type="button" class="inventory-cancel-btn" id="cancelCreateInventoryTypeModal">
                     Cancel
                 </button>
 
-                <button type="submit" class="manager-management-modal-primary-btn">
+                <button type="submit" class="inventory-save-btn">
                     Save
                 </button>
             </div>

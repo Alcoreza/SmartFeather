@@ -2,176 +2,111 @@ function showPopup(message, type = "success", callback = null) {
     const oldPopup = document.getElementById("inventoryPopupOverlay");
     if (oldPopup) oldPopup.remove();
 
+    const isError = type === "error";
     const overlay = document.createElement("div");
     overlay.id = "inventoryPopupOverlay";
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    `;
+    overlay.className = "inventory-modal-overlay inventory-confirm-overlay confirm-modal-top show";
 
     const box = document.createElement("div");
-    box.style.cssText = `
-        background: #ffffff;
-        width: 360px;
-        max-width: 90%;
-        border-radius: 18px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        font-family: inherit;
-    `;
+    box.className = "inventory-modal-card inventory-confirm-card";
 
     box.innerHTML = `
-        <h2 style="margin:0 0 10px;color:${type === "success" ? "#1f7a3f" : "#b42318"};">
-            ${type === "success" ? "Success" : "Error"}
-        </h2>
-        <p style="margin:0 0 22px;color:#333;font-size:15px;">
-            ${message}
-        </p>
-        <button id="inventoryPopupOkBtn" style="
-            border: none;
-            background: ${type === "success" ? "#1f7a3f" : "#b42318"};
-            color: white;
-            padding: 10px 28px;
-            border-radius: 999px;
-            cursor: pointer;
-            font-weight: 600;
-        ">
-            OK
-        </button>
-    `;
+        <div class="inventory-modal-header">
+            <div>
+                <h2></h2>
+                <div class="inventory-modal-line"></div>
+            </div>
+        </div>
 
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+        <p class="inventory-confirm-text" id="inventoryPopupMessage"></p>
 
-    overlay.animate(
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 180, easing: "ease-out" }
-    );
-
-    box.animate(
-        type === "error"
-            ? [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateX(-6px) scale(1)" },
-                { opacity: 1, transform: "translateX(6px) scale(1)" },
-                { opacity: 1, transform: "translateX(0) scale(1)" }
-            ]
-            : [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateY(0) scale(1)" }
-            ],
-        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
-    );
-
-    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
-        const fadeOut = overlay.animate(
-            [{ opacity: 1 }, { opacity: 0 }],
-            { duration: 140, easing: "ease-in" }
-        );
-
-        box.animate(
-            [
-                { opacity: 1, transform: "translateY(0) scale(1)" },
-                { opacity: 0, transform: "translateY(10px) scale(0.96)" }
-            ],
-            { duration: 140, easing: "ease-in" }
-        );
-
-        fadeOut.onfinish = () => {
-            overlay.remove();
-
-            if (typeof callback === "function") {
-                callback();
-            }
-        };
-    });
-}
-
-function showConfirmPopup(message, callback) {
-    const oldPopup = document.getElementById("confirmPopupOverlay");
-    if (oldPopup) oldPopup.remove();
-
-    const overlay = document.createElement("div");
-    overlay.id = "confirmPopupOverlay";
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    `;
-
-    const box = document.createElement("div");
-    box.style.cssText = `
-        background: #ffffff;
-        width: 380px;
-        max-width: 90%;
-        border-radius: 18px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        font-family: inherit;
-    `;
-
-    box.innerHTML = `
-        <h2 style="margin:0 0 10px;color:#b42318;">
-            Confirm Archive
-        </h2>
-        <p style="margin:0 0 22px;color:#333;font-size:15px;">
-            ${message}
-        </p>
-        <div style="display:flex;justify-content:center;gap:12px;">
-            <button id="confirmArchiveBtn" style="
-                border: none;
-                background: #b42318;
-                color: white;
-                padding: 10px 24px;
-                border-radius: 999px;
-                cursor: pointer;
-                font-weight: 600;
-            ">
-                Archive
-            </button>
-            <button id="cancelArchiveBtn" style="
-                border: none;
-                background: #d1d5db;
-                color: #111827;
-                padding: 10px 24px;
-                border-radius: 999px;
-                cursor: pointer;
-                font-weight: 600;
-            ">
-                Cancel
+        <div class="inventory-modal-actions inventory-confirm-actions">
+            <button type="button" class="inventory-save-btn ${isError ? "inventory-confirm-danger" : ""}" id="inventoryPopupOkBtn">
+                OK
             </button>
         </div>
     `;
 
+    box.querySelector("h2").textContent = isError ? "Error" : "Success";
+    box.querySelector("#inventoryPopupMessage").textContent = message || "";
+
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    document.getElementById("confirmArchiveBtn").addEventListener("click", () => {
+    const close = () => {
         overlay.remove();
 
         if (typeof callback === "function") {
-            callback(true);
+            callback();
+        }
+    };
+
+    document.getElementById("inventoryPopupOkBtn").addEventListener("click", close);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            close();
         }
     });
+}
 
-    document.getElementById("cancelArchiveBtn").addEventListener("click", () => {
+function showConfirmPopup(message, callback, options = {}) {
+    const oldPopup = document.getElementById("confirmPopupOverlay");
+    if (oldPopup) oldPopup.remove();
+
+    const title = options.title || "Confirm Archive";
+    const confirmText = options.confirmText || "Archive";
+    const isDanger =
+        options.variant === "danger" ||
+        confirmText.toLowerCase().includes("archive") ||
+        options.confirmColor === "#b42318";
+
+    const overlay = document.createElement("div");
+    overlay.id = "confirmPopupOverlay";
+    overlay.className = "inventory-modal-overlay inventory-confirm-overlay confirm-modal-top show";
+
+    const box = document.createElement("div");
+    box.className = "inventory-modal-card inventory-confirm-card";
+
+    box.innerHTML = `
+        <div class="inventory-modal-header">
+            <div>
+                <h2></h2>
+                <div class="inventory-modal-line"></div>
+            </div>
+        </div>
+
+        <p class="inventory-confirm-text"></p>
+
+        <div class="inventory-modal-actions inventory-confirm-actions">
+            <button type="button" class="inventory-cancel-btn" id="cancelArchiveBtn">
+                Cancel
+            </button>
+            <button type="button" class="inventory-save-btn ${isDanger ? "inventory-confirm-danger" : ""}" id="confirmArchiveBtn">
+            </button>
+        </div>
+    `;
+
+    box.querySelector("h2").textContent = title;
+    box.querySelector(".inventory-confirm-text").textContent = message;
+    box.querySelector("#confirmArchiveBtn").textContent = confirmText;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const close = (confirmed) => {
         overlay.remove();
 
         if (typeof callback === "function") {
-            callback(false);
+            callback(confirmed);
+        }
+    };
+
+    document.getElementById("confirmArchiveBtn").addEventListener("click", () => close(true));
+    document.getElementById("cancelArchiveBtn").addEventListener("click", () => close(false));
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            close(false);
         }
     });
 }
@@ -205,9 +140,251 @@ async function apiRequest(url, method, data = null) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    setupCreateInventoryTypeModal();
     setupInventoryModals();
     setupProfileModal();
+    setupInventoryStockSync();
 });
+
+function setupInventoryStockSync() {
+    const entries = document.querySelectorAll(".inventory-entry[data-id]");
+
+    if (!entries.length) return;
+
+    let isSyncing = false;
+
+    async function syncInventoryStocks() {
+        if (document.hidden || isSyncing) return;
+
+        isSyncing = true;
+
+        try {
+            const response = await fetch("/api/manager/inventory/snapshot", {
+                headers: {
+                    "Accept": "application/json",
+                },
+            });
+
+            if (!response.ok) return;
+
+            const data = await response.json().catch(() => ({}));
+            const items = Array.isArray(data.items) ? data.items : [];
+
+            items.forEach(updateInventoryEntry);
+        } catch (error) {
+            console.error("Inventory stock sync failed:", error);
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    function updateInventoryEntry(item) {
+        const entry = document.querySelector(`.inventory-entry[data-id="${item.id}"]`);
+
+        if (!entry) return;
+
+        const nextRemaining = formatStockNumber(item.remaining_stock);
+        const previousRemaining = formatStockNumber(entry.dataset.remainingStock);
+
+        entry.dataset.initialStock = item.initial_stock;
+        entry.dataset.remainingStock = item.remaining_stock;
+        entry.dataset.critical = item.critical;
+        entry.dataset.unit = item.unit;
+
+        const amount = entry.querySelector(".inventory-stock-amount");
+        const progressTrack = entry.querySelector(".inventory-progress-track");
+        const progressLabel = entry.querySelector(".inventory-progress-label");
+        const currentStockInput = getCurrentStockInput(entry);
+
+        if (amount) {
+            amount.innerHTML = `${nextRemaining} <span class="inventory-stock-unit">${unitLabel(item.unit)}</span>`;
+        }
+
+        if (progressTrack) {
+            progressTrack.style.setProperty("--percent", Number(item.percentage ?? 0));
+            progressTrack.classList.remove("high", "moderate", "critical");
+            progressTrack.classList.add(item.status_class || "high");
+        }
+
+        if (progressLabel) {
+            progressLabel.textContent = item.status || "";
+        }
+
+        if (currentStockInput) {
+            currentStockInput.value = item.remaining_stock;
+        }
+
+        if (nextRemaining !== previousRemaining) {
+            entry.classList.remove("stock-updated");
+            void entry.offsetWidth;
+            entry.classList.add("stock-updated");
+        }
+    }
+
+    function getCurrentStockInput(entry) {
+        const isFeed = entry.classList.contains("inventory-feed-entry");
+        const selectedInput = isFeed
+            ? document.getElementById("feedInventoryIdUnified")
+            : document.getElementById("vitaminInventoryIdUnified");
+        const currentStockInput = isFeed
+            ? document.getElementById("feedCurrentStock")
+            : document.getElementById("vitaminCurrentStock");
+
+        return selectedInput?.value === String(entry.dataset.id)
+            ? currentStockInput
+            : null;
+    }
+
+    function formatStockNumber(value) {
+        const number = Number(value ?? 0);
+
+        return Number.isInteger(number)
+            ? number.toString()
+            : number.toFixed(2);
+    }
+
+    function unitLabel(unit) {
+        return unit === "bottles" || unit === "bottle" ? "btls" : unit;
+    }
+
+    syncInventoryStocks();
+    setInterval(syncInventoryStocks, 5000);
+    document.addEventListener("visibilitychange", syncInventoryStocks);
+}
+
+function setupCreateInventoryTypeModal() {
+    const createInventoryTypeModal = document.getElementById("createInventoryTypeModal");
+    const openCreateInventoryTypeModalBtn = document.getElementById("openCreateInventoryTypeModal");
+    const closeCreateInventoryTypeModalBtn = document.getElementById("closeCreateInventoryTypeModal");
+    const cancelCreateInventoryTypeModalBtn = document.getElementById("cancelCreateInventoryTypeModal");
+    const createInventoryTypeForm = document.getElementById("createInventoryTypeForm");
+    const inventoryCategory = document.getElementById("inventoryCategory");
+    const newInventoryTypeName = document.getElementById("newInventoryTypeName");
+    const newInventoryInitialStock = document.getElementById("newInventoryInitialStock");
+    const newInventoryCritical = document.getElementById("newInventoryCritical");
+    const inventoryTypeNameLabel = document.getElementById("inventoryTypeNameLabel");
+    const createInventoryTypeMessage = document.getElementById("createInventoryTypeMessage");
+
+    function setInventoryMessage(message, type = "error") {
+        if (!createInventoryTypeMessage) return;
+
+        createInventoryTypeMessage.textContent = message || "";
+        createInventoryTypeMessage.className = message
+            ? `inventory-modal-message ${type}`
+            : "inventory-modal-message";
+    }
+
+    function resetCreateInventoryTypeModal() {
+        if (inventoryCategory) inventoryCategory.value = "";
+        if (newInventoryTypeName) {
+            newInventoryTypeName.value = "";
+            newInventoryTypeName.placeholder = "Enter inventory item";
+        }
+        if (newInventoryInitialStock) newInventoryInitialStock.value = "";
+        if (newInventoryCritical) newInventoryCritical.value = "";
+        if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Vitamins";
+
+        setInventoryMessage("");
+    }
+
+    function openCreateInventoryTypeModal() {
+        resetCreateInventoryTypeModal();
+        createInventoryTypeModal?.classList.add("show");
+
+        setTimeout(() => {
+            inventoryCategory?.focus();
+        }, 60);
+    }
+
+    function closeCreateInventoryTypeModal() {
+        resetCreateInventoryTypeModal();
+        createInventoryTypeModal?.classList.remove("show");
+    }
+
+    inventoryCategory?.addEventListener("change", () => {
+        if (inventoryCategory.value === "feed") {
+            if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Feed";
+            if (newInventoryTypeName) newInventoryTypeName.placeholder = "Enter feed type";
+            return;
+        }
+
+        if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Vitamins";
+        if (newInventoryTypeName) newInventoryTypeName.placeholder = "Enter vitamin type";
+    });
+
+    openCreateInventoryTypeModalBtn?.addEventListener("click", openCreateInventoryTypeModal);
+    closeCreateInventoryTypeModalBtn?.addEventListener("click", closeCreateInventoryTypeModal);
+    cancelCreateInventoryTypeModalBtn?.addEventListener("click", closeCreateInventoryTypeModal);
+
+    createInventoryTypeModal?.addEventListener("click", (event) => {
+        if (event.target === createInventoryTypeModal) {
+            closeCreateInventoryTypeModal();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && createInventoryTypeModal?.classList.contains("show")) {
+            closeCreateInventoryTypeModal();
+        }
+    });
+
+    createInventoryTypeForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const category = inventoryCategory?.value || "";
+        const name = newInventoryTypeName?.value.trim() || "";
+        const initialStock = newInventoryInitialStock?.value || "";
+        const critical = newInventoryCritical?.value || "";
+
+        if (!category || !name || initialStock === "" || critical === "") {
+            showPopup("Please complete all fields.", "error");
+            return;
+        }
+
+        showConfirmPopup(`Create "${name}" as a new ${category} inventory item?`, async (confirmed) => {
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+            const response = await fetch("/api/manager/inventory/types", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+                },
+                body: JSON.stringify({
+                    category,
+                    name,
+                    initial_stock: Number(initialStock),
+                    critical: Number(critical),
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const firstError = data.errors ? Object.values(data.errors)[0]?.[0] : "";
+                showPopup(firstError || data.error || data.message || "Unable to save inventory item.", "error");
+                return;
+            }
+
+            showPopup(`Added "${data.name || name}" successfully.`, "success", () => {
+                closeCreateInventoryTypeModal();
+                location.reload();
+            });
+        } catch (error) {
+            console.error(error);
+            showPopup(error.message || "Unable to save inventory item.", "error");
+        }
+        }, {
+            title: "Confirm Inventory Item",
+            confirmText: "Confirm",
+            confirmColor: "#1f7a3f",
+        });
+    });
+}
 
 function setupInventoryModals() {
     const feedModal = document.getElementById("feedEditStockModal");
@@ -493,7 +670,14 @@ function setupInventoryModals() {
             return;
         }
 
-        try {
+        showConfirmPopup(
+            `${currentFeedAction === "add" ? "Add" : "Reduce"} feed stock for ${feedEditStockSelect.options[feedEditStockSelect.selectedIndex]?.text || "this item"}?`,
+            async (confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
             let payload;
 
             if (currentFeedAction === "add") {
@@ -544,6 +728,13 @@ function setupInventoryModals() {
             console.error(error);
             showPopup("Something went wrong while updating feed stock.", "error");
         }
+            },
+            {
+                title: "Confirm Feed Stock",
+                confirmText: "Confirm",
+                confirmColor: "#1f7a3f",
+            },
+        );
     });
 
     vitaminForm?.addEventListener("submit", async (event) => {
@@ -564,7 +755,14 @@ function setupInventoryModals() {
             return;
         }
 
-        try {
+        showConfirmPopup(
+            `${currentVitaminAction === "add" ? "Add" : "Reduce"} vitamin stock for ${vitaminEditStockSelect.options[vitaminEditStockSelect.selectedIndex]?.text || "this item"}?`,
+            async (confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
             let payload;
 
             if (currentVitaminAction === "add") {
@@ -615,6 +813,13 @@ function setupInventoryModals() {
             console.error(error);
             showPopup("Something went wrong while updating vitamin stock.", "error");
         }
+            },
+            {
+                title: "Confirm Vitamin Stock",
+                confirmText: "Confirm",
+                confirmColor: "#1f7a3f",
+            },
+        );
     });
 
     setupArchiveButtons();

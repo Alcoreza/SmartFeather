@@ -11,16 +11,9 @@ class MobileVitaminsRefillController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -33,6 +26,7 @@ class MobileVitaminsRefillController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -106,8 +100,10 @@ class MobileVitaminsRefillController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
+            'task_id' => 'nullable|integer|exists:tasks,taskid',
             'inventory_id' => 'required|integer|exists:inventories,id',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
@@ -115,12 +111,44 @@ class MobileVitaminsRefillController extends Controller
             'recorded_at' => 'required|date',
         ]);
 
-        $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->orderByDesc('id')
-            ->first();
+        if (!empty($validated['task_id'])) {
+            $task = DB::table('tasks')
+                ->where('taskid', $validated['task_id'])
+                ->where('user_employeeid', $employeeId)
+                ->first();
+
+            if (!$task) {
+                return response()->json([
+                    'message' => 'Selected task was not found for this employee.',
+                ], 404);
+            }
+
+            if (strtolower((string) $task->status) !== 'pending') {
+                return response()->json([
+                    'message' => 'This task is no longer pending.',
+                ], 422);
+            }
+
+            if (!$this->isVitaminsSupplementationTask((string) $task->tasktype)) {
+                return response()->json([
+                    'message' => 'This task is not a vitamins supplementation task.',
+                ], 422);
+            }
+
+            if ((int) $task->house_houseid !== (int) $validated['house_id']) {
+                return response()->json([
+                    'message' => 'Selected house does not match the assigned task house.',
+                ], 403);
+            }
+
+            if ((int) $task->pennumber !== (int) $validated['pen_id']) {
+                return response()->json([
+                    'message' => 'Selected pen does not match the assigned task pen.',
+                ], 403);
+            }
+        }
+
+        $latestEntry = $this->latestEntryLog($employeeId);
 
         if (!$latestEntry || strtoupper((string) $latestEntry->status) !== 'IN') {
             return response()->json([
@@ -128,20 +156,25 @@ class MobileVitaminsRefillController extends Controller
             ], 403);
         }
 
-        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+        $biosecurityQuery = DB::table('personnel_biosecurity_logs')
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->orderByDesc('id')
-            ->first();
+            ->where('employee_id', $employeeId)
+            ->where('house_id', $validated['house_id'])
+            ->orderByDesc('id');
+
+        if (!empty($validated['task_id'])) {
+            $biosecurityQuery
+                ->where('task_id', $validated['task_id'])
+                ->where('pen_id', $validated['pen_id']);
+        }
+
+        $latestBiosecurity = $biosecurityQuery->first();
 
         if (!$latestBiosecurity) {
             return response()->json([
-                'message' => 'Please submit the personnel biosecurity form first before recording vitamins refill.'
-            ], 403);
-        }
-
-        if ((int) $latestBiosecurity->house_id !== (int) $validated['house_id']) {
-            return response()->json([
-                'message' => 'You can only record vitamins refill for the house selected in your personnel biosecurity form.'
+                'message' => !empty($validated['task_id'])
+                    ? 'Please complete personnel biosecurity for this assigned task before recording vitamins supplementation.'
+                    : 'Please submit the personnel biosecurity form first before recording vitamins refill.'
             ], 403);
         }
 
@@ -172,6 +205,11 @@ class MobileVitaminsRefillController extends Controller
             $remainingStock = (int) $inventory->remaining_stock;
             $initialStock = (int) $inventory->initial_stock;
             $bottles = (int) $validated['bottles'];
+            $initialPurchaseDate = $this->initialPurchaseDate(
+                $validated['inventory_id'],
+                $inventory->purchase_date ?? null
+            );
+            $reducedDate = \Illuminate\Support\Carbon::parse($validated['recorded_at'])->toDateString();
 
             if ($remainingStock < $bottles) {
                 return response()->json([
@@ -182,6 +220,7 @@ class MobileVitaminsRefillController extends Controller
             $newRemaining = $remainingStock - $bottles;
 
             DB::table('vitamin_refill_records')->insert([
+                'task_id' => $validated['task_id'] ?? null,
                 'inventory_id' => $validated['inventory_id'],
                 'house_id' => $validated['house_id'],
                 'pen_id' => $validated['pen_id'],
@@ -200,6 +239,10 @@ class MobileVitaminsRefillController extends Controller
                 'inventory_id' => $validated['inventory_id'],
                 'initial_stock' => $initialStock,
                 'remaining_stock' => $newRemaining,
+                'deducted' => $bottles,
+                'added' => 0,
+                'initial_purchase_date' => $initialPurchaseDate,
+                'reduced_date' => $reducedDate,
                 'monitoring_date' => $validated['recorded_at'],
             ]);
 
@@ -208,5 +251,35 @@ class MobileVitaminsRefillController extends Controller
                 'message' => 'Vitamins refill submitted successfully.',
             ]);
         });
+    }
+
+    private function latestEntryLog(int $employeeId)
+    {
+        return DB::table('personnel_entry_logs')
+            ->where('employee_id', $employeeId)
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function initialPurchaseDate($inventoryId, $fallback = null)
+    {
+        return DB::table('inventory_records')
+            ->where('inventory_id', $inventoryId)
+            ->whereNotNull('initial_purchase_date')
+            ->orderBy('id')
+            ->value('initial_purchase_date') ?? $fallback;
+    }
+
+    private function isVitaminsSupplementationTask(string $taskType): bool
+    {
+        $normalized = strtolower(trim($taskType));
+
+        return $normalized === 'vitamins supplementation' ||
+            $normalized === 'vitamin supplementation' ||
+            $normalized === 'vitamins refill' ||
+            $normalized === 'vitamin refill' ||
+            str_contains($normalized, 'vitamin') && str_contains($normalized, 'supplement');
     }
 }

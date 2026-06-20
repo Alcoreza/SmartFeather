@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setupInventoryRecordTabs();
 });
 
+const RECORD_ROWS_PER_PAGE = 10;
+
 /* ================= PROFILE MODAL ================= */
 async function populateProfileModal() {
     try {
@@ -57,11 +59,21 @@ function setupInventoryRecordTabs() {
     const vitaminsTab = document.getElementById("vitaminsTab");
     const filterWrap = document.getElementById("filterWrap");
     const recordFilter = document.getElementById("recordFilter");
+    const transactionDateFilter = document.getElementById("transactionDateFilter");
+    const initialStockDateFilter = document.getElementById("initialStockDateFilter");
+    const clearRecordDateFilters = document.getElementById("clearRecordDateFilters");
     const tableHead = document.getElementById("recordTableHead");
     const tableBody = document.getElementById("recordTableBody");
+    const pagination = document.querySelector("[data-record-pagination]");
+    const prevButton = document.querySelector("[data-record-prev]");
+    const nextButton = document.querySelector("[data-record-next]");
+    const dots = document.querySelector("[data-record-dots]");
 
     let currentType = "feed";
     let renderVersion = 0;
+    let currentPage = 0;
+    let allRows = [];
+    let currentRows = [];
 
     /* ===== FETCH ITEMS (for dropdown) ===== */
     async function fetchItems(type) {
@@ -86,7 +98,6 @@ function setupInventoryRecordTabs() {
             <option value="${item}">${item}</option>
         `).join("");
 
-        filterWrap.classList.remove("hidden");
     }
 
     /* ===== FETCH RECORDS ===== */
@@ -109,15 +120,25 @@ function setupInventoryRecordTabs() {
     /* ===== RENDER TABLE ===== */
     function renderLoading() {
         tableBody.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+        updatePagination(0);
     }
 
-    function renderRows(data) {
-        if (!data.length) {
-            tableBody.innerHTML = `<tr><td colspan="6">No records found</td></tr>`;
+    function renderRows(rows, emptyMessage = "No records found") {
+        currentRows = Array.isArray(rows) ? rows : [];
+        const totalPages = Math.max(1, Math.ceil(currentRows.length / RECORD_ROWS_PER_PAGE));
+        currentPage = Math.min(currentPage, totalPages - 1);
+
+        if (!currentRows.length) {
+            tableBody.innerHTML = `<tr><td colspan="6">${emptyMessage}</td></tr>`;
+            updatePagination(0);
             return;
         }
 
-        tableBody.innerHTML = data.map((row, index) => {
+        const start = currentPage * RECORD_ROWS_PER_PAGE;
+        const pageRows = currentRows.slice(start, start + RECORD_ROWS_PER_PAGE);
+        const placeholderRows = RECORD_ROWS_PER_PAGE - pageRows.length;
+
+        tableBody.innerHTML = pageRows.map((row, index) => {
             const movement = getMovement(row);
 
             return `
@@ -137,6 +158,26 @@ function setupInventoryRecordTabs() {
                 </tr>
             `;
         }).join("");
+
+        if (placeholderRows > 0) {
+            tableBody.innerHTML += Array.from({ length: placeholderRows }, () => `
+                <tr class="record-placeholder-row" aria-hidden="true">
+                    <td colspan="6">&nbsp;</td>
+                </tr>
+            `).join("");
+        }
+
+        updatePagination(currentRows.length);
+    }
+
+    function applyFiltersAndRender() {
+        const filteredRows = applyDateFilters(allRows);
+        const hasDateFilter = Boolean(transactionDateFilter?.value || initialStockDateFilter?.value);
+
+        renderRows(
+            filteredRows,
+            hasDateFilter ? "No records match the selected dates" : "No records found"
+        );
     }
 
     async function renderTable() {
@@ -149,12 +190,14 @@ function setupInventoryRecordTabs() {
 
         if (version !== renderVersion) return;
 
-        renderRows(data);
+        allRows = Array.isArray(data) ? data : [];
+        applyFiltersAndRender();
     }
 
     /* ===== FEED TAB ===== */
     async function renderFeed() {
         currentType = "feed";
+        currentPage = 0;
         const version = ++renderVersion;
 
         // UPDATED CLASSES
@@ -166,9 +209,9 @@ function setupInventoryRecordTabs() {
         tableHead.innerHTML = `
             <tr>
                 <th>Item</th>
-                <th>Movement</th>
+                <th>Transaction</th>
                 <th>Quantity</th>
-                <th>Movement Date</th>
+                <th>Transaction Date</th>
                 <th>Initial Purchase Date</th>
                 <th>Remaining (kg)</th>
             </tr>
@@ -184,12 +227,15 @@ function setupInventoryRecordTabs() {
         if (version !== renderVersion) return;
 
         await populateFilter("feed", items);
-        renderRows(data);
+        resetDateFilters();
+        allRows = Array.isArray(data) ? data : [];
+        applyFiltersAndRender();
     }
 
     /* ===== VITAMIN TAB ===== */
     async function renderVitamins() {
         currentType = "vitamin";
+        currentPage = 0;
         const version = ++renderVersion;
 
         // UPDATED CLASSES
@@ -201,9 +247,9 @@ function setupInventoryRecordTabs() {
         tableHead.innerHTML = `
             <tr>
                 <th>Item</th>
-                <th>Movement</th>
+                <th>Transaction</th>
                 <th>Quantity</th>
-                <th>Movement Date</th>
+                <th>Transaction Date</th>
                 <th>Initial Purchase Date</th>
                 <th>Remaining (bottles)</th>
             </tr>
@@ -219,13 +265,33 @@ function setupInventoryRecordTabs() {
         if (version !== renderVersion) return;
 
         await populateFilter("vitamin", items);
-        renderRows(data);
+        resetDateFilters();
+        allRows = Array.isArray(data) ? data : [];
+        applyFiltersAndRender();
     }
 
     /* ===== EVENTS ===== */
     if (feedTab) feedTab.addEventListener("click", renderFeed);
     if (vitaminsTab) vitaminsTab.addEventListener("click", renderVitamins);
-    if (recordFilter) recordFilter.addEventListener("change", renderTable);
+    if (recordFilter) {
+        recordFilter.addEventListener("change", () => {
+            currentPage = 0;
+            renderTable();
+        });
+    }
+    [transactionDateFilter, initialStockDateFilter].forEach((filter) => {
+        filter?.addEventListener("change", () => {
+            currentPage = 0;
+            applyFiltersAndRender();
+        });
+    });
+    clearRecordDateFilters?.addEventListener("click", () => {
+        resetDateFilters();
+        currentPage = 0;
+        applyFiltersAndRender();
+    });
+
+    setupPagination();
 
     /* ===== DEFAULT LOAD ===== */
     renderFeed();
@@ -274,6 +340,48 @@ function setupInventoryRecordTabs() {
         };
     }
 
+    function applyDateFilters(rows) {
+        const transactionDate = transactionDateFilter?.value || "";
+        const initialStockDate = initialStockDateFilter?.value || "";
+
+        if (!transactionDate && !initialStockDate) {
+            return rows;
+        }
+
+        return rows.filter((row) => {
+            const movement = getMovement(row);
+            const rowTransactionDate = getDateFilterValue(movement.date);
+            const rowInitialStockDate = getDateFilterValue(row.initial_purchase_date);
+
+            return (!transactionDate || rowTransactionDate === transactionDate)
+                && (!initialStockDate || rowInitialStockDate === initialStockDate);
+        });
+    }
+
+    function getDateFilterValue(dateString) {
+        if (!dateString) return "";
+
+        const stringValue = String(dateString);
+        const simpleDateMatch = stringValue.match(/^\d{4}-\d{2}-\d{2}/);
+
+        if (simpleDateMatch) {
+            return simpleDateMatch[0];
+        }
+
+        const parsedDate = new Date(stringValue);
+
+        if (Number.isNaN(parsedDate.getTime())) {
+            return "";
+        }
+
+        return parsedDate.toISOString().slice(0, 10);
+    }
+
+    function resetDateFilters() {
+        if (transactionDateFilter) transactionDateFilter.value = "";
+        if (initialStockDateFilter) initialStockDateFilter.value = "";
+    }
+
     function escapeHtml(value) {
         return String(value ?? "")
             .replace(/&/g, "&amp;")
@@ -281,5 +389,58 @@ function setupInventoryRecordTabs() {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    function updatePagination(totalRows) {
+        const totalPages = Math.max(1, Math.ceil(totalRows / RECORD_ROWS_PER_PAGE));
+
+        if (pagination) {
+            pagination.classList.toggle("is-hidden", totalRows <= RECORD_ROWS_PER_PAGE);
+        }
+
+        if (prevButton) {
+            prevButton.disabled = currentPage === 0;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = currentPage >= totalPages - 1;
+        }
+
+        if (dots) {
+            dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+                <button
+                    type="button"
+                    class="record-page-dot ${index === currentPage ? "active" : ""}"
+                    data-record-page="${index}"
+                    aria-label="Go to page ${index + 1}"
+                    aria-current="${index === currentPage ? "page" : "false"}"
+                ></button>
+            `).join("");
+        }
+    }
+
+    function renderCurrentPage() {
+        renderRows(currentRows);
+    }
+
+    function setupPagination() {
+        prevButton?.addEventListener("click", () => {
+            currentPage = Math.max(0, currentPage - 1);
+            renderCurrentPage();
+        });
+
+        nextButton?.addEventListener("click", () => {
+            const totalPages = Math.max(1, Math.ceil(currentRows.length / RECORD_ROWS_PER_PAGE));
+            currentPage = Math.min(totalPages - 1, currentPage + 1);
+            renderCurrentPage();
+        });
+
+        dots?.addEventListener("click", (event) => {
+            const dot = event.target.closest("[data-record-page]");
+            if (!dot) return;
+
+            currentPage = Number(dot.dataset.recordPage || 0);
+            renderCurrentPage();
+        });
     }
 }

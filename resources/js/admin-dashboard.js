@@ -1,11 +1,33 @@
 let adminMonitoringChart = null;
 let adminMonitoringSlides = [];
+let activeAdminMonitoringSlideIndex = 0;
+let activeAdminMonitoringHouseIndex = 0;
+let adminEnvironmentChart = null;
+let adminEnvironmentSlides = [];
+let activeAdminEnvironmentSlideIndex = 0;
+let adminResourceChart = null;
+let adminResourceSlides = [];
+let activeAdminResourceSlideIndex = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
+    resetInitialAdminRealtimeWidgets();
+
     await renderAdminRealtimeMonitoring();
     await renderAdminMonitoringCarousel();
+    await renderAdminEnvironmentCarousel();
+    await renderAdminResourceCarousel();
     setupAdminProfileModal();
 });
+
+function resetInitialAdminRealtimeWidgets() {
+    document.querySelectorAll(".admin-radial-gauge").forEach((gauge) => {
+        gauge.style.setProperty("--gauge-value", "0deg");
+    });
+
+    document.querySelectorAll(".admin-resource-bar").forEach((bar) => {
+        bar.style.height = "0%";
+    });
+}
 
 async function renderAdminRealtimeMonitoring() {
     try {
@@ -33,7 +55,7 @@ function renderAdminEnvironment(items) {
 
             return `
             <div class="admin-sensor-card">
-                <div class="admin-radial-gauge ${item.status}" style="--gauge-value: ${degrees}deg;">
+                <div class="admin-radial-gauge ${item.status}" data-gauge-value="${degrees}" style="--gauge-value: 0deg;">
                     <div class="admin-radial-gauge-inner">
                         <span class="admin-sensor-value">${item.value}${item.unit}</span>
                     </div>
@@ -44,6 +66,8 @@ function renderAdminEnvironment(items) {
         `;
         })
         .join("");
+
+    animateAdminRealtimeGauges(grid);
 }
 
 function renderAdminResources(items) {
@@ -58,7 +82,7 @@ function renderAdminResources(items) {
             return `
             <div class="admin-resource-card">
                 <div class="admin-resource-bar-shell">
-                    <div class="admin-resource-bar ${isWater ? "admin-water-bar" : "admin-feed-bar"}" style="height: ${safeValue}%;"></div>
+                    <div class="admin-resource-bar ${isWater ? "admin-water-bar" : "admin-feed-bar"}" data-bar-height="${safeValue}" style="height: 0%;"></div>
                 </div>
                 <div class="admin-resource-percent ${isWater ? "admin-water-text" : ""}">${safeValue}${item.unit}</div>
                 <div class="admin-resource-label">${item.label}</div>
@@ -67,6 +91,53 @@ function renderAdminResources(items) {
         `;
         })
         .join("");
+
+    animateAdminResourceBars(grid);
+}
+
+function animateAdminRealtimeGauges(container) {
+    const gauges = container.querySelectorAll("[data-gauge-value]");
+
+    gauges.forEach((gauge, index) => {
+        const target = Number(gauge.dataset.gaugeValue || 0);
+        animateAdminGaugeValue(gauge, target, 900, index * 120);
+    });
+}
+
+function animateAdminResourceBars(container) {
+    const bars = container.querySelectorAll("[data-bar-height]");
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            bars.forEach((bar, index) => {
+                setTimeout(() => {
+                    bar.style.height = `${bar.dataset.barHeight || 0}%`;
+                }, index * 120);
+            });
+        });
+    });
+}
+
+function animateAdminGaugeValue(gauge, target, duration = 900, delay = 0) {
+    const startTime = performance.now() + delay;
+
+    function tick(now) {
+        if (now < startTime) {
+            requestAnimationFrame(tick);
+            return;
+        }
+
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        gauge.style.setProperty("--gauge-value", `${target * eased}deg`);
+
+        if (progress < 1) {
+            requestAnimationFrame(tick);
+        }
+    }
+
+    requestAnimationFrame(tick);
 }
 
 function getAdminGaugeDegrees(value, min, max) {
@@ -80,7 +151,11 @@ function getAdminGaugeDegrees(value, min, max) {
 async function renderAdminMonitoringCarousel() {
     const canvas = document.getElementById("adminMonitoringChart");
     const caption = document.getElementById("adminGraphCaption");
-    const dots = document.querySelectorAll(".admin-graph-dot");
+    const dots = document.querySelectorAll(".admin-monitoring-dot");
+    const pager = document.getElementById("adminHouseGraphPager");
+    const pagerDots = document.getElementById("adminHouseGraphPageDots");
+    const prevButton = document.getElementById("adminHouseGraphPrev");
+    const nextButton = document.getElementById("adminHouseGraphNext");
 
     if (!canvas || typeof Chart === "undefined") {
         return;
@@ -93,8 +168,7 @@ async function renderAdminMonitoringCarousel() {
         adminMonitoringSlides = Array.isArray(data.slides) ? data.slides : [];
         if (!adminMonitoringSlides.length) return;
 
-        createOrUpdateAdminChart(canvas, adminMonitoringSlides[0]);
-        updateAdminGraphCaption(caption, adminMonitoringSlides[0]);
+        renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
         updateAdminDots(dots, 0);
 
         dots.forEach((dot) => {
@@ -103,13 +177,97 @@ async function renderAdminMonitoringCarousel() {
                 if (Number.isNaN(index) || !adminMonitoringSlides[index])
                     return;
 
-                createOrUpdateAdminChart(canvas, adminMonitoringSlides[index]);
-                updateAdminGraphCaption(caption, adminMonitoringSlides[index]);
+                activeAdminMonitoringSlideIndex = index;
+                renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
                 updateAdminDots(dots, index);
             });
         });
+
+        prevButton?.addEventListener("click", () => {
+            activeAdminMonitoringHouseIndex = Math.max(0, activeAdminMonitoringHouseIndex - 1);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        nextButton?.addEventListener("click", () => {
+            const houseCount = getAdminMonitoringHouseCount(adminMonitoringSlides[activeAdminMonitoringSlideIndex]);
+            activeAdminMonitoringHouseIndex = Math.min(houseCount - 1, activeAdminMonitoringHouseIndex + 1);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        pagerDots?.addEventListener("click", (event) => {
+            const dot = event.target.closest("[data-admin-house-graph-page]");
+
+            if (!dot) {
+                return;
+            }
+
+            activeAdminMonitoringHouseIndex = Number(dot.dataset.adminHouseGraphPage || 0);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
     } catch (error) {
         console.error("Failed to load admin monitoring graph data.", error);
+    }
+}
+
+function renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton) {
+    const slide = adminMonitoringSlides[activeAdminMonitoringSlideIndex];
+
+    if (!slide) {
+        return;
+    }
+
+    const houseCount = getAdminMonitoringHouseCount(slide);
+    activeAdminMonitoringHouseIndex = Math.max(0, Math.min(activeAdminMonitoringHouseIndex, houseCount - 1));
+
+    const pageSlide = getAdminMonitoringHousePageSlide(slide, activeAdminMonitoringHouseIndex);
+
+    createOrUpdateAdminChart(canvas, pageSlide);
+    updateAdminGraphCaption(caption, pageSlide);
+    updateAdminMonitoringHousePager(pager, pagerDots, prevButton, nextButton, pageSlide, houseCount);
+}
+
+function getAdminMonitoringHouseCount(slide) {
+    return Array.isArray(slide?.datasets) && slide.datasets.length ? slide.datasets.length : 1;
+}
+
+function getAdminMonitoringHousePageSlide(slide, houseIndex) {
+    if (!Array.isArray(slide.datasets) || !slide.datasets.length) {
+        return slide;
+    }
+
+    const dataset = slide.datasets[houseIndex] || slide.datasets[0];
+
+    return {
+        ...slide,
+        houseLabel: dataset.label,
+        datasets: [dataset],
+    };
+}
+
+function updateAdminMonitoringHousePager(pager, pagerDots, prevButton, nextButton, slide, houseCount) {
+    if (!pager) {
+        return;
+    }
+
+    pager.hidden = houseCount <= 1;
+
+    if (pagerDots) {
+        pagerDots.innerHTML = Array.from({ length: houseCount }, (_, index) => `
+            <button
+                type="button"
+                class="admin-house-graph-page-dot ${index === activeAdminMonitoringHouseIndex ? "active" : ""}"
+                data-admin-house-graph-page="${index}"
+                aria-label="Show house ${index + 1}"
+            ></button>
+        `).join("");
+    }
+
+    if (prevButton) {
+        prevButton.disabled = activeAdminMonitoringHouseIndex <= 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = activeAdminMonitoringHouseIndex >= houseCount - 1;
     }
 }
 
@@ -118,41 +276,146 @@ function createOrUpdateAdminChart(canvas, slide) {
         adminMonitoringChart.destroy();
     }
 
-    adminMonitoringChart = new Chart(canvas, {
-        type: "line",
+    adminMonitoringChart = createAdminBarChart(canvas, slide);
+}
+
+function createAdminBarChart(canvas, slide, maxValue = null) {
+    const context = canvas.getContext("2d");
+    const barGradient = createAdminBarGradient(context, canvas, slide.borderColor);
+    const datasets = Array.isArray(slide.datasets) && slide.datasets.length
+        ? slide.datasets
+        : [
+              {
+                  label: slide.label,
+                  data: slide.values,
+                  borderColor: slide.borderColor,
+                  backgroundColor: barGradient || slide.backgroundColor,
+                  hoverBackgroundColor: slide.borderColor,
+                  borderWidth: 0,
+                  borderRadius: 12,
+                  borderSkipped: false,
+                  maxBarThickness: 42,
+              },
+          ];
+
+    return new Chart(canvas, {
+        type: "bar",
         data: {
             labels: slide.labels,
-            datasets: [
-                {
-                    label: slide.label,
-                    data: slide.values,
-                    borderColor: slide.borderColor,
-                    backgroundColor: slide.backgroundColor,
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: slide.borderColor,
-                    pointBorderColor: slide.borderColor,
-                    borderWidth: 3,
-                },
-            ],
+            datasets,
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 900,
+                easing: "easeOutCubic",
+                delay(context) {
+                    if (context.type !== "data" || context.mode !== "default") {
+                        return 0;
+                    }
+
+                    return context.dataIndex * 95;
+                },
+            },
+            animations: {
+                y: {
+                    from(context) {
+                        const chart = context.chart;
+                        const scale = chart.scales.y;
+
+                        return scale ? scale.getPixelForValue(0) : chart.chartArea.bottom;
+                    },
+                },
+            },
             plugins: {
                 legend: {
-                    display: false,
+                    display: datasets.length > 1,
+                    position: "bottom",
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        color: "#3f473f",
+                        font: {
+                            weight: 700,
+                        },
+                    },
+                },
+                tooltip: {
+                    backgroundColor: "rgba(6, 51, 32, 0.94)",
+                    borderColor: "rgba(184, 239, 189, 0.32)",
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    padding: 12,
+                    titleColor: "#ffffff",
+                    bodyColor: "#e9f7ec",
+                    callbacks: {
+                        label(context) {
+                            const label = context.dataset.label || slide.label;
+                            return `${label}: ${context.parsed.y}${slide.unit || ""}`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                    },
+                    border: {
+                        display: false,
+                    },
+                    ticks: {
+                        color: "#687068",
+                        font: {
+                            weight: 700,
+                        },
+                    },
+                },
+                y: {
+                    beginAtZero: true,
+                    ...(maxValue ? { max: maxValue } : {}),
+                    border: {
+                        display: false,
+                    },
+                    grid: {
+                        color: "rgba(90, 96, 90, 0.12)",
+                    },
+                    ticks: {
+                        color: "#687068",
+                        padding: 8,
+                    },
                 },
             },
         },
     });
 }
 
+function createAdminBarGradient(context, canvas, color) {
+    if (!context) {
+        return null;
+    }
+
+    const height = canvas.offsetHeight || canvas.height || 280;
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+
+    if (color === "#b7791f") {
+        gradient.addColorStop(0, "rgba(217, 158, 62, 0.96)");
+        gradient.addColorStop(0.58, "rgba(183, 121, 31, 0.78)");
+        gradient.addColorStop(1, "rgba(183, 121, 31, 0.3)");
+        return gradient;
+    }
+
+    gradient.addColorStop(0, "rgba(41, 132, 77, 0.96)");
+    gradient.addColorStop(0.58, "rgba(23, 100, 58, 0.78)");
+    gradient.addColorStop(1, "rgba(23, 100, 58, 0.3)");
+    return gradient;
+}
+
 function updateAdminGraphCaption(caption, slide) {
     if (caption) {
-        caption.textContent = slide.label;
+        caption.textContent = slide.houseLabel ? `${slide.label} - ${slide.houseLabel}` : slide.label;
     }
 }
 
@@ -160,6 +423,94 @@ function updateAdminDots(dots, activeIndex) {
     dots.forEach((dot, index) => {
         dot.classList.toggle("active", index === activeIndex);
     });
+}
+
+async function renderAdminEnvironmentCarousel() {
+    const canvas = document.getElementById("adminEnvironmentChart");
+    const caption = document.getElementById("adminEnvGraphCaption");
+    const dots = document.querySelectorAll(".admin-env-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/admin/dashboard/environment-by-house");
+        const data = await response.json();
+
+        adminEnvironmentSlides = Array.isArray(data.slides) ? data.slides : [];
+        if (!adminEnvironmentSlides.length) return;
+
+        createOrUpdateAdminEnvironmentChart(canvas, adminEnvironmentSlides[0]);
+        updateAdminGraphCaption(caption, adminEnvironmentSlides[0]);
+        updateAdminDots(dots, 0);
+
+        dots.forEach((dot) => {
+            dot.addEventListener("click", () => {
+                const index = Number(dot.dataset.slide);
+                if (Number.isNaN(index) || !adminEnvironmentSlides[index]) return;
+
+                activeAdminEnvironmentSlideIndex = index;
+                createOrUpdateAdminEnvironmentChart(canvas, adminEnvironmentSlides[index]);
+                updateAdminGraphCaption(caption, adminEnvironmentSlides[index]);
+                updateAdminDots(dots, index);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to load admin environment monitoring data.", error);
+    }
+}
+
+function createOrUpdateAdminEnvironmentChart(canvas, slide) {
+    if (adminEnvironmentChart) {
+        adminEnvironmentChart.destroy();
+    }
+
+    adminEnvironmentChart = createAdminBarChart(canvas, slide, slide.maxValue || 35);
+}
+
+async function renderAdminResourceCarousel() {
+    const canvas = document.getElementById("adminResourceChart");
+    const caption = document.getElementById("adminResourceGraphCaption");
+    const dots = document.querySelectorAll(".admin-resource-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/admin/dashboard/resources-by-house");
+        const data = await response.json();
+
+        adminResourceSlides = Array.isArray(data.slides) ? data.slides : [];
+        if (!adminResourceSlides.length) return;
+
+        createOrUpdateAdminResourceChart(canvas, adminResourceSlides[0]);
+        updateAdminGraphCaption(caption, adminResourceSlides[0]);
+        updateAdminDots(dots, 0);
+
+        dots.forEach((dot) => {
+            dot.addEventListener("click", () => {
+                const index = Number(dot.dataset.slide);
+                if (Number.isNaN(index) || !adminResourceSlides[index]) return;
+
+                activeAdminResourceSlideIndex = index;
+                createOrUpdateAdminResourceChart(canvas, adminResourceSlides[index]);
+                updateAdminGraphCaption(caption, adminResourceSlides[index]);
+                updateAdminDots(dots, index);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to load admin resource monitoring data.", error);
+    }
+}
+
+function createOrUpdateAdminResourceChart(canvas, slide) {
+    if (adminResourceChart) {
+        adminResourceChart.destroy();
+    }
+
+    adminResourceChart = createAdminBarChart(canvas, slide, slide.maxValue || 100);
 }
 
 async function populateAdminProfileModal() {

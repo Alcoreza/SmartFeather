@@ -62,7 +62,7 @@
 
             <div class="profile-actions">
                 <button type="button" class="profile-btn cancel-btn" id="closeProfileModal">Cancel</button>
-                <button type="button" class="profile-btn logout-btn" onclick="window.location.href='{{ route('logout') }}'">Logout</button>
+                <button type="button" class="profile-btn logout-btn" data-logout-trigger data-logout-url="{{ route('logout') }}">Logout</button>
             </div>
         </form>
     </div>

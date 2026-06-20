@@ -16,6 +16,11 @@ class House extends Model
         'number_of_pens',
         'status',
         'start_date',
+        'archived_at',
+    ];
+
+    protected $casts = [
+        'archived_at' => 'datetime',
     ];
 
     /**

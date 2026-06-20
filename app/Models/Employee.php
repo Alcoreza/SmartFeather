@@ -23,6 +23,11 @@ class Employee extends Model
         'Address',
         'Password',
         'Username',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -42,7 +47,12 @@ class Employee extends Model
         $initial = mb_substr(trim($firstName), 0, 1, 'UTF-8');
         $surname = trim($lastName);
 
-        return mb_strtoupper($initial . $surname, 'UTF-8');
+        return mb_strtolower($initial . $surname, 'UTF-8');
+    }
+
+    public function setUsernameAttribute($value): void
+    {
+        $this->attributes['Username'] = mb_strtolower(trim((string) $value), 'UTF-8');
     }
 
     public function setPasswordAttribute($value)

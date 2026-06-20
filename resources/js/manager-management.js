@@ -10,215 +10,48 @@ const createTaskTypeForm = document.getElementById("createTaskTypeForm");
 const newTaskTypeInput = document.getElementById("newTaskType");
 const createTaskTypeMessage = document.getElementById("createTaskTypeMessage");
 
-const createInventoryTypeModal = document.getElementById("createInventoryTypeModal");
-const openCreateInventoryTypeModalBtn = document.getElementById("openCreateInventoryTypeModal");
-const closeCreateInventoryTypeModalBtn = document.getElementById("closeCreateInventoryTypeModal");
-const cancelCreateInventoryTypeModalBtn = document.getElementById("cancelCreateInventoryTypeModal");
-const createInventoryTypeForm = document.getElementById("createInventoryTypeForm");
-const inventoryCategory = document.getElementById("inventoryCategory");
-const newInventoryTypeName = document.getElementById("newInventoryTypeName");
-const inventoryTypeNameLabel = document.getElementById("inventoryTypeNameLabel");
-const createInventoryTypeMessage = document.getElementById("createInventoryTypeMessage");
+function showManagementConfirmModal(message, title = "Confirm Save", confirmText = "Confirm") {
+    return new Promise((resolve) => {
+        document.getElementById("managerManagementGenericConfirmModal")?.remove();
 
-function setInventoryMessage(message, type = "error") {
-    if (!createInventoryTypeMessage) return;
+        const modal = document.createElement("div");
+        modal.className = "manager-management-modal-backdrop confirm-modal-top show";
+        modal.id = "managerManagementGenericConfirmModal";
+        modal.innerHTML = `
+            <div class="manager-management-modal-card">
+                <div class="manager-management-modal-header">
+                    <div>
+                        <p class="manager-management-modal-eyebrow">Management</p>
+                        <h2></h2>
+                    </div>
+                </div>
+                <div class="manager-management-modal-form">
+                    <p class="manager-management-modal-help"></p>
+                    <div class="manager-management-modal-actions">
+                        <button type="button" class="manager-management-modal-secondary-btn" data-confirm-cancel>Cancel</button>
+                        <button type="button" class="manager-management-modal-primary-btn" data-confirm-ok></button>
+                    </div>
+                </div>
+            </div>
+        `;
 
-    createInventoryTypeMessage.textContent = message || "";
-    createInventoryTypeMessage.className = message
-        ? `manager-management-modal-message ${type}`
-        : "manager-management-modal-message";
-}
+        modal.querySelector("h2").textContent = title;
+        modal.querySelector(".manager-management-modal-help").textContent = message;
+        modal.querySelector("[data-confirm-ok]").textContent = confirmText;
 
-function resetCreateInventoryTypeModal() {
-    if (inventoryCategory) inventoryCategory.value = "";
-    if (newInventoryTypeName) newInventoryTypeName.value = "";
-    if (inventoryTypeNameLabel) inventoryTypeNameLabel.textContent = "Type of Vitamins";
+        const close = (confirmed) => {
+            modal.remove();
+            resolve(confirmed);
+        };
 
-    setInventoryMessage("");
-}
-
-function showPopup(message, type = "success", callback = null) {
-    const oldPopup = document.getElementById("managementPopupOverlay");
-    if (oldPopup) oldPopup.remove();
-
-    const overlay = document.createElement("div");
-    overlay.id = "managementPopupOverlay";
-
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    `;
-
-    const box = document.createElement("div");
-
-    box.style.cssText = `
-        background: #ffffff;
-        width: 360px;
-        max-width: 90%;
-        border-radius: 18px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        font-family: inherit;
-    `;
-
-    box.innerHTML = `
-        <h2 style="
-            margin:0 0 10px;
-            color:${type === "success" ? "#1f7a3f" : "#b42318"};
-        ">
-            ${type === "success" ? "Success" : "Error"}
-        </h2>
-
-        <p style="
-            margin:0 0 22px;
-            color:#333;
-            font-size:15px;
-        ">
-            ${message}
-        </p>
-
-        <button id="managementPopupOkBtn" style="
-            border:none;
-            background:${type === "success" ? "#1f7a3f" : "#b42318"};
-            color:white;
-            padding:10px 28px;
-            border-radius:999px;
-            cursor:pointer;
-            font-weight:600;
-        ">
-            OK
-        </button>
-    `;
-
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-
-    overlay.animate(
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 180, easing: "ease-out" }
-    );
-
-    box.animate(
-        type === "error"
-            ? [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateX(-6px) scale(1)" },
-                { opacity: 1, transform: "translateX(6px) scale(1)" },
-                { opacity: 1, transform: "translateX(0) scale(1)" }
-            ]
-            : [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateY(0) scale(1)" }
-            ],
-        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
-    );
-
-    document.getElementById("managementPopupOkBtn")
-        .addEventListener("click", () => {
-            const fadeOut = overlay.animate(
-                [{ opacity: 1 }, { opacity: 0 }],
-                { duration: 140, easing: "ease-in" }
-            );
-
-            box.animate(
-                [
-                    { opacity: 1, transform: "translateY(0) scale(1)" },
-                    { opacity: 0, transform: "translateY(10px) scale(0.96)" }
-                ],
-                { duration: 140, easing: "ease-in" }
-            );
-
-            fadeOut.onfinish = () => {
-                overlay.remove();
-
-                if (typeof callback === "function") {
-                    callback();
-                }
-            };
-        });
-}
-
-async function handleCreateInventoryTypeSubmit(event) {
-    event.preventDefault();
-
-    const category = inventoryCategory?.value || "";
-    const name = newInventoryTypeName?.value.trim() || "";
-    const initialStock = newInventoryInitialStock?.value || "";
-    const critical = newInventoryCritical?.value || "";
-
-    if (!category || !name || initialStock === "" || critical === "") {
-        showPopup("Please complete all fields.", "error");
-        return;
-    }
-
-    const token = document.querySelector('meta[name="csrf-token"]')?.content;
-
-    try {
-        const response = await fetch("/api/manager/inventory/types", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "X-CSRF-TOKEN": token || "",
-            },
-            body: JSON.stringify({
-                category: category,
-                name: name,
-                initial_stock: Number(initialStock),
-                critical: Number(critical),
-            }),
+        modal.querySelector("[data-confirm-cancel]").addEventListener("click", () => close(false));
+        modal.querySelector("[data-confirm-ok]").addEventListener("click", () => close(true));
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) close(false);
         });
 
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-
-            if (data.errors) {
-                const firstError = Object.values(data.errors)[0]?.[0];
-
-                showPopup(
-                    firstError || "Unable to save inventory item.",
-                    "error"
-                );
-
-                return;
-            }
-
-            showPopup(
-                data.error || data.message || "Unable to save inventory item.",
-                "error"
-            );
-
-            return;
-        }
-
-        showPopup(
-            `Added "${data.name}" successfully.`,
-            "success",
-            () => {
-                resetCreateInventoryTypeModal();
-                closeModal(createInventoryTypeModal);
-                location.reload();
-            }
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showPopup(
-            error.message || "Unable to save inventory item.",
-            "error"
-        );
-    }
+        document.body.appendChild(modal);
+    });
 }
 
 function setMessage(message, type = "error") {
@@ -300,6 +133,15 @@ async function handleCreateTaskTypeSubmit(event) {
 
     if (!taskType) {
         setMessage("Please enter a new task type.", "error");
+        return;
+    }
+
+    const confirmed = await showManagementConfirmModal(
+        `Create "${taskType}" as a new task type?`,
+        "Confirm Task Type",
+    );
+
+    if (!confirmed) {
         return;
     }
 
@@ -408,41 +250,3 @@ if (profileModal || createTaskTypeModal) {
         }
     });
 }
-
-inventoryCategory?.addEventListener("change", () => {
-    if (inventoryCategory.value === "feed") {
-        inventoryTypeNameLabel.textContent = "Type of Feed";
-        newInventoryTypeName.placeholder = "Enter feed type";
-    } else {
-        inventoryTypeNameLabel.textContent = "Type of Vitamins";
-        newInventoryTypeName.placeholder = "Enter vitamin type";
-    }
-});
-
-openCreateInventoryTypeModalBtn?.addEventListener("click", () => {
-    resetCreateInventoryTypeModal();
-    openModal(createInventoryTypeModal);
-
-    setTimeout(() => {
-        inventoryCategory?.focus();
-    }, 60);
-});
-
-closeCreateInventoryTypeModalBtn?.addEventListener("click", () => {
-    resetCreateInventoryTypeModal();
-    closeModal(createInventoryTypeModal);
-});
-
-cancelCreateInventoryTypeModalBtn?.addEventListener("click", () => {
-    resetCreateInventoryTypeModal();
-    closeModal(createInventoryTypeModal);
-});
-
-createInventoryTypeModal?.addEventListener("click", (event) => {
-    if (event.target === createInventoryTypeModal) {
-        resetCreateInventoryTypeModal();
-        closeModal(createInventoryTypeModal);
-    }
-});
-
-createInventoryTypeForm?.addEventListener("submit", handleCreateInventoryTypeSubmit);

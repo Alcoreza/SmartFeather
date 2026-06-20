@@ -7,6 +7,7 @@ export default defineConfig({
         laravel({
             input: [
                 "resources/css/app.css",
+                "resources/css/landing.css",
                 "resources/css/login.css",
 
                 "resources/css/admin-dashboard.css",
@@ -20,6 +21,7 @@ export default defineConfig({
 
                 "resources/css/manager-biosecurity-logs.css",
                 "resources/css/manager-dashboard.css",
+                "resources/css/manager-farm-activity-records.css",
                 "resources/css/manager-houses.css",
                 "resources/css/manager-inventory.css",
                 "resources/css/manager-management.css",
@@ -32,6 +34,7 @@ export default defineConfig({
                 "resources/css/manager-shared.css",
                 "resources/css/manager-tasks.css",
                 "resources/css/manager-workers.css",
+                "resources/css/manager-decision-support.css",
 
                 "resources/js/app.js",
                 "resources/js/login.js",
@@ -46,6 +49,7 @@ export default defineConfig({
 
                 "resources/js/manager-biosecurity-logs.js",
                 "resources/js/manager-dashboard.js",
+                "resources/js/manager-farm-activity-records.js",
                 "resources/js/manager-houses.js",
                 "resources/js/manager-inventory.js",
                 "resources/js/manager-management.js",
@@ -57,6 +61,7 @@ export default defineConfig({
                 "resources/js/manager-sensors.js",
                 "resources/js/manager-tasks.js",
                 "resources/js/manager-workers.js",
+                "resources/js/manager-decision-support.js",
             ],
             refresh: true,
         }),

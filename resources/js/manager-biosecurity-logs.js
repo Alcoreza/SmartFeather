@@ -17,6 +17,87 @@ let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
 let shouldTrackAddBioRequiredHighlights = false;
 
+function showBioConfirmModal(message, title = 'Confirm Save', confirmText = 'Confirm') {
+    return new Promise((resolve) => {
+        document.getElementById('bioGenericConfirmModal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'bio-modal-overlay confirm-modal-top show';
+        modal.id = 'bioGenericConfirmModal';
+        modal.innerHTML = `
+            <div class="bio-modal bio-confirm-modal">
+                <div class="bio-modal-header">
+                    <h2></h2>
+                    <div class="bio-modal-line"></div>
+                </div>
+                <div class="bio-modal-form bio-confirm-body">
+                    <p class="bio-form-confirm-text"></p>
+                    <div class="bio-modal-actions">
+                        <button type="button" class="bio-btn bio-btn-cancel" data-confirm-cancel>Cancel</button>
+                        <button type="button" class="bio-btn bio-btn-save" data-confirm-ok></button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector('h2').textContent = title;
+        modal.querySelector('p').textContent = message;
+        modal.querySelector('[data-confirm-ok]').textContent = confirmText;
+
+        const close = (confirmed) => {
+            modal.remove();
+            resolve(confirmed);
+        };
+
+        modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
+        modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close(false);
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
+function showBioNoticeModal(message, title = 'Notice') {
+    return new Promise((resolve) => {
+        document.getElementById('bioGenericNoticeModal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'bio-modal-overlay confirm-modal-top show';
+        modal.id = 'bioGenericNoticeModal';
+        modal.innerHTML = `
+            <div class="bio-modal bio-confirm-modal">
+                <div class="bio-modal-header">
+                    <h2></h2>
+                    <div class="bio-modal-line"></div>
+                </div>
+                <div class="bio-modal-form bio-confirm-body">
+                    <p class="bio-form-confirm-text"></p>
+                    <div class="bio-modal-actions">
+                        <button type="button" class="bio-btn bio-btn-save" data-notice-ok>OK</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector('h2').textContent = title;
+        modal.querySelector('p').textContent = message;
+
+        const close = () => {
+            modal.remove();
+            resolve();
+        };
+
+        modal.querySelector('[data-notice-ok]').addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        });
+
+        document.body.appendChild(modal);
+    });
+}
+
 const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
     'Personnel Biosecurity Logs': [
         { name: 'name', label: 'Name' },
@@ -164,6 +245,17 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function getReadableBioError(error) {
+    if (!error) return 'Unable to save log. Please try again.';
+
+    if (error.errors) {
+        const messages = Object.values(error.errors).flat().filter(Boolean);
+        if (messages.length) return messages.join(' ');
+    }
+
+    return error.message || error.error || 'Unable to save log. Please try again.';
+}
+
 function formatDateForDisplay(isoDate) {
     if (!isoDate) return '';
     
@@ -178,17 +270,11 @@ function formatDateForDisplay(isoDate) {
 }
 
 function setOverview(overview) {
-    const violations = document.getElementById('bioViolations');
-    const visitors = document.getElementById('bioVisitors');
-    const mortalities = document.getElementById('bioMortalities');
-    const disinfectionDate = document.getElementById('bioDisinfectionDate');
-    const disinfectionTime = document.getElementById('bioDisinfectionTime');
+    const personnelEntered = document.getElementById('bioPersonnelEntered');
+    const visitorsEntered = document.getElementById('bioVisitorsEntered');
 
-    if (violations) violations.textContent = overview?.violations ?? 0;
-    if (visitors) visitors.textContent = overview?.visitors ?? 0;
-    if (mortalities) mortalities.textContent = overview?.mortalities ?? 0;
-    if (disinfectionDate) disinfectionDate.textContent = formatDateForDisplay(overview?.last_disinfection?.date) ?? '--';
-    if (disinfectionTime) disinfectionTime.textContent = overview?.last_disinfection?.time ?? '--';
+    if (personnelEntered) personnelEntered.textContent = overview?.personnel_entered ?? 0;
+    if (visitorsEntered) visitorsEntered.textContent = overview?.visitors_entered ?? 0;
 }
 
 function renderTableHead(type) {
@@ -348,9 +434,9 @@ function renderTableRows(type, rows) {
 
         const encodedRow = encodeURIComponent(JSON.stringify(row));
 
-        return `
-            <tr>
-                ${cells}
+        const actionCell = row.can_edit === false
+            ? '<td></td>'
+            : `
                 <td>
                     <button
                         type="button"
@@ -364,6 +450,12 @@ function renderTableRows(type, rows) {
                         </svg>
                     </button>
                 </td>
+            `;
+
+        return `
+            <tr>
+                ${cells}
+                ${actionCell}
             </tr>
         `;
     }).join('');
@@ -382,6 +474,13 @@ function renderCurrentTable(resetPage = true) {
     renderTableHead(type);
     renderBioTable(type, filteredRows);
     updateBioPagination(filteredRows.length);
+}
+
+function syncAddBioButtonVisibility() {
+    const openBtn = document.getElementById('openAddBioModal');
+    if (!openBtn) return;
+
+    openBtn.hidden = state.selectedCategory !== 'Visitors';
 }
 
 function normalizeFieldValueForInput(field, value = '') {
@@ -534,6 +633,8 @@ function closeVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (cameraModal) {
         cameraModal.classList.remove('show');
@@ -547,10 +648,67 @@ function closeVisitorCameraModal() {
 
     if (snapshot) {
         snapshot.style.display = 'none';
+        snapshot.src = '';
+    }
+    if (video) {
+        video.style.display = 'block';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+    }
+    if (useButton) {
+        useButton.disabled = true;
     }
 
     visitorPhotoDataUrl = null;
     visitorCameraStream = null;
+}
+
+function showVisitorCameraLiveMode() {
+    const video = document.getElementById('visitorCameraVideo');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+
+    visitorPhotoDataUrl = null;
+
+    if (video) {
+        video.style.display = 'block';
+        video.play().catch(() => {});
+    }
+    if (snapshot) {
+        snapshot.style.display = 'none';
+        snapshot.src = '';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+    }
+    if (useButton) {
+        useButton.disabled = true;
+    }
+}
+
+function showVisitorCameraCapturedMode() {
+    const video = document.getElementById('visitorCameraVideo');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+
+    if (video) {
+        video.style.display = 'none';
+    }
+    if (snapshot) {
+        snapshot.style.display = 'block';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture Again';
+        captureButton.dataset.mode = 'retake';
+    }
+    if (useButton) {
+        useButton.disabled = false;
+    }
 }
 
 async function openVisitorCameraModal() {
@@ -562,7 +720,7 @@ async function openVisitorCameraModal() {
     if (!cameraModal || !video || !snapshot || !useButton) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera access is not available in this browser.');
+        await showBioNoticeModal('Camera access is not available in this browser.', 'Camera Unavailable');
         return;
     }
 
@@ -570,12 +728,11 @@ async function openVisitorCameraModal() {
         visitorCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = visitorCameraStream;
         video.play();
-        snapshot.style.display = 'none';
-        useButton.disabled = true;
+        showVisitorCameraLiveMode();
         cameraModal.classList.add('show');
     } catch (error) {
         console.error('Camera error:', error);
-        alert('Could not access the camera. Please allow camera access or use a supported browser.');
+        await showBioNoticeModal('Could not access the camera. Please allow camera access or use a supported browser.', 'Camera Error');
     }
 }
 
@@ -584,8 +741,14 @@ function captureVisitorPhoto() {
     const canvas = document.getElementById('visitorCameraCanvas');
     const snapshot = document.getElementById('visitorCameraSnapshot');
     const useButton = document.getElementById('useVisitorPhotoBtn');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
 
     if (!video || !canvas || !snapshot || !useButton) return;
+
+    if (captureButton?.dataset.mode === 'retake') {
+        showVisitorCameraLiveMode();
+        return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -595,8 +758,7 @@ function captureVisitorPhoto() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     visitorPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     snapshot.src = visitorPhotoDataUrl;
-    snapshot.style.display = 'block';
-    useButton.disabled = false;
+    showVisitorCameraCapturedMode();
 }
 
 async function uploadVisitorPhoto() {
@@ -605,7 +767,7 @@ async function uploadVisitorPhoto() {
     const openCameraButton = document.getElementById('add_open_camera_btn');
 
     if (!visitorPhotoDataUrl) {
-        alert('Please capture a photo first.');
+        await showBioNoticeModal('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -648,7 +810,7 @@ async function uploadVisitorPhoto() {
         closeVisitorCameraModal();
     } catch (error) {
         console.error('Error uploading visitor photo:', error);
-        alert('Failed to upload photo. Please try again.');
+        await showBioNoticeModal('Failed to upload photo. Please try again.', 'Upload Failed');
         if (status) {
             status.textContent = 'Upload failed. Try again.';
         }
@@ -669,7 +831,7 @@ function attachVisitorPhoto() {
     const status = document.getElementById('add_photo_status');
 
     if (!visitorPhotoDataUrl) {
-        alert('Please capture a photo first.');
+        showBioNoticeModal('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -743,7 +905,16 @@ function setupEditModal() {
             const logId = logIdInput?.value;
 
             if (!logId) {
-                alert('Invalid log ID');
+                await showBioNoticeModal('Invalid log ID.', 'Unable to Update Log');
+                return;
+            }
+
+            const confirmed = await showBioConfirmModal(
+                'Save changes to this biosecurity log?',
+                'Confirm Biosecurity Log',
+            );
+
+            if (!confirmed) {
                 return;
             }
 
@@ -760,19 +931,20 @@ function setupEditModal() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Server error:', errorData);
-                    throw new Error(`Failed to update: ${response.status}`);
+                    throw new Error(getReadableBioError(errorData));
                 }
 
                 const result = await response.json();
                 console.log('Log updated:', result);
 
                 modal.classList.remove('show');
+                await showBioNoticeModal(result.message || 'Log updated successfully.', 'Biosecurity Log Updated');
 
                 // Reload logs to show the updated entry
                 loadBiosecurityLogs();
             } catch (error) {
                 console.error('Error updating log:', error);
-                alert('Failed to update log. Please try again.');
+                await showBioNoticeModal(error.message || 'Failed to update log. Please try again.', 'Unable to Update Log');
             }
         });
     }
@@ -801,6 +973,10 @@ function setupAddModal() {
 
     openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
+
+        if (type !== 'Visitors') {
+            return;
+        }
 
         // Load form options for available categories
         if (type === 'Personnel Biosecurity Logs' || type === 'Visitors') {
@@ -906,6 +1082,15 @@ function setupAddModal() {
                 return;
             }
 
+            const confirmed = await showBioConfirmModal(
+                `Add this ${payload.type || 'biosecurity log'}?`,
+                'Confirm Biosecurity Log',
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
             try {
                 const response = await fetch('/api/manager/biosecurity-logs', {
                     method: 'POST',
@@ -918,7 +1103,7 @@ function setupAddModal() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Server error:', errorData);
-                    throw new Error(`Failed to save: ${response.status}`);
+                    throw new Error(getReadableBioError(errorData));
                 }
 
                 const result = await response.json();
@@ -932,7 +1117,7 @@ function setupAddModal() {
                 loadBiosecurityLogs();
             } catch (error) {
                 console.error('Error saving log:', error);
-                showAddBioFormError(formError, 'Failed to save log. Please try again.');
+                showAddBioFormError(formError, error.message || 'Failed to save log. Please try again.');
             }
         });
     }
@@ -1075,9 +1260,12 @@ function bindEvents() {
             categoryButtons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
+            syncAddBioButtonVisibility();
             renderCurrentTable();
         });
     });
+
+    syncAddBioButtonVisibility();
 
     // Add event listeners for search and date filters
     const nameSearchInput = document.getElementById('bioNameSearch');

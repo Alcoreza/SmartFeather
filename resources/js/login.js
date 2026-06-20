@@ -1,13 +1,28 @@
 const BASE_URL = '/api/login';
 
 const loginErrorModal = document.getElementById('loginErrorModal');
+const loginErrorTitle = document.getElementById('loginErrorTitle');
 const loginErrorMessage = document.getElementById('loginErrorMessage');
 const closeLoginErrorModal = document.getElementById('closeLoginErrorModal');
+const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+const loginSubmitLabel = loginSubmitBtn?.querySelector('.go-btn-label');
 
-function showLoginError(message = 'Wrong username or password.') {
+function setLoginLoading(isLoading) {
+    if (!loginSubmitBtn || !loginSubmitLabel) return;
+
+    loginSubmitBtn.disabled = isLoading;
+    loginSubmitBtn.classList.toggle('is-loading', isLoading);
+    loginSubmitLabel.textContent = isLoading ? 'Logging in' : 'Login';
+}
+
+function showLoginError(message = 'Wrong username or password.', title = 'Login Failed') {
     if (!loginErrorModal || !loginErrorMessage) {
         alert(message);
         return;
+    }
+
+    if (loginErrorTitle) {
+        loginErrorTitle.textContent = title;
     }
 
     loginErrorMessage.textContent = message;
@@ -42,10 +57,32 @@ document.addEventListener('keydown', (event) => {
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const username = usernameInput?.value.trim() || '';
+    const password = passwordInput?.value || '';
+
+    if (!username && !password) {
+        showLoginError('Please enter your username and password before logging in.', 'Credentials Required');
+        usernameInput?.focus();
+        return;
+    }
+
+    if (!username) {
+        showLoginError('Please enter your username before logging in.', 'Username Required');
+        usernameInput?.focus();
+        return;
+    }
+
+    if (!password) {
+        showLoginError('Please enter your password before logging in.', 'Password Required');
+        passwordInput?.focus();
+        return;
+    }
 
     try {
+        setLoginLoading(true);
+
         const res = await fetch(BASE_URL, {
             method: 'POST',
             headers: {
@@ -62,19 +99,26 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
         if (!res.ok) {
             showLoginError(data.message || 'Wrong username or password.');
+            setLoginLoading(false);
             return;
         }
 
+        sessionStorage.removeItem('smartfeather:logged-out');
+
         if (data.user.Role === 'Admin') {
-            window.location.href = '/admin/dashboard';
+            // Use replace() instead of href to replace history entry
+            window.location.replace('/admin/dashboard');
         } else if (data.user.Role === 'Manager') {
-            window.location.href = '/manager/dashboard';
+            // Use replace() instead of href to replace history entry
+            window.location.replace('/manager/dashboard');
         } else {
             showLoginError('Unauthorized role.');
+            setLoginLoading(false);
         }
 
     } catch (err) {
         console.error(err);
         showLoginError('Network error. Please try again.');
+        setLoginLoading(false);
     }
 });

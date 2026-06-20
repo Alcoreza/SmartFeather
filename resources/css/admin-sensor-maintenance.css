@@ -31,26 +31,6 @@ body {
     box-sizing: border-box;
 }
 
-.admin-shell {
-    min-height: 100vh;
-    display: flex;
-}
-
-.admin-sidebar {
-    width: 220px;
-    min-height: 100vh;
-    padding: 28px 20px;
-    background: linear-gradient(180deg, #022713 0%, #042b1a 100%);
-    color: #fff;
-    position: sticky;
-    top: 0;
-}
-
-.admin-main {
-    flex: 1;
-    padding: 28px 34px 34px;
-}
-
 .admin-profile {
     width: 62px;
     height: 62px;
@@ -204,7 +184,7 @@ body {
 
 .admin-maintenance-table {
     width: 100%;
-    min-width: 900px;
+    min-width: 720px;
     border-collapse: separate;
     border-spacing: 0 14px;
 }
@@ -371,23 +351,7 @@ body {
     background: #c91c16;
 }
 
-@media (max-width: 992px) {
-    .admin-shell {
-        flex-direction: column;
-    }
-
-    .admin-sidebar {
-        width: 100%;
-        min-height: auto;
-        position: relative;
-    }
-}
-
 @media (max-width: 768px) {
-    .admin-main {
-        padding: 22px 16px 28px;
-    }
-
     .admin-maintenance-topbar {
         grid-template-columns: 1fr auto;
     }

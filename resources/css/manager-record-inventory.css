@@ -32,13 +32,15 @@
 }
 
 .record-inventory-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(170px, 0.75fr) minmax(170px, 0.85fr) minmax(430px, 1.55fr);
     align-items: center;
-    gap: 14px;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
 .record-back-btn {
+    grid-column: 1;
     width: 34px;
     height: 34px;
     border-radius: 50%;
@@ -60,98 +62,244 @@
 }
 
 .record-tabs {
+    grid-column: 2;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    min-width: 0;
+    border: 1px solid rgba(87, 196, 81, 0.14);
+    border-radius: 12px;
+    background: #f5fbf5;
+    box-shadow: 0 4px 12px rgba(12, 35, 22, 0.035);
 }
 
 .record-tab {
-    min-width: 92px;
-    height: 36px;
-    padding: 0 18px;
-    border-radius: 999px;
-    border: 1px solid #9d9d9d;
+    flex: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background: #ffffff;
-    color: #222222;
-    font-size: 1rem;
-    font-weight: 700;
+    color: #17452d;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 650;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    box-shadow: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.record-tab:hover {
+    background: #f9fff9;
+    border-color: rgba(87, 196, 81, 0.24);
+    box-shadow: none;
 }
 
 .record-tab.active.feed-active {
-    background: #9b6420;
+    background: linear-gradient(135deg, #a66c25, #9b6420);
     color: #ffffff;
-    border-color: #9b6420;
+    border-color: rgba(155, 100, 32, 0.42);
+    box-shadow: none;
+}
+
+.record-tab.active.feed-active:hover {
+    background: linear-gradient(135deg, #9b6420, #875619);
+    box-shadow: none;
 }
 
 .record-tab.active.vitamins-active {
-    background: #5b9999;
+    background: linear-gradient(135deg, #66a7a7, #5b9999);
     color: #ffffff;
-    border-color: #5b9999;
+    border-color: rgba(91, 153, 153, 0.42);
+    box-shadow: none;
+}
+
+.record-tab.active.vitamins-active:hover {
+    background: linear-gradient(135deg, #5b9999, #4c8585);
+    box-shadow: none;
 }
 
 .record-filter-wrap {
-    margin-left: auto;
-}
-
-.record-filter-wrap.hidden {
-    display: none;
+    grid-column: 3;
+    margin-left: 0;
+    padding: 6px;
+    min-width: 0;
+    border: 1px solid rgba(87, 196, 81, 0.14);
+    border-radius: 12px;
+    background: #f5fbf5;
+    box-shadow: 0 4px 12px rgba(12, 35, 22, 0.035);
 }
 
 .record-filter-select {
-    min-width: 150px;
+    width: 100%;
+    min-width: 0;
     height: 36px;
-    padding: 0 38px 0 16px;
-    border-radius: 999px;
-    border: 1.5px solid #5b8f59;
-    background: #f8f8f8;
-    color: #111111;
-    font-size: 0.96rem;
-    font-weight: 500;
+    padding: 0 36px 0 12px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
     outline: none;
+    box-shadow: none;
     appearance: none;
     cursor: pointer;
     background-image:
-        linear-gradient(45deg, transparent 50%, #333 50%),
-        linear-gradient(135deg, #333 50%, transparent 50%);
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
     background-position:
-        calc(100% - 18px) 14px,
-        calc(100% - 12px) 14px;
-    background-size: 6px 6px, 6px 6px;
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 8px) calc(50% - 3px);
+    background-size:
+        12px 12px,
+        12px 12px;
     background-repeat: no-repeat;
+    transition: all 0.3s ease;
+}
+
+.record-filter-select:focus {
+    border-color: rgba(87, 196, 81, 0.6);
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
+.record-date-filters {
+    grid-column: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: nowrap;
+    padding: 6px 8px;
+    min-width: 0;
+    border: 1px solid rgba(87, 196, 81, 0.14);
+    border-radius: 12px;
+    background: #f5fbf5;
+    box-shadow: 0 4px 12px rgba(12, 35, 22, 0.035);
+}
+
+.record-date-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.record-date-filter span {
+    color: #1b5e20;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.record-date-filter input {
+    width: 100%;
+    min-width: 112px;
+    max-width: 124px;
+    height: 36px;
+    padding: 0 8px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.82rem;
+    outline: none;
+    box-shadow: none;
+    transition: all 0.3s ease;
+}
+
+.record-date-filter input:focus {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
+}
+
+.record-clear-filters-btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.record-clear-filters-btn:hover {
+    background: #0d4a2d;
+    color: #ffffff;
+    border-color: #0d4a2d;
+    box-shadow: none;
 }
 
 .record-table-card {
-    background: rgba(255, 255, 255, 0.88);
-    border-radius: 28px;
-    padding: 12px 18px 22px;
+    background: #ffffff;
+    border: 1px solid rgba(87, 196, 81, 0.12);
+    border-radius: 8px;
+    padding: 18px 18px 20px;
     min-height: 420px;
-    box-shadow: 0 12px 26px rgba(10, 24, 15, 0.06);
+    box-shadow: 0 6px 16px rgba(10, 24, 15, 0.035);
+    overflow-x: auto;
 }
 
 .record-table {
     width: 100%;
+    min-width: 820px;
     border-collapse: collapse;
+    border-spacing: 0;
+    table-layout: fixed;
 }
 
 .record-table th,
 .record-table td {
-    text-align: left;
-    padding: 14px 10px;
-    font-size: 0.98rem;
-    color: #111111;
+    text-align: center;
+    padding: 12px 10px;
+    color: #102016;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .record-table th {
+    background: #f2faf3;
+    border-bottom: 1px solid rgba(87, 196, 81, 0.12);
+    color: #4f5f55;
+    font-size: 0.9rem;
     font-weight: 800;
+    line-height: 1.1;
 }
 
 .record-table td {
-    font-weight: 500;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(87, 196, 81, 0.08);
+    font-size: 0.94rem;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.record-table tbody tr:hover td {
+    background: #f6fcf6;
+}
+
+.record-table th:first-child,
+.record-table td:first-child {
+    text-align: left;
+    padding-left: 16px;
+    width: 22%;
 }
 
 .record-movement-badge {
@@ -161,7 +309,8 @@
     min-width: 116px;
     min-height: 28px;
     padding: 5px 12px;
-    border-radius: 999px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     font-size: 0.84rem;
     font-weight: 800;
     white-space: nowrap;
@@ -170,16 +319,19 @@
 .record-movement-badge.movement-initial {
     background: #eef2f7;
     color: #334155;
+    border-color: rgba(51, 65, 85, 0.12);
 }
 
 .record-movement-badge.movement-added {
-    background: #e7f6ec;
-    color: #126033;
+    background: #f5fbf5;
+    color: #17452d;
+    border-color: rgba(87, 196, 81, 0.16);
 }
 
 .record-movement-badge.movement-reduced {
-    background: #fdebea;
-    color: #9f1f18;
+    background: #fbeeee;
+    color: #a81a12;
+    border-color: rgba(168, 26, 18, 0.14);
 }
 
 .record-quantity {
@@ -197,6 +349,91 @@
 
 .record-quantity.movement-reduced {
     color: #9f1f18;
+}
+
+.record-placeholder-row {
+    background: transparent !important;
+    box-shadow: none !important;
+    cursor: default;
+    height: 46px;
+}
+
+.record-placeholder-row td {
+    background: transparent !important;
+    height: 46px;
+}
+
+.record-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 18px 0 0;
+    border-top: 1px solid rgba(87, 196, 81, 0.1);
+}
+
+.record-pagination.is-hidden {
+    display: none;
+}
+
+.record-page-btn {
+    min-width: 78px;
+    min-height: 44px;
+    padding: 9px 18px;
+    border: 1px solid rgba(87, 196, 81, 0.18);
+    border-radius: 999px;
+    background: #f5fbf5;
+    color: #0d4a2d;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.record-page-btn:hover:not(:disabled) {
+    background: #ffffff;
+    border-color: rgba(87, 196, 81, 0.34);
+    box-shadow: 0 6px 16px rgba(10, 24, 15, 0.06);
+}
+
+.record-page-btn:disabled {
+    color: #75847a;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+.record-page-dots {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.record-page-dot {
+    width: 11px;
+    height: 11px;
+    padding: 0;
+    flex: 0 0 11px;
+    border: 1px solid #a7dea7;
+    border-radius: 50%;
+    background: #ffffff !important;
+    appearance: none;
+    font-size: 0;
+    line-height: 0;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.record-page-dot:hover {
+    background: rgba(87, 196, 81, 0.14) !important;
+    border-color: rgba(87, 196, 81, 0.6);
+}
+
+.record-page-dot.active {
+    background: #57c451 !important;
+    border-color: #57c451 !important;
+    box-shadow: none;
 }
 
 .record-inventory-topbar,
@@ -248,11 +485,27 @@
     }
 
     .record-inventory-controls {
-        flex-wrap: wrap;
+        grid-template-columns: auto 1fr;
+    }
+
+    .record-tabs {
+        grid-column: 2;
+    }
+
+    .record-filter-wrap {
+        grid-column: 1 / -1;
+    }
+
+    .record-date-filters {
+        grid-column: 1 / -1;
     }
 
     .record-filter-wrap {
         margin-left: 0;
+    }
+
+    .record-date-filters {
+        flex-wrap: nowrap;
     }
 
     .record-table-card {

@@ -1,9 +1,18 @@
 const BASE_URL = '/api/admin/workers';
-const WORKERS_ROWS_PER_PAGE = 5;
+const WORKERS_ROWS_PER_PAGE = 7;
 
 let workersCache = [];
 let workersCurrentPage = 0;
 let workersCurrentRole = 'All';
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 // ================= PROFILE MODAL =================
 async function populateProfileModal() {
@@ -84,11 +93,10 @@ function renderWorkersTable() {
     if (!filteredWorkers.length) {
         table.innerHTML = `
             <tr>
-                <td colspan="4" class="workers-empty-row">No employees match the selected filter.</td>
+                <td colspan="3" class="workers-empty-row">No employees match the selected filter.</td>
             </tr>
             ${Array.from({ length: WORKERS_ROWS_PER_PAGE - 1 }, () => `
                 <tr class="workers-placeholder-row" aria-hidden="true">
-                    <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
@@ -107,12 +115,11 @@ function renderWorkersTable() {
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
         return `
-            <tr data-id="${user.EmployeeId}">
-                <td>${fullName}</td>
-                <td>${user.EmployeeId}</td>
-                <td>${user.Role}</td>
+            <tr data-id="${escapeHtml(user.EmployeeId)}">
+                <td>${escapeHtml(fullName)}</td>
+                <td>${escapeHtml(user.Role)}</td>
                 <td class="text-center">
-                    <button class="view-worker-btn icon-btn" type="button" data-id="${user.EmployeeId}">
+                    <button class="view-worker-btn icon-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
@@ -123,7 +130,6 @@ function renderWorkersTable() {
         `;
     }).join('') + Array.from({ length: placeholderRows }, () => `
         <tr class="workers-placeholder-row" aria-hidden="true">
-            <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>

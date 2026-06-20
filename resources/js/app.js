@@ -16,6 +16,24 @@ document.addEventListener("DOMContentLoaded", () => {
         document.documentElement.style.visibility = "";
     }
 
+    function lockBackNavigationOnProtectedPage() {
+        if (!isProtectedAppPage()) return;
+        if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
+
+        const currentUrl = window.location.href;
+        const state = { smartfeatherProtectedHistoryLock: true };
+
+        window.history.replaceState(state, "", currentUrl);
+        window.history.pushState(state, "", currentUrl);
+
+        window.addEventListener("popstate", () => {
+            if (!isProtectedAppPage()) return;
+            if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
+
+            window.history.pushState(state, "", window.location.href);
+        });
+    }
+
     async function redirectIfSessionExpired(options = {}) {
         if (!isProtectedAppPage()) return;
 
@@ -63,6 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
             redirectIfSessionExpired({ hideWhileChecking: true });
         }
     });
+
+    lockBackNavigationOnProtectedPage();
 
     document.querySelectorAll(".sidebar-nav, .admin-sidebar-nav").forEach((nav) => {
         let scrollTimer = null;
@@ -201,9 +221,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
     let pendingLogoutUrl = null;
 
+    function submitLogout(url) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = url;
+        form.style.display = "none";
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        if (token) {
+            const tokenInput = document.createElement("input");
+            tokenInput.type = "hidden";
+            tokenInput.name = "_token";
+            tokenInput.value = token;
+            form.appendChild(tokenInput);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     function openLogoutModal(url) {
         if (!logoutModal || !confirmLogoutBtn) {
-            window.location.href = url;
+            submitLogout(url);
             return;
         }
 
@@ -239,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (pendingLogoutUrl) {
             sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
             hideProtectedPage();
-            window.location.href = pendingLogoutUrl;
+            submitLogout(pendingLogoutUrl);
         }
     });
 

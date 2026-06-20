@@ -1,4 +1,4 @@
-const BASE_URL = '/api/admin/workers';
+const BASE_URL = '/api/manager/workers';
 const WORKERS_ROWS_PER_PAGE = 7;
 
 let workersCache = [];

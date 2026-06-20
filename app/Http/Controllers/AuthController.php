@@ -58,8 +58,8 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        // Completely destroy the session
-        $request->session()->flush();
+        // Completely destroy the session and rotate the CSRF token.
+        $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         // Redirect to login with cache control headers

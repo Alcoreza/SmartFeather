@@ -208,17 +208,6 @@ function formatRecordCount(count) {
     return `${count} ${count === 1 ? 'record' : 'records'}`;
 }
 
-function getPageRangeText(totalRows, currentPage = 0) {
-    if (!totalRows) {
-        return '0 records';
-    }
-
-    const start = currentPage * FARM_ACTIVITY_ROWS_PER_PAGE + 1;
-    const end = Math.min(totalRows, start + FARM_ACTIVITY_ROWS_PER_PAGE - 1);
-
-    return `Showing ${start}-${end} of ${totalRows}`;
-}
-
 function getInventoryMovement(row) {
     const added = Number(row.added ?? 0);
     const deducted = Number(row.deducted ?? 0);
@@ -369,12 +358,10 @@ function reRenderFarmActivityCard(cardKey) {
 
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, allRows.length);
-    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
         formatRecordCount(allRows.length),
-        getPageRangeText(allRows.length, currentPage),
         `
             ${tableHtml}
             ${paginationHtml}
@@ -425,12 +412,10 @@ function renderSingleRecord(recordType, recordData) {
     const paginatedRows = updateFarmActivityCard(cardKey, rows);
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, rows.length);
-    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
         formatRecordCount(rows.length),
-        getPageRangeText(rows.length, currentPage),
         `
             ${tableHtml}
             ${paginationHtml}
@@ -440,13 +425,12 @@ function renderSingleRecord(recordType, recordData) {
     updateFarmActivityPagination(cardKey, rows.length);
 }
 
-function renderFarmActivityCardShell(title, countText, pageText, contentHtml) {
+function renderFarmActivityCardShell(title, countText, contentHtml) {
     return `
         <section class="reports-card farm-record-card">
             <div class="farm-record-card-header">
                 <div>
                     <h2>${escapeHtml(title)}</h2>
-                    <p>${escapeHtml(pageText)}</p>
                 </div>
                 <div class="farm-record-card-badges">
                     <span class="farm-record-count">${escapeHtml(countText)}</span>
@@ -470,7 +454,6 @@ function renderMultiRecord(recordType, recordData) {
                     <div class="farm-record-card-header">
                         <div>
                             <h2>${escapeHtml(section.title)}</h2>
-                            <p>${escapeHtml(getPageRangeText(rows.length))}</p>
                         </div>
                         <div class="farm-record-card-badges">
                             <span class="farm-record-count">${escapeHtml(formatRecordCount(rows.length))}</span>

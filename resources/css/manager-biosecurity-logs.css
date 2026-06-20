@@ -725,6 +725,48 @@ button.bio-category-btn:not(.active) svg {
     max-width: 460px;
 }
 
+.bio-confirm-modal {
+    max-width: 460px;
+    padding: 24px;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8);
+    border-radius: 28px;
+    box-shadow:
+        0 28px 60px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+}
+
+.bio-confirm-modal .bio-modal-header {
+    margin-bottom: 18px;
+}
+
+.bio-confirm-modal .bio-modal-header h2 {
+    font-size: 1.9rem;
+}
+
+.bio-confirm-modal .bio-modal-line {
+    margin-top: 12px;
+    background: linear-gradient(90deg, #1d6a37, #2c8748);
+}
+
+.bio-confirm-body {
+    margin-top: 0;
+}
+
+.bio-form-confirm-text {
+    margin: 0;
+    color: #26382f;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.bio-confirm-modal .bio-modal-actions {
+    justify-content: center;
+    margin-top: 22px;
+}
+
 @keyframes bioModalPop {
     from {
         opacity: 0;

@@ -55,6 +55,12 @@ class BiosecurityLogController extends Controller
         $type = $request->input('type', 'Cleaning');
         $request->merge(['type' => $type]);
 
+        if ($type === 'Personnel Biosecurity Logs') {
+            return response()->json([
+                'message' => 'Personnel logs are generated from personnel scan activity.',
+            ], 422);
+        }
+
         $validated = $request->validate($this->getValidationRules($type));
         unset($validated['type']);
 
@@ -319,7 +325,7 @@ class BiosecurityLogController extends Controller
     {
         return match ($type) {
             'Cleaning' => CleaningLog::create($validated),
-            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::create($validated),
+            'Personnel Biosecurity Logs' => PersonnelEntryLog::create($validated),
             'Visitors' => VisitorLog::create($validated),
             'Personnel Entry Logs' => PersonnelEntryLog::create($validated),
             'Weight Sampling' => WeightSamplingLog::create($validated),
@@ -374,7 +380,7 @@ class BiosecurityLogController extends Controller
 
     private function formatPersonnelBiosecurityLog($log)
     {
-        $entryStatus = strtoupper((string) ($log->entry_status ?? 'IN'));
+        $entryStatus = strtoupper((string) ($log->status ?? $log->entry_status ?? 'IN'));
         $time = $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '';
 
         return [

@@ -470,8 +470,18 @@ body.logout-confirm-open {
     filter: brightness(1.03);
 }
 
+button.logout-confirm-btn.cancel,
 .logout-confirm-btn.cancel {
-    background: #7b7b7b;
+    background: #7b7b7b !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+}
+
+button.logout-confirm-btn.cancel:hover,
+.logout-confirm-btn.cancel:hover {
+    background: #6f6f6f !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 20px rgba(64, 64, 64, 0.16) !important;
 }
 
 .logout-confirm-btn.confirm {

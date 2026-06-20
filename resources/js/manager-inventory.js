@@ -2,96 +2,51 @@ function showPopup(message, type = "success", callback = null) {
     const oldPopup = document.getElementById("inventoryPopupOverlay");
     if (oldPopup) oldPopup.remove();
 
+    const isError = type === "error";
     const overlay = document.createElement("div");
     overlay.id = "inventoryPopupOverlay";
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    `;
+    overlay.className = "inventory-modal-overlay inventory-confirm-overlay confirm-modal-top show";
 
     const box = document.createElement("div");
-    box.style.cssText = `
-        background: #ffffff;
-        width: 360px;
-        max-width: 90%;
-        border-radius: 18px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        font-family: inherit;
-    `;
+    box.className = "inventory-modal-card inventory-confirm-card";
 
     box.innerHTML = `
-        <h2 style="margin:0 0 10px;color:${type === "success" ? "#1f7a3f" : "#b42318"};">
-            ${type === "success" ? "Success" : "Error"}
-        </h2>
-        <p id="inventoryPopupMessage" style="margin:0 0 22px;color:#333;font-size:15px;"></p>
-        <button id="inventoryPopupOkBtn" style="
-            border: none;
-            background: ${type === "success" ? "#1f7a3f" : "#b42318"};
-            color: white;
-            padding: 10px 28px;
-            border-radius: 999px;
-            cursor: pointer;
-            font-weight: 600;
-        ">
-            OK
-        </button>
+        <div class="inventory-modal-header">
+            <div>
+                <h2></h2>
+                <div class="inventory-modal-line"></div>
+            </div>
+        </div>
+
+        <p class="inventory-confirm-text" id="inventoryPopupMessage"></p>
+
+        <div class="inventory-modal-actions inventory-confirm-actions">
+            <button type="button" class="inventory-save-btn ${isError ? "inventory-confirm-danger" : ""}" id="inventoryPopupOkBtn">
+                OK
+            </button>
+        </div>
     `;
 
+    box.querySelector("h2").textContent = isError ? "Error" : "Success";
     box.querySelector("#inventoryPopupMessage").textContent = message || "";
 
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    overlay.animate(
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 180, easing: "ease-out" }
-    );
+    const close = () => {
+        overlay.remove();
 
-    box.animate(
-        type === "error"
-            ? [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateX(-6px) scale(1)" },
-                { opacity: 1, transform: "translateX(6px) scale(1)" },
-                { opacity: 1, transform: "translateX(0) scale(1)" }
-            ]
-            : [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateY(0) scale(1)" }
-            ],
-        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
-    );
+        if (typeof callback === "function") {
+            callback();
+        }
+    };
 
-    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
-        const fadeOut = overlay.animate(
-            [{ opacity: 1 }, { opacity: 0 }],
-            { duration: 140, easing: "ease-in" }
-        );
+    document.getElementById("inventoryPopupOkBtn").addEventListener("click", close);
 
-        box.animate(
-            [
-                { opacity: 1, transform: "translateY(0) scale(1)" },
-                { opacity: 0, transform: "translateY(10px) scale(0.96)" }
-            ],
-            { duration: 140, easing: "ease-in" }
-        );
-
-        fadeOut.onfinish = () => {
-            overlay.remove();
-
-            if (typeof callback === "function") {
-                callback();
-            }
-        };
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            close();
+        }
     });
 }
 

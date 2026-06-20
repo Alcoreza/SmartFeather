@@ -628,22 +628,30 @@
 }
 
 .inventory-confirm-card {
-    max-width: 430px;
+    max-width: 460px;
+    padding: 24px;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8);
+    border-radius: 28px;
+    box-shadow:
+        0 28px 60px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    overflow: hidden;
     text-align: center;
 }
 
 .inventory-confirm-card .inventory-modal-header {
-    margin-bottom: 14px;
+    margin-bottom: 18px;
 }
 
 .inventory-confirm-card .inventory-modal-header h2 {
-    font-size: 1.75rem;
+    font-size: 1.9rem;
 }
 
 .inventory-confirm-text {
     margin: 0;
-    color: #333333;
+    color: #26382f;
     font-size: 1rem;
+    font-weight: 600;
     line-height: 1.5;
 }
 

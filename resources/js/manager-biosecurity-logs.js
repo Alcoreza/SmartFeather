@@ -25,12 +25,12 @@ function showBioConfirmModal(message, title = 'Confirm Save', confirmText = 'Con
         modal.className = 'bio-modal-overlay confirm-modal-top show';
         modal.id = 'bioGenericConfirmModal';
         modal.innerHTML = `
-            <div class="bio-modal">
+            <div class="bio-modal bio-confirm-modal">
                 <div class="bio-modal-header">
                     <h2></h2>
                     <div class="bio-modal-line"></div>
                 </div>
-                <div class="bio-modal-form">
+                <div class="bio-modal-form bio-confirm-body">
                     <p class="bio-form-confirm-text"></p>
                     <div class="bio-modal-actions">
                         <button type="button" class="bio-btn bio-btn-cancel" data-confirm-cancel>Cancel</button>
@@ -67,12 +67,12 @@ function showBioNoticeModal(message, title = 'Notice') {
         modal.className = 'bio-modal-overlay confirm-modal-top show';
         modal.id = 'bioGenericNoticeModal';
         modal.innerHTML = `
-            <div class="bio-modal">
+            <div class="bio-modal bio-confirm-modal">
                 <div class="bio-modal-header">
                     <h2></h2>
                     <div class="bio-modal-line"></div>
                 </div>
-                <div class="bio-modal-form">
+                <div class="bio-modal-form bio-confirm-body">
                     <p class="bio-form-confirm-text"></p>
                     <div class="bio-modal-actions">
                         <button type="button" class="bio-btn bio-btn-save" data-notice-ok>OK</button>
@@ -476,6 +476,13 @@ function renderCurrentTable(resetPage = true) {
     updateBioPagination(filteredRows.length);
 }
 
+function syncAddBioButtonVisibility() {
+    const openBtn = document.getElementById('openAddBioModal');
+    if (!openBtn) return;
+
+    openBtn.hidden = state.selectedCategory !== 'Visitors';
+}
+
 function normalizeFieldValueForInput(field, value = '') {
     if (!value) return '';
 
@@ -626,6 +633,8 @@ function closeVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (cameraModal) {
         cameraModal.classList.remove('show');
@@ -639,10 +648,67 @@ function closeVisitorCameraModal() {
 
     if (snapshot) {
         snapshot.style.display = 'none';
+        snapshot.src = '';
+    }
+    if (video) {
+        video.style.display = 'block';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+    }
+    if (useButton) {
+        useButton.disabled = true;
     }
 
     visitorPhotoDataUrl = null;
     visitorCameraStream = null;
+}
+
+function showVisitorCameraLiveMode() {
+    const video = document.getElementById('visitorCameraVideo');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+
+    visitorPhotoDataUrl = null;
+
+    if (video) {
+        video.style.display = 'block';
+        video.play().catch(() => {});
+    }
+    if (snapshot) {
+        snapshot.style.display = 'none';
+        snapshot.src = '';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+    }
+    if (useButton) {
+        useButton.disabled = true;
+    }
+}
+
+function showVisitorCameraCapturedMode() {
+    const video = document.getElementById('visitorCameraVideo');
+    const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
+
+    if (video) {
+        video.style.display = 'none';
+    }
+    if (snapshot) {
+        snapshot.style.display = 'block';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture Again';
+        captureButton.dataset.mode = 'retake';
+    }
+    if (useButton) {
+        useButton.disabled = false;
+    }
 }
 
 async function openVisitorCameraModal() {
@@ -662,8 +728,7 @@ async function openVisitorCameraModal() {
         visitorCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = visitorCameraStream;
         video.play();
-        snapshot.style.display = 'none';
-        useButton.disabled = true;
+        showVisitorCameraLiveMode();
         cameraModal.classList.add('show');
     } catch (error) {
         console.error('Camera error:', error);
@@ -676,8 +741,14 @@ function captureVisitorPhoto() {
     const canvas = document.getElementById('visitorCameraCanvas');
     const snapshot = document.getElementById('visitorCameraSnapshot');
     const useButton = document.getElementById('useVisitorPhotoBtn');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
 
     if (!video || !canvas || !snapshot || !useButton) return;
+
+    if (captureButton?.dataset.mode === 'retake') {
+        showVisitorCameraLiveMode();
+        return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -687,8 +758,7 @@ function captureVisitorPhoto() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     visitorPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     snapshot.src = visitorPhotoDataUrl;
-    snapshot.style.display = 'block';
-    useButton.disabled = false;
+    showVisitorCameraCapturedMode();
 }
 
 async function uploadVisitorPhoto() {
@@ -903,6 +973,10 @@ function setupAddModal() {
 
     openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
+
+        if (type !== 'Visitors') {
+            return;
+        }
 
         // Load form options for available categories
         if (type === 'Personnel Biosecurity Logs' || type === 'Visitors') {
@@ -1186,9 +1260,12 @@ function bindEvents() {
             categoryButtons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
+            syncAddBioButtonVisibility();
             renderCurrentTable();
         });
     });
+
+    syncAddBioButtonVisibility();
 
     // Add event listeners for search and date filters
     const nameSearchInput = document.getElementById('bioNameSearch');

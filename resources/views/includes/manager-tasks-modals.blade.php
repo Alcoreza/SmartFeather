@@ -88,28 +88,35 @@
 </div>
 
 <div class="manager-task-modal-backdrop" id="addTaskModal">
-    <div class="manager-task-form-modal">
-        <div class="manager-task-modal-header center">
-            <h2>Assign Task</h2>
-            <div class="manager-task-header-line"></div>
+    <div class="manager-task-form-modal manager-task-assign-modal">
+        <div class="manager-task-modal-header manager-task-assign-header">
+            <div class="manager-task-modal-title-block">
+                <span class="manager-task-modal-kicker">Task Assignment</span>
+                <h2>Assign Task</h2>
+            </div>
+            <button type="button" class="manager-task-close-btn" data-close-task-modal="addTaskModal">&times;</button>
         </div>
 
         <form class="manager-task-form-body" id="addTaskForm">
             <div class="manager-task-form-error" id="addTaskFormError" role="alert" aria-live="polite"></div>
 
             <!-- Worker Selection Section -->
-            <div class="manager-task-form-section">
-                <h3 class="manager-task-form-section-title">Select Flockman</h3>
-                <div class="manager-task-form-field full">
-                    <label for="taskWorkerName">Assign Flockman*</label>
-                    <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>
+            <div class="manager-task-form-section manager-task-assignee-panel">
+                <div class="manager-task-assignee-row">
+                    <h3 class="manager-task-form-section-title">Assignment</h3>
+                    <div class="manager-task-form-field full">
+                        <label for="taskWorkerName">Assign Flockman*</label>
+                        <select id="taskWorkerName" name="worker_name" class="task-select-placeholder"></select>
+                    </div>
                 </div>
             </div>
 
             <!-- Tasks Section -->
-            <div class="manager-task-form-section">
+            <div class="manager-task-form-section manager-task-list-section">
                 <div class="manager-task-tasks-header">
-                    <h3 class="manager-task-form-section-title">Tasks</h3>
+                    <div>
+                        <h3 class="manager-task-form-section-title">Tasks</h3>
+                    </div>
                     <span class="manager-task-count-badge" id="taskCountBadge">0</span>
                 </div>
                 

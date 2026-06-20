@@ -553,9 +553,9 @@ function generateTaskRowHtml(rowIndex) {
         <div class="manager-task-row" data-row-index="${rowIndex}">
             <div class="manager-task-row-header">
                 <h4 class="manager-task-row-title">Task ${rowIndex + 1}</h4>
-                ${rowIndex > 0 ? `<button type="button" class="manager-task-row-remove-btn remove-task-row-btn" data-row-index="${rowIndex}" title="Remove task">×</button>` : ''}
+                ${rowIndex > 0 ? `<button type="button" class="manager-task-row-remove-btn remove-task-row-btn" data-row-index="${rowIndex}" title="Remove task">&times;</button>` : ''}
             </div>
-            <div class="manager-task-form-grid">
+            <div class="manager-task-row-grid">
                 <div class="manager-task-form-field">
                     <label>Task*</label>
                     <select name="task_category_${rowIndex}" class="task-select-placeholder task-category-select"></select>
@@ -573,17 +573,17 @@ function generateTaskRowHtml(rowIndex) {
                     <select name="pen_number_${rowIndex}" class="task-select-placeholder task-pen-select"></select>
                 </div>
                 <div class="manager-task-form-field">
-                    <label>Time to finish*</label>
-                    <input type="time" name="time_assigned_${rowIndex}" class="task-time-input">
-                </div>
-                <div class="manager-task-form-field">
                     <label>Date to finish*</label>
                     <input type="date" name="date_assigned_${rowIndex}" class="task-date-input" min="${getTodayDateValue()}">
                 </div>
-            </div>
-            <div class="manager-task-form-field full">
-                <label>Detailed Task</label>
-                <textarea name="detailed_task_${rowIndex}" class="task-detailed-textarea" rows="3" placeholder="Write a clear and specific task instruction here."></textarea>
+                <div class="manager-task-form-field">
+                    <label>Time to finish*</label>
+                    <input type="time" name="time_assigned_${rowIndex}" class="task-time-input">
+                </div>
+                <div class="manager-task-form-field full">
+                    <label>Detailed Task</label>
+                    <textarea name="detailed_task_${rowIndex}" class="task-detailed-textarea" rows="3" placeholder="Write a clear and specific task instruction here."></textarea>
+                </div>
             </div>
         </div>
     `;
@@ -669,7 +669,7 @@ function setupAddTaskModal() {
         });
     }
 
-    function addNewTaskRow() {
+    function addNewTaskRow(options = {}) {
         const rowIndex = nextTaskRowIndex;
         nextTaskRowIndex += 1;
         const rowHtml = generateTaskRowHtml(rowIndex);
@@ -698,6 +698,13 @@ function setupAddTaskModal() {
         });
 
         updateTaskCountBadge();
+
+        if (options.scrollToRow) {
+            requestAnimationFrame(() => {
+                row.scrollIntoView({ behavior: "smooth", block: "start" });
+                row.querySelector(".task-category-select")?.focus({ preventScroll: true });
+            });
+        }
     }
 
     function updateTaskCountBadge() {
@@ -711,7 +718,7 @@ function setupAddTaskModal() {
     if (addTaskRowBtn) {
         addTaskRowBtn.addEventListener("click", (e) => {
             e.preventDefault();
-            addNewTaskRow();
+            addNewTaskRow({ scrollToRow: true });
         });
     }
 

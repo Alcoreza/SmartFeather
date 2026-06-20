@@ -852,8 +852,46 @@ body {
     overflow-y: auto;
 }
 
+.manager-task-assign-modal {
+    width: min(100%, 980px);
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background:
+        linear-gradient(180deg, rgba(246, 252, 244, 0.96), rgba(255, 255, 255, 0.98)),
+        #ffffff;
+}
+
+.manager-task-assign-header {
+    padding: 22px 26px;
+    border-bottom: 1px solid rgba(34, 91, 55, 0.12);
+    background: linear-gradient(180deg, #ffffff, #f3fbf0);
+}
+
+.manager-task-modal-title-block {
+    display: grid;
+    gap: 4px;
+}
+
+.manager-task-modal-kicker {
+    color: #1d6a37;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
 .manager-task-form-body {
     margin-top: 18px;
+}
+
+.manager-task-assign-modal .manager-task-form-body {
+    flex: 1;
+    min-height: 0;
+    margin-top: 0;
+    padding: 20px 26px 0;
+    overflow-y: auto;
 }
 
 .manager-task-form-error {
@@ -980,6 +1018,35 @@ body {
     margin-bottom: 28px;
 }
 
+.manager-task-assign-modal .manager-task-form-section {
+    margin-bottom: 18px;
+}
+
+.manager-task-assignee-panel,
+.manager-task-list-section {
+    border: 1px solid rgba(32, 92, 54, 0.12);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 12px 28px rgba(14, 57, 32, 0.06);
+    padding: 18px;
+}
+
+.manager-task-assignee-row {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 18px;
+    align-items: end;
+}
+
+.manager-task-assignee-row .manager-task-form-section-title,
+.manager-task-assignee-row .manager-task-form-field {
+    margin-bottom: 0;
+}
+
+.manager-task-list-section {
+    background: rgba(250, 253, 248, 0.9);
+}
+
 .manager-task-form-section:last-of-type {
     margin-bottom: 22px;
 }
@@ -996,6 +1063,7 @@ body {
 .manager-task-tasks-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     margin-bottom: 16px;
 }
@@ -1014,7 +1082,7 @@ body {
 }
 
 .manager-task-rows-container {
-    max-height: 450px;
+    max-height: min(48vh, 520px);
     overflow-y: auto;
     margin-bottom: 16px;
     padding-right: 6px;
@@ -1039,18 +1107,18 @@ body {
 }
 
 .manager-task-row {
-    border: 1.5px solid rgba(28, 36, 29, 0.25);
-    border-radius: 20px;
+    border: 1px solid rgba(32, 92, 54, 0.14);
+    border-radius: 16px;
     padding: 18px;
-    margin-bottom: 12px;
-    background: linear-gradient(180deg, #fafafa, #f5f5f5);
+    margin-bottom: 14px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(20, 64, 38, 0.06);
     transition: all 0.2s ease;
 }
 
 .manager-task-row:hover {
-    border-color: rgba(44, 135, 72, 0.4);
-    background: linear-gradient(180deg, #ffffff, #fafafa);
-    box-shadow: 0 4px 12px rgba(44, 135, 72, 0.08);
+    border-color: rgba(44, 135, 72, 0.32);
+    box-shadow: 0 14px 30px rgba(44, 135, 72, 0.1);
 }
 
 .manager-task-row-header {
@@ -1059,14 +1127,21 @@ body {
     align-items: center;
     margin-bottom: 14px;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(32, 92, 54, 0.1);
 }
 
 .manager-task-row-title {
-    margin: 0;
-    font-size: 0.9rem;
+    margin: 2px 0 0;
+    font-size: 1.05rem;
     font-weight: 700;
-    color: #1d6a37;
+    color: #122417;
+}
+
+.manager-task-row-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 16px;
+    row-gap: 2px;
 }
 
 .manager-task-row-remove-btn {
@@ -1100,6 +1175,17 @@ body {
     border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.manager-task-assign-modal .manager-task-form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0 -26px;
+    padding: 16px 26px 20px;
+    justify-content: flex-end;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), #ffffff 38%);
+    border-top: 1px solid rgba(34, 91, 55, 0.12);
+}
+
 @media (max-width: 768px) {
     .manager-task-form-grid {
         grid-template-columns: 1fr;
@@ -1108,6 +1194,35 @@ body {
     .manager-task-form-modal {
         padding: 20px 18px 22px;
         border-radius: 24px;
+    }
+
+    .manager-task-assign-modal {
+        width: min(100%, 720px);
+        padding: 0;
+    }
+
+    .manager-task-assign-header {
+        padding: 18px;
+    }
+
+    .manager-task-assign-modal .manager-task-form-body {
+        padding: 16px 18px 0;
+    }
+
+    .manager-task-assignee-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .manager-task-row-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .manager-task-assign-modal .manager-task-form-actions {
+        margin: 0 -18px;
+        padding: 14px 18px 18px;
+        justify-content: center;
     }
 
     .manager-task-rows-container {

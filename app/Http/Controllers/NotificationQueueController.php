@@ -13,13 +13,8 @@ class NotificationQueueController extends Controller
 
     public function processOne(Request $request, FirebaseCloudMessagingService $firebase)
     {
-        $expectedSecret = env('NOTIFICATION_QUEUE_SECRET');
-
-        if (!$expectedSecret || $request->header('X-Notification-Queue-Secret') !== $expectedSecret) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized notification queue request.',
-            ], 401);
+        if (!$this->isAuthorized($request)) {
+            return $this->unauthorizedResponse();
         }
 
         $jobs = DB::transaction(function () {
@@ -67,7 +62,7 @@ class NotificationQueueController extends Controller
         $results = [];
 
         foreach ($jobs as $job) {
-            $result = $this->processJob($job, $firebase);
+            $result = $this->sendJob($job, $firebase);
 
             $sentCount += $result['sent'] ? 1 : 0;
             $failedCount += $result['failed'] ? 1 : 0;
@@ -94,7 +89,70 @@ class NotificationQueueController extends Controller
         ]);
     }
 
-    private function processJob($job, FirebaseCloudMessagingService $firebase): array
+    public function processJob(Request $request, FirebaseCloudMessagingService $firebase)
+    {
+        if (!$this->isAuthorized($request)) {
+            return $this->unauthorizedResponse();
+        }
+
+        $payload = $request->all();
+
+        $jobId = $request->input('job_id')
+            ?? data_get($payload, 'record.id')
+            ?? data_get($payload, 'new.id');
+
+        if (!$jobId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Missing notification queue job ID.',
+            ], 422);
+        }
+
+        $job = DB::transaction(function () use ($jobId) {
+            $job = DB::table('notification_queue')
+                ->where('id', $jobId)
+                ->where('status', 'pending')
+                ->where('available_at', '<=', now())
+                ->lock('FOR UPDATE SKIP LOCKED')
+                ->first();
+
+            if (!$job) {
+                return null;
+            }
+
+            DB::table('notification_queue')
+                ->where('id', $job->id)
+                ->update([
+                    'status' => 'processing',
+                    'attempts' => DB::raw('attempts + 1'),
+                    'locked_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            return $job;
+        });
+
+        if (!$job) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification job is not pending or was already processed.',
+                'processed' => false,
+                'job_id' => (int) $jobId,
+            ]);
+        }
+
+        $result = $this->sendJob($job, $firebase);
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+            'processed' => true,
+            'job_id' => $job->id,
+            'status' => $result['status'],
+        ]);
+    }
+
+    private function sendJob($job, FirebaseCloudMessagingService $firebase): array
     {
         $data = [];
 
@@ -185,5 +243,21 @@ class NotificationQueueController extends Controller
             'retry' => $status === 'pending',
             'invalid_token' => false,
         ];
+    }
+
+    private function isAuthorized(Request $request): bool
+    {
+        $expectedSecret = env('NOTIFICATION_QUEUE_SECRET');
+
+        return $expectedSecret &&
+            $request->header('X-Notification-Queue-Secret') === $expectedSecret;
+    }
+
+    private function unauthorizedResponse()
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized notification queue request.',
+        ], 401);
     }
 }

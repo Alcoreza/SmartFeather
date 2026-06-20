@@ -19,9 +19,22 @@ class MobileDashboardController extends Controller
             'resource_pen_id' => 'nullable|integer',
         ]);
 
-        $latestPopulationDate = DB::table('population_record')
-            ->selectRaw('DATE(recorded_at) as record_date')
-            ->orderByRaw('DATE(recorded_at) desc')
+        $validPopulationRecords = DB::table('population_record as pr')
+            ->join('pen as p', 'pr.pen_id', '=', 'p.id')
+            ->join('house as h', 'p.house_id', '=', 'h.id')
+            ->join('flock_batches as fb', 'p.current_batch_id', '=', 'fb.id')
+            ->whereNull('h.archived_at')
+            ->whereNull('p.archived_at')
+            ->whereRaw("LOWER(TRIM(fb.status)) = 'running'")
+            ->whereNull('fb.ended_at')
+            ->whereColumn('fb.house_id', 'p.house_id')
+            ->whereColumn('fb.pen_id', 'p.id')
+            ->whereColumn('fb.id', 'p.current_batch_id')
+            ->whereRaw('pr.recorded_at >= fb.started_at');
+
+        $latestPopulationDate = (clone $validPopulationRecords)
+            ->selectRaw('DATE(pr.recorded_at) as record_date')
+            ->orderByRaw('DATE(pr.recorded_at) desc')
             ->value('record_date');
 
         $dailyEggs = 0;
@@ -29,10 +42,10 @@ class MobileDashboardController extends Controller
         $overviewDateLabel = Carbon::now()->format('n/j/y');
 
         if (!empty($latestPopulationDate)) {
-            $dailyTotals = DB::table('population_record')
-                ->selectRaw('COALESCE(SUM(eggs_hatched), 0) as total_eggs')
-                ->selectRaw('COALESCE(SUM(mortality), 0) as total_mortalities')
-                ->whereDate('recorded_at', $latestPopulationDate)
+            $dailyTotals = (clone $validPopulationRecords)
+                ->selectRaw('COALESCE(SUM(pr.eggs_hatched), 0) as total_eggs')
+                ->selectRaw('COALESCE(SUM(pr.mortality), 0) as total_mortalities')
+                ->whereDate('pr.recorded_at', $latestPopulationDate)
                 ->first();
 
             $dailyEggs = (int) ($dailyTotals->total_eggs ?? 0);
@@ -40,9 +53,17 @@ class MobileDashboardController extends Controller
             $overviewDateLabel = Carbon::parse($latestPopulationDate)->format('n/j/y');
         }
 
-        $totalBirds = (int) DB::table('pen')
-            ->whereNotNull('current_batch_id')
-            ->sum('population');
+        $totalBirds = (int) DB::table('pen as p')
+            ->join('house as h', 'p.house_id', '=', 'h.id')
+            ->join('flock_batches as fb', 'p.current_batch_id', '=', 'fb.id')
+            ->whereNull('h.archived_at')
+            ->whereNull('p.archived_at')
+            ->whereRaw("LOWER(TRIM(fb.status)) = 'running'")
+            ->whereNull('fb.ended_at')
+            ->whereColumn('fb.house_id', 'p.house_id')
+            ->whereColumn('fb.pen_id', 'p.id')
+            ->whereColumn('fb.id', 'p.current_batch_id')
+            ->sum(DB::raw('COALESCE(p.population, 0)'));
 
         $pendingTasksQuery = DB::table('tasks as t')
             ->leftJoin('house as h', 't.house_houseid', '=', 'h.id')
@@ -340,7 +361,7 @@ class MobileDashboardController extends Controller
                 $rawInches = (float) ($row->value ?? 0);
 
                 $percent = $containerHeightInches > 0
-                    ? ($rawInches / $containerHeightInches) * 100
+                    ? (($containerHeightInches - $rawInches) / $containerHeightInches) * 100
                     : 0;
 
                 $percent = round(max(0, min(100, $percent)), 1);

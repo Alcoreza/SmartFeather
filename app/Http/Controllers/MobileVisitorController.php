@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -94,8 +95,16 @@ class MobileVisitorController extends Controller
             'foot_bath' => 'required|boolean',
             'sanitation' => 'required|boolean',
             'ppe' => 'required|boolean',
-            'photo_path' => 'nullable|string|max:500',
+            'photo_path' => 'required|string|max:500',
         ]);
+
+        $selectedDateTime = Carbon::parse($validated['date'] . ' ' . $validated['time_in']);
+
+        if ($selectedDateTime->lt(now()->startOfMinute())) {
+            return response()->json([
+                'message' => 'Visitor time in cannot be in the past.',
+            ], 422);
+        }
 
         $employee = Employee::find($employeeId);
         $monitoredBy = $this->resolveMonitoredBy($employee, $employeeId);
@@ -172,6 +181,15 @@ class MobileVisitorController extends Controller
         if (!empty($visitor->time_out)) {
             return response()->json([
                 'message' => 'This visitor has already been timed out.',
+            ], 422);
+        }
+
+        $timeIn = Carbon::parse($visitor->date . ' ' . $visitor->time_in);
+        $timeOut = Carbon::parse($visitor->date . ' ' . $validated['time_out']);
+
+        if ($timeOut->lt($timeIn)) {
+            return response()->json([
+                'message' => 'Visitor time out cannot be earlier than time in.',
             ], 422);
         }
 

@@ -213,7 +213,7 @@
                                 Cancel
                             </button>
                             <button type="submit" class="profile-edit-btn save-btn">
-                                Save changes
+                                Save
                             </button>
                         </div>
                     </form>

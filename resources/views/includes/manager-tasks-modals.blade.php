@@ -194,7 +194,7 @@
             <div class="manager-task-form-actions">
                 <button type="button" class="manager-task-btn cancel"
                     data-close-task-modal="editTaskModal">Cancel</button>
-                <button type="submit" class="manager-task-btn confirm">Save Changes</button>
+                <button type="submit" class="manager-task-btn confirm">Save</button>
             </div>
         </form>
     </div>

@@ -755,6 +755,7 @@ function setupAddTaskModal() {
             const tasks = [];
             let hasRequiredErrors = false;
             let hasScheduleErrors = false;
+            let hasSequenceErrors = false;
             let previousFinishAt = null;
             clearAddTaskRequiredFieldHighlights(false);
 
@@ -812,7 +813,7 @@ function setupAddTaskModal() {
                 const finishAt = new Date(finishBy);
 
                 if (previousFinishAt && finishAt <= previousFinishAt) {
-                    hasScheduleErrors = true;
+                    hasSequenceErrors = true;
                     timeAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
                     dateAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
                     return;
@@ -840,6 +841,11 @@ function setupAddTaskModal() {
 
             if (hasScheduleErrors) {
                 showAddTaskFormError(formError, "Date to finish cannot be earlier than today.");
+                return;
+            }
+
+            if (hasSequenceErrors) {
+                showAddTaskFormError(formError, "Each succeeding task must finish later than the task before it.");
                 return;
             }
 

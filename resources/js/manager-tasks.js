@@ -582,7 +582,7 @@ function generateTaskRowHtml(rowIndex) {
                 </div>
                 <div class="manager-task-form-field full">
                     <label>Detailed Task</label>
-                    <textarea name="detailed_task_${rowIndex}" class="task-detailed-textarea" rows="3" placeholder="Write a clear and specific task instruction here."></textarea>
+                    <textarea name="detailed_task_${rowIndex}" class="task-detailed-textarea" rows="2" placeholder="Write a clear and specific task instruction here."></textarea>
                 </div>
             </div>
         </div>
@@ -708,6 +708,13 @@ function setupAddTaskModal() {
     }
 
     function updateTaskCountBadge() {
+        tasksContainer.querySelectorAll(".manager-task-row").forEach((row, index) => {
+            const title = row.querySelector(".manager-task-row-title");
+            if (title) {
+                title.textContent = `Task ${index + 1}`;
+            }
+        });
+
         const countBadge = document.getElementById("taskCountBadge");
         const taskCount = tasksContainer.querySelectorAll(".manager-task-row").length;
         if (countBadge) {

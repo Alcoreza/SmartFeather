@@ -140,12 +140,13 @@ class EmployeeController extends Controller
     private function employeeRules(?int $employeeId, bool $isCreate): array
     {
         $required = $isCreate ? ['required'] : ['sometimes', 'required'];
+        $noNumbers = 'not_regex:/\d/';
 
         return [
-            'FirstName' => [...$required, 'string', 'max:100'],
-            'MiddleName' => ['nullable', 'string', 'max:100'],
-            'LastName' => [...$required, 'string', 'max:100'],
-            'Suffix' => ['nullable', 'string', 'max:20'],
+            'FirstName' => [...$required, 'string', 'max:100', $noNumbers],
+            'MiddleName' => ['nullable', 'string', 'max:100', $noNumbers],
+            'LastName' => [...$required, 'string', 'max:100', $noNumbers],
+            'Suffix' => ['nullable', 'string', 'max:20', $noNumbers],
             'Role' => [...$required, 'string', Rule::in(['Manager', 'Admin', 'Flockman'])],
             'PhoneNumber' => [
                 ...$required,
@@ -179,6 +180,10 @@ class EmployeeController extends Controller
             'Role.in' => 'Select a valid role.',
             'Gender.in' => 'Select a valid gender.',
             'Password.min' => 'Password must be at least 8 characters.',
+            'FirstName.not_regex' => 'First name cannot contain numbers.',
+            'MiddleName.not_regex' => 'Middle name cannot contain numbers.',
+            'LastName.not_regex' => 'Last name cannot contain numbers.',
+            'Suffix.not_regex' => 'Suffix cannot contain numbers.',
         ];
     }
 

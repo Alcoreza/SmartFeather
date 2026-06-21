@@ -188,6 +188,10 @@ function sanitizePhoneValue(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 11);
 }
 
+function sanitizeNameValue(value) {
+    return String(value || '').replace(/\d/g, '');
+}
+
 function markWorkerFieldError(input, message) {
     input?.closest('.admin-worker-field')?.classList.add('has-error');
     showWorkerFormError(message);
@@ -907,6 +911,22 @@ workerRequiredFields.forEach(field => {
 
     input?.addEventListener('input', () => syncRequiredFieldHighlight(field));
     input?.addEventListener('change', () => syncRequiredFieldHighlight(field));
+});
+
+['FirstName', 'MiddleName', 'LastName', 'Suffix'].forEach((fieldId) => {
+    const input = document.getElementById(fieldId);
+
+    input?.addEventListener('input', () => {
+        const sanitizedValue = sanitizeNameValue(input.value);
+
+        if (input.value !== sanitizedValue) {
+            input.value = sanitizedValue;
+        }
+
+        if (['FirstName', 'LastName', 'Suffix'].includes(fieldId)) {
+            syncUsernamePreview();
+        }
+    });
 });
 
 phoneInput?.addEventListener('input', () => {

@@ -73,6 +73,7 @@
                 <div class="admin-worker-field">
                     <label>Password*</label>
                     <input type="password" id="AddPassword" autocomplete="new-password">
+                    <small style="display:block; color:#4b5563; font-size:0.85rem; margin-top:6px;">Minimum 8 characters.</small>
                 </div>
                 <div class="admin-worker-field">
                     <label>Confirm Password*</label>

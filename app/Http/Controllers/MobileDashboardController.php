@@ -65,44 +65,10 @@ class MobileDashboardController extends Controller
             ->whereColumn('fb.id', 'p.current_batch_id')
             ->sum(DB::raw('COALESCE(p.population, 0)'));
 
-        $pendingTasksQuery = DB::table('tasks as t')
-            ->leftJoin('house as h', 't.house_houseid', '=', 'h.id')
-            ->leftJoin('pen as p', function ($join) {
-                $join->on('t.pennumber', '=', 'p.id')
-                    ->on('t.house_houseid', '=', 'p.house_id');
-            })
-            ->where('t.user_employeeid', $employeeId)
-            ->where('t.status', 'Pending');
-
-        $pendingTasks = (int) $pendingTasksQuery->count();
-
-        $pendingTask = DB::table('tasks as t')
-            ->leftJoin('house as h', 't.house_houseid', '=', 'h.id')
-            ->leftJoin('pen as p', function ($join) {
-                $join->on('t.pennumber', '=', 'p.id')
-                    ->on('t.house_houseid', '=', 'p.house_id');
-            })
-            ->where('t.user_employeeid', $employeeId)
-            ->where('t.status', 'Pending')
-            ->orderByRaw("
-                CASE
-                    WHEN t.prioritylevel = 'High' THEN 1
-                    WHEN t.prioritylevel = 'Medium' THEN 2
-                    WHEN t.prioritylevel = 'Low' THEN 3
-                    ELSE 4
-                END
-            ")
-            ->orderBy('t.finishby')
-            ->orderByDesc('t.timeassigned')
-            ->select(
-                't.tasktype',
-                't.detailedtask',
-                't.finishby',
-                't.prioritylevel',
-                'h.house_number',
-                'p.pen_name'
-            )
-            ->first();
+        $pendingTasks = (int) DB::table('tasks')
+            ->where('user_employeeid', $employeeId)
+            ->where('status', 'Pending')
+            ->count();
 
         $environmentFilterOptions = $this->buildSensorFilterOptions(['temperature', 'ammonia']);
         $resourceFilterOptions = $this->buildSensorFilterOptions(['feed', 'water']);
@@ -137,7 +103,7 @@ class MobileDashboardController extends Controller
             'overview_date_label' => "for {$overviewDateLabel}",
             'stats' => [
                 [
-                    'title' => 'Total Birds',
+                    'title' => 'Total Chickens',
                     'value' => (string) $totalBirds,
                     'icon_key' => 'birds',
                     'bg_color' => '#FDFDFD',
@@ -193,16 +159,7 @@ class MobileDashboardController extends Controller
                 $resourceSelection['pen_id']
             ),
             'pending_task_count' => $pendingTasks,
-            'pending_task' => $pendingTask ? [
-                'title' => $pendingTask->tasktype,
-                'detail' => $pendingTask->detailedtask,
-                'priority' => $pendingTask->prioritylevel,
-                'finish_by' => $pendingTask->finishby
-                    ? Carbon::parse($pendingTask->finishby)->format('M j, g:i A')
-                    : null,
-                'house_label' => $pendingTask->house_number,
-                'pen_label' => $pendingTask->pen_name,
-            ] : null,
+            'pending_task' => null,
             'quick_access' => [
                 [
                     'title' => 'Visitor Log',

@@ -223,7 +223,7 @@ class MobileTaskController extends Controller
 
         if (!$hasBiosecurity) {
             return response()->json([
-                'message' => 'Biosecurity for this task has expired. Please submit the form again before opening this task.'
+                'message' => 'Biosecurity verification is required for this task. Please complete the biosecurity form before opening it.'
             ], 403);
         }
 

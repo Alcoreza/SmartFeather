@@ -719,6 +719,53 @@
     align-items: flex-start;
 }
 
+.pen-capacity-section {
+    margin-top: 24px;
+}
+
+.pen-capacity-header {
+    margin-bottom: 12px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #000000;
+}
+
+.pen-capacity-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+.pen-setup-card {
+    padding: 14px;
+    border: 1px solid rgba(16, 92, 52, 0.12);
+    border-radius: 18px;
+    background: rgba(248, 251, 247, 0.86);
+}
+
+.pen-setup-title {
+    margin-bottom: 12px;
+    color: #17211b;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.pen-setup-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.pen-setup-grid .modal-group label {
+    font-size: 0.86rem;
+    margin-bottom: 6px;
+}
+
+.pen-setup-grid .modal-group input {
+    height: 38px;
+    padding: 0 12px;
+}
+
 .modal-group {
     flex: 1;
     margin-bottom: 0;
@@ -852,10 +899,50 @@
     margin-top: 18px;
 }
 
+.archive-house-card {
+    max-width: 430px;
+}
+
+.archive-house-text {
+    margin: 0;
+    color: #333333;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
 .edit-data-modal {
     max-width: 610px;
     border-radius: 34px;
     padding: 24px 44px 34px;
+}
+
+#endBatchModal .modal-actions {
+    margin-top: 28px;
+    gap: 12px;
+}
+
+#endBatchModal .cancel-btn,
+#endBatchModal .delete-btn {
+    min-width: 96px;
+    padding: 9px 22px;
+    font-size: 0.96rem;
+    line-height: 1.15;
+}
+
+#endBatchModal .delete-btn {
+    background: #dc3545;
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s ease;
+    box-shadow: 0 5px 12px rgba(220, 53, 69, 0.16);
+}
+
+#endBatchModal .delete-btn:hover {
+    background: #c82333;
+    box-shadow: 0 9px 18px rgba(200, 35, 51, 0.2);
 }
 
 .edit-data-modal .modal-header {
@@ -985,9 +1072,16 @@
     }
 
     #addHouseForm .modal-row,
-    .edit-data-modal .modal-row {
+    .edit-data-modal .modal-row,
+    .pen-capacity-fields,
+    .pen-setup-grid {
         flex-direction: column;
         gap: 14px;
+    }
+
+    .pen-capacity-fields,
+    .pen-setup-grid {
+        display: flex;
     }
 
     .edit-data-modal {
@@ -1110,7 +1204,23 @@
 
 .pen-select {
     min-width: 128px;
+    height: 36px;
+    appearance: none;
     border-color: rgba(16, 92, 52, 0.14);
+    background-color: #ffffff;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--admin-green-700) 50%),
+        linear-gradient(135deg, var(--admin-green-700) 50%, transparent 50%);
+    background-position:
+        calc(100% - 17px) calc(50% - 3px),
+        calc(100% - 9px) calc(50% - 3px);
+    background-size:
+        9px 9px,
+        9px 9px;
+    background-repeat: no-repeat;
+    color: var(--admin-text-main);
+    padding: 0 30px 0 14px;
+    opacity: 1;
 }
 
 .houses-actions {
@@ -1131,6 +1241,44 @@
     background: #8b9198;
     border-color: transparent;
     color: #ffffff;
+}
+
+.btn-end {
+    background: #fff1f1;
+    border-color: #f3c6c6;
+    color: #b42318;
+    box-shadow: none;
+}
+
+.btn-end:hover {
+    background: #ffe6e6;
+    box-shadow: none;
+}
+
+.btn-end:disabled {
+    background: #9aa0a6;
+    color: #f5f6f7;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-archive {
+    background: #fff6e8;
+    border-color: #efd2a5;
+    color: #805214;
+    box-shadow: none;
+}
+
+.btn-archive:hover {
+    background: #ffeed4;
+    box-shadow: none;
+}
+
+.btn-archive:disabled {
+    background: #9aa0a6;
+    color: #f5f6f7;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .houses-workspace {
@@ -1382,65 +1530,56 @@
 }
 
 .sensor-chart-wrap {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 12px;
-    min-height: 306px;
-    padding: 12px;
-    border: 1px solid rgba(16, 92, 52, 0.08);
-    border-radius: 18px;
-    background:
-        linear-gradient(180deg, rgba(248, 251, 247, 0.92), rgba(255, 255, 255, 0.84));
-}
-
-.sensor-chart-plot {
-    position: relative;
-    min-height: 198px;
+    min-height: 154px;
+    padding: 16px;
+    border: 1px solid rgba(16, 92, 52, 0.1);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 14px 28px rgba(6, 51, 32, 0.06);
 }
 
 .temperature-chart {
-    border-color: rgba(223, 77, 69, 0.16);
+    border-color: rgba(143, 31, 29, 0.16);
 }
 
 .ammonia-chart {
-    border-color: rgba(65, 164, 93, 0.16);
-}
-
-.sensor-chart-plot canvas {
-    width: 100% !important;
-    height: 100% !important;
+    border-color: rgba(23, 100, 58, 0.16);
 }
 
 .sensor-stat {
-    display: grid;
-    gap: 8px;
-    min-height: 74px;
-    padding: 12px;
-    border: 1px solid rgba(16, 92, 52, 0.08);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.72);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.sensor-stat .sensor-label {
+.sensor-kicker {
     color: var(--admin-text-soft);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 800;
     text-transform: uppercase;
 }
 
 .sensor-reading-value {
     color: var(--admin-text-main);
-    font-size: 1.55rem;
+    font-size: clamp(2.1rem, 4vw, 3rem);
     font-weight: 800;
     line-height: 1;
 }
 
+.sensor-helper {
+    color: var(--admin-text-soft);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
 .temperature-stat .sensor-reading-value {
-    color: #df4d45;
+    color: #8f1f1d;
 }
 
 .ammonia-stat .sensor-reading-value {
-    color: #2f9d52;
+    color: #17643a;
 }
 
 .info-panel {
@@ -1512,11 +1651,7 @@
 
 @media (max-width: 768px) {
     .sensor-chart-wrap {
-        min-height: 290px;
-    }
-
-    .sensor-chart-plot {
-        min-height: 190px;
+        min-height: 138px;
     }
 
     .sensor-chart-grid,

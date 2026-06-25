@@ -5,24 +5,18 @@
 @push('styles')
     @vite([
         'resources/css/manager-shared.css',
-        'resources/css/manager-dashboard.css'
+        'resources/css/manager-dashboard.css',
+        'resources/css/manager-decision-support.css'
     ])
 @endpush
 
 
 @push('scripts')
     @vite('resources/js/manager-dashboard.js')
+    @vite('resources/js/manager-decision-support.js')
 @endpush
 
 @section('content')
-    @php
-        $overviewCards = [
-            ['icon' => '🐔', 'value' => '5462', 'label' => 'Total Chickens', 'accent' => 'red'],
-            ['icon' => '🥚', 'value' => '367', 'label' => 'Total Eggs', 'accent' => 'orange'],
-            ['icon' => '📉', 'value' => '25', 'label' => 'Mortalities', 'accent' => 'gray'],
-        ];
-    @endphp
-
     <div class="manager-shell">
         @include('includes.manager-sidebar')
 
@@ -75,25 +69,21 @@
                     <div class="decision-header">
                         <h2>Decision Support</h2>
 
-                        <select class="decision-select">
-                            <option>Mortality</option>
-                            <option>Temperature</option>
-                            <option>Water</option>
-                        </select>
+                        <button type="button" class="decision-support-refresh" id="refreshDecisionSupport" title="Refresh recommendations">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M20 12a8 8 0 0 1-13.7 5.7"></path>
+                                <path d="M4 12A8 8 0 0 1 17.7 6.3"></path>
+                                <path d="M7 18H4v3"></path>
+                                <path d="M17 6h3V3"></path>
+                            </svg>
+                        </button>
                     </div>
 
-                    <div class="decision-content">
-                        <div class="decision-stars">
-                            <span class="star star-lg"></span>
-                            <span class="star star-md"></span>
-                            <span class="star star-sm"></span>
+                    <div class="decision-content" id="decisionSupportContent">
+                        <div class="decision-support-loading">
+                            <div class="spinner"></div>
+                            <p>Loading recommendations...</p>
                         </div>
-
-                        <p>
-                            Mortality count has increased beyond the normal daily range.
-                            Conduct flock inspection, review environmental conditions,
-                            and verify feed and water availability to identify possible causes.
-                        </p>
                     </div>
                 </article>
             </section>
@@ -104,26 +94,15 @@
                         <h2>Environmental Monitoring</h2>
                     </div>
 
-                    <div class="env-realtime-grid" id="environmentGrid">
-                        <div class="sensor-card">
-                            <div class="radial-gauge safe" style="--gauge-value: 0deg;">
-                                <div class="radial-gauge-inner">
-                                    <span class="sensor-value">24deg</span>
-                                </div>
-                            </div>
-                            <div class="sensor-label">Temperature</div>
-                        </div>
+                    <div class="env-chart-area">
+                        <canvas id="environmentChart"></canvas>
+                    </div>
 
-                        <div class="panel-divider"></div>
+                    <div class="graph-caption" id="envGraphCaption">Temperature</div>
 
-                        <div class="sensor-card">
-                            <div class="radial-gauge warning" style="--gauge-value: 0deg;">
-                                <div class="radial-gauge-inner">
-                                    <span class="sensor-value">15ppm</span>
-                                </div>
-                            </div>
-                            <div class="sensor-label">Ammonia</div>
-                        </div>
+                    <div class="graph-dots">
+                        <button type="button" class="graph-dot env-dot active" data-slide="0"></button>
+                        <button type="button" class="graph-dot env-dot" data-slide="1"></button>
                     </div>
                 </article>
 
@@ -132,24 +111,15 @@
                         <h2>Feed and Water Monitoring</h2>
                     </div>
 
-                    <div class="resource-grid" id="resourceGrid">
-                        <div class="resource-card">
-                            <div class="resource-bar-shell">
-                                <div class="resource-bar feed-bar" style="height: 0%;"></div>
-                            </div>
-                            <div class="resource-percent">60%</div>
-                            <div class="resource-label">Feed</div>
-                        </div>
+                    <div class="resource-chart-area">
+                        <canvas id="resourceChart"></canvas>
+                    </div>
 
-                        <div class="panel-divider"></div>
+                    <div class="graph-caption" id="resourceGraphCaption">Feed</div>
 
-                        <div class="resource-card">
-                            <div class="resource-bar-shell">
-                                <div class="resource-bar water-bar" style="height: 0%;"></div>
-                            </div>
-                            <div class="resource-percent water-text">30%</div>
-                            <div class="resource-label">Water</div>
-                        </div>
+                    <div class="graph-dots">
+                        <button type="button" class="graph-dot resource-dot active" data-slide="0"></button>
+                        <button type="button" class="graph-dot resource-dot" data-slide="1"></button>
                     </div>
                 </article>
             </section>
@@ -170,9 +140,15 @@
 
                     <div class="graph-caption" id="graphCaption">Temperature</div>
 
+                    <div class="house-graph-pager" id="houseGraphPager" hidden>
+                        <button type="button" class="house-graph-page-btn" id="houseGraphPrev">Prev</button>
+                        <div class="house-graph-page-dots" id="houseGraphPageDots"></div>
+                        <button type="button" class="house-graph-page-btn" id="houseGraphNext">Next</button>
+                    </div>
+
                     <div class="graph-dots">
-                        <button type="button" class="graph-dot active" data-slide="0"></button>
-                        <button type="button" class="graph-dot" data-slide="1"></button>
+                        <button type="button" class="graph-dot monitoring-dot active" data-slide="0"></button>
+                        <button type="button" class="graph-dot monitoring-dot" data-slide="1"></button>
                     </div>
                 </article>
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FeedRefillRecord;
 use App\Models\House;
 use App\Models\Pen;
+use App\Models\PopulationRecord;
 use App\Models\WeightSamplingLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class ReportsController extends Controller
         if (Schema::hasTable('feed_refill_records')) {
             $query = FeedRefillRecord::query();
             $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+            $this->applyActiveHouseAndPenModelFilter($query);
 
             if (!empty($filters['house'])) {
                 $query->whereHas('house', function ($houseQuery) use ($filters) {
@@ -54,24 +56,28 @@ class ReportsController extends Controller
             $totalFeedConsumed = $query->sum('kilograms_used') ?? 0;
         }
 
-        // Total Mortalities
-        if (Schema::hasTable('pen')) {
-            $query = Pen::query()->whereNull('archived_at');
-            $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        // Total Mortalities - Read from population_record table
+        if (Schema::hasTable('population_record')) {
+            $query = DB::table('population_record as pr')
+                ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
+                ->leftJoin('house as h', 'h.id', '=', 'p.house_id');
+
+            $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+            $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
 
             if (!empty($filters['house'])) {
-                $query->whereHas('house', function ($houseQuery) use ($filters) {
-                    $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
-                });
+                $houseNumbers = $this->getHouseFilterValues($filters['house']);
+                $query->whereIn('h.house_number', $houseNumbers);
             }
 
-            $totalMortalities = $query->sum('mortality') ?? 0;
+            $totalMortalities = $query->sum('pr.mortality') ?? 0;
         }
 
         // Weight Status Breakdown
         if (Schema::hasTable('weight_sampling_logs')) {
             $query = WeightSamplingLog::query();
             $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+            $this->applyActiveHouseStringFilter($query, 'house');
 
             if (!empty($filters['house'])) {
                 $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
@@ -125,6 +131,7 @@ class ReportsController extends Controller
             ->orderByDesc('id');
 
         $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseStringFilter($query, 'house');
 
         if (!empty($filters['house'])) {
             $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
@@ -148,6 +155,7 @@ class ReportsController extends Controller
             ->orderByDesc('recorded_at');
 
         $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseAndPenModelFilter($query);
 
         if (!empty($filters['house'])) {
             $query->whereHas('house', function ($houseQuery) use ($filters) {
@@ -167,22 +175,28 @@ class ReportsController extends Controller
 
     private function getMortalityReport(array $filters): array
     {
-        $query = Pen::query()
-            ->with(['house', 'currentBatch'])
-            ->whereNull('archived_at')
-            ->orderBy('house_id')
-            ->orderBy('id');
+        $query = DB::table('population_record as pr')
+            ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
+            ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
+            ->select(
+                'h.house_number',
+                'p.pen_name',
+                'pr.mortality',
+                'pr.recorded_at'
+            )
+            ->orderBy('h.id')
+            ->orderByDesc('pr.recorded_at');
 
-        $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
 
         if (!empty($filters['house'])) {
-            $query->whereHas('house', function ($houseQuery) use ($filters) {
-                $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
-            });
+            $houseNumbers = $this->getHouseFilterValues($filters['house']);
+            $query->whereIn('h.house_number', $houseNumbers);
         }
 
         return $query->get()->map(fn($record) => [
-            'house_number' => $this->formatHouseNumber($record->house?->house_number),
+            'house_number' => $this->formatHouseNumber($record->house_number),
             'pen_name' => $record->pen_name ?? '--',
             'mortality' => $record->mortality ?? 0,
             'recorded_at' => $this->formatDate($record->recorded_at),
@@ -237,31 +251,33 @@ class ReportsController extends Controller
 
     private function getPopulationReport(?string $startDate, ?string $endDate): array
     {
-        if (!Schema::hasTable('house') || !Schema::hasTable('pen')) {
+        if (!Schema::hasTable('house') || !Schema::hasTable('population_record')) {
             return [];
         }
 
-        $query = DB::table('pen')
-            ->leftJoin('house', 'pen.house_id', '=', 'house.id')
+        $query = DB::table('population_record as pr')
+            ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
+            ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
             ->leftJoin('flock_batches as fb', function ($join) {
-                $join->on('fb.pen_id', '=', 'pen.id')
+                $join->on('fb.pen_id', '=', 'p.id')
                      ->where('fb.status', 'Running');
             })
             ->select(
                 'fb.batch_code',
-                'house.start_date',
-                'house.house_number',
-                'pen.pen_name',
-                'pen.capacity',
-                'pen.population',
-                'pen.mortality',
-                'pen.eggs_hatched',
-                'pen.recorded_at'
+                'h.start_date',
+                'h.house_number',
+                'p.pen_name',
+                'p.capacity',
+                'pr.running_population',
+                'pr.mortality',
+                'pr.eggs_hatched',
+                'pr.recorded_at'
             )
-            ->orderBy('house.house_number')
-            ->orderBy('pen.pen_name');
+            ->orderBy('h.house_number')
+            ->orderBy('p.pen_name');
 
-        $this->applyDateRange($query, 'pen.recorded_at', $startDate, $endDate);
+        $this->applyDateRange($query, 'pr.recorded_at', $startDate, $endDate);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
 
         return $query->get()->map(function ($row) {
             return [
@@ -271,7 +287,7 @@ class ReportsController extends Controller
                 'start_date' => $this->formatDate($row->start_date),
                 'end_date' => '--',
                 'initial_population' => $row->capacity ?? 0,
-                'running_population' => $row->population ?? 0,
+                'running_population' => $row->running_population ?? 0,
                 'mortalities' => $row->mortality ?? 0,
                 'eggs_hatched' => $row->eggs_hatched ?? 0,
                 'reporting_date' => $this->formatDate($row->recorded_at),
@@ -299,6 +315,7 @@ class ReportsController extends Controller
                 ->orderByDesc('f.recorded_at');
 
             $this->applyDateRange($query, 'f.recorded_at', $startDate, $endDate);
+            $this->applyActiveHouseAndPenJoinFilter($query, 'house', 'pen');
 
             $feeds = $query->get()->map(function ($row) {
                 return [
@@ -393,6 +410,7 @@ class ReportsController extends Controller
             ->orderBy('time', 'desc');
 
         $this->applyDateRange($query, 'date', $startDate, $endDate);
+        $this->applyActiveHouseStringFilter($query, 'house');
 
         $logs = $query->get();
 
@@ -474,6 +492,7 @@ class ReportsController extends Controller
             ->orderBy('time', 'desc');
 
         $this->applyDateRange($query, 'date', $startDate, $endDate);
+        $this->applyActiveHouseStringFilter($query, 'house');
 
         return $query->get()->map(function ($log) {
             return [
@@ -520,6 +539,7 @@ class ReportsController extends Controller
             ->orderByDesc('tasks.timeassigned');
 
         $this->applyDateRange($query, 'tasks.timeassigned', $startDate, $endDate);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'house', 'pen');
 
         return $query->get()->map(function ($row) {
             $name = trim(collect([
@@ -613,6 +633,54 @@ class ReportsController extends Controller
         if ($endDate) {
             $query->whereDate($column, '<=', $endDate);
         }
+    }
+
+    private function applyActiveHouseAndPenModelFilter($query): void
+    {
+        $query->whereHas('house', function ($houseQuery) {
+            $houseQuery->whereNull('archived_at');
+        });
+
+        $query->where(function ($recordQuery) {
+            $recordQuery
+                ->whereDoesntHave('pen')
+                ->orWhereHas('pen', function ($penQuery) {
+                    $penQuery->whereNull('archived_at');
+                });
+        });
+    }
+
+    private function applyActiveHouseAndPenJoinFilter($query, string $houseAlias = 'house', string $penAlias = 'pen'): void
+    {
+        $query
+            ->whereNotNull($houseAlias . '.id')
+            ->whereNull($houseAlias . '.archived_at')
+            ->whereNull($penAlias . '.archived_at');
+    }
+
+    private function applyActiveHouseStringFilter($query, string $column): void
+    {
+        $activeHouses = $this->getActiveHouseFilterValues();
+
+        if (empty($activeHouses)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereIn($column, $activeHouses);
+    }
+
+    private function getActiveHouseFilterValues(): array
+    {
+        return House::query()
+            ->whereNull('archived_at')
+            ->whereNotNull('house_number')
+            ->pluck('house_number')
+            ->flatMap(fn ($houseNumber) => $this->getHouseFilterValues($houseNumber))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function formatDate($value): string

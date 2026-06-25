@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CleaningLog;
+use App\Models\Employee;
 use App\Models\PersonnelBiosecurityLog;
 use App\Models\VisitorLog;
 use App\Models\PersonnelEntryLog;
@@ -23,7 +24,7 @@ class BiosecurityLogController extends Controller
             $groupedLogs = [
                 'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
                 'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLogs(
-                    PersonnelBiosecurityLog::orderByDesc('date')->orderByDesc('time')->orderByDesc('id')->get(),
+                    PersonnelEntryLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
                 ),
                 'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
                 'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
@@ -52,8 +53,16 @@ class BiosecurityLogController extends Controller
     public function store(Request $request)
     {
         $type = $request->input('type', 'Cleaning');
+        $request->merge(['type' => $type]);
+
+        if ($type === 'Personnel Biosecurity Logs') {
+            return response()->json([
+                'message' => 'Personnel logs are generated from personnel scan activity.',
+            ], 422);
+        }
 
         $validated = $request->validate($this->getValidationRules($type));
+        unset($validated['type']);
 
         // If a captured photo was attached (DataURL), upload it now and set photo_url
         if ($type === 'Visitors' && $request->filled('photo_data')) {
@@ -84,9 +93,14 @@ class BiosecurityLogController extends Controller
      */
     public function uploadVisitorPhoto(Request $request)
     {
-        $data = $request->input('photo_data');
+        $validated = $request->validate([
+            'photo_data' => ['required', 'string'],
+            'mime_type' => ['nullable', 'string', 'in:image/jpeg,image/png,image/webp'],
+        ]);
+        $data = $validated['photo_data'];
+
         try {
-            $path = $this->uploadPhotoFromData($data, $request->input('mime_type'));
+            $path = $this->uploadPhotoFromData($data, $validated['mime_type'] ?? null);
             return response()->json([
                 'success' => true,
                 'photo_path' => $path,
@@ -158,11 +172,13 @@ class BiosecurityLogController extends Controller
     public function update(Request $request, $id)
     {
         $type = $request->input('type');
-
-        // Find the log based on type
-        $log = $this->findLog($type, $id);
+        $request->merge(['type' => $type]);
 
         $validated = $request->validate($this->getValidationRules($type, true));
+        unset($validated['type']);
+
+        // Find the log based on type after validating the submitted category.
+        $log = $this->findLog($type, $id);
 
         // Convert IDs to display values
         $validated = $this->convertIdsToValues($type, $validated, $log);
@@ -195,6 +211,10 @@ class BiosecurityLogController extends Controller
      */
     private function getValidationRules($type, $isUpdate = false)
     {
+        $baseRules = [
+            'type' => 'required|in:Cleaning,Personnel Biosecurity Logs,Visitors,Personnel Entry Logs,Weight Sampling',
+        ];
+
         $rules = [
             'Cleaning' => [
                 'house' => 'nullable|string|max:50',
@@ -202,40 +222,42 @@ class BiosecurityLogController extends Controller
                 'activity' => 'nullable|string|max:255',
                 'disinfectant_used' => 'nullable|string|max:255',
                 'performed_by' => 'nullable|string|max:100',
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'date' => 'nullable|date|before_or_equal:today',
+                'time' => 'nullable|date_format:H:i',
             ],
             'Personnel Biosecurity Logs' => [
-                'name' => 'nullable|string|max:100',
-                'role' => 'nullable|string|max:100',
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'name' => 'required|string|max:100',
+                'role' => 'required|string|max:100',
+                'date' => 'required|date|before_or_equal:today',
+                'time' => 'required|date_format:H:i',
+                'status' => 'required|string|in:IN,OUT',
                 'foot_bath' => 'nullable|string|max:10',
                 'boots_changed' => 'nullable|string|max:10',
                 'protective_clothing' => 'nullable|string|max:10',
             ],
             'Visitors' => [
-                'date' => 'nullable|date',
-                'time_in' => 'nullable',
-                'time_out' => 'nullable',
-                'name' => 'nullable|string|max:100',
-                'purpose' => 'nullable|string|max:255',
-                'foot_bath' => 'nullable|string|max:10',
-                'sanitation' => 'nullable|string|max:10',
-                'ppe' => 'nullable|string|max:10',
-                'monitored_by' => 'nullable|string|max:100',
+                'date' => 'required|date|before_or_equal:today',
+                'time_in' => 'required|date_format:H:i',
+                'time_out' => 'required|date_format:H:i|after_or_equal:time_in',
+                'name' => 'required|string|max:100',
+                'purpose' => 'required|string|max:255',
+                'foot_bath' => 'required|string|in:Yes,No',
+                'sanitation' => 'required|string|in:Yes,No',
+                'ppe' => 'required|string|in:Yes,No',
+                'monitored_by' => 'required|string|max:100',
                 'photo_url' => 'nullable|string|max:255',
+                'photo_data' => 'nullable|string',
             ],
             'Personnel Entry Logs' => [
                 'name' => 'nullable|string|max:100',
                 'role' => 'nullable|string|max:100',
                 'house' => 'nullable|string|max:50',
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'date' => 'nullable|date|before_or_equal:today',
+                'time' => 'nullable|date_format:H:i',
             ],
             'Weight Sampling' => [
-                'date' => 'nullable|date',
-                'time' => 'nullable',
+                'date' => 'nullable|date|before_or_equal:today',
+                'time' => 'nullable|date_format:H:i',
                 'house' => 'nullable|string|max:50',
                 'pen' => 'nullable|string|max:50',
                 'batch' => 'nullable|string|max:50',
@@ -247,7 +269,7 @@ class BiosecurityLogController extends Controller
             ],
         ];
 
-        return $rules[$type] ?? [];
+        return array_merge($baseRules, $rules[$type] ?? []);
     }
 
     /**
@@ -303,7 +325,7 @@ class BiosecurityLogController extends Controller
     {
         return match ($type) {
             'Cleaning' => CleaningLog::create($validated),
-            'Personnel Biosecurity Logs' => PersonnelBiosecurityLog::create($validated),
+            'Personnel Biosecurity Logs' => PersonnelEntryLog::create($validated),
             'Visitors' => VisitorLog::create($validated),
             'Personnel Entry Logs' => PersonnelEntryLog::create($validated),
             'Weight Sampling' => WeightSamplingLog::create($validated),
@@ -358,7 +380,7 @@ class BiosecurityLogController extends Controller
 
     private function formatPersonnelBiosecurityLog($log)
     {
-        $entryStatus = strtoupper((string) ($log->entry_status ?? 'IN'));
+        $entryStatus = strtoupper((string) ($log->status ?? $log->entry_status ?? 'IN'));
         $time = $log->time ? \Carbon\Carbon::parse($log->time)->format('h:i A') : '';
 
         return [
@@ -377,15 +399,115 @@ class BiosecurityLogController extends Controller
 
     private function formatPersonnelBiosecurityLogs($logs)
     {
-        $entryStatuses = PersonnelEntryLog::whereIn(
-            'id',
-            $logs->pluck('personnel_entry_log_id')->filter()->unique()->values(),
-        )->pluck('status', 'id');
+        $employees = Employee::whereIn(
+            'EmployeeId',
+            $logs->pluck('employee_id')->filter()->unique()->values(),
+        )->get()->keyBy('EmployeeId');
 
-        return $logs->map(function ($log) use ($entryStatuses) {
-            $log->entry_status = $entryStatuses[$log->personnel_entry_log_id] ?? 'IN';
-            return $this->formatPersonnelBiosecurityLog($log);
-        })->values();
+        $rows = [];
+        $openRowsByPerson = [];
+
+        foreach ($logs as $log) {
+            $employee = $log->employee_id ? $employees->get($log->employee_id) : null;
+            $personKey = $this->getPersonnelEntryPersonKey($log);
+            $status = strtoupper(trim((string) ($log->status ?: 'IN')));
+            $date = $log->date ? $log->date->format('Y-m-d') : '';
+            $time = $log->time ? Carbon::parse($log->time)->format('h:i A') : '';
+            $sortValue = sprintf('%s %s %010d', $date, $log->time ? Carbon::parse($log->time)->format('H:i:s') : '00:00:00', $log->id);
+
+            if ($status === 'OUT') {
+                $openIndex = null;
+                if (!empty($openRowsByPerson[$personKey])) {
+                    $openIndex = array_shift($openRowsByPerson[$personKey]);
+                }
+
+                if ($openIndex !== null && isset($rows[$openIndex])) {
+                    $rows[$openIndex]['time_out'] = $time;
+                    $rows[$openIndex]['remarks'] = '';
+                    $rows[$openIndex]['out_entry_id'] = $log->id;
+                    $rows[$openIndex]['sort_value'] = $sortValue;
+                    continue;
+                }
+
+                $rows[] = [
+                    'id' => $log->id,
+                    'type' => 'Personnel Biosecurity Logs',
+                    'name' => $this->getPersonnelEntryName($log, $employee),
+                    'role' => $this->getPersonnelEntryRole($log, $employee),
+                    'date' => $date,
+                    'time' => $time,
+                    'time_in' => '',
+                    'time_out' => $time,
+                    'status' => 'OUT',
+                    'remarks' => '',
+                    'sort_value' => $sortValue,
+                    'can_edit' => false,
+                ];
+                continue;
+            }
+
+            $rows[] = [
+                'id' => $log->id,
+                'type' => 'Personnel Biosecurity Logs',
+                'name' => $this->getPersonnelEntryName($log, $employee),
+                'role' => $this->getPersonnelEntryRole($log, $employee),
+                'date' => $date,
+                'time' => $time,
+                'time_in' => $time,
+                'time_out' => '',
+                'status' => 'IN',
+                'remarks' => 'Pending Out',
+                'sort_value' => $sortValue,
+                'can_edit' => false,
+            ];
+
+            $openRowsByPerson[$personKey][] = array_key_last($rows);
+        }
+
+        return collect($rows)
+            ->sortByDesc('sort_value')
+            ->map(function ($row) {
+                unset($row['sort_value']);
+                return $row;
+            })
+            ->values();
+    }
+
+    private function getPersonnelEntryPersonKey($log): string
+    {
+        if ($log->employee_id) {
+            return 'employee:' . $log->employee_id;
+        }
+
+        return 'name:' . mb_strtolower(trim(($log->name ?? '') . '|' . ($log->role ?? '')));
+    }
+
+    private function getPersonnelEntryName($log, $employee): string
+    {
+        if (!blank($log->name)) {
+            return $log->name;
+        }
+
+        if (!$employee) {
+            return '';
+        }
+
+        return trim(sprintf(
+            '%s %s %s %s',
+            $employee->FirstName ?? '',
+            $employee->MiddleName ?? '',
+            $employee->LastName ?? '',
+            $employee->Suffix ?? '',
+        ));
+    }
+
+    private function getPersonnelEntryRole($log, $employee): string
+    {
+        if (!blank($log->role)) {
+            return $log->role;
+        }
+
+        return $employee->Role ?? '';
     }
 
     private function formatVisitorLog($log)

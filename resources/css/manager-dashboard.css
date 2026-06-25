@@ -37,7 +37,7 @@
 
 .dashboard-command-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+    grid-template-columns: 1fr;
     gap: 16px;
     align-items: stretch;
 }
@@ -56,7 +56,8 @@
 }
 
 .dashboard-overview {
-    min-height: 320px;
+    min-height: 0;
+    padding: 18px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -110,41 +111,40 @@
     position: relative;
     z-index: 1;
     flex: 1;
-    margin-top: 18px;
+    margin-top: 16px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 14px;
     align-items: stretch;
 }
 
 .overview-item {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
     min-height: 0;
-    padding: 22px;
+    padding: 16px 18px;
     border: 1px solid rgba(16, 92, 52, 0.1);
-    border-radius: 20px;
+    border-radius: 16px;
     background: rgba(248, 251, 247, 0.88);
     backdrop-filter: blur(10px);
 }
 
 .overview-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
     display: grid;
     place-items: center;
-    font-size: 1.35rem;
-    flex: 0 0 54px;
+    font-size: 1.1rem;
+    flex: 0 0 46px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .overview-icon svg {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     fill: none;
     stroke: #ffffff;
     stroke-width: 2;
@@ -165,16 +165,16 @@
 }
 
 .overview-value {
-    font-size: clamp(2rem, 3vw, 2.5rem);
+    font-size: clamp(1.55rem, 2vw, 2rem);
     font-weight: 800;
     line-height: 1;
     color: var(--manager-green-950);
 }
 
 .overview-label {
-    margin-top: 8px;
+    margin-top: 6px;
     color: var(--manager-text-soft);
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     font-weight: 700;
 }
 
@@ -368,6 +368,71 @@
     font-style: normal;
 }
 
+.house-graph-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.house-graph-pager[hidden] {
+    display: none;
+}
+
+.house-graph-page-btn {
+    min-width: 72px;
+    padding: 8px 16px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.house-graph-page-btn:hover:not(:disabled) {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    color: #062c17;
+    box-shadow: 0 4px 12px rgba(87, 196, 81, 0.15);
+}
+
+.house-graph-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.house-graph-page-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.house-graph-page-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 1px solid rgba(87, 196, 81, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.house-graph-page-dot:hover {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(87, 196, 81, 0.2);
+}
+
+.house-graph-page-dot.active {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+}
+
 .graph-dots {
     position: absolute;
     top: 22px;
@@ -378,15 +443,87 @@
     gap: 7px;
 }
 
-.graph-dot {
+.env-chart-area {
+    position: relative;
+    margin-top: 16px;
+    height: 278px;
+    padding: 18px 18px 12px;
+    border: 1px solid rgba(16, 92, 52, 0.1);
+    border-radius: 20px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 250, 246, 0.92)),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 58px,
+            rgba(23, 100, 58, 0.035) 59px,
+            transparent 60px
+        );
+    overflow: hidden;
+}
+
+.env-chart-area::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at top right, rgba(184, 239, 189, 0.26), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 42%);
+}
+
+.env-chart-area canvas {
+    position: relative;
+    z-index: 1;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.resource-chart-area {
+    position: relative;
+    margin-top: 16px;
+    height: 278px;
+    padding: 18px 18px 12px;
+    border: 1px solid rgba(16, 92, 52, 0.1);
+    border-radius: 20px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 250, 246, 0.92)),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 58px,
+            rgba(23, 100, 58, 0.035) 59px,
+            transparent 60px
+        );
+    overflow: hidden;
+}
+
+.resource-chart-area::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at top right, rgba(184, 239, 189, 0.26), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 42%);
+}
+
+.resource-chart-area canvas {
+    position: relative;
+    z-index: 1;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.manager-main .graph-dot {
     width: 32px;
     height: 8px;
     padding: 0;
     border: 1px solid rgba(23, 100, 58, 0.1);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.8) !important;
     cursor: pointer;
-    box-shadow: 0 5px 12px rgba(8, 38, 22, 0.08);
+    box-shadow: 0 5px 12px rgba(8, 38, 22, 0.08) !important;
     transition:
         width 0.22s ease,
         background 0.22s ease,
@@ -394,14 +531,15 @@
         transform 0.22s ease;
 }
 
-.graph-dot:hover {
+.manager-main .graph-dot:hover {
     transform: translateY(-1px);
     border-color: rgba(23, 100, 58, 0.28);
 }
 
-.graph-dot.active {
+.manager-main .graph-dot.active {
     width: 44px;
-    background: var(--manager-green-700);
+    border-color: rgba(23, 100, 58, 0.72);
+    background: var(--manager-green-700) !important;
 }
 
 .decision-card {
@@ -510,8 +648,6 @@
 }
 
 @media (max-width: 1200px) {
-    .dashboard-command-grid,
-    .overview-grid,
     .dashboard-panels,
     .dashboard-bottom {
         grid-template-columns: 1fr;
@@ -533,7 +669,12 @@
     .overview-grid,
     .env-realtime-grid,
     .resource-grid {
+        grid-template-columns: 1fr;
         min-height: 0;
+    }
+
+    .overview-item {
+        align-items: flex-start;
     }
 
     .decision-content {

@@ -1,11 +1,21 @@
 let adminMonitoringChart = null;
 let adminMonitoringSlides = [];
+let activeAdminMonitoringSlideIndex = 0;
+let activeAdminMonitoringHouseIndex = 0;
+let adminEnvironmentChart = null;
+let adminEnvironmentSlides = [];
+let activeAdminEnvironmentSlideIndex = 0;
+let adminResourceChart = null;
+let adminResourceSlides = [];
+let activeAdminResourceSlideIndex = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
     resetInitialAdminRealtimeWidgets();
 
     await renderAdminRealtimeMonitoring();
     await renderAdminMonitoringCarousel();
+    await renderAdminEnvironmentCarousel();
+    await renderAdminResourceCarousel();
     setupAdminProfileModal();
 });
 
@@ -141,7 +151,11 @@ function getAdminGaugeDegrees(value, min, max) {
 async function renderAdminMonitoringCarousel() {
     const canvas = document.getElementById("adminMonitoringChart");
     const caption = document.getElementById("adminGraphCaption");
-    const dots = document.querySelectorAll(".admin-graph-dot");
+    const dots = document.querySelectorAll(".admin-monitoring-dot");
+    const pager = document.getElementById("adminHouseGraphPager");
+    const pagerDots = document.getElementById("adminHouseGraphPageDots");
+    const prevButton = document.getElementById("adminHouseGraphPrev");
+    const nextButton = document.getElementById("adminHouseGraphNext");
 
     if (!canvas || typeof Chart === "undefined") {
         return;
@@ -154,8 +168,7 @@ async function renderAdminMonitoringCarousel() {
         adminMonitoringSlides = Array.isArray(data.slides) ? data.slides : [];
         if (!adminMonitoringSlides.length) return;
 
-        createOrUpdateAdminChart(canvas, adminMonitoringSlides[0]);
-        updateAdminGraphCaption(caption, adminMonitoringSlides[0]);
+        renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
         updateAdminDots(dots, 0);
 
         dots.forEach((dot) => {
@@ -164,13 +177,97 @@ async function renderAdminMonitoringCarousel() {
                 if (Number.isNaN(index) || !adminMonitoringSlides[index])
                     return;
 
-                createOrUpdateAdminChart(canvas, adminMonitoringSlides[index]);
-                updateAdminGraphCaption(caption, adminMonitoringSlides[index]);
+                activeAdminMonitoringSlideIndex = index;
+                renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
                 updateAdminDots(dots, index);
             });
         });
+
+        prevButton?.addEventListener("click", () => {
+            activeAdminMonitoringHouseIndex = Math.max(0, activeAdminMonitoringHouseIndex - 1);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        nextButton?.addEventListener("click", () => {
+            const houseCount = getAdminMonitoringHouseCount(adminMonitoringSlides[activeAdminMonitoringSlideIndex]);
+            activeAdminMonitoringHouseIndex = Math.min(houseCount - 1, activeAdminMonitoringHouseIndex + 1);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
+
+        pagerDots?.addEventListener("click", (event) => {
+            const dot = event.target.closest("[data-admin-house-graph-page]");
+
+            if (!dot) {
+                return;
+            }
+
+            activeAdminMonitoringHouseIndex = Number(dot.dataset.adminHouseGraphPage || 0);
+            renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton);
+        });
     } catch (error) {
         console.error("Failed to load admin monitoring graph data.", error);
+    }
+}
+
+function renderAdminMonitoringHousePage(canvas, caption, pager, pagerDots, prevButton, nextButton) {
+    const slide = adminMonitoringSlides[activeAdminMonitoringSlideIndex];
+
+    if (!slide) {
+        return;
+    }
+
+    const houseCount = getAdminMonitoringHouseCount(slide);
+    activeAdminMonitoringHouseIndex = Math.max(0, Math.min(activeAdminMonitoringHouseIndex, houseCount - 1));
+
+    const pageSlide = getAdminMonitoringHousePageSlide(slide, activeAdminMonitoringHouseIndex);
+
+    createOrUpdateAdminChart(canvas, pageSlide);
+    updateAdminGraphCaption(caption, pageSlide);
+    updateAdminMonitoringHousePager(pager, pagerDots, prevButton, nextButton, pageSlide, houseCount);
+}
+
+function getAdminMonitoringHouseCount(slide) {
+    return Array.isArray(slide?.datasets) && slide.datasets.length ? slide.datasets.length : 1;
+}
+
+function getAdminMonitoringHousePageSlide(slide, houseIndex) {
+    if (!Array.isArray(slide.datasets) || !slide.datasets.length) {
+        return slide;
+    }
+
+    const dataset = slide.datasets[houseIndex] || slide.datasets[0];
+
+    return {
+        ...slide,
+        houseLabel: dataset.label,
+        datasets: [dataset],
+    };
+}
+
+function updateAdminMonitoringHousePager(pager, pagerDots, prevButton, nextButton, slide, houseCount) {
+    if (!pager) {
+        return;
+    }
+
+    pager.hidden = houseCount <= 1;
+
+    if (pagerDots) {
+        pagerDots.innerHTML = Array.from({ length: houseCount }, (_, index) => `
+            <button
+                type="button"
+                class="admin-house-graph-page-dot ${index === activeAdminMonitoringHouseIndex ? "active" : ""}"
+                data-admin-house-graph-page="${index}"
+                aria-label="Show house ${index + 1}"
+            ></button>
+        `).join("");
+    }
+
+    if (prevButton) {
+        prevButton.disabled = activeAdminMonitoringHouseIndex <= 0;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = activeAdminMonitoringHouseIndex >= houseCount - 1;
     }
 }
 
@@ -179,26 +276,33 @@ function createOrUpdateAdminChart(canvas, slide) {
         adminMonitoringChart.destroy();
     }
 
+    adminMonitoringChart = createAdminBarChart(canvas, slide);
+}
+
+function createAdminBarChart(canvas, slide, maxValue = null) {
     const context = canvas.getContext("2d");
     const barGradient = createAdminBarGradient(context, canvas, slide.borderColor);
+    const datasets = Array.isArray(slide.datasets) && slide.datasets.length
+        ? slide.datasets
+        : [
+              {
+                  label: slide.label,
+                  data: slide.values,
+                  borderColor: slide.borderColor,
+                  backgroundColor: barGradient || slide.backgroundColor,
+                  hoverBackgroundColor: slide.borderColor,
+                  borderWidth: 0,
+                  borderRadius: 12,
+                  borderSkipped: false,
+                  maxBarThickness: 42,
+              },
+          ];
 
-    adminMonitoringChart = new Chart(canvas, {
+    return new Chart(canvas, {
         type: "bar",
         data: {
             labels: slide.labels,
-            datasets: [
-                {
-                    label: slide.label,
-                    data: slide.values,
-                    borderColor: slide.borderColor,
-                    backgroundColor: barGradient || slide.backgroundColor,
-                    hoverBackgroundColor: slide.borderColor,
-                    borderWidth: 0,
-                    borderRadius: 12,
-                    borderSkipped: false,
-                    maxBarThickness: 42,
-                },
-            ],
+            datasets,
         },
         options: {
             responsive: true,
@@ -226,7 +330,16 @@ function createOrUpdateAdminChart(canvas, slide) {
             },
             plugins: {
                 legend: {
-                    display: false,
+                    display: datasets.length > 1,
+                    position: "bottom",
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        color: "#3f473f",
+                        font: {
+                            weight: 700,
+                        },
+                    },
                 },
                 tooltip: {
                     backgroundColor: "rgba(6, 51, 32, 0.94)",
@@ -239,7 +352,8 @@ function createOrUpdateAdminChart(canvas, slide) {
                     bodyColor: "#e9f7ec",
                     callbacks: {
                         label(context) {
-                            return `${slide.label}: ${context.parsed.y}${slide.unit || ""}`;
+                            const label = context.dataset.label || slide.label;
+                            return `${label}: ${context.parsed.y}${slide.unit || ""}`;
                         },
                     },
                 },
@@ -261,6 +375,7 @@ function createOrUpdateAdminChart(canvas, slide) {
                 },
                 y: {
                     beginAtZero: true,
+                    ...(maxValue ? { max: maxValue } : {}),
                     border: {
                         display: false,
                     },
@@ -300,7 +415,7 @@ function createAdminBarGradient(context, canvas, color) {
 
 function updateAdminGraphCaption(caption, slide) {
     if (caption) {
-        caption.textContent = slide.label;
+        caption.textContent = slide.houseLabel ? `${slide.label} - ${slide.houseLabel}` : slide.label;
     }
 }
 
@@ -308,6 +423,94 @@ function updateAdminDots(dots, activeIndex) {
     dots.forEach((dot, index) => {
         dot.classList.toggle("active", index === activeIndex);
     });
+}
+
+async function renderAdminEnvironmentCarousel() {
+    const canvas = document.getElementById("adminEnvironmentChart");
+    const caption = document.getElementById("adminEnvGraphCaption");
+    const dots = document.querySelectorAll(".admin-env-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/admin/dashboard/environment-by-house");
+        const data = await response.json();
+
+        adminEnvironmentSlides = Array.isArray(data.slides) ? data.slides : [];
+        if (!adminEnvironmentSlides.length) return;
+
+        createOrUpdateAdminEnvironmentChart(canvas, adminEnvironmentSlides[0]);
+        updateAdminGraphCaption(caption, adminEnvironmentSlides[0]);
+        updateAdminDots(dots, 0);
+
+        dots.forEach((dot) => {
+            dot.addEventListener("click", () => {
+                const index = Number(dot.dataset.slide);
+                if (Number.isNaN(index) || !adminEnvironmentSlides[index]) return;
+
+                activeAdminEnvironmentSlideIndex = index;
+                createOrUpdateAdminEnvironmentChart(canvas, adminEnvironmentSlides[index]);
+                updateAdminGraphCaption(caption, adminEnvironmentSlides[index]);
+                updateAdminDots(dots, index);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to load admin environment monitoring data.", error);
+    }
+}
+
+function createOrUpdateAdminEnvironmentChart(canvas, slide) {
+    if (adminEnvironmentChart) {
+        adminEnvironmentChart.destroy();
+    }
+
+    adminEnvironmentChart = createAdminBarChart(canvas, slide, slide.maxValue || 35);
+}
+
+async function renderAdminResourceCarousel() {
+    const canvas = document.getElementById("adminResourceChart");
+    const caption = document.getElementById("adminResourceGraphCaption");
+    const dots = document.querySelectorAll(".admin-resource-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/admin/dashboard/resources-by-house");
+        const data = await response.json();
+
+        adminResourceSlides = Array.isArray(data.slides) ? data.slides : [];
+        if (!adminResourceSlides.length) return;
+
+        createOrUpdateAdminResourceChart(canvas, adminResourceSlides[0]);
+        updateAdminGraphCaption(caption, adminResourceSlides[0]);
+        updateAdminDots(dots, 0);
+
+        dots.forEach((dot) => {
+            dot.addEventListener("click", () => {
+                const index = Number(dot.dataset.slide);
+                if (Number.isNaN(index) || !adminResourceSlides[index]) return;
+
+                activeAdminResourceSlideIndex = index;
+                createOrUpdateAdminResourceChart(canvas, adminResourceSlides[index]);
+                updateAdminGraphCaption(caption, adminResourceSlides[index]);
+                updateAdminDots(dots, index);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to load admin resource monitoring data.", error);
+    }
+}
+
+function createOrUpdateAdminResourceChart(canvas, slide) {
+    if (adminResourceChart) {
+        adminResourceChart.destroy();
+    }
+
+    adminResourceChart = createAdminBarChart(canvas, slide, slide.maxValue || 100);
 }
 
 async function populateAdminProfileModal() {

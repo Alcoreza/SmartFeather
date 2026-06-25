@@ -184,7 +184,7 @@ body {
 
 .admin-maintenance-table {
     width: 100%;
-    min-width: 900px;
+    min-width: 720px;
     border-collapse: separate;
     border-spacing: 0 14px;
 }

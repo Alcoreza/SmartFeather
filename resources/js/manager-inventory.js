@@ -2,176 +2,111 @@ function showPopup(message, type = "success", callback = null) {
     const oldPopup = document.getElementById("inventoryPopupOverlay");
     if (oldPopup) oldPopup.remove();
 
+    const isError = type === "error";
     const overlay = document.createElement("div");
     overlay.id = "inventoryPopupOverlay";
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    `;
+    overlay.className = "inventory-modal-overlay inventory-confirm-overlay confirm-modal-top show";
 
     const box = document.createElement("div");
-    box.style.cssText = `
-        background: #ffffff;
-        width: 360px;
-        max-width: 90%;
-        border-radius: 18px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        font-family: inherit;
-    `;
+    box.className = "inventory-modal-card inventory-confirm-card";
 
     box.innerHTML = `
-        <h2 style="margin:0 0 10px;color:${type === "success" ? "#1f7a3f" : "#b42318"};">
-            ${type === "success" ? "Success" : "Error"}
-        </h2>
-        <p style="margin:0 0 22px;color:#333;font-size:15px;">
-            ${message}
-        </p>
-        <button id="inventoryPopupOkBtn" style="
-            border: none;
-            background: ${type === "success" ? "#1f7a3f" : "#b42318"};
-            color: white;
-            padding: 10px 28px;
-            border-radius: 999px;
-            cursor: pointer;
-            font-weight: 600;
-        ">
-            OK
-        </button>
-    `;
+        <div class="inventory-modal-header">
+            <div>
+                <h2></h2>
+                <div class="inventory-modal-line"></div>
+            </div>
+        </div>
 
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+        <p class="inventory-confirm-text" id="inventoryPopupMessage"></p>
 
-    overlay.animate(
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 180, easing: "ease-out" }
-    );
-
-    box.animate(
-        type === "error"
-            ? [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateX(-6px) scale(1)" },
-                { opacity: 1, transform: "translateX(6px) scale(1)" },
-                { opacity: 1, transform: "translateX(0) scale(1)" }
-            ]
-            : [
-                { opacity: 0, transform: "translateY(18px) scale(0.94)" },
-                { opacity: 1, transform: "translateY(0) scale(1.02)" },
-                { opacity: 1, transform: "translateY(0) scale(1)" }
-            ],
-        { duration: type === "error" ? 340 : 240, easing: "ease-out" }
-    );
-
-    document.getElementById("inventoryPopupOkBtn").addEventListener("click", () => {
-        const fadeOut = overlay.animate(
-            [{ opacity: 1 }, { opacity: 0 }],
-            { duration: 140, easing: "ease-in" }
-        );
-
-        box.animate(
-            [
-                { opacity: 1, transform: "translateY(0) scale(1)" },
-                { opacity: 0, transform: "translateY(10px) scale(0.96)" }
-            ],
-            { duration: 140, easing: "ease-in" }
-        );
-
-        fadeOut.onfinish = () => {
-            overlay.remove();
-
-            if (typeof callback === "function") {
-                callback();
-            }
-        };
-    });
-}
-
-function showConfirmPopup(message, callback) {
-    const oldPopup = document.getElementById("confirmPopupOverlay");
-    if (oldPopup) oldPopup.remove();
-
-    const overlay = document.createElement("div");
-    overlay.id = "confirmPopupOverlay";
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    `;
-
-    const box = document.createElement("div");
-    box.style.cssText = `
-        background: #ffffff;
-        width: 380px;
-        max-width: 90%;
-        border-radius: 18px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        font-family: inherit;
-    `;
-
-    box.innerHTML = `
-        <h2 style="margin:0 0 10px;color:#b42318;">
-            Confirm Archive
-        </h2>
-        <p style="margin:0 0 22px;color:#333;font-size:15px;">
-            ${message}
-        </p>
-        <div style="display:flex;justify-content:center;gap:12px;">
-            <button id="confirmArchiveBtn" style="
-                border: none;
-                background: #b42318;
-                color: white;
-                padding: 10px 24px;
-                border-radius: 999px;
-                cursor: pointer;
-                font-weight: 600;
-            ">
-                Archive
-            </button>
-            <button id="cancelArchiveBtn" style="
-                border: none;
-                background: #d1d5db;
-                color: #111827;
-                padding: 10px 24px;
-                border-radius: 999px;
-                cursor: pointer;
-                font-weight: 600;
-            ">
-                Cancel
+        <div class="inventory-modal-actions inventory-confirm-actions">
+            <button type="button" class="inventory-save-btn ${isError ? "inventory-confirm-danger" : ""}" id="inventoryPopupOkBtn">
+                OK
             </button>
         </div>
     `;
 
+    box.querySelector("h2").textContent = isError ? "Error" : "Success";
+    box.querySelector("#inventoryPopupMessage").textContent = message || "";
+
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    document.getElementById("confirmArchiveBtn").addEventListener("click", () => {
+    const close = () => {
         overlay.remove();
 
         if (typeof callback === "function") {
-            callback(true);
+            callback();
+        }
+    };
+
+    document.getElementById("inventoryPopupOkBtn").addEventListener("click", close);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            close();
         }
     });
+}
 
-    document.getElementById("cancelArchiveBtn").addEventListener("click", () => {
+function showConfirmPopup(message, callback, options = {}) {
+    const oldPopup = document.getElementById("confirmPopupOverlay");
+    if (oldPopup) oldPopup.remove();
+
+    const title = options.title || "Confirm Archive";
+    const confirmText = options.confirmText || "Archive";
+    const isDanger =
+        options.variant === "danger" ||
+        confirmText.toLowerCase().includes("archive") ||
+        options.confirmColor === "#b42318";
+
+    const overlay = document.createElement("div");
+    overlay.id = "confirmPopupOverlay";
+    overlay.className = "inventory-modal-overlay inventory-confirm-overlay confirm-modal-top show";
+
+    const box = document.createElement("div");
+    box.className = "inventory-modal-card inventory-confirm-card";
+
+    box.innerHTML = `
+        <div class="inventory-modal-header">
+            <div>
+                <h2></h2>
+                <div class="inventory-modal-line"></div>
+            </div>
+        </div>
+
+        <p class="inventory-confirm-text"></p>
+
+        <div class="inventory-modal-actions inventory-confirm-actions">
+            <button type="button" class="inventory-cancel-btn" id="cancelArchiveBtn">
+                Cancel
+            </button>
+            <button type="button" class="inventory-save-btn ${isDanger ? "inventory-confirm-danger" : ""}" id="confirmArchiveBtn">
+            </button>
+        </div>
+    `;
+
+    box.querySelector("h2").textContent = title;
+    box.querySelector(".inventory-confirm-text").textContent = message;
+    box.querySelector("#confirmArchiveBtn").textContent = confirmText;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const close = (confirmed) => {
         overlay.remove();
 
         if (typeof callback === "function") {
-            callback(false);
+            callback(confirmed);
+        }
+    };
+
+    document.getElementById("confirmArchiveBtn").addEventListener("click", () => close(true));
+    document.getElementById("cancelArchiveBtn").addEventListener("click", () => close(false));
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            close(false);
         }
     });
 }
@@ -406,7 +341,12 @@ function setupCreateInventoryTypeModal() {
             return;
         }
 
-        try {
+        showConfirmPopup(`Create "${name}" as a new ${category} inventory item?`, async (confirmed) => {
+            if (!confirmed) {
+                return;
+            }
+
+            try {
             const response = await fetch("/api/manager/inventory/types", {
                 method: "POST",
                 headers: {
@@ -438,6 +378,11 @@ function setupCreateInventoryTypeModal() {
             console.error(error);
             showPopup(error.message || "Unable to save inventory item.", "error");
         }
+        }, {
+            title: "Confirm Inventory Item",
+            confirmText: "Confirm",
+            confirmColor: "#1f7a3f",
+        });
     });
 }
 
@@ -725,7 +670,14 @@ function setupInventoryModals() {
             return;
         }
 
-        try {
+        showConfirmPopup(
+            `${currentFeedAction === "add" ? "Add" : "Reduce"} feed stock for ${feedEditStockSelect.options[feedEditStockSelect.selectedIndex]?.text || "this item"}?`,
+            async (confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
             let payload;
 
             if (currentFeedAction === "add") {
@@ -776,6 +728,13 @@ function setupInventoryModals() {
             console.error(error);
             showPopup("Something went wrong while updating feed stock.", "error");
         }
+            },
+            {
+                title: "Confirm Feed Stock",
+                confirmText: "Confirm",
+                confirmColor: "#1f7a3f",
+            },
+        );
     });
 
     vitaminForm?.addEventListener("submit", async (event) => {
@@ -796,7 +755,14 @@ function setupInventoryModals() {
             return;
         }
 
-        try {
+        showConfirmPopup(
+            `${currentVitaminAction === "add" ? "Add" : "Reduce"} vitamin stock for ${vitaminEditStockSelect.options[vitaminEditStockSelect.selectedIndex]?.text || "this item"}?`,
+            async (confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
             let payload;
 
             if (currentVitaminAction === "add") {
@@ -847,6 +813,13 @@ function setupInventoryModals() {
             console.error(error);
             showPopup("Something went wrong while updating vitamin stock.", "error");
         }
+            },
+            {
+                title: "Confirm Vitamin Stock",
+                confirmText: "Confirm",
+                confirmColor: "#1f7a3f",
+            },
+        );
     });
 
     setupArchiveButtons();

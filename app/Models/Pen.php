@@ -21,6 +21,8 @@ class Pen extends Model
         'archived_at',
         'current_batch_id',
         'batch_started_at',
+        'feeder_count',
+        'drinker_count',
     ];
 
     protected $casts = [
@@ -48,6 +50,11 @@ class Pen extends Model
     public function weightSamplingLogs()
     {
         return $this->hasMany(WeightSamplingLog::class, 'pen_id');
+    }
+
+    public function latestWeightSamplingLog()
+    {
+        return $this->hasOne(WeightSamplingLog::class, 'pen_id')->latestOfMany('id');
     }
 
     public function cleaningLogs()

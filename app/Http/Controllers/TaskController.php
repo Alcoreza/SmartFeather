@@ -44,7 +44,9 @@ class TaskController extends Controller
                     'name' => $fullName ?: 'Unknown',
                     'task_assigned' => $task->tasktype,
                     'house_number' => $house?->house_number ?? null,
+                    'house_id' => $house?->id ?? null,
                     'pen_number' => $pen?->pen_name ?? 'Unknown Pen',
+                    'pen_id' => $pen?->id ?? null,
                     'detailed_task' => $task->detailedtask ?? '',
                     'priority' => $task->prioritylevel,
                     'time_assigned' => $formatDate($task->timeassigned),
@@ -81,6 +83,37 @@ class TaskController extends Controller
         );
     }
 
+    private function isChickPlacementTask(?string $taskType): bool
+    {
+        return strtolower(trim((string) $taskType)) === 'chick placement';
+    }
+
+    private function validateAssignablePen(int $houseId, int $penId, ?string $taskType): ?\Illuminate\Http\JsonResponse
+    {
+        $pen = Pen::where('id', $penId)
+            ->where('house_id', $houseId)
+            ->whereNull('archived_at')
+            ->first();
+
+        if (! $pen) {
+            return response()->json([
+                'errors' => [
+                    'pennumber' => ['Select a valid pen in the selected house.'],
+                ],
+            ], 422);
+        }
+
+        if (! $this->isChickPlacementTask($taskType) && ! $pen->runningBatch()->exists()) {
+            return response()->json([
+                'errors' => [
+                    'pennumber' => ['Select a pen with a running batch.'],
+                ],
+            ], 422);
+        }
+
+        return null;
+    }
+
     public function store(Request $request)
     {
         try {
@@ -98,6 +131,14 @@ class TaskController extends Controller
 
             $validated['timeassigned'] = now()->format('Y-m-d\TH:i:s');
 
+            if ($this->finishDateIsPast($validated['finishby'] ?? null)) {
+                return response()->json([
+                    'errors' => [
+                        'finishby' => ['Date to finish cannot be earlier than today.'],
+                    ],
+                ], 422);
+            }
+
             // Ensure the chosen task type exists in the task_type table.
             $taskTypeName = trim($validated['tasktype']);
             if ($taskTypeName !== '') {
@@ -110,6 +151,16 @@ class TaskController extends Controller
                         'task' => $taskTypeName,
                     ]);
                 }
+            }
+
+            $penError = $this->validateAssignablePen(
+                (int) $validated['house_houseid'],
+                (int) $validated['pennumber'],
+                $validated['tasktype'],
+            );
+
+            if ($penError) {
+                return $penError;
             }
 
             $task = Task::create($validated);
@@ -128,11 +179,46 @@ class TaskController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => 'required|string|in:Pending,For Approval,Completed',
+                'status' => 'nullable|string|in:Pending,For Approval,Completed',
+                'tasktype' => 'nullable|string|max:255',
+                'prioritylevel' => 'nullable|string|max:255',
+                'house_houseid' => 'nullable|integer|exists:house,id',
+                'pennumber' => 'nullable|integer',
+                'finishby' => 'nullable|date_format:Y-m-d H:i:s',
+                'detailedtask' => 'nullable|string',
             ]);
 
             $task = Task::findOrFail($taskId);
-            $task->update($validated);
+
+            if ($this->finishDateIsPast($validated['finishby'] ?? null)) {
+                return response()->json([
+                    'errors' => [
+                        'finishby' => ['Date to finish cannot be earlier than today.'],
+                    ],
+                ], 422);
+            }
+
+            if (array_key_exists('tasktype', $validated)
+                || array_key_exists('house_houseid', $validated)
+                || array_key_exists('pennumber', $validated)
+            ) {
+                $nextTaskType = $validated['tasktype'] ?? $task->tasktype;
+                $nextHouseId = (int) ($validated['house_houseid'] ?? $task->house_houseid);
+                $nextPenId = (int) ($validated['pennumber'] ?? $task->pennumber);
+
+                $penError = $this->validateAssignablePen($nextHouseId, $nextPenId, $nextTaskType);
+
+                if ($penError) {
+                    return $penError;
+                }
+            }
+
+            // Remove null values to only update provided fields
+            $updateData = array_filter($validated, function($value) {
+                return $value !== null;
+            });
+
+            $task->update($updateData);
 
             return response()->json($task, 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -140,6 +226,19 @@ class TaskController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Task update error:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($taskId)
+    {
+        try {
+            $task = Task::findOrFail($taskId);
+            $task->delete();
+
+            return response()->json(['message' => 'Task deleted successfully'], 200);
+        } catch (\Exception $e) {
+            Log::error('Task deletion error:', ['message' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -152,6 +251,7 @@ class TaskController extends Controller
             ->toArray();
 
         $workers = Employee::where('Role', 'Flockman')
+            ->whereRaw('is_active is true')
             ->get()
             ->map(function (Employee $employee) use ($pendingWorkerIds) {
                 $fullName = trim(sprintf(
@@ -183,6 +283,9 @@ class TaskController extends Controller
         $taskCategories = DB::table('task_type')
             ->orderBy('id', 'asc')
             ->pluck('task')
+            ->map(function($task) {
+                return trim($task);
+            })
             ->toArray();
 
         return response()->json([
@@ -194,16 +297,32 @@ class TaskController extends Controller
         ]);
     }
 
-    public function getPensForHouse($houseId)
+    private function finishDateIsPast(?string $finishBy): bool
     {
+        if (blank($finishBy)) {
+            return false;
+        }
+
+        return Carbon::parse($finishBy)->toDateString() < now()->toDateString();
+    }
+
+    public function getPensForHouse(Request $request, $houseId)
+    {
+        $allowWithoutRunningBatch = $this->isChickPlacementTask($request->query('task_type'));
+
         $pens = Pen::where('house_id', $houseId)
             ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get(['id', 'pen_name'])
-            ->map(function (Pen $pen) {
+            ->map(function (Pen $pen) use ($allowWithoutRunningBatch) {
+                // Check if pen has a running batch
+                $hasRunningBatch = $pen->runningBatch()->exists();
+                
                 return [
                     'number' => $pen->id,
                     'label' => $pen->pen_name,
+                    'disabled' => !$allowWithoutRunningBatch && !$hasRunningBatch,
+                    'disabledReason' => !$allowWithoutRunningBatch && !$hasRunningBatch ? 'no running batch' : null,
                 ];
             });
 
@@ -215,7 +334,8 @@ class TaskController extends Controller
      */
     public function getAllWorkers()
     {
-        $workers = Employee::all()
+        $workers = Employee::whereRaw('is_active is true')
+            ->get()
             ->map(function (Employee $employee) {
                 $fullName = trim(sprintf(
                     '%s %s %s %s',

@@ -5,23 +5,17 @@
 @push('styles')
     @vite([
         'resources/css/admin-shared.css',
-        'resources/css/admin-dashboard.css'
+        'resources/css/admin-dashboard.css',
+        'resources/css/manager-decision-support.css'
     ])
 @endpush
 
 @push('scripts')
     @vite('resources/js/admin-dashboard.js')
+    @vite('resources/js/manager-decision-support.js')
 @endpush
 
 @section('content')
-    @php
-        $overviewCards = [
-            ['icon' => '🐔', 'value' => '5462', 'label' => 'Total Chickens', 'accent' => 'red'],
-            ['icon' => '🥚', 'value' => '367', 'label' => 'Total Eggs', 'accent' => 'orange'],
-            ['icon' => '📉', 'value' => '25', 'label' => 'Mortalities', 'accent' => 'gray'],
-        ];
-    @endphp
-
     <div class="admin-shell">
         @include('includes.admin-sidebar')
 
@@ -29,7 +23,6 @@
             <div class="admin-topbar">
                 <div>
                     <h1 class="admin-page-title">Dashboard</h1>
-                    <p class="admin-page-subtitle">Monitor operations, live farm conditions, and critical alerts.</p>
                 </div>
             </div>
 
@@ -76,29 +69,25 @@
                     </div>
                 </section>
 
-                <article class="admin-dashboard-card admin-decision-card">
-                    <div class="admin-decision-header">
+                <article class="admin-dashboard-card admin-decision-card decision-card">
+                    <div class="admin-decision-header decision-header">
                         <h2>Decision Support</h2>
 
-                        <select class="admin-decision-select">
-                            <option>Mortality</option>
-                            <option>Temperature</option>
-                            <option>Water</option>
-                        </select>
+                        <button type="button" class="decision-support-refresh" id="refreshDecisionSupport" title="Refresh recommendations">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M20 12a8 8 0 0 1-13.7 5.7"></path>
+                                <path d="M4 12A8 8 0 0 1 17.7 6.3"></path>
+                                <path d="M7 18H4v3"></path>
+                                <path d="M17 6h3V3"></path>
+                            </svg>
+                        </button>
                     </div>
 
-                    <div class="admin-decision-content">
-                        <div class="admin-decision-stars">
-                            <span class="admin-star admin-star-lg"></span>
-                            <span class="admin-star admin-star-md"></span>
-                            <span class="admin-star admin-star-sm"></span>
+                    <div class="admin-decision-content decision-content" id="decisionSupportContent" data-decision-support-api="/api/admin/dashboard/decision-support">
+                        <div class="decision-support-loading">
+                            <div class="spinner"></div>
+                            <p>Loading recommendations...</p>
                         </div>
-
-                        <p>
-                            Mortality count has increased beyond the normal daily range.
-                            Conduct flock inspection, review environmental conditions,
-                            and verify feed and water availability to identify possible causes.
-                        </p>
                     </div>
                 </article>
             </section>
@@ -109,26 +98,15 @@
                         <h2>Environmental Monitoring</h2>
                     </div>
 
-                    <div class="admin-environment-grid" id="adminEnvironmentGrid">
-                        <div class="admin-sensor-card">
-                            <div class="admin-radial-gauge safe" style="--gauge-value: 0deg;">
-                                <div class="admin-radial-gauge-inner">
-                                    <span class="admin-sensor-value">24deg</span>
-                                </div>
-                            </div>
-                            <div class="admin-sensor-label">Temperature</div>
-                        </div>
+                    <div class="admin-graph-area">
+                        <canvas id="adminEnvironmentChart"></canvas>
+                    </div>
 
-                        <div class="admin-panel-divider"></div>
+                    <div class="admin-graph-caption" id="adminEnvGraphCaption">Temperature</div>
 
-                        <div class="admin-sensor-card">
-                            <div class="admin-radial-gauge warning" style="--gauge-value: 0deg;">
-                                <div class="admin-radial-gauge-inner">
-                                    <span class="admin-sensor-value">15ppm</span>
-                                </div>
-                            </div>
-                            <div class="admin-sensor-label">Ammonia</div>
-                        </div>
+                    <div class="admin-graph-dots">
+                        <button type="button" class="admin-graph-dot admin-env-dot active" data-slide="0"></button>
+                        <button type="button" class="admin-graph-dot admin-env-dot" data-slide="1"></button>
                     </div>
                 </article>
 
@@ -137,24 +115,15 @@
                         <h2>Feed and Water Monitoring</h2>
                     </div>
 
-                    <div class="admin-resource-grid" id="adminResourceGrid">
-                        <div class="admin-resource-card">
-                            <div class="admin-resource-bar-shell">
-                                <div class="admin-resource-bar admin-feed-bar" style="height: 0%;"></div>
-                            </div>
-                            <div class="admin-resource-percent">60%</div>
-                            <div class="admin-resource-label">Feed</div>
-                        </div>
+                    <div class="admin-graph-area">
+                        <canvas id="adminResourceChart"></canvas>
+                    </div>
 
-                        <div class="admin-panel-divider"></div>
+                    <div class="admin-graph-caption" id="adminResourceGraphCaption">Feed</div>
 
-                        <div class="admin-resource-card">
-                            <div class="admin-resource-bar-shell">
-                                <div class="admin-resource-bar admin-water-bar" style="height: 0%;"></div>
-                            </div>
-                            <div class="admin-resource-percent admin-water-text">30%</div>
-                            <div class="admin-resource-label">Water</div>
-                        </div>
+                    <div class="admin-graph-dots">
+                        <button type="button" class="admin-graph-dot admin-resource-dot active" data-slide="0"></button>
+                        <button type="button" class="admin-graph-dot admin-resource-dot" data-slide="1"></button>
                     </div>
                 </article>
             </section>
@@ -173,12 +142,17 @@
 
                     <div class="admin-graph-caption" id="adminGraphCaption">Temperature</div>
 
+                    <div class="admin-house-graph-pager" id="adminHouseGraphPager" hidden>
+                        <button type="button" class="admin-house-graph-page-btn" id="adminHouseGraphPrev">Prev</button>
+                        <div class="admin-house-graph-page-dots" id="adminHouseGraphPageDots"></div>
+                        <button type="button" class="admin-house-graph-page-btn" id="adminHouseGraphNext">Next</button>
+                    </div>
+
                     <div class="admin-graph-dots">
-                        <button type="button" class="admin-graph-dot active" data-slide="0"></button>
-                        <button type="button" class="admin-graph-dot" data-slide="1"></button>
+                        <button type="button" class="admin-graph-dot admin-monitoring-dot active" data-slide="0"></button>
+                        <button type="button" class="admin-graph-dot admin-monitoring-dot" data-slide="1"></button>
                     </div>
                 </article>
-
             </section>
         </main>
     </div>

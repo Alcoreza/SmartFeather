@@ -37,7 +37,7 @@
 
 .admin-dashboard-command-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+    grid-template-columns: 1fr;
     gap: 16px;
     align-items: stretch;
 }
@@ -56,7 +56,7 @@
 }
 
 .admin-overview-card {
-    min-height: 320px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -110,41 +110,40 @@
     position: relative;
     z-index: 1;
     flex: 1;
-    margin-top: 18px;
+    margin-top: 16px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 14px;
     align-items: stretch;
 }
 
 .admin-overview-item {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
     min-height: 0;
-    padding: 22px;
+    padding: 16px 18px;
     border: 1px solid rgba(16, 92, 52, 0.1);
-    border-radius: 20px;
+    border-radius: 16px;
     background: rgba(248, 251, 247, 0.88);
     backdrop-filter: blur(10px);
 }
 
 .admin-overview-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
     display: grid;
     place-items: center;
-    font-size: 1.35rem;
-    flex: 0 0 54px;
+    font-size: 1rem;
+    flex: 0 0 42px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .admin-overview-icon svg {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     fill: none;
     stroke: #ffffff;
     stroke-width: 2;
@@ -165,16 +164,16 @@
 }
 
 .admin-overview-value {
-    font-size: clamp(2rem, 3vw, 2.5rem);
+    font-size: clamp(1.35rem, 1.8vw, 1.75rem);
     font-weight: 800;
     line-height: 1;
     color: var(--admin-green-950);
 }
 
 .admin-overview-label {
-    margin-top: 8px;
+    margin-top: 5px;
     color: var(--admin-text-soft);
-    font-size: 0.88rem;
+    font-size: 0.74rem;
     font-weight: 700;
 }
 
@@ -368,6 +367,71 @@
     font-style: normal;
 }
 
+.admin-house-graph-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.admin-house-graph-pager[hidden] {
+    display: none;
+}
+
+.admin-house-graph-page-btn {
+    min-width: 72px;
+    padding: 8px 16px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-house-graph-page-btn:hover:not(:disabled) {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    color: #062c17;
+    box-shadow: 0 4px 12px rgba(87, 196, 81, 0.15);
+}
+
+.admin-house-graph-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.admin-house-graph-page-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-house-graph-page-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 1px solid rgba(87, 196, 81, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-house-graph-page-dot:hover {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: rgba(87, 196, 81, 0.2);
+}
+
+.admin-house-graph-page-dot.active {
+    border-color: rgba(87, 196, 81, 0.6);
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+}
+
 .admin-graph-dots {
     position: absolute;
     top: 22px;
@@ -405,6 +469,17 @@
 }
 
 .admin-decision-card {
+    --manager-panel-bg: var(--admin-panel-bg);
+    --manager-panel-border: var(--admin-panel-border);
+    --manager-green-950: var(--admin-green-950);
+    --manager-green-900: var(--admin-green-900);
+    --manager-green-800: var(--admin-green-800);
+    --manager-green-700: var(--admin-green-700);
+    --manager-green-500: var(--admin-green-500);
+    --manager-green-300: var(--admin-green-300);
+    --manager-text-main: var(--admin-text-main);
+    --manager-text-soft: var(--admin-text-soft);
+    --manager-shadow-soft: var(--admin-shadow-soft);
     min-height: 320px;
     display: flex;
     flex-direction: column;
@@ -421,6 +496,18 @@
 
 .admin-decision-card .admin-decision-header h2::before {
     background: rgba(255, 255, 255, 0.92);
+}
+
+.admin-decision-content.decision-content {
+    display: block;
+    flex: 1;
+    align-items: initial;
+    justify-content: initial;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .admin-decision-select {

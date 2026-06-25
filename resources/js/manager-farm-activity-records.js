@@ -17,6 +17,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house_number', label: 'House' },
                     { key: 'pen_name', label: 'Pen' },
                     { key: 'eggs_hatched', label: 'Eggs<br>Hatched' },
@@ -32,6 +33,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house', label: 'House' },
                     { key: 'pen', label: 'Pen' },
                     { key: 'batch', label: 'Batch' },
@@ -49,6 +51,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'feed', label: 'Feed' },
                     { key: 'house_number', label: 'House<br>Number' },
                     { key: 'pen_name', label: 'Pen' },
@@ -65,6 +68,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'vitamin', label: 'Vitamin' },
                     { key: 'house_number', label: 'House<br>Number' },
                     { key: 'pen_name', label: 'Pen' },
@@ -80,10 +84,10 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house', label: 'House' },
                     { key: 'pen', label: 'Pen' },
                     { key: 'disinfectant_used', label: 'Disinfectant<br>Used' },
-                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'date', label: 'Date' },
                     { key: 'time', label: 'Time' },
                 ],
@@ -96,9 +100,9 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house', label: 'House' },
                     { key: 'pen', label: 'Pen' },
-                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'date', label: 'Date' },
                     { key: 'time', label: 'Time' },
                 ],
@@ -111,6 +115,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'house_number', label: 'House' },
                     { key: 'pen_name', label: 'Pen' },
                     { key: 'sensor_present', label: 'Sensor<br>Present' },
@@ -120,7 +125,6 @@ const FARM_RECORD_CONFIG = {
                     { key: 'placement_secure', label: 'Placement<br>Secure' },
                     { key: 'date', label: 'Date' },
                     { key: 'time', label: 'Time' },
-                    { key: 'performed_by', label: 'Performed By' },
                 ],
             },
         ],
@@ -131,6 +135,7 @@ const FARM_RECORD_CONFIG = {
         sections: [
             {
                 columns: [
+                    { key: 'performed_by', label: 'Performed By' },
                     { key: 'batch_code', label: 'Batch' },
                     { key: 'house_number', label: 'House<br>Number' },
                     { key: 'pen_name', label: 'Pen' },
@@ -203,17 +208,6 @@ function formatNumber(value) {
 
 function formatRecordCount(count) {
     return `${count} ${count === 1 ? 'record' : 'records'}`;
-}
-
-function getPageRangeText(totalRows, currentPage = 0) {
-    if (!totalRows) {
-        return '0 records';
-    }
-
-    const start = currentPage * FARM_ACTIVITY_ROWS_PER_PAGE + 1;
-    const end = Math.min(totalRows, start + FARM_ACTIVITY_ROWS_PER_PAGE - 1);
-
-    return `Showing ${start}-${end} of ${totalRows}`;
 }
 
 function getInventoryMovement(row) {
@@ -390,12 +384,10 @@ function reRenderFarmActivityCard(cardKey) {
 
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, allRows.length);
-    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
         formatRecordCount(allRows.length),
-        getPageRangeText(allRows.length, currentPage),
         `
             ${tableHtml}
             ${paginationHtml}
@@ -446,12 +438,10 @@ function renderSingleRecord(recordType, recordData) {
     const paginatedRows = updateFarmActivityCard(cardKey, rows);
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, rows.length);
-    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
         formatRecordCount(rows.length),
-        getPageRangeText(rows.length, currentPage),
         `
             ${tableHtml}
             ${paginationHtml}
@@ -461,13 +451,12 @@ function renderSingleRecord(recordType, recordData) {
     updateFarmActivityPagination(cardKey, rows.length);
 }
 
-function renderFarmActivityCardShell(title, countText, pageText, contentHtml) {
+function renderFarmActivityCardShell(title, countText, contentHtml) {
     return `
         <section class="reports-card farm-record-card">
             <div class="farm-record-card-header">
                 <div>
                     <h2>${escapeHtml(title)}</h2>
-                    <p>${escapeHtml(pageText)}</p>
                 </div>
                 <div class="farm-record-card-badges">
                     <span class="farm-record-count">${escapeHtml(countText)}</span>
@@ -491,7 +480,6 @@ function renderMultiRecord(recordType, recordData) {
                     <div class="farm-record-card-header">
                         <div>
                             <h2>${escapeHtml(section.title)}</h2>
-                            <p>${escapeHtml(getPageRangeText(rows.length))}</p>
                         </div>
                         <div class="farm-record-card-badges">
                             <span class="farm-record-count">${escapeHtml(formatRecordCount(rows.length))}</span>

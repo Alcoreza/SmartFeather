@@ -459,8 +459,18 @@
     border: 1px solid rgba(138, 63, 40, 0.18);
 }
 
+.manager-sensor-status-pill.inactive {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid rgba(75, 85, 99, 0.18);
+}
+
 .manager-sensor-row-maintenance td {
     background: #fffcf7;
+}
+
+.manager-sensor-row-inactive td {
+    background: #f8fafc;
 }
 
 .manager-sensor-status-filter {
@@ -497,13 +507,18 @@
     border-color: rgba(29, 106, 55, 0.24);
 }
 
-.manager-sensor-table tbody tr:not(.manager-sensor-row-maintenance):hover td {
+.manager-sensor-table tbody tr:not(.manager-sensor-row-maintenance):not(.manager-sensor-row-inactive):hover td {
     background: #f8fbf8;
     box-shadow: none;
 }
 
 .manager-sensor-row-maintenance:hover td {
     background: #fff7ed;
+    box-shadow: none;
+}
+
+.manager-sensor-row-inactive:hover td {
+    background: #f1f5f9;
     box-shadow: none;
 }
 

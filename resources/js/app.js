@@ -1,4 +1,89 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const LOGGED_OUT_FLAG = "smartfeather:logged-out";
+
+    function isProtectedAppPage() {
+        return window.location.pathname.startsWith("/manager/")
+            || window.location.pathname.startsWith("/admin/");
+    }
+
+    function hideProtectedPage() {
+        if (isProtectedAppPage()) {
+            document.documentElement.style.visibility = "hidden";
+        }
+    }
+
+    function showProtectedPage() {
+        document.documentElement.style.visibility = "";
+    }
+
+    function lockBackNavigationOnProtectedPage() {
+        if (!isProtectedAppPage()) return;
+        if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
+
+        const currentUrl = window.location.href;
+        const state = { smartfeatherProtectedHistoryLock: true };
+
+        window.history.replaceState(state, "", currentUrl);
+        window.history.pushState(state, "", currentUrl);
+
+        window.addEventListener("popstate", () => {
+            if (!isProtectedAppPage()) return;
+            if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
+
+            window.history.pushState(state, "", window.location.href);
+        });
+    }
+
+    async function redirectIfSessionExpired(options = {}) {
+        if (!isProtectedAppPage()) return;
+
+        if (options.hideWhileChecking) {
+            hideProtectedPage();
+        }
+
+        if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") {
+            window.location.replace("/login");
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/user", {
+                headers: {
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                cache: "no-store",
+                credentials: "same-origin",
+            });
+
+            if (response.status === 401) {
+                sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
+                window.location.replace("/login");
+                return;
+            }
+
+            showProtectedPage();
+        } catch (error) {
+            console.error("Session check failed.", error);
+            window.location.replace("/login");
+        }
+    }
+
+    window.addEventListener("pagehide", () => {
+        hideProtectedPage();
+    });
+
+    window.addEventListener("pageshow", (event) => {
+        const navigationEntry = performance.getEntriesByType("navigation")[0];
+        const restoredFromHistory = event.persisted || navigationEntry?.type === "back_forward";
+
+        if (restoredFromHistory) {
+            redirectIfSessionExpired({ hideWhileChecking: true });
+        }
+    });
+
+    lockBackNavigationOnProtectedPage();
+
     document.querySelectorAll(".sidebar-nav, .admin-sidebar-nav").forEach((nav) => {
         let scrollTimer = null;
 
@@ -136,9 +221,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
     let pendingLogoutUrl = null;
 
+    function submitLogout(url) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = url;
+        form.style.display = "none";
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        if (token) {
+            const tokenInput = document.createElement("input");
+            tokenInput.type = "hidden";
+            tokenInput.name = "_token";
+            tokenInput.value = token;
+            form.appendChild(tokenInput);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     function openLogoutModal(url) {
         if (!logoutModal || !confirmLogoutBtn) {
-            window.location.href = url;
+            submitLogout(url);
             return;
         }
 
@@ -172,7 +277,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     confirmLogoutBtn?.addEventListener("click", () => {
         if (pendingLogoutUrl) {
-            window.location.href = pendingLogoutUrl;
+            sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
+            hideProtectedPage();
+            submitLogout(pendingLogoutUrl);
         }
     });
 

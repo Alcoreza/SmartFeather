@@ -12,12 +12,10 @@ class MobileDisinfectionController extends Controller
 {
     public function getContext(Request $request)
     {
-        $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
 
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -34,6 +32,7 @@ class MobileDisinfectionController extends Controller
         }
 
         $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
             ->orderByDesc('id')
             ->first();
@@ -82,8 +81,10 @@ class MobileDisinfectionController extends Controller
 
     public function submit(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
+            'task_id' => 'nullable|integer|exists:tasks,taskid',
             'house_id' => 'required|integer|exists:house,id',
             'pen_id' => 'required|integer|exists:pen,id',
             'activity' => 'required|string|max:255',
@@ -92,8 +93,45 @@ class MobileDisinfectionController extends Controller
             'recorded_time' => 'required|date_format:H:i:s',
         ]);
 
+        if (!empty($validated['task_id'])) {
+            $task = DB::table('tasks')
+                ->where('taskid', $validated['task_id'])
+                ->where('user_employeeid', $employeeId)
+                ->first();
+
+            if (!$task) {
+                return response()->json([
+                    'message' => 'Selected task was not found for this employee.',
+                ], 404);
+            }
+
+            if (strtolower((string) $task->status) !== 'pending') {
+                return response()->json([
+                    'message' => 'This task is no longer pending.',
+                ], 422);
+            }
+
+            if (!$this->isPenDisinfectionTask((string) $task->tasktype)) {
+                return response()->json([
+                    'message' => 'This task is not a pen disinfection task.',
+                ], 422);
+            }
+
+            if ((int) $task->house_houseid !== (int) $validated['house_id']) {
+                return response()->json([
+                    'message' => 'Selected house does not match the assigned task house.',
+                ], 403);
+            }
+
+            if ((int) $task->pennumber !== (int) $validated['pen_id']) {
+                return response()->json([
+                    'message' => 'Selected pen does not match the assigned task pen.',
+                ], 403);
+            }
+        }
+
         $latestEntry = DB::table('personnel_entry_logs')
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $employeeId)
             ->orderByDesc('date')
             ->orderByDesc('time')
             ->orderByDesc('id')
@@ -105,14 +143,25 @@ class MobileDisinfectionController extends Controller
             ], 403);
         }
 
-        $latestBiosecurity = DB::table('personnel_biosecurity_logs')
+        $biosecurityQuery = DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
             ->where('personnel_entry_log_id', $latestEntry->id)
-            ->orderByDesc('id')
-            ->first();
+            ->where('house_id', $validated['house_id'])
+            ->orderByDesc('id');
+
+        if (!empty($validated['task_id'])) {
+            $biosecurityQuery
+                ->where('task_id', $validated['task_id'])
+                ->where('pen_id', $validated['pen_id']);
+        }
+
+        $latestBiosecurity = $biosecurityQuery->first();
 
         if (!$latestBiosecurity) {
             return response()->json([
-                'message' => 'Please submit the personnel biosecurity form first before recording disinfection.',
+                'message' => !empty($validated['task_id'])
+                    ? 'Please complete personnel biosecurity for this assigned task before recording disinfection.'
+                    : 'Please submit the personnel biosecurity form first before recording disinfection.',
             ], 403);
         }
 
@@ -133,7 +182,7 @@ class MobileDisinfectionController extends Controller
             ], 422);
         }
 
-        $employee = Employee::find($validated['employee_id']);
+        $employee = Employee::find($employeeId);
 
         $performedBy = null;
         if ($employee) {
@@ -149,11 +198,14 @@ class MobileDisinfectionController extends Controller
         $createdAt = $validated['recorded_date'] . ' ' . $validated['recorded_time'];
 
         DB::table('cleaning_logs')->insert([
+            'task_id' => $validated['task_id'] ?? null,
+            'house_id' => $validated['house_id'],
+            'pen_id' => $validated['pen_id'],
             'house' => $house?->house_number,
             'pen' => $pen->pen_name,
             'activity' => $validated['activity'],
             'disinfectant_used' => $validated['disinfectant_used'],
-            'performed_by' => $performedBy ?: (string) $validated['employee_id'],
+            'performed_by' => $performedBy ?: (string) $employeeId,
             'date' => $validated['recorded_date'],
             'time' => $validated['recorded_time'],
             'created_at' => $createdAt,
@@ -164,5 +216,14 @@ class MobileDisinfectionController extends Controller
             'success' => true,
             'message' => 'Disinfection submitted successfully.',
         ]);
+    }
+
+    private function isPenDisinfectionTask(string $taskType): bool
+    {
+        $normalized = strtolower(trim($taskType));
+
+        return $normalized === 'pen disinfection' ||
+            $normalized === 'disinfection' ||
+            str_contains($normalized, 'disinfection');
     }
 }

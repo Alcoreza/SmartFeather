@@ -7,6 +7,7 @@ use App\Models\Pen;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 
 class HouseController extends Controller
@@ -23,6 +24,16 @@ class HouseController extends Controller
                 },
                 'pens.currentBatch:id,batch_code,started_at,status',
                 'pens.runningBatch:id,batch_code,pen_id,started_at,status',
+                'pens.latestWeightSamplingLog' => function ($query) {
+                    $query->select(
+                        'weight_sampling_logs.id',
+                        'weight_sampling_logs.pen_id',
+                        'weight_sampling_logs.status',
+                        'weight_sampling_logs.date',
+                        'weight_sampling_logs.time',
+                        'weight_sampling_logs.created_at'
+                    );
+                },
             ])
                 ->whereNull('archived_at')
                 ->orderBy('id', 'asc')
@@ -50,17 +61,28 @@ class HouseController extends Controller
     {
         try {
             $validated = $request->validate([
-                'house_number' => 'required|string|max:255',
+                'house_number' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('house', 'house_number')->whereNull('archived_at'),
+                ],
                 'number_of_pens' => 'required|integer|min:1|max:100',
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
                 'pen_capacities' => 'nullable|array',
                 'pen_capacities.*' => 'nullable|integer|min:0',
+                'pen_feeder_counts' => 'required|array',
+                'pen_feeder_counts.*' => 'required|integer|min:0',
+                'pen_drinker_counts' => 'required|array',
+                'pen_drinker_counts.*' => 'required|integer|min:0',
             ]);
 
             $penCapacities = $validated['pen_capacities'] ?? [];
+            $penFeederCounts = $validated['pen_feeder_counts'] ?? [];
+            $penDrinkerCounts = $validated['pen_drinker_counts'] ?? [];
 
-            $house = DB::transaction(function () use ($validated, $penCapacities) {
+            $house = DB::transaction(function () use ($validated, $penCapacities, $penFeederCounts, $penDrinkerCounts) {
                 // Create the house
                 $house = House::create([
                     'house_number' => $validated['house_number'],
@@ -78,6 +100,8 @@ class HouseController extends Controller
                         'population' => 0,
                         'eggs_hatched' => 0,
                         'mortality' => 0,
+                        'feeder_count' => $penFeederCounts[$i - 1] ?? 0,
+                        'drinker_count' => $penDrinkerCounts[$i - 1] ?? 0,
                         'recorded_at' => now(),
                     ]);
                 }
@@ -91,7 +115,7 @@ class HouseController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $house,
-                'message' => 'House and pen capacities saved successfully.'
+                'message' => 'House and pen setup saved successfully.'
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -119,6 +143,16 @@ class HouseController extends Controller
                 },
                 'pens.currentBatch:id,batch_code,started_at,status',
                 'pens.runningBatch:id,batch_code,pen_id,started_at,status',
+                'pens.latestWeightSamplingLog' => function ($query) {
+                    $query->select(
+                        'weight_sampling_logs.id',
+                        'weight_sampling_logs.pen_id',
+                        'weight_sampling_logs.status',
+                        'weight_sampling_logs.date',
+                        'weight_sampling_logs.time',
+                        'weight_sampling_logs.created_at'
+                    );
+                },
             ])
                 ->whereNull('archived_at')
                 ->find($id);
@@ -161,7 +195,12 @@ class HouseController extends Controller
             }
 
             $validated = $request->validate([
-                'house_number' => 'nullable|string|max:255',
+                'house_number' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    Rule::unique('house', 'house_number')->whereNull('archived_at')->ignore($house->id),
+                ],
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
             ]);
@@ -203,6 +242,21 @@ class HouseController extends Controller
                 ], 404);
             }
 
+            $hasActiveBatch = Pen::where('house_id', $house->id)
+                ->whereNull('archived_at')
+                ->whereNotNull('current_batch_id')
+                ->whereHas('currentBatch', function ($query) {
+                    $query->where('status', 'Running');
+                })
+                ->exists();
+
+            if ($hasActiveBatch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'End all active batches before archiving this house.'
+                ], 422);
+            }
+
             DB::transaction(function () use ($house) {
                 $archivedAt = now();
 
@@ -214,6 +268,19 @@ class HouseController extends Controller
                     ->whereNull('archived_at')
                     ->update([
                         'archived_at' => $archivedAt,
+                    ]);
+
+                Sensor::where('house_houseid', $house->id)
+                    ->update([
+                        'status' => 'Inactive',
+                    ]);
+
+                DB::table('decision_support_logs')
+                    ->where('house_id', $house->id)
+                    ->where('status', 'active')
+                    ->update([
+                        'status' => 'archived',
+                        'updated_at' => $archivedAt,
                     ]);
             });
 
@@ -363,6 +430,8 @@ class HouseController extends Controller
             $validated = $request->validate([
                 'capacity' => 'nullable|integer|min:0',
                 'population' => 'nullable|integer|min:0',
+                'feeder_count' => 'nullable|integer|min:0',
+                'drinker_count' => 'nullable|integer|min:0',
             ]);
 
             $pen->update($validated);
@@ -387,14 +456,26 @@ class HouseController extends Controller
     }
 
     /**
-     * Get all pens for records display
+     * Get all pens for records display - returns only latest recording per pen
      */
     public function getPenRecords()
     {
         try {
             $houses = DB::table('house as h')
                 ->leftJoin('pen as p', 'p.house_id', '=', 'h.id')
-                ->leftJoin('population_record as pr', 'pr.pen_id', '=', 'p.id')
+                ->leftJoinSub(
+                    DB::table('population_record')
+                        ->selectRaw('pen_id, MAX(recorded_at) as recorded_at')
+                        ->groupBy('pen_id'),
+                    'latest_pr',
+                    function ($join) {
+                        $join->on('p.id', '=', 'latest_pr.pen_id');
+                    }
+                )
+                ->leftJoin('population_record as pr', function ($join) {
+                    $join->on('pr.pen_id', '=', 'p.id')
+                         ->on('pr.recorded_at', '=', 'latest_pr.recorded_at');
+                })
                 ->whereNull('h.archived_at')
                 ->where(function ($query) {
                     $query->whereNull('p.id')
@@ -536,7 +617,7 @@ class HouseController extends Controller
             $reading = $sensor->latestReading;
             $sensorType = $this->normalizeSensorReadingType($sensor->sensortype);
 
-            if (!$reading || !$sensorType || $sensor->house_houseid === null) {
+            if (!$sensorType || $sensor->house_houseid === null) {
                 continue;
             }
 
@@ -544,24 +625,52 @@ class HouseController extends Controller
                 'sensor_id' => $sensor->sensorid,
                 'sensor_name' => $sensor->sensorname,
                 'sensor_type' => $sensorType,
-                'value' => (float) $reading->value,
-                'formatted_value' => $this->formatSensorReadingValue($sensorType, $reading->value),
-                'recorded_at' => $reading->recorded_at,
+                'value' => $this->sensorReadingDisplayValue($sensorType, $reading?->value),
+                'formatted_value' => $this->formatSensorReadingValue($sensorType, $reading?->value),
+                'recorded_at' => $reading?->recorded_at,
             ];
 
             $houseId = (int) $sensor->house_houseid;
             $penId = $sensor->pen_penid !== null ? (int) $sensor->pen_penid : null;
 
-            $readingsByHouse[$houseId][$sensorType] = $this->newerSensorReading(
-                $readingsByHouse[$houseId][$sensorType] ?? null,
-                $readingData
-            );
-
-            if ($penId !== null) {
-                $readingsByPen[$penId][$sensorType] = $this->newerSensorReading(
-                    $readingsByPen[$penId][$sensorType] ?? null,
+            // Handle feed and water sensors specially - group by feeder/drinker number
+            if ($sensorType === 'feed' && $penId !== null) {
+                if (!isset($readingsByPen[$penId]['feeders'])) {
+                    $readingsByPen[$penId]['feeders'] = [];
+                }
+                $feederNum = $sensor->feeder_number ?? 0;
+                if ($feederNum > 0) {
+                    $readingData['label'] = 'Feeder ' . $feederNum;
+                    $readingsByPen[$penId]['feeders'][$feederNum] = $this->newerSensorReading(
+                        $readingsByPen[$penId]['feeders'][$feederNum] ?? null,
+                        $readingData
+                    );
+                }
+            } elseif ($sensorType === 'water' && $penId !== null) {
+                if (!isset($readingsByPen[$penId]['drinkers'])) {
+                    $readingsByPen[$penId]['drinkers'] = [];
+                }
+                $drinkerNum = $sensor->drinker_number ?? 0;
+                if ($drinkerNum > 0) {
+                    $readingData['label'] = 'Drinker ' . $drinkerNum;
+                    $readingsByPen[$penId]['drinkers'][$drinkerNum] = $this->newerSensorReading(
+                        $readingsByPen[$penId]['drinkers'][$drinkerNum] ?? null,
+                        $readingData
+                    );
+                }
+            } elseif ($reading) {
+                // Temperature and ammonia sensors
+                $readingsByHouse[$houseId][$sensorType] = $this->newerSensorReading(
+                    $readingsByHouse[$houseId][$sensorType] ?? null,
                     $readingData
                 );
+
+                if ($penId !== null) {
+                    $readingsByPen[$penId][$sensorType] = $this->newerSensorReading(
+                        $readingsByPen[$penId][$sensorType] ?? null,
+                        $readingData
+                    );
+                }
             }
         }
 
@@ -570,18 +679,58 @@ class HouseController extends Controller
             $house->setAttribute('sensor_readings', $houseReadings);
 
             foreach ($house->pens as $pen) {
-                $penReadings = $this->sensorReadingDefaults($readingsByPen[(int) $pen->id] ?? []);
+                $penReadings = $this->sensorReadingDefaults(
+                    $readingsByPen[(int) $pen->id] ?? [],
+                    (int) ($pen->feeder_count ?? 0),
+                    (int) ($pen->drinker_count ?? 0)
+                );
                 $pen->setAttribute('sensor_readings', $penReadings);
             }
         }
     }
 
-    private function sensorReadingDefaults(array $readings): array
+    private function sensorReadingDefaults(array $readings, int $feederCount = 0, int $drinkerCount = 0): array
     {
         return [
             'temperature' => $readings['temperature'] ?? null,
             'ammonia' => $readings['ammonia'] ?? null,
+            'feeders' => $this->numberedResourceReadingDefaults(
+                $readings['feeders'] ?? [],
+                $feederCount,
+                'feed'
+            ),
+            'drinkers' => $this->numberedResourceReadingDefaults(
+                $readings['drinkers'] ?? [],
+                $drinkerCount,
+                'water'
+            ),
         ];
+    }
+
+    private function numberedResourceReadingDefaults(array $readings, int $configuredCount, string $sensorType): array
+    {
+        $labelPrefix = $sensorType === 'feed' ? 'Feeder' : 'Drinker';
+        $readingNumbers = array_filter(
+            array_map('intval', array_keys($readings)),
+            fn ($number) => $number > 0
+        );
+        $count = max($configuredCount, empty($readingNumbers) ? 0 : max($readingNumbers));
+        $defaults = [];
+
+        for ($number = 1; $number <= $count; $number++) {
+            $defaults[$number] = array_merge([
+                'label' => $labelPrefix . ' ' . $number,
+            ], $readings[$number] ?? [
+                'sensor_id' => null,
+                'sensor_name' => null,
+                'sensor_type' => $sensorType,
+                'value' => 0,
+                'formatted_value' => $this->formatSensorReadingValue($sensorType, null),
+                'recorded_at' => null,
+            ]);
+        }
+
+        return $defaults;
     }
 
     private function normalizeSensorReadingType(?string $type): ?string
@@ -596,20 +745,64 @@ class HouseController extends Controller
             return 'ammonia';
         }
 
+        if (str_contains($type, 'feed')) {
+            return 'feed';
+        }
+
+        if (str_contains($type, 'water') || str_contains($type, 'drink')) {
+            return 'water';
+        }
+
         return null;
     }
 
     private function formatSensorReadingValue(string $type, $value): string
     {
         if ($value === null) {
-            return $type === 'temperature' ? '0 deg' : '0 ppm';
+            if ($type === 'temperature') {
+                return '0 deg';
+            } elseif ($type === 'feed' || $type === 'water') {
+                return '0%';
+            }
+            return '0 ppm';
         }
 
         if ($type === 'temperature') {
             return number_format((float) $value, 1) . ' deg';
         }
 
+        if ($type === 'feed' || $type === 'water') {
+            return number_format($this->resourceLevelPercent($value), 0) . '%';
+        }
+
         return number_format((float) $value, 1) . ' ppm';
+    }
+
+    private function sensorReadingDisplayValue(string $type, $value): float
+    {
+        if ($value === null) {
+            return 0;
+        }
+
+        if ($type === 'feed' || $type === 'water') {
+            return $this->resourceLevelPercent($value);
+        }
+
+        return (float) $value;
+    }
+
+    private function resourceLevelPercent($value): float
+    {
+        $containerHeightInches = 8.5;
+
+        if ($containerHeightInches <= 0) {
+            return 0;
+        }
+
+        $remainingInches = $containerHeightInches - (float) $value;
+        $percent = ($remainingInches / $containerHeightInches) * 100;
+
+        return round(max(0, min(100, $percent)), 1);
     }
 
     private function newerSensorReading(?array $current, array $candidate): array

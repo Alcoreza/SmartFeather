@@ -36,12 +36,16 @@ async function renderManagerSensorSections() {
 function createSectionMarkup(section, index) {
     const rows = Array.isArray(section.items) ? section.items : [];
     const firstItem = rows[0] || {};
+    const sensorType = section.sensor_type || section.title;
+    const showsResourceColumn = managerSensorShowsResourceColumn(sensorType);
+    const columnCount = showsResourceColumn ? 7 : 6;
 
     return `
         <section
             class="manager-sensor-section"
             data-section-id="${escapeHtml(section.id)}"
-            data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+            data-sensor-type="${escapeHtml(sensorType)}"
+            data-column-count="${columnCount}"
             data-lowest-threshold="${escapeHtml(firstItem.lowest_threshold || "")}"
             data-highest-threshold="${escapeHtml(firstItem.highest_threshold || "")}"
         >
@@ -54,6 +58,7 @@ function createSectionMarkup(section, index) {
                     <select class="manager-sensor-filter" aria-label="Filter sensors by status">
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                         <option value="under maintenance">Under Maintenance</option>
                     </select>
 
@@ -75,6 +80,7 @@ function createSectionMarkup(section, index) {
                             <th>Sensor Name</th>
                             <th>House</th>
                             <th>Pen</th>
+                            ${showsResourceColumn ? "<th>Resource No.</th>" : ""}
                             <th>Value</th> <!-- ✅ NEW -->
                             <th>Status</th>
                             <th>View</th>
@@ -86,16 +92,17 @@ function createSectionMarkup(section, index) {
                             rows.length
                                 ? rows.map(item => `
 <tr
-    class="${(item.status || "Active").toLowerCase() === "under maintenance" ? "manager-sensor-row-maintenance" : ""}"
+    class="${getManagerSensorStatusRowClass(item.status)}"
     data-name="${escapeHtml(item.name)}"
     data-house-number="${escapeHtml(item.house_number)}"
     data-pen-number="${escapeHtml(item.pen_number)}"
     data-status="${escapeHtml(item.status)}"
-    data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+    data-sensor-type="${escapeHtml(sensorType)}"
 >
     <td>${escapeHtml(item.name)}</td>
     <td>${escapeHtml(item.house_number)}</td>
     <td>${escapeHtml(item.pen_number)}</td>
+    ${showsResourceColumn ? `<td>${escapeHtml(getManagerSensorResourceNumber(sensorType, item))}</td>` : ""}
 
     <!-- ✅ VALUE COLUMN -->
     <td>
@@ -108,7 +115,7 @@ function createSectionMarkup(section, index) {
     </td>
 
     <td>
-        <span class="manager-sensor-status-pill ${(item.status || "Active").toLowerCase() === "under maintenance" ? "maintenance" : "active"}">
+        <span class="manager-sensor-status-pill ${getManagerSensorStatusClass(item.status)}">
             ${escapeHtml(item.status || "Active")}
         </span>
     </td>
@@ -118,7 +125,7 @@ function createSectionMarkup(section, index) {
             type="button"
             class="manager-sensor-view-btn"
             data-open-view
-            data-sensor-type="${escapeHtml(section.sensor_type || section.title)}"
+            data-sensor-type="${escapeHtml(sensorType)}"
             data-sensor-name="${escapeHtml(item.name)}"
             data-house-number="${escapeHtml(item.house_number)}"
             data-pen-number="${escapeHtml(item.pen_number)}"
@@ -136,7 +143,7 @@ function createSectionMarkup(section, index) {
                                       .join("")
                                 : `
                             <tr>
-                                <td colspan="6">
+                                <td colspan="${columnCount}">
                                     <div class="manager-sensor-empty">No placeholder sensors available.</div>
                                 </td>
                             </tr>
@@ -149,6 +156,42 @@ function createSectionMarkup(section, index) {
     `;
 }
 
+function managerSensorShowsResourceColumn(sensorType) {
+    return ["Feed Sensor", "Water Sensor"].includes(sensorType);
+}
+
+function getManagerSensorStatusClass(status) {
+    const normalized = (status || "Active").toLowerCase();
+
+    if (normalized === "inactive") {
+        return "inactive";
+    }
+
+    return normalized === "under maintenance" ? "maintenance" : "active";
+}
+
+function getManagerSensorStatusRowClass(status) {
+    const normalized = (status || "").toLowerCase();
+
+    if (normalized === "under maintenance") {
+        return "manager-sensor-row-maintenance";
+    }
+
+    return normalized === "inactive" ? "manager-sensor-row-inactive" : "";
+}
+
+function getManagerSensorResourceNumber(sensorType, item) {
+    if (sensorType === "Feed Sensor") {
+        return item.feeder_number ? `Feeder ${item.feeder_number}` : "--";
+    }
+
+    if (sensorType === "Water Sensor") {
+        return item.drinker_number ? `Drinker ${item.drinker_number}` : "--";
+    }
+
+    return "--";
+}
+
 function bindManagerSensorFilters() {
     document.querySelectorAll(".manager-sensor-section").forEach((section) => {
         const filterSelect = section.querySelector(".manager-sensor-filter");
@@ -159,12 +202,13 @@ function bindManagerSensorFilters() {
             const existing = tbody.querySelector(
                 "tr.manager-sensor-filter-empty",
             );
+            const columnCount = section.dataset.columnCount || "6";
             if (visibleCount === 0) {
                 if (!existing) {
                     const noMatchRow = document.createElement("tr");
                     noMatchRow.className = "manager-sensor-filter-empty";
                     noMatchRow.innerHTML = `
-                        <td colspan="6">
+                        <td colspan="${columnCount}">
                             <div class="manager-sensor-empty">No sensors match the filter.</div>
                         </td>
                     `;
@@ -384,12 +428,13 @@ function bindManagerStatusFilters() {
             const existing = tbody.querySelector(
                 "tr.manager-sensor-filter-empty",
             );
+            const columnCount = section.dataset.columnCount || "6";
             if (visibleCount === 0) {
                 if (!existing) {
                     const noMatchRow = document.createElement("tr");
                     noMatchRow.className = "manager-sensor-filter-empty";
                     noMatchRow.innerHTML = `
-                        <td colspan="6">
+                        <td colspan="${columnCount}">
                             <div class="manager-sensor-empty">No sensors match the selected status.</div>
                         </td>
                     `;

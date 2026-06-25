@@ -45,12 +45,11 @@
                     <table class="manager-maintenance-table">
                         <thead>
                             <tr>
-                                <th>Sensor<br>Type</th>
                                 <th>Name</th>
+                                <th>Sensor<br>Type</th>
                                 <th>House<br>Number</th>
-                                <th>Start<br>Date</th>
-                                <th>End Date</th>
-                                <th>Status</th>
+                                <th>Pen<br>Number</th>
+                                <th>Maintenance<br>Date</th>
                             </tr>
                         </thead>
                         <tbody id="managerMaintenanceTableBody"></tbody>

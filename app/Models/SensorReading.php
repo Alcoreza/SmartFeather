@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class SensorReading extends Model
 {
-    protected $table = 'sensor_readings';
-    protected $primaryKey = 'reading_id';
-    public $timestamps = false;
+    protected $casts = [
+        'recorded_at' => 'datetime',
+    ];
 
     protected $fillable = [
         'sensorid',

@@ -34,6 +34,7 @@ export default defineConfig({
                 "resources/css/manager-shared.css",
                 "resources/css/manager-tasks.css",
                 "resources/css/manager-workers.css",
+                "resources/css/manager-decision-support.css",
 
                 "resources/js/app.js",
                 "resources/js/login.js",
@@ -60,6 +61,7 @@ export default defineConfig({
                 "resources/js/manager-sensors.js",
                 "resources/js/manager-tasks.js",
                 "resources/js/manager-workers.js",
+                "resources/js/manager-decision-support.js",
             ],
             refresh: true,
         }),

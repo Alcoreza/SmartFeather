@@ -21,18 +21,23 @@
             @include('includes.admin-profile-modal')
             @include('includes.admin-add-house-modal')
             @include('includes.admin-edit-house-modal')
+            @include('includes.admin-end-batch-modal')
+            @include('includes.admin-archive-house-modal')
 
             <section class="houses-page">
                 <div class="houses-header">
                     <div>
-                        <p class="houses-eyebrow">Farm Structure</p>
                         <h1>Farm Management</h1>
-                        <p class="houses-subtitle">Manage each poultry house, select its pens, and update flock capacity, population, batch dates, hatch counts, and mortality.</p>
                     </div>
                 </div>
 
                 <div class="houses-tabs">
-                    <button type="button" class="add-house-btn" id="openAddHouseModal">+</button>
+                    <button type="button" class="add-house-btn" id="openAddHouseModal" aria-label="Add house">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                            <path d="M12 5v14"></path>
+                            <path d="M5 12h14"></path>
+                        </svg>
+                    </button>
                 </div>
 
                 <div class="houses-divider"></div>
@@ -54,24 +59,18 @@
 
                             <div class="sensor-chart-grid">
                                 <div class="sensor-chart-wrap temperature-chart">
-                                    <div class="sensor-chart-plot">
-                                        <canvas id="farmTemperatureChart"></canvas>
-                                    </div>
-
                                     <div class="sensor-stat temperature-stat">
-                                        <span class="sensor-label">Temperature</span>
+                                        <span class="sensor-kicker">Temperature</span>
                                         <span class="sensor-reading-value" id="houseTemperature">--</span>
+                                        <span class="sensor-helper">Current pen reading</span>
                                     </div>
                                 </div>
 
                                 <div class="sensor-chart-wrap ammonia-chart">
-                                    <div class="sensor-chart-plot">
-                                        <canvas id="farmAmmoniaChart"></canvas>
-                                    </div>
-
                                     <div class="sensor-stat ammonia-stat">
-                                        <span class="sensor-label">Ammonia</span>
+                                        <span class="sensor-kicker">Ammonia</span>
                                         <span class="sensor-reading-value" id="houseAmmonia">--</span>
+                                        <span class="sensor-helper">Current pen reading</span>
                                     </div>
                                 </div>
                             </div>
@@ -124,6 +123,8 @@
                             title="Flock Batch Records">
                             Records
                             </a>
+                            <button type="button" class="toolbar-btn btn-archive" id="openArchiveHouseModal">Archive</button>
+                            <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
                         </div>
                     </article>
                     </aside>

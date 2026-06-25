@@ -32,7 +32,7 @@
             <div class="admin-worker-field">
                 <label>Username</label>
                 <input type="text" id="Username">
-                <small id="usernameHint" style="display:none; color:#4b5563; font-size:0.85rem; margin-top:6px;">Auto-generated from first and last name.</small>
+                <small id="usernameHint" style="display:none; color:#4b5563; font-size:0.85rem; margin-top:6px;">Auto-generated from first name, last name, and suffix.</small>
             </div>
 
             <div class="admin-worker-field">
@@ -48,11 +48,11 @@
             <div class="admin-worker-form-grid">
                 <div class="admin-worker-field">
                     <label>Phone Number*</label>
-                    <input type="text" id="PhoneNumber">
+                    <input type="text" id="PhoneNumber" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="09XXXXXXXXX">
                 </div>
                 <div class="admin-worker-field">
-                    <label>Birthday</label>
-                    <input type="date" id="Birthday">
+                    <label>Birthday*</label>
+                    <input type="date" id="Birthday" max="{{ now()->subDay()->toDateString() }}">
                 </div>
                 <div class="admin-worker-field">
                     <label>Gender*</label>
@@ -69,7 +69,19 @@
                 <input type="text" id="Address">
             </div>
 
-            <div class="admin-worker-field">
+            <div class="admin-worker-form-grid" id="addPasswordFields">
+                <div class="admin-worker-field">
+                    <label>Password*</label>
+                    <input type="password" id="AddPassword" autocomplete="new-password">
+                    <small style="display:block; color:#4b5563; font-size:0.85rem; margin-top:6px;">Minimum 8 characters.</small>
+                </div>
+                <div class="admin-worker-field">
+                    <label>Confirm Password*</label>
+                    <input type="password" id="AddConfirmPassword" autocomplete="new-password">
+                </div>
+            </div>
+
+            <div class="admin-worker-field" id="editPasswordField">
                 <button type="button" id="editPasswordBtn" class="admin-worker-btn save">Edit Password</button>
             </div>
 
@@ -78,6 +90,23 @@
                 <button type="submit" class="admin-worker-btn save">Save</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- SAVE CONFIRMATION MODAL -->
+<div class="admin-worker-modal-backdrop confirm-modal-top" id="saveWorkerConfirmModal" style="display:none;">
+    <div class="admin-worker-modal-card admin-delete-worker-card">
+        <div class="admin-worker-modal-header">
+            <h2>Save Employee</h2>
+            <div class="admin-worker-header-line"></div>
+        </div>
+        <div class="admin-worker-modal-body">
+            <p class="admin-delete-worker-text" id="saveWorkerConfirmMessage">Save this employee?</p>
+            <div class="admin-worker-modal-actions">
+                <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="saveWorkerConfirmModal">Cancel</button>
+                <button type="button" class="admin-worker-btn save" id="confirmSaveWorkerBtn">Save</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -160,18 +189,18 @@
     </div>
 </div>
 
-<!-- DELETE MODAL -->
+<!-- DEACTIVATE MODAL -->
 <div class="admin-worker-modal-backdrop" id="deleteWorkerModal" style="display:none;">
     <div class="admin-worker-modal-card">
         <div class="admin-worker-modal-header">
-            <h2>Delete Employee</h2>
+            <h2>Deactivate Employee</h2>
             <div class="admin-worker-header-line"></div>
         </div>
         <div class="admin-worker-modal-body">
-            <p>Are you sure you want to delete <span id="deleteWorkerName"></span>?</p>
+            <p>Deactivate <span id="deleteWorkerName"></span>? This employee will be marked inactive and hidden from active employee lists.</p>
             <div class="admin-worker-modal-actions">
                 <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="deleteWorkerModal">Cancel</button>
-                <button type="button" class="admin-worker-btn save" id="confirmDeleteWorkerBtn">Delete</button>
+                <button type="button" class="admin-worker-btn save" id="confirmDeleteWorkerBtn">Deactivate</button>
             </div>
         </div>
     </div>

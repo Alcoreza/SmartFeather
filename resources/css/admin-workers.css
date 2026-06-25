@@ -111,13 +111,15 @@
 }
 
 .admin-workers-name-col {
-    width: 40%;
+    width: 52%;
 }
 
-.admin-workers-id-col,
-.admin-workers-role-col,
+.admin-workers-role-col {
+    width: 24%;
+}
+
 .admin-workers-actions-col {
-    width: 20%;
+    width: 24%;
 }
 
 .admin-workers-table thead th {

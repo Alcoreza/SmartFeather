@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -12,8 +13,9 @@ class MobileVisitorController extends Controller
 {
     public function createVisitorPhotoUploadUrl(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'mime_type' => 'required|string|in:image/jpeg,image/png,image/webp',
         ]);
 
@@ -35,7 +37,7 @@ class MobileVisitorController extends Controller
 
         $path = sprintf(
             'employee-%d/visitor-%s.%s',
-            $validated['employee_id'],
+            $employeeId,
             Str::uuid()->toString(),
             $extension
         );
@@ -83,8 +85,9 @@ class MobileVisitorController extends Controller
 
     public function timeIn(Request $request)
     {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'date' => 'required|date',
             'time_in' => 'required|date_format:H:i',
             'name' => 'required|string|max:100',
@@ -92,14 +95,22 @@ class MobileVisitorController extends Controller
             'foot_bath' => 'required|boolean',
             'sanitation' => 'required|boolean',
             'ppe' => 'required|boolean',
-            'photo_path' => 'nullable|string',
+            'photo_path' => 'required|string|max:500',
         ]);
 
-        $employee = Employee::find($validated['employee_id']);
-        $monitoredBy = $this->resolveMonitoredBy($employee, $validated['employee_id']);
+        $selectedDateTime = Carbon::parse($validated['date'] . ' ' . $validated['time_in']);
+
+        if ($selectedDateTime->lt(now()->startOfMinute())) {
+            return response()->json([
+                'message' => 'Visitor time in cannot be in the past.',
+            ], 422);
+        }
+
+        $employee = Employee::find($employeeId);
+        $monitoredBy = $this->resolveMonitoredBy($employee, $employeeId);
 
         $id = DB::table('visitor_logs')->insertGetId([
-            'employee_id' => $validated['employee_id'],
+            'employee_id' => $employeeId,
             'date' => $validated['date'],
             'time_in' => $validated['time_in'],
             'time_out' => null,
@@ -123,10 +134,6 @@ class MobileVisitorController extends Controller
 
     public function getOpenVisitors(Request $request)
     {
-        $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
-        ]);
-
         $visitors = DB::table('visitor_logs')
             ->whereNull('time_out')
             ->orderByDesc('date')
@@ -157,7 +164,6 @@ class MobileVisitorController extends Controller
     public function timeOut(Request $request)
     {
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:user,EmployeeId',
             'visitor_log_id' => 'required|integer|exists:visitor_logs,id',
             'time_out' => 'required|date_format:H:i',
         ]);
@@ -175,6 +181,15 @@ class MobileVisitorController extends Controller
         if (!empty($visitor->time_out)) {
             return response()->json([
                 'message' => 'This visitor has already been timed out.',
+            ], 422);
+        }
+
+        $timeIn = Carbon::parse($visitor->date . ' ' . $visitor->time_in);
+        $timeOut = Carbon::parse($visitor->date . ' ' . $validated['time_out']);
+
+        if ($timeOut->lt($timeIn)) {
+            return response()->json([
+                'message' => 'Visitor time out cannot be earlier than time in.',
             ], 422);
         }
 

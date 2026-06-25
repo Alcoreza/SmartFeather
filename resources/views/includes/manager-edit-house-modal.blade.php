@@ -44,6 +44,18 @@
 
             <div class="modal-row">
                 <div class="modal-group">
+                    <label for="editFeederCount">Number of Feeders</label>
+                    <input type="number" id="editFeederCount" min="0" step="1">
+                </div>
+
+                <div class="modal-group">
+                    <label for="editDrinkerCount">Number of Drinkers</label>
+                    <input type="number" id="editDrinkerCount" min="0" step="1">
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="modal-group">
                     <label for="editEggsHatched">Eggs Hatched</label>
                     <input type="number" id="editEggsHatched">
                 </div>
@@ -59,5 +71,25 @@
                 <button type="submit" class="save-btn">Save</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal-overlay confirm-modal-top" id="confirmEditHouseModal">
+    <div class="modal-card archive-house-card">
+        <div class="modal-header">
+            <h2>Confirm Changes</h2>
+            <button type="button" class="modal-close" id="closeConfirmEditHouseModal">&times;</button>
+        </div>
+
+        <div>
+            <p class="archive-house-text" id="confirmEditHouseMessage">
+                Save changes to this house and pen?
+            </p>
+
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" id="cancelConfirmEditHouseModal">Cancel</button>
+                <button type="button" class="save-btn" id="confirmEditHouseSave">Confirm</button>
+            </div>
+        </div>
     </div>
 </div>

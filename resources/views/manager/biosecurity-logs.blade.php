@@ -131,7 +131,7 @@
                     </div>
                 </div>
 
-                <button type="button" class="bio-circle-btn add" id="openAddBioModal" aria-label="Add log">
+                <button type="button" class="bio-circle-btn add" id="openAddBioModal" aria-label="Add log" hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
                         <path d="M12 5v14"></path>
                         <path d="M5 12h14"></path>

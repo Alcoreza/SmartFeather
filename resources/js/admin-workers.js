@@ -1,9 +1,11 @@
 const BASE_URL = '/api/admin/workers';
-const ADMIN_WORKERS_ROWS_PER_PAGE = 5;
+const ADMIN_WORKERS_ROWS_PER_PAGE = 7;
+const ADMIN_WORKERS_DOT_LIMIT = 5;
 
 let deleteId = null;
 const employeesCache = new Map();
 let adminWorkersCurrentPage = 0;
+let adminWorkersLastPage = 0;
 let adminWorkersCurrentRole = 'All';
 
 // ================= MODAL HELPERS =================
@@ -317,11 +319,11 @@ function renderWorkersTable() {
     const pageWorkers = filteredWorkers.slice(start, start + ADMIN_WORKERS_ROWS_PER_PAGE);
     const placeholderRows = ADMIN_WORKERS_ROWS_PER_PAGE - pageWorkers.length;
 
-    table.innerHTML = pageWorkers.map(user => {
+    table.innerHTML = pageWorkers.map((user, index) => {
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
         return `
-            <tr data-id="${user.EmployeeId}">
+            <tr data-id="${user.EmployeeId}" style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
                 <td>${fullName}</td>
                 <td>${user.EmployeeId}</td>
                 <td>${user.Role}</td>
@@ -391,7 +393,18 @@ function updateAdminWorkersPagination(totalRows) {
     }
 
     if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        const visiblePages = getVisibleAdminWorkerPages(totalPages, adminWorkersCurrentPage);
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(adminWorkersCurrentPage));
+        const direction = adminWorkersCurrentPage > adminWorkersLastPage
+            ? 'next'
+            : adminWorkersCurrentPage < adminWorkersLastPage
+                ? 'prev'
+                : 'still';
+
+        dots.dataset.pageDirection = direction;
+        dots.style.setProperty('--active-dot-index', activeDotIndex);
+
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="admin-workers-page-dot ${index === adminWorkersCurrentPage ? 'active' : ''}"
@@ -400,7 +413,25 @@ function updateAdminWorkersPagination(totalRows) {
                 aria-current="${index === adminWorkersCurrentPage ? 'page' : 'false'}"
             ></button>
         `).join('');
+        adminWorkersLastPage = adminWorkersCurrentPage;
     }
+}
+
+function getVisibleAdminWorkerPages(totalPages, currentPage) {
+    if (totalPages <= ADMIN_WORKERS_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(ADMIN_WORKERS_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + ADMIN_WORKERS_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - ADMIN_WORKERS_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function setupAdminWorkersPagination() {
@@ -410,7 +441,8 @@ function setupAdminWorkersPagination() {
     });
 
     document.querySelector('[data-admin-workers-next]')?.addEventListener('click', () => {
-        adminWorkersCurrentPage += 1;
+        const totalPages = Math.max(1, Math.ceil(getFilteredAdminWorkers().length / ADMIN_WORKERS_ROWS_PER_PAGE));
+        adminWorkersCurrentPage = Math.min(totalPages - 1, adminWorkersCurrentPage + 1);
         renderWorkersTable();
     });
 

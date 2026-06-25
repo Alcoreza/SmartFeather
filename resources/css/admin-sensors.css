@@ -1186,3 +1186,473 @@ body {
         justify-content: center;
     }
 }
+
+/* Manager-aligned sensor surface */
+.admin-main {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.admin-sensors-sections {
+    width: 100%;
+    min-width: 0;
+}
+
+.admin-sensor-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 16px 18px 18px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(16, 32, 22, 0.09);
+    box-shadow: 0 2px 8px rgba(10, 24, 15, 0.035);
+    --sensor-section-accent: #17643a;
+    --sensor-section-tint: #f3f8f2;
+    --sensor-section-text: #17452d;
+    overflow: hidden;
+}
+
+.admin-sensor-section:nth-child(2n) {
+    --sensor-section-accent: #628141;
+    --sensor-section-tint: #f6f8ef;
+    --sensor-section-text: #3f5a2c;
+}
+
+.admin-sensor-section:nth-child(3n) {
+    --sensor-section-accent: #1d5d63;
+    --sensor-section-tint: #f1f8f7;
+    --sensor-section-text: #1d5d63;
+}
+
+.admin-sensor-section:nth-child(4n) {
+    --sensor-section-accent: #8a6a2f;
+    --sensor-section-tint: #faf6ed;
+    --sensor-section-text: #614719;
+}
+
+.admin-sensor-section:hover {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(16, 32, 22, 0.09);
+    box-shadow: 0 2px 8px rgba(10, 24, 15, 0.035);
+}
+
+.admin-sensor-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 8px 0 12px;
+    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.admin-sensor-section-main,
+.admin-sensor-tools {
+    min-width: 0;
+}
+
+.admin-sensor-section-title {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 6px 12px;
+    border: 1px solid rgba(16, 32, 22, 0.08);
+    border-radius: 8px;
+    background: var(--sensor-section-tint, #f3f8f2);
+    color: var(--sensor-section-text, #102016);
+    font-size: 1.02rem;
+}
+
+.admin-sensor-tools {
+    justify-content: flex-end;
+    justify-self: end;
+}
+
+.admin-sensor-status-filter {
+    min-width: 190px;
+    height: 40px;
+    padding: 0 40px 0 14px;
+    border: 1.5px solid rgba(16, 32, 22, 0.12);
+    border-radius: 8px;
+    background-color: #ffffff;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--sensor-section-text, #17643a) 50%),
+        linear-gradient(135deg, var(--sensor-section-text, #17643a) 50%, transparent 50%);
+    color: var(--sensor-section-text, #17452d);
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: none;
+}
+
+.admin-sensor-status-filter:hover {
+    transform: none;
+    background-color: #ffffff;
+    border-color: rgba(23, 100, 58, 0.28);
+    box-shadow: none;
+}
+
+.admin-sensor-threshold-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(16, 32, 22, 0.12);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--sensor-section-text, #17452d);
+}
+
+.admin-sensor-view-btn,
+.admin-sensor-edit-btn,
+.admin-sensor-delete-btn,
+.admin-sensor-toggle-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(16, 32, 22, 0.1);
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.admin-sensor-view-btn,
+.admin-sensor-edit-btn {
+    background: var(--sensor-section-tint, #f8fbf8);
+    color: var(--sensor-section-text, #17452d);
+}
+
+.admin-sensor-delete-btn {
+    background: #fff5f5;
+    color: #c91c16;
+    border-color: rgba(201, 28, 22, 0.14);
+}
+
+.admin-sensor-toggle-btn.maintenance {
+    background: #fff7ed;
+    color: #b95f10;
+    border-color: rgba(241, 139, 40, 0.2);
+}
+
+.admin-sensor-toggle-btn.activate {
+    background: var(--sensor-section-tint, #f8fbf8);
+    color: var(--sensor-section-text, #17452d);
+    border-color: rgba(23, 100, 58, 0.16);
+}
+
+.admin-sensor-threshold-btn:hover,
+.admin-sensor-view-btn:hover,
+.admin-sensor-edit-btn:hover,
+.admin-sensor-delete-btn:hover,
+.admin-sensor-toggle-btn:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: rgba(23, 100, 58, 0.24);
+}
+
+.admin-sensor-table-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-sensor-table {
+    display: table;
+    width: 100%;
+    min-width: 780px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.admin-sensor-table thead {
+    display: table-header-group;
+}
+
+.admin-sensor-table tbody {
+    display: table-row-group;
+}
+
+.admin-sensor-table tr {
+    display: table-row;
+}
+
+.admin-sensor-table th {
+    padding: 10px;
+    text-align: center;
+    background: var(--sensor-section-tint, #f6f8f5);
+    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
+    color: #4f5f55;
+    font-size: 0.88rem;
+    letter-spacing: 0;
+    line-height: 1.1;
+    text-transform: none;
+}
+
+.admin-sensor-table td {
+    display: table-cell;
+    height: 54px;
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle;
+    background: #ffffff;
+    color: #102016;
+    border-bottom: 1px solid rgba(16, 32, 22, 0.055);
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 0.94rem;
+    font-weight: 550;
+    line-height: 1.15;
+}
+
+.admin-sensor-table td::before {
+    content: none !important;
+}
+
+.admin-sensor-table td:first-child {
+    text-align: left;
+    padding-left: 16px;
+    border-radius: 0;
+}
+
+.admin-sensor-table td:last-child {
+    text-align: center;
+    border-radius: 0;
+}
+
+.admin-sensor-table tbody tr,
+.admin-sensor-table tbody tr:hover {
+    filter: none;
+}
+
+.admin-sensor-table tbody tr:hover {
+    transform: translateY(0);
+}
+
+.admin-sensor-table tbody tr:hover td,
+.admin-sensor-table tbody tr:not(.admin-sensor-row-maintenance):hover td {
+    background: var(--sensor-section-tint, #f8fbf8);
+    box-shadow: none;
+}
+
+.admin-sensor-row-maintenance td,
+.admin-sensor-row-maintenance:hover td {
+    background: #fff5f5;
+    box-shadow: none;
+}
+
+.admin-sensor-actions {
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.admin-sensor-status-pill {
+    min-width: 104px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .admin-sensor-section {
+        padding: 16px;
+        border-radius: 8px;
+    }
+
+    .admin-sensor-table-wrap {
+        margin-inline: -16px;
+        padding-inline: 16px;
+        padding-bottom: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-sensor-table {
+        min-width: 760px;
+    }
+
+    .admin-sensor-table th,
+    .admin-sensor-table td {
+        padding: 9px 8px;
+        font-size: 0.84rem;
+    }
+
+    .admin-sensor-status-pill {
+        min-width: 92px;
+        font-size: 0.76rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .admin-sensor-section {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .admin-sensor-section-head {
+        gap: 10px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+    }
+
+    .admin-sensor-section-title {
+        min-height: auto;
+        width: 100%;
+        padding: 0.55rem 0.7rem;
+        font-size: 0.95rem;
+    }
+
+    .admin-sensor-tools {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .admin-sensor-status-filter {
+        min-width: 0;
+        height: 38px;
+        font-size: 0.82rem;
+    }
+
+    .admin-sensor-threshold-btn {
+        width: 38px;
+        height: 38px;
+    }
+
+    .admin-sensor-table-wrap {
+        margin-inline: -10px;
+        padding-inline: 10px;
+        padding-bottom: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .admin-sensor-table,
+    .admin-sensor-table thead,
+    .admin-sensor-table tbody,
+    .admin-sensor-table tr,
+    .admin-sensor-table th,
+    .admin-sensor-table td {
+        width: auto !important;
+        min-width: 0 !important;
+    }
+
+    .admin-sensor-table {
+        display: table !important;
+        width: 760px !important;
+        min-width: 760px !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+        border-spacing: 0 !important;
+    }
+
+    .admin-sensor-table thead {
+        position: static !important;
+        display: table-header-group !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+        clip: auto !important;
+    }
+
+    .admin-sensor-table tbody {
+        display: table-row-group !important;
+        width: auto !important;
+        gap: 0 !important;
+    }
+
+    .admin-sensor-table tr,
+    .admin-sensor-table tbody tr,
+    .admin-sensor-table tbody tr:hover {
+        display: table-row !important;
+        overflow: visible !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        filter: none !important;
+        transform: none !important;
+    }
+
+    .admin-sensor-table th {
+        display: table-cell !important;
+        width: auto !important;
+        white-space: nowrap !important;
+    }
+
+    .admin-sensor-table td {
+        display: table-cell !important;
+        grid-template-columns: none !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        border-radius: 0 !important;
+        height: 52px !important;
+        padding: 9px 7px !important;
+        font-size: 0.78rem !important;
+        line-height: 1.12 !important;
+        box-shadow: none !important;
+    }
+
+    .admin-sensor-table td:first-child {
+        text-align: left !important;
+    }
+
+    .admin-sensor-table td::before {
+        content: none !important;
+    }
+
+    .admin-sensor-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 32px);
+        justify-content: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .admin-sensor-view-btn,
+    .admin-sensor-edit-btn,
+    .admin-sensor-delete-btn,
+    .admin-sensor-toggle-btn {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+@media (max-width: 420px) {
+    .admin-sensor-section {
+        margin-inline: -4px;
+        padding: 10px;
+    }
+
+    .admin-sensor-table {
+        width: 800px !important;
+        min-width: 800px !important;
+    }
+
+    .admin-sensor-table th,
+    .admin-sensor-table td {
+        padding-inline: 6px;
+        font-size: 0.74rem;
+    }
+
+    .admin-sensor-actions {
+        grid-template-columns: repeat(2, 30px);
+        gap: 6px;
+    }
+
+    .admin-sensor-view-btn,
+    .admin-sensor-edit-btn,
+    .admin-sensor-delete-btn,
+    .admin-sensor-toggle-btn {
+        width: 30px;
+        height: 30px;
+    }
+}

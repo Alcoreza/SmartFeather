@@ -423,6 +423,14 @@
     outline: none;
 }
 
+.worker-field p {
+    margin: 0;
+    color: #111;
+    font: inherit;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
 /* Actions */
 .worker-view-actions {
     display: flex;

@@ -1,4 +1,4 @@
-const BASE_URL = '/api/admin/workers';
+const BASE_URL = '/api/manager/workers';
 const WORKERS_ROWS_PER_PAGE = 7;
 const WORKERS_DOT_LIMIT = 5;
 
@@ -86,11 +86,10 @@ function renderWorkersTable() {
     if (!filteredWorkers.length) {
         table.innerHTML = `
             <tr>
-                <td colspan="4" class="workers-empty-row">No employees match the selected filter.</td>
+                <td colspan="3" class="workers-empty-row">No employees match the selected filter.</td>
             </tr>
             ${Array.from({ length: WORKERS_ROWS_PER_PAGE - 1 }, () => `
                 <tr class="workers-placeholder-row" aria-hidden="true">
-                    <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
@@ -111,7 +110,6 @@ function renderWorkersTable() {
         return `
             <tr data-id="${user.EmployeeId}" style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
                 <td>${fullName}</td>
-                <td>${user.EmployeeId}</td>
                 <td>${user.Role}</td>
                 <td class="text-center">
                     <button class="view-worker-btn icon-btn" type="button" data-id="${user.EmployeeId}">
@@ -125,7 +123,6 @@ function renderWorkersTable() {
         `;
     }).join('') + Array.from({ length: placeholderRows }, () => `
         <tr class="workers-placeholder-row" aria-hidden="true">
-            <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
@@ -220,17 +217,7 @@ async function openViewModal(id) {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
 
-        document.getElementById('workerFirstName').value = user.FirstName;
-        document.getElementById('workerMiddleName').value = user.MiddleName ?? '';
-        document.getElementById('workerLastName').value = user.LastName;
-        document.getElementById('workerSuffix').value = user.Suffix ?? '';
-        document.getElementById('workerUsername').value = user.Username ?? '';
-        document.getElementById('workerRole').value = user.Role;
-        document.getElementById('workerPhone').value = user.PhoneNumber ?? '';
-        document.getElementById('workerId').value = user.EmployeeId;
-        document.getElementById('workerBirthday').value = user.Birthday ?? '';
-        document.getElementById('workerGender').value = user.Gender ?? '';
-        document.getElementById('workerAddress').value = user.Address ?? '';
+        populateViewModal(user);
 
         // ✅ FIXED: use class instead of display
         document.getElementById('workerModal').classList.add('active');
@@ -239,6 +226,18 @@ async function openViewModal(id) {
         console.error(err);
         alert('Failed to load employee');
     }
+}
+
+function populateViewModal(user) {
+    const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+    document.getElementById('view_name').innerText = fullName;
+    document.getElementById('view_username').innerText = user.Username ?? '';
+    document.getElementById('view_role').innerText = user.Role;
+    document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
+    document.getElementById('view_birthday').innerText = user.Birthday ?? '';
+    document.getElementById('view_gender').innerText = user.Gender ?? '';
+    document.getElementById('view_address').innerText = user.Address ?? '';
 }
 
 // ================= EVENT LISTENER =================

@@ -5,62 +5,56 @@
 .farm-records-toolbar {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     margin-bottom: 18px;
+    min-width: 0;
 }
 
 .farm-records-filter-card {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
+    display: flex;
+    justify-content: flex-end;
     width: auto;
     max-width: 100%;
-    padding: 8px 10px;
-    border: 1px solid rgba(87, 196, 81, 0.16);
-    border-radius: 12px;
-    background: #f5fbf5;
-    box-shadow: 0 4px 12px rgba(12, 35, 22, 0.035);
-}
-
-.farm-records-filter-card label {
-    color: #1b5e20;
-    font-size: 0.82rem;
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
+    min-width: 0;
 }
 
 .farm-records-filter-card .reports-filter-select {
-    width: 260px;
     min-width: 180px;
-    height: 34px;
-    padding: 0 38px 0 12px;
-    border: 1px solid rgba(87, 196, 81, 0.24);
-    border-radius: 8px;
+    width: auto;
+    height: 42px;
+    padding: 0 40px 0 14px;
+    border: 1.5px solid rgba(23, 100, 58, 0.24);
+    border-radius: 12px;
     background-color: #ffffff;
     color: #1b5e20;
     font-family: inherit;
-    font-size: 0.88rem;
-    font-weight: 650;
+    font-size: 0.9rem;
+    font-weight: 700;
     outline: none;
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
     appearance: none;
     cursor: pointer;
     background-image:
         linear-gradient(45deg, transparent 50%, #1d6a37 50%),
         linear-gradient(135deg, #1d6a37 50%, transparent 50%);
     background-position:
-        calc(100% - 18px) calc(50% - 3px),
-        calc(100% - 8px) calc(50% - 3px);
+        calc(100% - 20px) calc(50% - 3px),
+        calc(100% - 10px) calc(50% - 3px);
     background-size:
-        12px 12px,
-        12px 12px;
+        10px 10px,
+        10px 10px;
     background-repeat: no-repeat;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
+.farm-records-filter-card .reports-filter-select:hover {
+    background-color: #f9fff9;
+    border-color: rgba(87, 196, 81, 0.38);
+}
+
 .farm-records-filter-card .reports-filter-select:focus {
     border-color: rgba(87, 196, 81, 0.6);
-    background-color: rgba(255, 255, 255, 0.98);
+    background-color: #ffffff;
     box-shadow: 0 6px 16px rgba(87, 196, 81, 0.15), inset 0 1px 2px rgba(87, 196, 81, 0.1);
 }
 
@@ -151,19 +145,154 @@
     border-color: rgba(87, 196, 81, 0.14);
 }
 
+.farm-records-page .reports-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(87, 196, 81, 0.1);
+}
+
+.farm-records-page .reports-pagination.is-hidden {
+    display: none;
+}
+
+.farm-records-page button.reports-page-btn {
+    min-width: 88px !important;
+    min-height: 40px;
+    padding: 7px 18px !important;
+    border: 1px solid rgba(87, 196, 81, 0.2) !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f5fbf6 100%) !important;
+    color: #0f4f32 !important;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(11, 67, 38, 0.05) !important;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.farm-records-page button.reports-page-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #fafffb 0%, #ecf8ee 100%) !important;
+    color: #062c17 !important;
+    border-color: rgba(87, 196, 81, 0.34) !important;
+    box-shadow: 0 10px 20px rgba(11, 67, 38, 0.08) !important;
+    transform: translateY(-1px);
+}
+
+.farm-records-page button.reports-page-btn:disabled {
+    color: #788a80 !important;
+    opacity: 1 !important;
+    cursor: not-allowed !important;
+    transform: none;
+}
+
+.farm-records-page .reports-page-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 18px;
+    overflow: visible;
+}
+
+.farm-records-page button.reports-page-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid rgba(87, 196, 81, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.farm-records-page button.reports-page-dot:hover {
+    background: rgba(87, 196, 81, 0.2);
+    border-color: rgba(87, 196, 81, 0.6);
+}
+
+.farm-records-page button.reports-page-dot.active {
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    border-color: rgba(87, 196, 81, 0.6);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.22);
+    transform: scale(1.08);
+}
+
+.farm-records-page .reports-page-dots[data-page-direction="next"] .reports-page-dot:not(.active) {
+    animation: farmRecordDotCarouselNext 0.24s ease both;
+}
+
+.farm-records-page .reports-page-dots[data-page-direction="prev"] .reports-page-dot:not(.active) {
+    animation: farmRecordDotCarouselPrev 0.24s ease both;
+}
+
+.farm-records-page .reports-page-dots[data-page-direction="next"] .reports-page-dot.active,
+.farm-records-page .reports-page-dots[data-page-direction="prev"] .reports-page-dot.active {
+    animation: farmRecordActiveDotIn 0.24s ease both;
+}
+
+@keyframes farmRecordDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes farmRecordDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes farmRecordActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+}
+
 @media (max-width: 768px) {
-    .farm-records-filter-card {
-        width: 100%;
-        flex-direction: column;
+    .farm-records-toolbar {
         align-items: stretch;
+        justify-content: stretch;
     }
 
-    .farm-records-filter-card label {
-        white-space: normal;
+    .farm-records-filter-card {
+        width: 100%;
     }
 
     .farm-records-filter-card .reports-filter-select {
         width: 100%;
+        height: 38px;
+        border-radius: 10px;
+        font-size: 0.84rem;
     }
 
     .farm-record-card-header {
@@ -177,5 +306,37 @@
 
     .farm-record-count {
         align-self: flex-start;
+    }
+
+    .farm-records-page .reports-pagination {
+        gap: 10px;
+        padding-top: 12px;
+    }
+
+    .farm-records-page button.reports-page-btn {
+        min-width: 82px !important;
+        min-height: 38px;
+        padding: 7px 14px !important;
+        font-size: 0.82rem;
+    }
+
+    .farm-records-page .reports-page-dots {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 420px) {
+    .farm-records-page .reports-pagination {
+        flex-wrap: wrap;
+    }
+
+    .farm-records-page .reports-page-dots {
+        order: -1;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .farm-records-page button.reports-page-btn {
+        flex: 1 1 0;
     }
 }

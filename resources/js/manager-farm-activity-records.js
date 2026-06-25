@@ -1,4 +1,5 @@
 const FARM_ACTIVITY_ROWS_PER_PAGE = 8;
+const FARM_ACTIVITY_DOT_LIMIT = 5;
 
 const farmRecordState = {
     selectedRecord: 'Hatch and Mortality Check',
@@ -7,6 +8,7 @@ const farmRecordState = {
 
 let farmActivityPagination = {};
 let currentFarmActivityData = {};
+let farmActivityLastPages = {};
 
 const FARM_RECORD_CONFIG = {
     'Hatch and Mortality Check': {
@@ -271,8 +273,9 @@ function renderFarmActivityPaginationControls(cardKey, totalRows) {
     const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
     const shouldHide = totalRows <= FARM_ACTIVITY_ROWS_PER_PAGE;
     const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
+    const visiblePages = getVisibleFarmActivityPages(totalPages, currentPage);
 
-    const dotsHtml = Array.from({ length: totalPages }, (_, index) => `
+    const dotsHtml = visiblePages.map((index) => `
         <button
             type="button"
             class="reports-page-dot ${index === currentPage ? 'active' : ''}"
@@ -287,7 +290,7 @@ function renderFarmActivityPaginationControls(cardKey, totalRows) {
             <button type="button" class="reports-page-btn" data-farm-activity-prev="${cardKey}">
                 Previous
             </button>
-            <div class="reports-page-dots" data-farm-activity-dots="${cardKey}">
+            <div class="reports-page-dots" data-page-direction="still" data-farm-activity-dots="${cardKey}">
                 ${dotsHtml}
             </div>
             <button type="button" class="reports-page-btn" data-farm-activity-next="${cardKey}">
@@ -295,6 +298,23 @@ function renderFarmActivityPaginationControls(cardKey, totalRows) {
             </button>
         </div>
     `;
+}
+
+function getVisibleFarmActivityPages(totalPages, currentPage) {
+    if (totalPages <= FARM_ACTIVITY_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(FARM_ACTIVITY_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + FARM_ACTIVITY_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - FARM_ACTIVITY_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function updateFarmActivityCard(cardKey, rows) {
@@ -321,6 +341,9 @@ function updateFarmActivityPagination(cardKey, totalRows) {
     const dotsContainer = document.querySelector(`[data-farm-activity-dots="${cardKey}"]`);
     const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
     const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
+    const lastPage = farmActivityLastPages[cardKey] ?? currentPage;
+    const direction = currentPage > lastPage ? 'next' : currentPage < lastPage ? 'prev' : 'still';
+    const visiblePages = getVisibleFarmActivityPages(totalPages, currentPage);
 
     if (pagination) {
         pagination.classList.toggle('is-hidden', totalRows <= FARM_ACTIVITY_ROWS_PER_PAGE);
@@ -335,7 +358,8 @@ function updateFarmActivityPagination(cardKey, totalRows) {
     }
 
     if (dotsContainer) {
-        dotsContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        dotsContainer.dataset.pageDirection = direction;
+        dotsContainer.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="reports-page-dot ${index === currentPage ? 'active' : ''}"
@@ -345,6 +369,8 @@ function updateFarmActivityPagination(cardKey, totalRows) {
             ></button>
         `).join('');
     }
+
+    farmActivityLastPages[cardKey] = currentPage;
 }
 
 function reRenderFarmActivityCard(cardKey) {

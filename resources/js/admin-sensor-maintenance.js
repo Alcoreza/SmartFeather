@@ -29,6 +29,13 @@ async function renderAdminMaintenanceRecords() {
                     <td>${escapeHtml(record.name)}</td>
                     <td>${escapeHtml(record.sensor_type)}</td>
                     <td>${escapeHtml(record.house_number)}</td>
+                    <td>${escapeHtml(record.start_date)}</td>
+                    <td>${escapeHtml(record.end_date)}</td>
+                    <td>
+                        <span class="admin-maintenance-status">
+                            ${escapeHtml(record.status)}
+                        </span>
+                    </td>
                     <td>${escapeHtml(record.pen_number)}</td>
                     <td>${escapeHtml(record.maintenance_date)}</td>
                 </tr>

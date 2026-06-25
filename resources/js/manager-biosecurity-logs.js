@@ -12,6 +12,10 @@ const state = {
 };
 
 const BIO_ROWS_PER_PAGE = 5;
+const BIO_DOT_LIMIT = 5;
+
+let bioLastPage = 0;
+let bioIsMobilePagination = false;
 
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
@@ -364,7 +368,7 @@ function renderBioTable(type, filteredRows) {
     if (!config || !tableBody) return;
 
     const totalPages = Math.max(1, Math.ceil(filteredRows.length / BIO_ROWS_PER_PAGE));
-    state.currentPage = Math.min(state.currentPage, totalPages - 1);
+    state.currentPage = Math.min(Math.max(0, state.currentPage), totalPages - 1);
 
     if (!filteredRows.length) {
         tableBody.innerHTML = `
@@ -409,7 +413,7 @@ function renderTableRows(type, rows) {
         return;
     }
 
-    tableBody.innerHTML = rows.map((row) => {
+    tableBody.innerHTML = rows.map((row, index) => {
         const cells = config.columns.map((col) => {
             const columnClass = getBioColumnClass(type, col.key);
 
@@ -434,9 +438,9 @@ function renderTableRows(type, rows) {
 
         const encodedRow = encodeURIComponent(JSON.stringify(row));
 
-        const actionCell = row.can_edit === false
-            ? '<td></td>'
-            : `
+        return `
+            <tr style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
+                ${cells}
                 <td>
                     <button
                         type="button"
@@ -1295,6 +1299,19 @@ function bindEvents() {
 
     // Setup pagination
     setupBioPagination();
+    setupBioPaginationResize();
+}
+
+function setupBioPaginationResize() {
+    bioIsMobilePagination = window.matchMedia('(max-width: 640px)').matches;
+
+    window.addEventListener('resize', () => {
+        const nextIsMobile = window.matchMedia('(max-width: 640px)').matches;
+        if (nextIsMobile === bioIsMobilePagination) return;
+
+        bioIsMobilePagination = nextIsMobile;
+        renderCurrentTable(false);
+    });
 }
 
 async function loadBiosecurityLogs() {
@@ -1463,9 +1480,12 @@ function updateBioPagination(totalRows) {
     const nextButton = document.querySelector('[data-bio-next]');
     const dots = document.querySelector('[data-bio-dots]');
     const totalPages = Math.max(1, Math.ceil(totalRows / BIO_ROWS_PER_PAGE));
+    state.currentPage = Math.min(Math.max(0, state.currentPage), totalPages - 1);
+    const shouldShowPagination = totalRows > BIO_ROWS_PER_PAGE;
 
     if (pagination) {
-        pagination.classList.toggle('is-hidden', totalRows <= BIO_ROWS_PER_PAGE);
+        pagination.classList.toggle('is-hidden', !shouldShowPagination);
+        pagination.dataset.bioTotalPages = String(totalPages);
     }
 
     if (prevButton) {
@@ -1476,8 +1496,22 @@ function updateBioPagination(totalRows) {
         nextButton.disabled = state.currentPage >= totalPages - 1;
     }
 
-    if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+    if (dots && shouldShowPagination) {
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
+        const visiblePages = getVisibleBioPages(totalPages, state.currentPage);
+        const direction = state.currentPage > bioLastPage ? 'next' : state.currentPage < bioLastPage ? 'prev' : 'still';
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(state.currentPage));
+        const dotSize = isMobile ? 11 : 10;
+        const dotGap = isMobile ? 7 : 8;
+        const dotStep = dotSize + dotGap;
+        const dotTrackWidth = (visiblePages.length * dotSize) + (Math.max(0, visiblePages.length - 1) * dotGap);
+
+        dots.dataset.pageDirection = direction;
+        dots.style.setProperty('--active-dot-index', activeDotIndex);
+        dots.style.setProperty('--active-dot-offset', `${activeDotIndex * dotStep}px`);
+        dots.style.setProperty('--dot-track-width', `${dotTrackWidth}px`);
+        dots.style.setProperty('--dot-track-half', `${dotTrackWidth / 2}px`);
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="bio-page-dot ${index === state.currentPage ? 'active' : ''}"
@@ -1486,17 +1520,50 @@ function updateBioPagination(totalRows) {
                 aria-current="${index === state.currentPage ? 'page' : 'false'}"
             ></button>
         `).join('');
+        bioLastPage = state.currentPage;
+    } else if (dots) {
+        dots.innerHTML = '';
+        dots.style.setProperty('--active-dot-index', 0);
+        dots.style.setProperty('--active-dot-offset', '0px');
+        dots.style.setProperty('--dot-track-width', '0px');
+        dots.style.setProperty('--dot-track-half', '0px');
     }
 }
 
+function getVisibleBioPages(totalPages, currentPage) {
+    if (totalPages <= BIO_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(BIO_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + BIO_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - BIO_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
+}
+
 function setupBioPagination() {
-    document.querySelector('[data-bio-prev]')?.addEventListener('click', () => {
+    const pagination = document.querySelector('[data-bio-pagination]');
+    const prevButton = document.querySelector('[data-bio-prev]');
+    const nextButton = document.querySelector('[data-bio-next]');
+
+    prevButton?.addEventListener('click', () => {
+        if (prevButton.disabled) return;
+
         state.currentPage = Math.max(0, state.currentPage - 1);
         renderCurrentTable(false);
     });
 
-    document.querySelector('[data-bio-next]')?.addEventListener('click', () => {
-        state.currentPage += 1;
+    nextButton?.addEventListener('click', () => {
+        if (nextButton.disabled) return;
+
+        const totalPages = Number(pagination?.dataset.bioTotalPages || 1);
+        state.currentPage = Math.min(totalPages - 1, state.currentPage + 1);
         renderCurrentTable(false);
     });
 

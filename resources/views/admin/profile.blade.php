@@ -42,11 +42,11 @@
                         <span class="profile-page-hero-avatar-badge" aria-hidden="true"></span>
                     </div>
 
-                    <div class="profile-page-hero-copy">
-                        <p class="profile-page-user-name">
+                    <div class="admin-profile-hero-copy">
+                        <p class="admin-profile-page-user-name">
                             {{ trim(($user->FirstName ?? '') . ' ' . ($user->LastName ?? '')) ?: 'User profile' }}
                         </p>
-                        <p class="profile-page-user-meta">{{ $user->Role ?? 'Admin' }}</p>
+                        <p class="admin-profile-page-user-meta">{{ $user->Role ?? 'Admin' }}</p>
                     </div>
 
                     <div class="profile-page-hero-actions">

@@ -29,8 +29,7 @@
 
             <section class="farm-records-toolbar">
                 <div class="farm-records-filter-card">
-                    <label for="farmRecordTypeFilter">Activity Type</label>
-                    <select id="farmRecordTypeFilter" class="reports-filter-select">
+                    <select id="farmRecordTypeFilter" class="reports-filter-select" aria-label="Activity Type">
                         <option value="Hatch and Mortality Check">Hatch and Mortality Check</option>
                         <option value="Weight Monitoring">Weight Monitoring</option>
                         <option value="Feed Replenishment">Feed Replenishment</option>

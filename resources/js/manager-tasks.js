@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    await Promise.all([renderManagerTasks(), loadTaskFormOptions()]);
+    await Promise.all([renderManagerTasks(false), loadTaskFormOptions()]);
 
     document.querySelectorAll(".task-date-input").forEach(applyTaskDateMinimum);
     setupTaskFilters();
@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupEditTaskModal();
     setupDeleteTaskModal();
     setupManagerProfileModal();
+    refreshTaskFilterOptions();
+    renderCurrentTaskTable();
     animateTaskSections();
 });
 
@@ -17,6 +19,7 @@ const ALL_HOUSES_OPTION = "All houses";
 const ALL_PRIORITY_OPTION = "All priority";
 const PRIORITY_ORDER = ["Low", "Medium", "High"];
 const TASK_ROWS_PER_PAGE = 5;
+const TASK_DOT_LIMIT = 5;
 const TASK_STATUS_OPTIONS = ["pending", "for_approval", "completed"];
 const TASK_TABLE_COLUMNS = {
     pending: [
@@ -70,6 +73,11 @@ let taskRowPages = {
     for_approval: 0,
     completed: 0,
 };
+let taskLastRowPages = {
+    pending: 0,
+    for_approval: 0,
+    completed: 0,
+};
 let availableHouseOptions = [];
 const addTaskRequiredFields = [
     { name: "worker_name", label: "Assign Flockman" },
@@ -86,25 +94,7 @@ let taskFilters = {
     priority: ALL_PRIORITY_OPTION,
 };
 
-function getTodayDateValue() {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-
-    return `${today.getFullYear()}-${month}-${day}`;
-}
-
-function applyTaskDateMinimum(input) {
-    if (input) {
-        input.min = getTodayDateValue();
-    }
-}
-
-function isPastTaskDate(value) {
-    return Boolean(value) && value < getTodayDateValue();
-}
-
-async function renderManagerTasks() {
+async function renderManagerTasks(shouldRender = true) {
     try {
         const response = await fetch("/api/manager/tasks");
         const data = await response.json();
@@ -117,7 +107,9 @@ async function renderManagerTasks() {
         syncAvailableHouseOptions();
 
         refreshTaskFilterOptions();
-        renderCurrentTaskTable();
+        if (shouldRender) {
+            renderCurrentTaskTable();
+        }
     } catch (error) {
         console.error("Failed to load manager tasks.", error);
     }
@@ -260,7 +252,20 @@ function updateTaskRowPagination(section, totalItems) {
     }
 
     if (dotsContainer) {
-        dotsContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        const visiblePages = getVisibleTaskPages(totalPages, taskRowPages[section]);
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(taskRowPages[section]));
+        const direction = taskRowPages[section] > taskLastRowPages[section]
+            ? "next"
+            : taskRowPages[section] < taskLastRowPages[section]
+                ? "prev"
+                : "still";
+        dotsContainer.dataset.pageDirection = direction;
+        dotsContainer.style.setProperty("--active-dot-index", activeDotIndex);
+        dotsContainer.style.setProperty("--active-dot-offset", `${activeDotIndex * 18}px`);
+        const dotTrackWidth = (visiblePages.length * 10) + (Math.max(0, visiblePages.length - 1) * 8);
+        dotsContainer.style.setProperty("--dot-track-width", `${dotTrackWidth}px`);
+        dotsContainer.style.setProperty("--dot-track-half", `${dotTrackWidth / 2}px`);
+        dotsContainer.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="manager-task-page-dot ${index === taskRowPages[section] ? 'active' : ''}"
@@ -268,7 +273,25 @@ function updateTaskRowPagination(section, totalItems) {
                 aria-label="Go to page ${index + 1}"
             ></button>
         `).join("");
+        taskLastRowPages[section] = taskRowPages[section];
     }
+}
+
+function getVisibleTaskPages(totalPages, currentPage) {
+    if (totalPages <= TASK_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(TASK_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + TASK_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - TASK_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function refreshTaskFilterOptions() {
@@ -390,7 +413,7 @@ function renderUnifiedTaskTable(section, items) {
     tbody.innerHTML = pageItems
         .map((item) => `
             <tr>
-                ${columns.map((column) => `<td>${renderTaskCell(column.key, item, section)}</td>`).join("")}
+                ${columns.map((column) => `<td data-task-label="${escapeHtml(stripHtml(column.label))}">${renderTaskCell(column.key, item, section)}</td>`).join("")}
             </tr>
         `)
         .join("");
@@ -401,7 +424,11 @@ function renderUnifiedTaskTable(section, items) {
     animateTaskRows();
 }
 
-function renderTaskCell(key, item, section) {
+function renderTaskCell(key, item) {
+    if (key === "priority") {
+        return renderTaskPriorityBadge(item.priority);
+    }
+
     if (key === "photo") {
         return item.photo_url
             ? `<button
@@ -425,26 +452,29 @@ function renderTaskCell(key, item, section) {
         </button>`;
     }
 
-    if (key === "actions") {
-        return `<button
-            type="button"
-            class="manager-task-action-btn manager-task-edit-btn"
-            data-task-id="${escapeHtml(item.id)}"
-            title="Edit task"
-        >
-            ✎
-        </button>
-        <button
-            type="button"
-            class="manager-task-action-btn manager-task-delete-btn"
-            data-task-id="${escapeHtml(item.id)}"
-            title="Delete task"
-        >
-            ✕
-        </button>`;
-    }
+    return item[key] ?? "";
+}
 
-    return escapeHtml(item[key] ?? "");
+function renderTaskPriorityBadge(priority) {
+    const priorityText = String(priority ?? "").trim();
+    const priorityClass = ["low", "medium", "high"].includes(priorityText.toLowerCase())
+        ? priorityText.toLowerCase()
+        : "unset";
+
+    return `<span class="manager-task-priority-badge ${escapeHtml(priorityClass)}">${escapeHtml(priorityText || "Unset")}</span>`;
+}
+
+function stripHtml(value) {
+    return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function encodeTaskPayload(item) {

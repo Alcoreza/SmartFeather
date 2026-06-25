@@ -458,7 +458,7 @@ body {
 
 .admin-maintenance-table {
     width: 100%;
-    min-width: 900px;
+    min-width: 720px;
     table-layout: fixed;
     border-collapse: collapse;
     border-spacing: 0;
@@ -563,7 +563,7 @@ body {
     }
 
     .admin-maintenance-table {
-        min-width: 740px;
+        min-width: 720px;
     }
 }
 
@@ -594,7 +594,7 @@ body {
     }
 
     .admin-maintenance-table {
-        min-width: 660px;
+        min-width: 640px;
     }
 
     .admin-maintenance-table th {

@@ -111,11 +111,11 @@
 }
 
 .admin-workers-name-col {
-    width: 52%;
+    width: 56%;
 }
 
 .admin-workers-role-col {
-    width: 24%;
+    width: 20%;
 }
 
 .admin-workers-actions-col {
@@ -397,9 +397,18 @@
 
 .admin-worker-modal-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 12px;
     margin-top: 18px;
+}
+
+.admin-worker-modal-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-left: auto;
 }
 
 .admin-worker-modal-actions.single {
@@ -424,15 +433,14 @@
     background: linear-gradient(180deg, #8a8a8a, #767676);
 }
 
-.admin-worker-field > .admin-worker-btn {
-    width: fit-content;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .admin-worker-btn.save {
     background: linear-gradient(180deg, #2c8748, #1f6f2b);
+}
+
+.admin-worker-btn.password {
+    background: #f3f8f2;
+    color: #17452d;
+    border: 1px solid rgba(23, 100, 58, 0.18);
 }
 
 .admin-worker-btn.delete {
@@ -500,7 +508,18 @@
 
     .admin-worker-modal-actions,
     .admin-worker-modal-actions.single {
+        align-items: stretch;
+        flex-direction: column;
         justify-content: center;
+    }
+
+    .admin-worker-modal-action-group {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .admin-worker-modal-actions .admin-worker-btn {
+        flex: 1 1 0;
     }
 
     .admin-worker-modal-card {
@@ -780,6 +799,7 @@
 .admin-worker-action-group {
     gap: 8px;
     justify-content: center;
+    width: 100%;
 }
 
 .admin-worker-icon-btn {
@@ -972,7 +992,7 @@
     }
 
     .admin-workers-table {
-        min-width: 640px;
+        min-width: 560px;
     }
 
     .admin-workers-table thead th,
@@ -1033,7 +1053,7 @@
     }
 
     .admin-workers-table {
-        min-width: 680px;
+        min-width: 600px;
     }
 
     .admin-workers-table thead th,

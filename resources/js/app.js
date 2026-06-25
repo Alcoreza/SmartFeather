@@ -118,10 +118,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const flockBatchToggle = document.querySelector("[data-flock-batch-toggle]");
     const flockBatchPanel = document.querySelector(".houses-side-column");
+    const flockBatchTogglePlaceholder = flockBatchToggle ? document.createComment("flock-batch-toggle-placeholder") : null;
     const flockBatchPlaceholder = flockBatchPanel ? document.createComment("flock-batch-panel-placeholder") : null;
+    const flockBatchFloatQuery = window.matchMedia("(max-width: 1180px)");
+
+    if (flockBatchToggle && flockBatchTogglePlaceholder) {
+        flockBatchToggle.before(flockBatchTogglePlaceholder);
+    }
 
     if (flockBatchPanel && flockBatchPlaceholder) {
         flockBatchPanel.before(flockBatchPlaceholder);
+    }
+
+    function restoreFlockBatchToggle() {
+        if (!flockBatchToggle || !flockBatchTogglePlaceholder?.parentNode) return;
+
+        flockBatchTogglePlaceholder.parentNode.insertBefore(flockBatchToggle, flockBatchTogglePlaceholder.nextSibling);
+        flockBatchToggle.removeAttribute("style");
     }
 
     function restoreFlockBatchPanel() {
@@ -131,15 +144,39 @@ document.addEventListener("DOMContentLoaded", () => {
         flockBatchPanel.removeAttribute("style");
     }
 
+    function syncFlockBatchToggle() {
+        if (!flockBatchToggle) return;
+
+        const isFloating = flockBatchFloatQuery.matches;
+
+        if (!isFloating) {
+            restoreFlockBatchToggle();
+            return;
+        }
+
+        if (flockBatchToggle.parentNode !== document.body) {
+            document.body.appendChild(flockBatchToggle);
+        }
+
+        flockBatchToggle.style.setProperty("position", "fixed", "important");
+        flockBatchToggle.style.setProperty("left", "auto", "important");
+        flockBatchToggle.style.setProperty("right", "18px", "important");
+        flockBatchToggle.style.setProperty("bottom", "18px", "important");
+        flockBatchToggle.style.setProperty("z-index", "1750", "important");
+    }
+
     function positionFlockBatchPanel() {
         if (!flockBatchPanel || !flockBatchToggle) return;
 
-        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        const isFloating = flockBatchFloatQuery.matches;
 
-        if (!isMobile) {
+        if (!isFloating) {
+            restoreFlockBatchToggle();
             restoreFlockBatchPanel();
             return;
         }
+
+        syncFlockBatchToggle();
 
         if (flockBatchPanel.parentNode !== document.body) {
             document.body.appendChild(flockBatchPanel);
@@ -164,10 +201,13 @@ document.addEventListener("DOMContentLoaded", () => {
         flockBatchPanel.classList.remove("is-floating-open");
         flockBatchToggle.classList.remove("is-active");
         flockBatchToggle.setAttribute("aria-expanded", "false");
-        if (!window.matchMedia("(max-width: 768px)").matches) {
+        if (!flockBatchFloatQuery.matches) {
+            restoreFlockBatchToggle();
             restoreFlockBatchPanel();
         }
     }
+
+    syncFlockBatchToggle();
 
     flockBatchToggle?.addEventListener("click", () => {
         if (!flockBatchPanel) return;
@@ -191,11 +231,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.addEventListener("resize", () => {
-        if (!window.matchMedia("(max-width: 768px)").matches) {
+        if (!flockBatchFloatQuery.matches) {
             closeFlockBatchPanel();
+            restoreFlockBatchToggle();
             restoreFlockBatchPanel();
             return;
         }
+
+        syncFlockBatchToggle();
 
         if (flockBatchPanel?.classList.contains("is-floating-open")) {
             positionFlockBatchPanel();

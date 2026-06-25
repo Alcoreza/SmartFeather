@@ -41,8 +41,10 @@ const reportsFilterForm = document.getElementById('reportsFilterForm');
 const reportsHouse = document.getElementById('reportsHouse');
 
 const REPORTS_ROWS_PER_PAGE = 5;
+const REPORTS_DOT_LIMIT = 5;
 const reportPagination = {};
 let currentReportData = {};
+let reportsLastPages = {};
 let reportsPaginationBound = false;
 
 function escapeHtml(value) {
@@ -98,7 +100,7 @@ function renderReportCards() {
                 <button type="button" class="reports-page-btn" data-reports-prev="${card.key}">
                     Previous
                 </button>
-                <div class="reports-page-dots" data-reports-dots="${card.key}"></div>
+                <div class="reports-page-dots" data-page-direction="still" data-reports-dots="${card.key}"></div>
                 <button type="button" class="reports-page-btn" data-reports-next="${card.key}">
                     Next
                 </button>
@@ -272,6 +274,23 @@ function bindReportsFilter() {
     });
 }
 
+function getVisibleReportPages(totalPages, currentPage) {
+    if (totalPages <= REPORTS_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(REPORTS_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + REPORTS_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - REPORTS_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
+}
+
 function updateReportsPagination(cardKey, totalRows) {
     const pagination = document.querySelector(`[data-reports-pagination="${cardKey}"]`);
     const prevButton = document.querySelector(`[data-reports-prev="${cardKey}"]`);
@@ -279,6 +298,9 @@ function updateReportsPagination(cardKey, totalRows) {
     const dots = document.querySelector(`[data-reports-dots="${cardKey}"]`);
     const totalPages = Math.max(1, Math.ceil(totalRows / REPORTS_ROWS_PER_PAGE));
     const currentPage = reportPagination[cardKey]?.currentPage || 0;
+    const lastPage = reportsLastPages[cardKey] ?? currentPage;
+    const direction = currentPage > lastPage ? 'next' : currentPage < lastPage ? 'prev' : 'still';
+    const visiblePages = getVisibleReportPages(totalPages, currentPage);
 
     if (pagination) {
         pagination.classList.toggle('is-hidden', totalRows <= REPORTS_ROWS_PER_PAGE);
@@ -293,7 +315,8 @@ function updateReportsPagination(cardKey, totalRows) {
     }
 
     if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        dots.dataset.pageDirection = direction;
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="reports-page-dot ${index === currentPage ? 'active' : ''}"
@@ -303,6 +326,8 @@ function updateReportsPagination(cardKey, totalRows) {
             ></button>
         `).join('');
     }
+
+    reportsLastPages[cardKey] = currentPage;
 }
 
 function setupReportsPagination() {

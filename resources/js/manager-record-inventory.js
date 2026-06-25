@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 const RECORD_ROWS_PER_PAGE = 10;
+const RECORD_DOT_LIMIT = 5;
 
 /* ================= PROFILE MODAL ================= */
 async function populateProfileModal() {
@@ -72,6 +73,7 @@ function setupInventoryRecordTabs() {
     let currentType = "feed";
     let renderVersion = 0;
     let currentPage = 0;
+    let lastRecordPage = 0;
     let allRows = [];
     let currentRows = [];
 
@@ -407,7 +409,16 @@ function setupInventoryRecordTabs() {
         }
 
         if (dots) {
-            dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            const visiblePages = getVisibleRecordPages(totalPages, currentPage);
+            const activeDotIndex = Math.max(0, visiblePages.indexOf(currentPage));
+            const direction = currentPage > lastRecordPage ? "next" : currentPage < lastRecordPage ? "prev" : "still";
+            dots.dataset.pageDirection = direction;
+            dots.style.setProperty("--active-dot-index", activeDotIndex);
+            dots.style.setProperty("--active-dot-offset", `${activeDotIndex * 20}px`);
+            const dotTrackWidth = (visiblePages.length * 11) + (Math.max(0, visiblePages.length - 1) * 9);
+            dots.style.setProperty("--dot-track-width", `${dotTrackWidth}px`);
+            dots.style.setProperty("--dot-track-half", `${dotTrackWidth / 2}px`);
+            dots.innerHTML = visiblePages.map((index) => `
                 <button
                     type="button"
                     class="record-page-dot ${index === currentPage ? "active" : ""}"
@@ -416,7 +427,25 @@ function setupInventoryRecordTabs() {
                     aria-current="${index === currentPage ? "page" : "false"}"
                 ></button>
             `).join("");
+            lastRecordPage = currentPage;
         }
+    }
+
+    function getVisibleRecordPages(totalPages, currentPage) {
+        if (totalPages <= RECORD_DOT_LIMIT) {
+            return Array.from({ length: totalPages }, (_, index) => index);
+        }
+
+        const centerOffset = Math.floor(RECORD_DOT_LIMIT / 2);
+        let start = Math.max(0, currentPage - centerOffset);
+        let end = start + RECORD_DOT_LIMIT;
+
+        if (end > totalPages) {
+            end = totalPages;
+            start = Math.max(0, end - RECORD_DOT_LIMIT);
+        }
+
+        return Array.from({ length: end - start }, (_, index) => start + index);
     }
 
     function renderCurrentPage() {

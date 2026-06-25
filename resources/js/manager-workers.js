@@ -1,8 +1,10 @@
 const BASE_URL = '/api/admin/workers';
 const WORKERS_ROWS_PER_PAGE = 7;
+const WORKERS_DOT_LIMIT = 5;
 
 let workersCache = [];
 let workersCurrentPage = 0;
+let workersLastPage = 0;
 let workersCurrentRole = 'All';
 
 // ================= PROFILE MODAL =================
@@ -103,11 +105,11 @@ function renderWorkersTable() {
     const pageWorkers = filteredWorkers.slice(start, start + WORKERS_ROWS_PER_PAGE);
     const placeholderRows = WORKERS_ROWS_PER_PAGE - pageWorkers.length;
 
-    table.innerHTML = pageWorkers.map(user => {
+    table.innerHTML = pageWorkers.map((user, index) => {
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
         return `
-            <tr data-id="${user.EmployeeId}">
+            <tr data-id="${user.EmployeeId}" style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
                 <td>${fullName}</td>
                 <td>${user.EmployeeId}</td>
                 <td>${user.Role}</td>
@@ -153,7 +155,16 @@ function updateWorkersPagination(totalRows) {
     }
 
     if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        const visiblePages = getVisibleWorkerPages(totalPages, workersCurrentPage);
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(workersCurrentPage));
+        const direction = workersCurrentPage > workersLastPage ? 'next' : workersCurrentPage < workersLastPage ? 'prev' : 'still';
+        dots.dataset.pageDirection = direction;
+        dots.style.setProperty('--active-dot-index', activeDotIndex);
+        dots.style.setProperty('--active-dot-offset', `${activeDotIndex * 18}px`);
+        const dotTrackWidth = (visiblePages.length * 10) + (Math.max(0, visiblePages.length - 1) * 8);
+        dots.style.setProperty('--dot-track-width', `${dotTrackWidth}px`);
+        dots.style.setProperty('--dot-track-half', `${dotTrackWidth / 2}px`);
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="workers-page-dot ${index === workersCurrentPage ? 'active' : ''}"
@@ -162,7 +173,25 @@ function updateWorkersPagination(totalRows) {
                 aria-current="${index === workersCurrentPage ? 'page' : 'false'}"
             ></button>
         `).join('');
+        workersLastPage = workersCurrentPage;
     }
+}
+
+function getVisibleWorkerPages(totalPages, currentPage) {
+    if (totalPages <= WORKERS_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(WORKERS_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + WORKERS_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - WORKERS_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function setupWorkersPagination() {

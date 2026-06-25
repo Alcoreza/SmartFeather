@@ -7,78 +7,16 @@ const employeesCache = new Map();
 let adminWorkersCurrentPage = 0;
 let adminWorkersLastPage = 0;
 let adminWorkersCurrentRole = 'All';
-let pendingWorkerSave = null;
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-function showAdminWorkerConfirmModal(message, title = 'Confirm Save', confirmText = 'Confirm') {
-    return new Promise((resolve) => {
-        document.getElementById('adminWorkerGenericConfirmModal')?.remove();
-
-        const modal = document.createElement('div');
-        modal.className = 'admin-worker-modal-backdrop confirm-modal-top';
-        modal.id = 'adminWorkerGenericConfirmModal';
-        modal.style.display = 'flex';
-        modal.innerHTML = `
-            <div class="admin-worker-modal-card admin-delete-worker-card">
-                <div class="admin-worker-modal-header">
-                    <h2></h2>
-                    <div class="admin-worker-header-line"></div>
-                </div>
-                <div class="admin-worker-modal-body">
-                    <p class="admin-delete-worker-text"></p>
-                    <div class="admin-worker-modal-actions">
-                        <button type="button" class="admin-worker-btn cancel" data-confirm-cancel>Cancel</button>
-                        <button type="button" class="admin-worker-btn save" data-confirm-ok></button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        modal.querySelector('h2').textContent = title;
-        modal.querySelector('p').textContent = message;
-        modal.querySelector('[data-confirm-ok]').textContent = confirmText;
-
-        const close = (confirmed) => {
-            modal.remove();
-            resolve(confirmed);
-        };
-
-        modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
-        modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close(false);
-        });
-
-        document.body.appendChild(modal);
-    });
-}
-
-function usernamePart(value) {
-    return String(value || '').replace(/[^a-z0-9]/gi, '');
-}
-
-function usernameSuffixPart(value) {
-    const suffix = usernamePart(value).toLowerCase();
-
-    if (suffix === 'junior') return 'jr';
-    if (suffix === 'senior') return 'sr';
-
-    return suffix;
-}
-
-function generateUsername(firstName, lastName, suffix = '') {
+function generateUsername(firstName, lastName) {
     const initial = (firstName || '').trim().charAt(0);
-    const surname = usernamePart(lastName);
-    const suffixPart = usernameSuffixPart(suffix);
+    const surname = (lastName || '').trim();
 
-    return `${initial}${surname}${suffixPart}`.toLowerCase();
-}
-
-function normalizeUsername(value) {
-    return String(value || '').trim().toLowerCase();
+    return `${initial}${surname}`.toUpperCase();
 }
 
 function syncUsernamePreview() {
@@ -97,8 +35,7 @@ function syncUsernamePreview() {
 
     const firstName = document.getElementById('FirstName').value || '';
     const lastName = document.getElementById('LastName').value || '';
-    const suffix = document.getElementById('Suffix').value || '';
-    usernameInput.value = generateUsername(firstName, lastName, suffix);
+    usernameInput.value = generateUsername(firstName, lastName);
 }
 
 const passwordInput = document.getElementById('passwordModalPassword');
@@ -108,10 +45,6 @@ const confirmPasswordMessage = document.getElementById('confirmPasswordMessage')
 const oldPasswordMessage = document.getElementById('oldPasswordMessage');
 const phoneInput = document.getElementById('PhoneNumber');
 const birthdayInput = document.getElementById('Birthday');
-const addPasswordFields = document.getElementById('addPasswordFields');
-const addPasswordInput = document.getElementById('AddPassword');
-const addConfirmPasswordInput = document.getElementById('AddConfirmPassword');
-const editPasswordField = document.getElementById('editPasswordField');
 let pendingPassword = null;
 
 const workerRequiredFields = [
@@ -120,240 +53,10 @@ const workerRequiredFields = [
     { id: 'Role', label: 'Role' },
     { id: 'PhoneNumber', label: 'Phone Number' },
     { id: 'Birthday', label: 'Birthday' },
-    { id: 'Gender', label: 'Gender' },
-    { id: 'AddPassword', label: 'Password', addOnly: true },
-    { id: 'AddConfirmPassword', label: 'Confirm Password', addOnly: true }
+    { id: 'Gender', label: 'Gender' }
 ];
 
 let shouldTrackRequiredHighlights = false;
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-function getReadableErrorMessage(error) {
-    if (!error) return 'Unable to save employee. Please try again.';
-
-    if (error.errors) {
-        const messages = Object.values(error.errors).flat().filter(Boolean);
-        if (messages.length) return messages.join(' ');
-    }
-
-    return error.message || error.error || 'Unable to save employee. Please try again.';
-}
-
-async function parseErrorResponse(response) {
-    const contentType = response.headers.get('content-type') || '';
-
-    if (contentType.includes('application/json')) {
-        return response.json();
-    }
-
-    const text = await response.text();
-    return {
-        message: text
-            ? `Server error (${response.status}). Please try again or check the Laravel log.`
-            : `Request failed (${response.status}). Please try again.`,
-    };
-}
-
-function getTodayDateValue() {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
-    return `${today.getFullYear()}-${month}-${day}`;
-}
-
-function getYesterdayDateValue() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const day = String(yesterday.getDate()).padStart(2, '0');
-
-    return `${yesterday.getFullYear()}-${month}-${day}`;
-}
-
-function setBirthdayMaxDate() {
-    if (birthdayInput) {
-        birthdayInput.max = getYesterdayDateValue();
-    }
-}
-
-function sanitizePhoneValue(value) {
-    return String(value || '').replace(/\D/g, '').slice(0, 11);
-}
-
-function sanitizeNameValue(value) {
-    return String(value || '').replace(/\d/g, '');
-}
-
-function markWorkerFieldError(input, message) {
-    input?.closest('.admin-worker-field')?.classList.add('has-error');
-    showWorkerFormError(message);
-    setTimeout(() => input?.focus(), 150);
-}
-
-function clearWorkerFieldError(input) {
-    input?.closest('.admin-worker-field')?.classList.remove('has-error');
-
-    const hasErrors = document.querySelector('#workerForm .admin-worker-field.has-error');
-    if (!hasErrors) {
-        clearWorkerFormError();
-    }
-}
-
-function getWorkerInputForErrorKey(key) {
-    const fieldMap = {
-        FirstName: 'FirstName',
-        MiddleName: 'MiddleName',
-        LastName: 'LastName',
-        Suffix: 'Suffix',
-        Role: 'Role',
-        PhoneNumber: 'PhoneNumber',
-        Birthday: 'Birthday',
-        Gender: 'Gender',
-        Address: 'Address',
-        Username: 'Username',
-        Password: isAddMode() ? 'AddPassword' : 'passwordModalPassword',
-    };
-
-    return document.getElementById(fieldMap[key] || key);
-}
-
-function showBackendValidationErrors(error) {
-    if (!error?.errors) {
-        showWorkerFormError(getReadableErrorMessage(error));
-        return;
-    }
-
-    if (error.errors.PhoneNumber?.length) {
-        const phoneInput = getWorkerInputForErrorKey('PhoneNumber');
-        markWorkerFieldError(phoneInput, error.errors.PhoneNumber[0]);
-    } else {
-        showWorkerFormError(getReadableErrorMessage(error));
-    }
-
-    Object.keys(error.errors).forEach((key) => {
-        getWorkerInputForErrorKey(key)?.closest('.admin-worker-field')?.classList.add('has-error');
-    });
-}
-
-function validateWorkerFormats() {
-    const phoneValue = phoneInput?.value.trim() || '';
-
-    if (!EMPLOYEE_PHONE_PATTERN.test(phoneValue)) {
-        markWorkerFieldError(phoneInput, 'Phone number must use 09XXXXXXXXX format.');
-        return false;
-    }
-
-    const birthdayValue = birthdayInput?.value || '';
-    if (!birthdayValue || Number.isNaN(new Date(birthdayValue).getTime())) {
-        markWorkerFieldError(birthdayInput, 'Please enter a valid birthday.');
-        return false;
-    }
-
-    if (birthdayValue >= getTodayDateValue()) {
-        markWorkerFieldError(birthdayInput, 'Birthday must be earlier than today.');
-        return false;
-    }
-
-    return true;
-}
-
-function validateAddPasswordFields() {
-    if (!isAddMode()) {
-        return true;
-    }
-
-    const password = addPasswordInput?.value || '';
-    const confirmPassword = addConfirmPasswordInput?.value || '';
-
-    if (!password) {
-        markWorkerFieldError(addPasswordInput, 'Please enter a password.');
-        return false;
-    }
-
-    if (password.length < 8) {
-        markWorkerFieldError(addPasswordInput, 'Password must be at least 8 characters.');
-        return false;
-    }
-
-    if (!confirmPassword) {
-        markWorkerFieldError(addConfirmPasswordInput, 'Please confirm the password.');
-        return false;
-    }
-
-    if (password !== confirmPassword) {
-        addPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
-        markWorkerFieldError(addConfirmPasswordInput, 'Passwords do not match.');
-        return false;
-    }
-
-    clearWorkerFieldError(addPasswordInput);
-    clearWorkerFieldError(addConfirmPasswordInput);
-    return true;
-}
-
-function validateBirthdayField(showError = false) {
-    const birthdayValue = birthdayInput?.value || '';
-
-    if (!birthdayValue) {
-        return true;
-    }
-
-    if (Number.isNaN(new Date(birthdayValue).getTime()) || birthdayValue >= getTodayDateValue()) {
-        if (showError) {
-            markWorkerFieldError(birthdayInput, 'Birthday must be earlier than today.');
-        } else {
-            birthdayInput?.closest('.admin-worker-field')?.classList.add('has-error');
-        }
-
-        return false;
-    }
-
-    birthdayInput?.closest('.admin-worker-field')?.classList.remove('has-error');
-    const hasErrors = document.querySelector('#workerForm .admin-worker-field.has-error');
-    if (!hasErrors) {
-        clearWorkerFormError();
-    }
-
-    return true;
-}
-
-async function validateEmployeePhoneAvailability(employeeId = '') {
-    const response = await fetch(`${BASE_URL}/check-phone`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        },
-        body: JSON.stringify({
-            PhoneNumber: phoneInput?.value || '',
-            EmployeeId: employeeId || null,
-        }),
-    });
-
-    const result = await parseErrorResponse(response);
-
-    if (!response.ok) {
-        showBackendValidationErrors(result);
-        return false;
-    }
-
-    if (!result.available) {
-        markWorkerFieldError(phoneInput, result.message || 'This phone number is already assigned to another employee.');
-        return false;
-    }
-
-    clearWorkerFieldError(phoneInput);
-    return true;
-}
 
 function clearConfirmPasswordMessage() {
     confirmPasswordMessage.textContent = '';
@@ -377,11 +80,6 @@ function validateConfirmPassword() {
         return false;
     }
 
-    if (password.length < 8) {
-        confirmPasswordMessage.textContent = 'Password must be at least 8 characters.';
-        return false;
-    }
-
     clearConfirmPasswordMessage();
     return true;
 }
@@ -390,8 +88,6 @@ function resetConfirmPasswordState() {
     if (passwordInput) passwordInput.value = '';
     if (confirmPasswordInput) confirmPasswordInput.value = '';
     if (oldPasswordInput) oldPasswordInput.value = '';
-    if (addPasswordInput) addPasswordInput.value = '';
-    if (addConfirmPasswordInput) addConfirmPasswordInput.value = '';
     clearConfirmPasswordMessage();
     clearOldPasswordMessage();
 }
@@ -405,14 +101,6 @@ function setPasswordModalMode(mode) {
     const oldPasswordField = document.getElementById('passwordModalOldPasswordField');
 
     const isEditMode = mode === 'edit';
-
-    if (addPasswordFields) {
-        addPasswordFields.style.display = isEditMode ? 'none' : 'grid';
-    }
-
-    if (editPasswordField) {
-        editPasswordField.style.display = isEditMode ? 'block' : 'none';
-    }
 
     if (oldPasswordField) {
         oldPasswordField.style.display = isEditMode ? 'block' : 'none';
@@ -432,10 +120,6 @@ function setAddModeRequirements(isAddMode) {
 }
 
 function isRequiredFieldEmpty(field) {
-    if (field.addOnly && !isAddMode()) {
-        return false;
-    }
-
     return !(document.getElementById(field.id)?.value || '').trim();
 }
 
@@ -616,10 +300,11 @@ function renderWorkersTable() {
     if (!filteredWorkers.length) {
         table.innerHTML = `
             <tr>
-                <td colspan="3" class="admin-workers-empty-row">No employees match the selected filter.</td>
+                <td colspan="4" class="admin-workers-empty-row">No employees match the selected filter.</td>
             </tr>
             ${Array.from({ length: ADMIN_WORKERS_ROWS_PER_PAGE - 1 }, () => `
                 <tr class="admin-workers-placeholder-row" aria-hidden="true">
+                    <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
@@ -646,7 +331,7 @@ function renderWorkersTable() {
                     <div class="admin-worker-action-group">
                         
                         <!-- VIEW -->
-                        <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                        <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${user.EmployeeId}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
@@ -654,15 +339,15 @@ function renderWorkersTable() {
                         </button>
 
                         <!-- EDIT -->
-                        <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                        <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${user.EmployeeId}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 20h9"></path>
                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                             </svg>
                         </button>
 
-                        <!-- DEACTIVATE -->
-                        <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                        <!-- DELETE -->
+                        <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${user.EmployeeId}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 6h18"></path>
                                 <path d="M8 6V4h8v2"></path>
@@ -678,6 +363,7 @@ function renderWorkersTable() {
         `;
     }).join('') + Array.from({ length: placeholderRows }, () => `
         <tr class="admin-workers-placeholder-row" aria-hidden="true">
+            <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
@@ -780,14 +466,12 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     clearWorkerFormError();
     setAddModeRequirements(true);
     setPasswordModalMode('add');
-    setBirthdayMaxDate();
     syncUsernamePreview();
     openModal('workerModal');
 });
 
 document.getElementById('FirstName')?.addEventListener('input', syncUsernamePreview);
 document.getElementById('LastName')?.addEventListener('input', syncUsernamePreview);
-document.getElementById('Suffix')?.addEventListener('input', syncUsernamePreview);
 
 async function openEditModal(id) {
     const cachedUser = employeesCache.get(String(id));
@@ -813,7 +497,7 @@ function populateEditModal(user) {
     document.getElementById('MiddleName').value = user.MiddleName ?? '';
     document.getElementById('LastName').value = user.LastName;
     document.getElementById('Suffix').value = user.Suffix ?? '';
-    document.getElementById('Username').value = normalizeUsername(user.Username);
+    document.getElementById('Username').value = user.Username ?? '';
     document.getElementById('Username').readOnly = false;
     document.getElementById('usernameHint').style.display = 'none';
     document.getElementById('Role').value = user.Role;
@@ -843,95 +527,47 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (!validateWorkerFormats()) {
-        return;
-    }
-
-    if (!validateAddPasswordFields()) {
+    if (isAddMode() && !pendingPassword) {
+        showWorkerFormError('Please set a password for the new employee before saving.');
         return;
     }
 
     const id = document.getElementById('EmployeeId').value;
-
-    try {
-        const phoneAvailable = await validateEmployeePhoneAvailability(id);
-        if (!phoneAvailable) {
-            return;
-        }
-    } catch (err) {
-        console.error(err);
-        showWorkerFormError('Unable to check phone number. Please try again.');
-        return;
-    }
-
-    const addPassword = addPasswordInput?.value || null;
     const data = {
         FirstName: document.getElementById('FirstName').value,
         MiddleName: document.getElementById('MiddleName').value || null,
         LastName: document.getElementById('LastName').value,
         Suffix: document.getElementById('Suffix').value || null,
-        Username: normalizeUsername(document.getElementById('Username').value),
+        Username: document.getElementById('Username').value,
         Role: document.getElementById('Role').value,
         PhoneNumber: document.getElementById('PhoneNumber').value || null,
         Birthday: document.getElementById('Birthday').value || null,
         Gender: document.getElementById('Gender').value || null,
         Address: document.getElementById('Address').value || null,
-        Password: isAddMode() ? addPassword : null
+        Password: pendingPassword || null
     };
 
     if (!data.Password) delete data.Password;
 
-    pendingWorkerSave = {
-        id,
-        method: id ? 'PUT' : 'POST',
-        url: id ? `${BASE_URL}/${id}` : BASE_URL,
-        data,
-    };
-
-    const fullName = `${data.FirstName || ''} ${data.MiddleName || ''} ${data.LastName || ''} ${data.Suffix || ''}`.trim();
-    const confirmMessage = document.getElementById('saveWorkerConfirmMessage');
-    if (confirmMessage) {
-        confirmMessage.textContent = id
-            ? `Save changes to ${fullName || 'this employee'}?`
-            : `Add ${fullName || 'this employee'} as a new employee?`;
-    }
-
-    openModal('saveWorkerConfirmModal');
-});
-
-document.getElementById('confirmSaveWorkerBtn')?.addEventListener('click', async () => {
-    if (!pendingWorkerSave) {
-        closeModal('saveWorkerConfirmModal');
-        return;
-    }
-
     try {
-        const res = await fetch(pendingWorkerSave.url, {
-            method: pendingWorkerSave.method,
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${BASE_URL}/${id}` : BASE_URL;
+
+        const res = await fetch(url, {
+            method,
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify(pendingWorkerSave.data)
+            body: JSON.stringify(data)
         });
 
-        if (!res.ok) {
-            const err = await parseErrorResponse(res);
-            closeModal('saveWorkerConfirmModal');
-            showBackendValidationErrors(err);
-            return;
-        }
+        if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
 
-        closeModal('saveWorkerConfirmModal');
         closeModal('workerModal');
         pendingPassword = null;
-        pendingWorkerSave = null;
         await loadEmployees();
-    } catch (err) {
-        console.error(err);
-        closeModal('saveWorkerConfirmModal');
-        showWorkerFormError('Network error. Please check your connection and try again.');
-    }
+    } catch (err) { console.error(err); alert('Network error'); }
 });
 
 document.getElementById('editPasswordBtn')?.addEventListener('click', () => {
@@ -943,47 +579,6 @@ workerRequiredFields.forEach(field => {
 
     input?.addEventListener('input', () => syncRequiredFieldHighlight(field));
     input?.addEventListener('change', () => syncRequiredFieldHighlight(field));
-});
-
-['FirstName', 'MiddleName', 'LastName', 'Suffix'].forEach((fieldId) => {
-    const input = document.getElementById(fieldId);
-
-    input?.addEventListener('input', () => {
-        const sanitizedValue = sanitizeNameValue(input.value);
-
-        if (input.value !== sanitizedValue) {
-            input.value = sanitizedValue;
-        }
-
-        if (['FirstName', 'LastName', 'Suffix'].includes(fieldId)) {
-            syncUsernamePreview();
-        }
-    });
-});
-
-phoneInput?.addEventListener('input', () => {
-    phoneInput.value = sanitizePhoneValue(phoneInput.value);
-    if (EMPLOYEE_PHONE_PATTERN.test(phoneInput.value)) {
-        clearWorkerFieldError(phoneInput);
-    }
-});
-
-birthdayInput?.addEventListener('change', () => {
-    setBirthdayMaxDate();
-    validateBirthdayField(true);
-});
-
-birthdayInput?.addEventListener('input', () => {
-    validateBirthdayField(true);
-});
-
-[addPasswordInput, addConfirmPasswordInput].forEach((input) => {
-    input?.addEventListener('input', () => {
-        if (addPasswordInput?.value && addConfirmPasswordInput?.value && addPasswordInput.value === addConfirmPasswordInput.value && addPasswordInput.value.length >= 8) {
-            clearWorkerFieldError(addPasswordInput);
-            clearWorkerFieldError(addConfirmPasswordInput);
-        }
-    });
 });
 
 document.getElementById('passwordForm')?.addEventListener('submit', async e => {
@@ -1014,12 +609,6 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    const confirmed = await showAdminWorkerConfirmModal('Save this password change?', 'Save Password');
-
-    if (!confirmed) {
-        return;
-    }
-
     try {
         const res = await fetch(`${BASE_URL}/${employeeId}`, {
             method: 'PUT',
@@ -1031,14 +620,14 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
         });
 
         if (!res.ok) {
-            const err = await parseErrorResponse(res);
+            const err = await res.json();
 
             if (err.errors?.old_password) {
                 oldPasswordMessage.textContent = err.errors.old_password[0];
                 return;
             }
 
-            oldPasswordMessage.textContent = getReadableErrorMessage(err);
+            alert('Error: ' + JSON.stringify(err.errors ?? err));
             return;
         }
 
@@ -1050,7 +639,7 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
     }
 });
 
-// ================= DEACTIVATE EMPLOYEE =================
+// ================= DELETE EMPLOYEE =================
 function openDeleteModal(id) {
     deleteId = id;
     const row = document.querySelector(`tr[data-id="${id}"]`);
@@ -1066,11 +655,7 @@ document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', asy
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
         });
 
-        if (!res.ok) {
-            const err = await parseErrorResponse(res);
-            alert(getReadableErrorMessage(err) || 'Error deactivating employee');
-            return;
-        }
+        if (!res.ok) { alert('Error deleting employee'); return; }
 
         closeModal('deleteWorkerModal');
         await loadEmployees();
@@ -1100,7 +685,7 @@ function populateViewModal(user) {
     const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
     document.getElementById('view_name').innerText = fullName;
-    document.getElementById('view_username').innerText = normalizeUsername(user.Username);
+    document.getElementById('view_username').innerText = user.Username ?? '';
     document.getElementById('view_role').innerText = user.Role;
     document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
     document.getElementById('view_birthday').innerText = user.Birthday ?? '';
@@ -1136,7 +721,6 @@ document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
 // ================= INITIAL LOAD =================
 document.addEventListener('DOMContentLoaded', () => {
     setupAdminWorkersPagination();
-    setBirthdayMaxDate();
     loadEmployees();
     setupAdminProfileModal();
 });
@@ -1151,15 +735,7 @@ document.getElementById('roleFilter')?.addEventListener('change', e => {
 // =============== REMOVE NATIVE REQUIRED ATTRIBUTES ===============
 function removeNativeRequiredAttributes() {
     [
-        'FirstName',
-        'LastName',
-        'Role',
-        'PhoneNumber',
-        'Birthday',
-        'Password',
-        'ConfirmPassword',
-        'AddPassword',
-        'AddConfirmPassword'
+        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'Password', 'ConfirmPassword'
     ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.removeAttribute('required');

@@ -18,7 +18,7 @@
         @include('includes.admin-sidebar')
 
         <main class="admin-main profile-page-main">
-            <div class="profile-page-shell">
+            <div class="admin-profile-page-shell">
                 @if(session('profile_success'))
                     <div class="profile-status profile-status-success">
                         {{ session('profile_success') }}
@@ -36,10 +36,9 @@
                     </div>
                 @endif
 
-                <div class="profile-page-hero">
-                    <div class="profile-page-hero-avatar">
+                <div class="admin-profile-hero">
+                    <div class="admin-profile-hero-avatar">
                         <span>{{ strtoupper(substr($user->FirstName ?? '', 0, 1)) }}{{ strtoupper(substr($user->LastName ?? '', 0, 1)) }}</span>
-                        <span class="profile-page-hero-avatar-badge" aria-hidden="true"></span>
                     </div>
 
                     <div class="admin-profile-hero-copy">
@@ -49,95 +48,91 @@
                         <p class="admin-profile-page-user-meta">{{ $user->Role ?? 'Admin' }}</p>
                     </div>
 
-                    <div class="profile-page-hero-actions">
-                        <button type="button" class="profile-page-btn edit-btn" data-profile-edit-open>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-                                <path d="M12 20h9"></path>
-                                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                            </svg>
+                    <div class="admin-profile-hero-actions">
+                        <button type="button" class="admin-profile-page-btn edit-btn" data-profile-edit-open>
                             Edit
                         </button>
                     </div>
                 </div>
 
-                <div class="profile-page-layout">
-                    <section class="profile-page-panel profile-page-panel-primary">
-                        <div class="profile-page-panel-header">
+                <div class="admin-profile-page-layout">
+                    <section class="admin-profile-page-panel admin-profile-page-panel-primary">
+                        <div class="admin-profile-page-panel-header">
                             <div>
-                                <p class="profile-page-panel-label">Personal details</p>
+                                <p class="admin-profile-page-panel-label">Personal details</p>
                             </div>
                         </div>
 
-                        <div class="profile-page-form-grid">
-                            <div class="profile-page-field">
-                                <label for="profileFirstName">First name</label>
-                                <input type="text" id="profileFirstName" value="{{ $user->FirstName ?? '' }}" readonly aria-readonly="true">
+                        <div class="admin-profile-page-form-grid">
+                            <div class="admin-profile-page-field">
+                                <label for="adminProfileFirstName">First name</label>
+                                <input type="text" id="adminProfileFirstName" value="{{ $user->FirstName ?? '' }}" readonly aria-readonly="true">
                             </div>
 
-                            <div class="profile-page-field">
-                                <label for="profileMiddleName">Middle name</label>
-                                <input type="text" id="profileMiddleName" value="{{ $user->MiddleName ?? '' }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-field">
+                                <label for="adminProfileMiddleName">Middle name</label>
+                                <input type="text" id="adminProfileMiddleName" value="{{ $user->MiddleName ?? '' }}" readonly aria-readonly="true">
                             </div>
 
-                            <div class="profile-page-field">
-                                <label for="profileLastName">Last name</label>
-                                <input type="text" id="profileLastName" value="{{ $user->LastName ?? '' }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-field">
+                                <label for="adminProfileLastName">Last name</label>
+                                <input type="text" id="adminProfileLastName" value="{{ $user->LastName ?? '' }}" readonly aria-readonly="true">
                             </div>
 
-                            <div class="profile-page-field">
-                                <label for="profileSuffix">Suffix</label>
-                                <input type="text" id="profileSuffix" value="{{ $user->Suffix ?? '' }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-field">
+                                <label for="adminProfileSuffix">Suffix</label>
+                                <input type="text" id="adminProfileSuffix" value="{{ $user->Suffix ?? '' }}" readonly aria-readonly="true">
                             </div>
 
-                            <div class="profile-page-field">
-                                <label for="profileBirthday">Birthday</label>
-                                <input type="text" id="profileBirthday" value="{{ $birthdayDisplay }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-field">
+                                <label for="adminProfileBirthday">Birthday</label>
+                                <input type="text" id="adminProfileBirthday" value="{{ $birthdayDisplay }}" readonly aria-readonly="true">
                             </div>
 
-                            <div class="profile-page-field">
-                                <label for="profileGender">Gender</label>
-                                <input type="text" id="profileGender" value="{{ $user->Gender ?? '' }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-field">
+                                <label for="adminProfileGender">Gender</label>
+                                <input type="text" id="adminProfileGender" value="{{ $user->Gender ?? '' }}" readonly aria-readonly="true">
                             </div>
                         </div>
                     </section>
 
-                    <div class="profile-page-side-stack">
-                        <section class="profile-page-panel">
-                            <div class="profile-page-panel-header">
+                    <div class="admin-profile-page-side-stack">
+                        <section class="admin-profile-page-panel">
+                            <div class="admin-profile-page-panel-header">
                                 <div>
-                                    <p class="profile-page-panel-label">Contact information</p>
+                                    <p class="admin-profile-page-panel-label">Contact information</p>
                                 </div>
                             </div>
 
-                            <div class="profile-page-form-grid profile-page-form-grid-single-column">
-                                <div class="profile-page-field profile-page-field-wide">
-                                    <label for="profilePhone">Phone number</label>
-                                    <input type="text" id="profilePhone" value="{{ $user->PhoneNumber ?? '' }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-form-grid admin-profile-page-form-grid-single-column">
+                                <div class="admin-profile-page-field admin-profile-page-field-wide">
+                                    <label for="adminProfilePhone">Phone number</label>
+                                    <input type="text" id="adminProfilePhone" value="{{ $user->PhoneNumber ?? '' }}" readonly aria-readonly="true">
                                 </div>
 
-                                <div class="profile-page-field profile-page-field-wide">
-                                    <label for="profileAddress">Address</label>
-                                    <input type="text" id="profileAddress" value="{{ $user->Address ?? '' }}" readonly aria-readonly="true">
+                                <div class="admin-profile-page-field admin-profile-page-field-wide">
+                                    <label for="adminProfileAddress">Address</label>
+                                    <input type="text" id="adminProfileAddress" value="{{ $user->Address ?? '' }}" readonly aria-readonly="true">
                                 </div>
                             </div>
                         </section>
 
-                        <section class="profile-page-panel">
-                            <div class="profile-page-panel-header">
+                        <section class="admin-profile-page-panel">
+                            <div class="admin-profile-page-panel-header">
                                 <div>
-                                    <p class="profile-page-panel-label">Employment information</p>
+                                    <p class="admin-profile-page-panel-label">Employment information</p>
                                 </div>
                             </div>
 
-                            <div class="profile-page-form-grid">
-                                <div class="profile-page-field">
-                                    <label for="profileRole">Role</label>
-                                    <input type="text" id="profileRole" value="{{ $user->Role ?? '' }}" readonly aria-readonly="true">
+                            <div class="admin-profile-page-form-grid">
+                                <div class="admin-profile-page-field">
+                                    <label for="adminProfileRole">Role</label>
+                                    <input type="text" id="adminProfileRole" value="{{ $user->Role ?? '' }}" readonly aria-readonly="true">
                                 </div>
 
-                                <div class="profile-page-field">
-                                    <label for="profileId">Username</label>
-                                    <input type="text" id="profileId" value="{{ $user->Username ?? '' }}" readonly aria-readonly="true">
+                                <div class="admin-profile-page-field">
+                                    <label for="adminProfileUsername">Username</label>
+                                    <input type="text" id="adminProfileUsername" value="{{ $user->Username ?? '' }}" readonly aria-readonly="true">
                                 </div>
                             </div>
                         </section>
@@ -213,7 +208,7 @@
                                 Cancel
                             </button>
                             <button type="submit" class="profile-edit-btn save-btn">
-                                Save
+                                Save changes
                             </button>
                         </div>
                     </form>

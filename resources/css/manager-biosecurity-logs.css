@@ -7,6 +7,7 @@ body {
 .bio-page {
     position: relative;
     overflow-x: hidden;
+    min-width: 0;
 }
 
 .bio-page::before {
@@ -425,19 +426,32 @@ button.bio-category-btn:not(.active) svg {
     box-shadow: 0 6px 16px rgba(10, 24, 15, 0.035);
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .bio-table-wrap {
+    display: block;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden;
     flex: 1;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
 
 .bio-table {
     width: 100%;
+    min-width: 860px;
     border-collapse: collapse;
     border-spacing: 0;
     table-layout: fixed;
+}
+
+.bio-table:has(.bio-visitor-date-col) {
+    min-width: 1180px;
 }
 
 .bio-table tbody {
@@ -447,6 +461,11 @@ button.bio-category-btn:not(.active) svg {
 .bio-table tr {
     min-height: 48px;
     height: 48px;
+}
+
+.bio-table tbody tr {
+    animation: bioRowIn 0.34s ease both;
+    animation-delay: var(--row-delay, 0s);
 }
 
 .bio-table th {
@@ -484,32 +503,32 @@ button.bio-category-btn:not(.active) svg {
 /* Column width and alignment styles */
 .bio-table th.bio-name-col,
 .bio-table td.bio-name-col {
-    width: 30%;
+    width: 24%;
     text-align: left;
     padding-left: 16px;
 }
 
 .bio-table th.bio-role-col,
 .bio-table td.bio-role-col {
-    width: 10%;
+    width: 12%;
     text-align: center;
 }
 
 .bio-table th.bio-date-col,
 .bio-table td.bio-date-col {
-    width: 15%;
+    width: 14%;
     text-align: center;
 }
 
 .bio-table th.bio-time-col,
 .bio-table td.bio-time-col {
-    width: 12.5%;
+    width: 12%;
     text-align: center;
 }
 
 .bio-table th.bio-remarks-col,
 .bio-table td.bio-remarks-col {
-    width: 15%;
+    width: 20%;
     text-align: left;
     padding-left: 14px;
     overflow: hidden;
@@ -520,33 +539,33 @@ button.bio-category-btn:not(.active) svg {
 
 .bio-table th:last-child,
 .bio-table td:last-child {
-    width: 5%;
+    width: 7%;
     text-align: center;
 }
 
 /* Visitor-specific column widths */
 .bio-table th.bio-visitor-date-col,
 .bio-table td.bio-visitor-date-col {
-    width: 9%;
+    width: 8%;
     text-align: center;
 }
 
 .bio-table th.bio-visitor-time-col,
 .bio-table td.bio-visitor-time-col {
-    width: 9%;
+    width: 8%;
     text-align: center;
 }
 
 .bio-table th.bio-visitor-name-col,
 .bio-table td.bio-visitor-name-col {
-    width: 15%;
+    width: 14%;
     text-align: left;
     padding-left: 16px;
 }
 
 .bio-table th.bio-purpose-col,
 .bio-table td.bio-purpose-col {
-    width: 14%;
+    width: 13%;
     text-align: left;
     padding-left: 14px;
 }
@@ -565,7 +584,7 @@ button.bio-category-btn:not(.active) svg {
 
 .bio-table th.bio-monitored-col,
 .bio-table td.bio-monitored-col {
-    width: 8%;
+    width: 9%;
     text-align: center;
 }
 
@@ -614,6 +633,7 @@ button.bio-category-btn:not(.active) svg {
     box-shadow: none !important;
     cursor: default;
     height: 48px;
+    animation: none !important;
 }
 
 .bio-placeholder-row:hover {
@@ -668,6 +688,12 @@ button.bio-category-btn:not(.active) svg {
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: center;
+    position: relative;
+    --dot-size: 10px;
+    --dot-gap: 8px;
+    min-height: 18px;
+    overflow: visible;
 }
 
 .bio-page-dot {
@@ -678,7 +704,13 @@ button.bio-category-btn:not(.active) svg {
     background: rgba(255, 255, 255, 0.9);
     cursor: pointer;
     padding: 0;
-    transition: all 0.2s ease;
+    flex: 0 0 auto;
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .bio-page-dot:hover {
@@ -689,7 +721,54 @@ button.bio-category-btn:not(.active) svg {
 .bio-page-dot.active {
     background: linear-gradient(135deg, #63d15f, #57c451);
     border-color: rgba(87, 196, 81, 0.6);
-    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.22);
+    transform: scale(1.08);
+}
+
+.bio-page-dots[data-page-direction="next"] .bio-page-dot:not(.active) {
+    animation: bioDotCarouselNext 0.24s ease both;
+}
+
+.bio-page-dots[data-page-direction="prev"] .bio-page-dot:not(.active) {
+    animation: bioDotCarouselPrev 0.24s ease both;
+}
+
+.bio-page-dots[data-page-direction="next"] .bio-page-dot.active,
+.bio-page-dots[data-page-direction="prev"] .bio-page-dot.active {
+    animation: bioActiveDotIn 0.24s ease both;
+}
+
+@keyframes bioDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes bioActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+}
+
+@keyframes bioDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
 }
 
 /* Modal */
@@ -733,6 +812,17 @@ button.bio-category-btn:not(.active) svg {
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes bioRowIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -940,6 +1030,27 @@ button.bio-category-btn:not(.active) svg {
     .bio-circle-btn.add {
         align-self: flex-end;
     }
+
+    .bio-table-wrap {
+        margin-inline: -18px;
+        padding-inline: 18px;
+        padding-bottom: 8px;
+    }
+
+    .bio-table th,
+    .bio-table td {
+        padding: 10px 8px;
+        font-size: 0.84rem;
+        line-height: 1.12;
+    }
+
+    .bio-table tr {
+        height: 52px;
+    }
+
+    .bio-table:has(.bio-visitor-date-col) {
+        min-width: 1120px;
+    }
 }
 
 @media (max-width: 640px) {
@@ -964,7 +1075,73 @@ button.bio-category-btn:not(.active) svg {
     .bio-table-card {
         min-height: 320px;
         padding: 14px;
-        border-radius: 22px;
+        border-radius: 12px;
+    }
+
+    .bio-table-wrap {
+        margin-inline: -14px;
+        padding-inline: 14px;
+    }
+
+    .bio-table {
+        min-width: 780px;
+    }
+
+    .bio-table:has(.bio-visitor-date-col) {
+        min-width: 1080px;
+    }
+
+    .bio-table th,
+    .bio-table td {
+        padding: 9px 7px;
+        font-size: 0.78rem;
+    }
+
+    .bio-table th.bio-name-col,
+    .bio-table td.bio-name-col,
+    .bio-table th.bio-visitor-name-col,
+    .bio-table td.bio-visitor-name-col,
+    .bio-table th.bio-purpose-col,
+    .bio-table td.bio-purpose-col,
+    .bio-table th.bio-remarks-col,
+    .bio-table td.bio-remarks-col {
+        padding-left: 10px;
+    }
+
+    .bio-table td.bio-photo-col img {
+        max-width: 86px !important;
+        max-height: 56px !important;
+    }
+
+    .bio-action-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .bio-pagination {
+        gap: 10px;
+        flex-wrap: wrap;
+        padding-top: 14px;
+    }
+
+    .bio-page-dots {
+        order: -1;
+        width: 100%;
+        min-height: 20px;
+        gap: 7px;
+        --dot-size: 11px;
+        --dot-gap: 7px;
+    }
+
+    .bio-page-btn {
+        min-height: 38px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .bio-page-dot {
+        width: 11px;
+        height: 11px;
     }
 
     .bio-filter-select {
@@ -1046,5 +1223,43 @@ button.bio-category-btn:not(.active) svg {
     .bio-modal-row.two-cols {
         grid-template-columns: 1fr;
         gap: 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .bio-table-card {
+        margin-inline: -4px;
+        padding: 10px;
+    }
+
+    .bio-table-wrap {
+        margin-inline: -10px;
+        padding-inline: 10px;
+    }
+
+    .bio-table {
+        min-width: 820px;
+    }
+
+    .bio-table:has(.bio-visitor-date-col) {
+        min-width: 1100px;
+    }
+
+    .bio-table th,
+    .bio-table td {
+        padding-inline: 6px;
+        font-size: 0.74rem;
+    }
+
+    .bio-pagination {
+        align-items: stretch;
+    }
+
+    .bio-page-dots {
+        justify-content: center;
+    }
+
+    .bio-page-btn {
+        flex: 1 1 0;
     }
 }

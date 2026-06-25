@@ -112,6 +112,7 @@ body {
     gap: 12px;
     flex-wrap: wrap;
     margin-left: auto;
+    min-width: 0;
 }
 
 .manager-task-status-buttons {
@@ -356,6 +357,13 @@ body {
     flex: 0 0 auto;
 }
 
+.manager-task-empty {
+    padding: 1.2rem !important;
+    text-align: center !important;
+    color: #5f675f !important;
+    font-weight: 700 !important;
+}
+
 .manager-task-table {
     width: 100%;
     min-width: 0;
@@ -394,6 +402,41 @@ body {
 
 .manager-task-table tbody tr:hover td {
     background: #f6fcf6;
+}
+
+.manager-task-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid rgba(106, 118, 106, 0.16);
+    border-radius: 999px;
+    background: #f4f7f3;
+    color: #485448;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.manager-task-priority-badge.low {
+    border-color: rgba(37, 111, 44, 0.18);
+    background: #edf8ee;
+    color: #256f2c;
+}
+
+.manager-task-priority-badge.medium {
+    border-color: rgba(239, 193, 58, 0.38);
+    background: #fff7d8;
+    color: #7c5a00;
+}
+
+.manager-task-priority-badge.high {
+    border-color: rgba(199, 22, 22, 0.2);
+    background: #fff0f0;
+    color: #c71616;
 }
 
 .manager-task-table td:first-child {
@@ -449,6 +492,11 @@ body {
     display: flex;
     gap: 8px;
     align-items: center;
+    position: relative;
+    --dot-size: 10px;
+    --dot-gap: 8px;
+    min-height: 18px;
+    overflow: visible;
 }
 
 .manager-task-page-dot {
@@ -459,7 +507,13 @@ body {
     background: rgba(255, 255, 255, 0.9);
     cursor: pointer;
     padding: 0;
-    transition: all 0.2s ease;
+    flex: 0 0 auto;
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .manager-task-page-dot:hover {
@@ -470,7 +524,54 @@ body {
 .manager-task-page-dot.active {
     background: linear-gradient(135deg, #63d15f, #57c451);
     border-color: rgba(87, 196, 81, 0.6);
-    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.22);
+    transform: scale(1.08);
+}
+
+.manager-task-page-dots[data-page-direction="next"] .manager-task-page-dot:not(.active) {
+    animation: taskDotCarouselNext 0.24s ease both;
+}
+
+.manager-task-page-dots[data-page-direction="prev"] .manager-task-page-dot:not(.active) {
+    animation: taskDotCarouselPrev 0.24s ease both;
+}
+
+.manager-task-page-dots[data-page-direction="next"] .manager-task-page-dot.active,
+.manager-task-page-dots[data-page-direction="prev"] .manager-task-page-dot.active {
+    animation: taskActiveDotIn 0.24s ease both;
+}
+
+@keyframes taskDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes taskDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes taskActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
 }
 
 .manager-task-photo-link {
@@ -838,11 +939,19 @@ body {
 @media (max-width: 768px) {
     .manager-tasks-topbar {
         align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
     }
 
     .manager-tasks-title {
         text-align: left;
-        font-size: 2.2rem;
+        font-size: clamp(1.65rem, 7vw, 2.1rem);
+        line-height: 1.08;
+    }
+
+    .manager-tasks-divider {
+        margin-inline: 0;
+        margin-top: 10px;
     }
 
     .manager-task-section {
@@ -852,6 +961,7 @@ body {
     .manager-task-section-head {
         margin-bottom: 10px;
         align-items: stretch;
+        padding: 12px;
     }
 
     .manager-task-header-actions,
@@ -865,6 +975,8 @@ body {
     .manager-task-status-btn {
         flex: 1 1 0;
         min-width: 0;
+        padding-inline: 12px;
+        font-size: 0.86rem;
     }
 
     .manager-task-add-btn {
@@ -883,5 +995,196 @@ body {
 
     .manager-task-row-pagination {
         flex-wrap: wrap;
+    }
+
+    .manager-task-card {
+        padding: 12px;
+    }
+
+    .manager-task-table {
+        min-width: 860px;
+    }
+
+    .manager-task-table th,
+    .manager-task-table td {
+        font-size: 0.82rem;
+        padding-inline: 7px;
+    }
+}
+
+@media (max-width: 620px) {
+    .manager-task-section-head {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+    }
+
+    .manager-task-status-buttons {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .manager-task-header-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .manager-task-filter-select {
+        min-width: 0;
+        width: 100%;
+        height: 38px;
+        font-size: 0.82rem;
+    }
+
+    .manager-task-add-btn {
+        grid-column: 2;
+        grid-row: 3;
+        width: 38px;
+        height: 38px;
+        justify-self: end;
+    }
+
+    .manager-task-card {
+        overflow: hidden;
+        padding: 10px;
+        border-radius: 12px;
+    }
+
+    .manager-task-table-wrap {
+        margin-inline: -10px;
+        padding-inline: 10px;
+        padding-bottom: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .manager-task-table {
+        width: 100%;
+        min-width: 980px;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+
+    .manager-task-table th,
+    .manager-task-table td {
+        padding: 9px 7px;
+        font-size: 0.78rem;
+        line-height: 1.12;
+    }
+
+    .manager-task-table td {
+        height: 54px;
+        text-align: center;
+    }
+
+    .manager-task-priority-badge {
+        min-width: 72px;
+        height: 26px;
+        padding-inline: 9px;
+        font-size: 0.72rem;
+    }
+
+    .manager-task-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .manager-task-table td::before {
+        content: none;
+    }
+
+    .manager-task-photo-link,
+    .manager-task-verify-btn {
+        justify-content: center;
+    }
+
+    .manager-task-photo-link img {
+        max-width: 96px !important;
+        max-height: 64px !important;
+    }
+
+    .manager-task-empty {
+        display: block !important;
+        text-align: center !important;
+    }
+
+    .manager-task-empty::before {
+        content: none !important;
+    }
+
+    .manager-task-row-pagination {
+        gap: 10px;
+    }
+
+    .manager-task-page-btn {
+        min-height: 38px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .manager-task-page-dots {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 420px) {
+    .manager-task-section-head,
+    .manager-task-card {
+        margin-inline: -4px;
+    }
+
+    .manager-task-table {
+        min-width: 1040px;
+    }
+
+    .manager-task-table th,
+    .manager-task-table td {
+        padding-inline: 6px;
+        font-size: 0.74rem;
+    }
+
+    .manager-task-row-pagination {
+        align-items: stretch;
+    }
+
+    .manager-task-page-dots {
+        order: -1;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .manager-task-page-btn {
+        flex: 1 1 0;
+    }
+
+    .manager-task-modal-backdrop {
+        padding: 12px;
+    }
+
+    .manager-task-modal-header h2 {
+        font-size: 1.45rem;
+    }
+
+    .manager-task-confirm-modal,
+    .manager-task-form-modal {
+        padding: 18px;
+        border-radius: 20px;
+    }
+
+    .manager-task-confirm-actions {
+        align-items: stretch;
+    }
+
+    .manager-task-btn {
+        width: 100%;
     }
 }

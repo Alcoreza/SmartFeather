@@ -543,6 +543,139 @@ body.modal-open {
     }
 }
 
+.profile-page-main,
+.profile-page-shell,
+.profile-page-hero-copy,
+.profile-page-layout,
+.profile-page-side-stack,
+.profile-page-panel {
+    min-width: 0;
+}
+
+.profile-page-shell {
+    width: 100%;
+}
+
+.profile-page-user-name,
+.profile-page-user-meta,
+.profile-page-field input[readonly] {
+    overflow-wrap: anywhere;
+}
+
+.profile-page-field input[readonly] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-edit-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    .profile-page-hero {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .profile-page-hero-actions {
+        grid-column: 1 / -1;
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+
+    .profile-page-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-page-form-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .profile-page-field {
+        padding: 9px 0;
+    }
+
+    .profile-page-field input[readonly] {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .profile-edit-modal-backdrop {
+        align-items: flex-start;
+        padding: 16px;
+        overflow-y: auto;
+    }
+
+    .profile-edit-modal-card {
+        margin-block: auto;
+        max-height: none;
+        padding: 20px;
+    }
+
+    .profile-edit-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-edit-actions {
+        justify-content: stretch;
+    }
+
+    .profile-edit-btn {
+        flex: 1 1 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .profile-page-main {
+        padding: 16px 12px 24px;
+    }
+
+    .profile-page-hero {
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .profile-page-hero-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        font-size: 1.2rem;
+    }
+
+    .profile-page-user-name {
+        font-size: 1.38rem;
+    }
+
+    .profile-page-user-meta {
+        font-size: 0.98rem;
+    }
+
+    .profile-page-hero-actions,
+    .profile-page-btn.edit-btn {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .profile-page-btn.edit-btn {
+        min-width: 0;
+    }
+
+    .profile-page-panel {
+        padding: 16px;
+    }
+
+    .profile-edit-actions {
+        flex-direction: column-reverse;
+    }
+
+    .profile-edit-btn {
+        width: 100%;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .profile-page-hero,
     .profile-page-layout,

@@ -336,17 +336,25 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: 18px;
+    overflow: visible;
 }
 
 .record-page-dot {
     width: 10px;
     height: 10px;
+    flex: 0 0 auto;
     padding: 0;
     border: 1px solid rgba(87, 196, 81, 0.4);
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.9);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .record-page-dot:hover {
@@ -357,7 +365,54 @@
 .record-page-dot.active {
     background: linear-gradient(135deg, #63d15f, #57c451);
     border-color: rgba(87, 196, 81, 0.6);
-    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.2);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.22);
+    transform: scale(1.08);
+}
+
+.record-page-dots[data-page-direction="next"] .record-page-dot:not(.active) {
+    animation: recordHouseDotCarouselNext 0.24s ease both;
+}
+
+.record-page-dots[data-page-direction="prev"] .record-page-dot:not(.active) {
+    animation: recordHouseDotCarouselPrev 0.24s ease both;
+}
+
+.record-page-dots[data-page-direction="next"] .record-page-dot.active,
+.record-page-dots[data-page-direction="prev"] .record-page-dot.active {
+    animation: recordHouseActiveDotIn 0.24s ease both;
+}
+
+@keyframes recordHouseDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes recordHouseDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes recordHouseActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
 }
 
 .record-house-topbar,

@@ -321,6 +321,19 @@ body {
     will-change: transform, background;
 }
 
+.admin-sensor-value {
+    font-weight: 800;
+    color: var(--admin-text-main);
+}
+
+.admin-sensor-timestamp {
+    margin-top: 0.25rem;
+    color: var(--admin-text-soft);
+    font-size: 0.76rem;
+    font-weight: 650;
+    line-height: 1.25;
+}
+
 .admin-sensor-table td:first-child {
     border-top-left-radius: 16px;
     border-bottom-left-radius: 16px;
@@ -872,13 +885,19 @@ body {
 }
 
 @media (max-width: 992px) {
+    .admin-sensors-toolbar {
+        justify-content: flex-start;
+    }
+
     .admin-sensor-section-head {
         grid-template-columns: 1fr;
     }
 
     .admin-sensor-tools {
         justify-self: start;
+        width: 100%;
     }
+
     .admin-sensor-form-grid {
         grid-template-columns: 1fr;
     }
@@ -890,9 +909,18 @@ body {
 }
 
 @media (max-width: 768px) {
+    .admin-sensors-topbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
     .admin-sensors-title {
         text-align: left;
         font-size: 2.15rem;
+    }
+
+    .admin-sensors-divider {
+        margin-inline: 0;
     }
 
     .admin-sensor-section {
@@ -900,8 +928,29 @@ body {
         border-radius: 24px;
     }
 
-    .admin-sensor-sort {
+    .admin-sensor-sort,
+    .admin-sensor-status-filter {
         width: 100%;
+    }
+
+    .admin-sensor-table {
+        min-width: 700px;
+    }
+
+    .admin-sensor-table th,
+    .admin-sensor-table td {
+        padding-inline: 10px;
+        font-size: 0.84rem;
+    }
+
+    .admin-sensor-status-pill {
+        min-width: 104px;
+        font-size: 0.76rem;
+    }
+
+    .admin-sensor-actions {
+        min-width: 132px;
+        gap: 8px;
     }
 
     .admin-sensor-modal-grid {
@@ -918,6 +967,208 @@ body {
     .admin-sensor-form-modal {
         padding: 20px 18px 22px;
         border-radius: 24px;
+    }
+}
+
+@media (max-width: 560px) {
+    .admin-sensors-title {
+        font-size: clamp(1.55rem, 8vw, 1.9rem);
+        line-height: 1.05;
+    }
+
+    .admin-sensors-toolbar {
+        margin-bottom: 12px;
+    }
+
+    .admin-sensor-section {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .admin-sensor-section-head {
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .admin-sensor-section-title {
+        width: 100%;
+        font-size: 0.98rem;
+    }
+
+    .admin-sensor-tools {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+    }
+
+    .admin-sensor-status-filter {
+        min-width: 0;
+        height: 38px;
+        font-size: 0.82rem;
+    }
+
+    .admin-sensor-threshold-btn {
+        width: 38px;
+        height: 38px;
+    }
+
+    .admin-sensor-table-wrap {
+        overflow: visible;
+        border-radius: 0;
+    }
+
+    .admin-sensor-table,
+    .admin-sensor-table thead,
+    .admin-sensor-table tbody,
+    .admin-sensor-table tr,
+    .admin-sensor-table td {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-sensor-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .admin-sensor-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .admin-sensor-table tbody {
+        display: grid;
+        gap: 0.8rem;
+    }
+
+    .admin-sensor-table tbody tr {
+        display: grid;
+        overflow: hidden;
+        border: 1px solid rgba(10, 51, 27, 0.08);
+        border-radius: 14px;
+        background: #ffffff;
+        filter: none;
+    }
+
+    .admin-sensor-table td {
+        display: grid;
+        grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+        align-items: center;
+        padding: 0.7rem 0.85rem;
+        border-bottom: 1px solid rgba(10, 51, 27, 0.06);
+        border-radius: 0;
+        background: #ffffff;
+        text-align: right;
+        font-size: 0.86rem;
+        box-shadow: none;
+    }
+
+    .admin-sensor-table td:first-child,
+    .admin-sensor-table td:last-child {
+        border-radius: 0;
+    }
+
+    .admin-sensor-table td:last-child {
+        border-bottom: 0;
+    }
+
+    .admin-sensor-table td::before {
+        color: var(--admin-text-soft);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    .admin-sensor-table td:nth-child(1)::before {
+        content: "Sensor";
+    }
+
+    .admin-sensor-table td:nth-child(2)::before {
+        content: "House";
+    }
+
+    .admin-sensor-table td:nth-child(3)::before {
+        content: "Pen";
+    }
+
+    .admin-sensor-table td:nth-child(4)::before {
+        content: "Value";
+    }
+
+    .admin-sensor-table td:nth-child(5)::before {
+        content: "Status";
+    }
+
+    .admin-sensor-table td:nth-child(6)::before {
+        content: "Actions";
+    }
+
+    .admin-sensor-actions {
+        justify-content: flex-end;
+        min-width: 0;
+    }
+
+    .admin-sensor-empty {
+        border-radius: 14px;
+        padding: 1rem;
+    }
+
+    .admin-sensor-filter-empty td,
+    .admin-sensor-table tr:not([data-id]) td {
+        display: block;
+        text-align: center;
+    }
+
+    .admin-sensor-filter-empty td::before,
+    .admin-sensor-table tr:not([data-id]) td::before {
+        content: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .admin-sensor-section {
+        margin-inline: -4px;
+        padding: 10px;
+    }
+
+    .admin-sensor-table td {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+        text-align: left;
+    }
+
+    .admin-sensor-actions {
+        justify-content: flex-start;
+    }
+
+    .admin-sensor-modal-backdrop,
+    .profile-modal-backdrop {
+        padding: 12px;
+    }
+
+    .admin-sensor-modal-header h2,
+    .profile-modal-header h2 {
+        font-size: 1.45rem;
+    }
+
+    .admin-sensor-modal-body {
+        padding: 16px;
+    }
+
+    .admin-sensor-modal-actions,
+    .profile-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-sensor-btn,
+    .profile-btn {
+        width: 100%;
     }
 }
 

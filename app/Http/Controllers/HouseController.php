@@ -799,7 +799,8 @@ class HouseController extends Controller
             return 0;
         }
 
-        $percent = ((float) $value / $containerHeightInches) * 100;
+        $remainingInches = $containerHeightInches - (float) $value;
+        $percent = ($remainingInches / $containerHeightInches) * 100;
 
         return round(max(0, min(100, $percent)), 1);
     }

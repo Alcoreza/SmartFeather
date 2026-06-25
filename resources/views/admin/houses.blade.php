@@ -28,7 +28,6 @@
                 <div class="houses-header">
                     <div>
                         <h1>Farm Management</h1>
-                        <p class="houses-subtitle">Manage each poultry house, select its pens, and update flock capacity, population, batch dates, hatch counts, and mortality.</p>
                     </div>
                 </div>
 

@@ -23,7 +23,6 @@
             <div class="admin-topbar">
                 <div>
                     <h1 class="admin-page-title">Dashboard</h1>
-                    <p class="admin-page-subtitle">Monitor operations, live farm conditions, and critical alerts.</p>
                 </div>
             </div>
 

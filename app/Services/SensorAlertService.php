@@ -233,7 +233,9 @@ class SensorAlertService
             return 0;
         }
 
-        return max(0, ($rawInches / $containerHeightInches) * 100);
+        $remainingInches = $containerHeightInches - $rawInches;
+
+        return max(0, min(100, ($remainingInches / $containerHeightInches) * 100));
     }
 
     private function buildAlert($reading, string $alertType, float $thresholdValue): array

@@ -92,41 +92,39 @@
                     </div>
 
                     <aside class="houses-side-column" id="flockBatchPanel">
-                    <article class="farm-panel cycle-panel">
-                        <div class="section-heading">
-                            <h2>Flock Batch</h2>
-                        </div>
-
-                        <div class="cycle-stack">
-                            <div class="status-card">
-                                <span class="status-label">Pen Status</span>
-                                <span class="chip chip-gray" id="houseStatus">Loading...</span>
+                        <article class="farm-panel cycle-panel">
+                            <div class="section-heading">
+                                <h2>Flock Batch</h2>
                             </div>
 
-                            <div class="status-card">
-                                <span class="status-label">Batch ID</span>
-                                <span class="chip chip-yellow" id="houseBatch">Loading...</span>
+                            <div class="cycle-stack">
+                                <div class="status-card">
+                                    <span class="status-label">Pen Status</span>
+                                    <span class="chip chip-gray" id="houseStatus">Loading...</span>
+                                </div>
+
+                                <div class="status-card">
+                                    <span class="status-label">Batch ID</span>
+                                    <span class="chip chip-yellow" id="houseBatch">Loading...</span>
+                                </div>
+
+                                <div class="status-card">
+                                    <span class="status-label">Selected Pen</span>
+                                    <select class="pen-select" id="housePen">
+                                        <option value="">Loading pens...</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="status-card">
-                                <span class="status-label">Selected Pen</span>
-                                <select class="pen-select" id="housePen">
-                                    <option value="">Loading pens...</option>
-                                </select>
+                            <div class="houses-actions">
+                                <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">Edit</button>
+                                <a href="{{ route('admin.houses.record-house') }}" class="toolbar-btn btn-file" title="Flock Batch Records">
+                                    Records
+                                </a>
+                                <button type="button" class="toolbar-btn btn-archive" id="openArchiveHouseModal">Archive</button>
+                                <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
                             </div>
-                        </div>
-
-                        <div class="houses-actions">
-                            <button type="button" class="toolbar-btn btn-edit" id="openEditHouseModal">Edit</button>
-                            <a href="{{ route('admin.houses.record-house') }}"
-                            class="toolbar-btn btn-file"
-                            title="Flock Batch Records">
-                            Records
-                            </a>
-                            <button type="button" class="toolbar-btn btn-archive" id="openArchiveHouseModal">Archive</button>
-                            <button type="button" class="toolbar-btn btn-end" id="openEndBatchModal">End Batch</button>
-                        </div>
-                    </article>
+                        </article>
                     </aside>
                 </div>
 

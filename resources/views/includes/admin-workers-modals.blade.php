@@ -81,13 +81,12 @@
                 </div>
             </div>
 
-            <div class="admin-worker-field" id="editPasswordField">
-                <button type="button" id="editPasswordBtn" class="admin-worker-btn save">Edit Password</button>
-            </div>
-
             <div class="admin-worker-modal-actions">
-                <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="workerModal">Cancel</button>
-                <button type="submit" class="admin-worker-btn save">Save</button>
+                <button type="button" id="editPasswordBtn" class="admin-worker-btn password">Edit Password</button>
+                <div class="admin-worker-modal-action-group">
+                    <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="workerModal">Cancel</button>
+                    <button type="submit" class="admin-worker-btn save">Save</button>
+                </div>
             </div>
         </form>
     </div>

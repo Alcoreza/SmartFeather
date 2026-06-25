@@ -42,7 +42,10 @@
                     </div>
 
                     <div class="admin-profile-hero-copy">
-                        <h1 class="admin-profile-page-title">Profile</h1>
+                        <p class="admin-profile-page-user-name">
+                            {{ trim(($user->FirstName ?? '') . ' ' . ($user->LastName ?? '')) ?: 'User profile' }}
+                        </p>
+                        <p class="admin-profile-page-user-meta">{{ $user->Role ?? 'Admin' }}</p>
                     </div>
 
                     <div class="admin-profile-hero-actions">

@@ -18,18 +18,41 @@ class BiosecurityLogController extends Controller
     /**
      * Get all biosecurity logs grouped by type
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $groupedLogs = [
-                'Cleaning' => CleaningLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatCleaningLog($log)),
-                'Personnel Biosecurity Logs' => $this->formatPersonnelBiosecurityLogs(
+            $requestedCategories = $this->getRequestedLogCategories($request);
+            $groupedLogs = [];
+
+            if (in_array('Personnel Biosecurity Logs', $requestedCategories, true)) {
+                $groupedLogs['Personnel Biosecurity Logs'] = $this->formatPersonnelBiosecurityLogs(
                     PersonnelEntryLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
-                ),
-                'Visitors' => VisitorLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatVisitorLog($log)),
-                'Personnel Entry Logs' => PersonnelEntryLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatPersonnelEntryLog($log)),
-                'Weight Sampling' => WeightSamplingLog::orderBy('created_at', 'desc')->get()->map(fn($log) => $this->formatWeightSamplingLog($log)),
-            ];
+                );
+            }
+
+            if (in_array('Visitors', $requestedCategories, true)) {
+                $groupedLogs['Visitors'] = VisitorLog::orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(fn($log) => $this->formatVisitorLog($log));
+            }
+
+            if (in_array('Cleaning', $requestedCategories, true)) {
+                $groupedLogs['Cleaning'] = CleaningLog::orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(fn($log) => $this->formatCleaningLog($log));
+            }
+
+            if (in_array('Personnel Entry Logs', $requestedCategories, true)) {
+                $groupedLogs['Personnel Entry Logs'] = PersonnelEntryLog::orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(fn($log) => $this->formatPersonnelEntryLog($log));
+            }
+
+            if (in_array('Weight Sampling', $requestedCategories, true)) {
+                $groupedLogs['Weight Sampling'] = WeightSamplingLog::orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(fn($log) => $this->formatWeightSamplingLog($log));
+            }
 
             // Get overview stats
             $overview = $this->getOverview();
@@ -45,6 +68,31 @@ class BiosecurityLogController extends Controller
                 'logs' => [],
             ], 500);
         }
+    }
+
+    private function getRequestedLogCategories(Request $request): array
+    {
+        $availableCategories = [
+            'Cleaning',
+            'Personnel Biosecurity Logs',
+            'Visitors',
+            'Personnel Entry Logs',
+            'Weight Sampling',
+        ];
+
+        $categories = $request->query('categories');
+
+        if ($categories === 'all') {
+            return $availableCategories;
+        }
+
+        if (is_string($categories) && trim($categories) !== '') {
+            $requested = array_map('trim', explode(',', $categories));
+
+            return array_values(array_intersect($availableCategories, $requested));
+        }
+
+        return ['Personnel Biosecurity Logs', 'Visitors'];
     }
 
     /**

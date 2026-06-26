@@ -1185,7 +1185,7 @@ function setupBioPaginationResize() {
 
 async function loadBiosecurityLogs() {
     try {
-        const response = await fetch('/api/manager/biosecurity-logs', {
+        const response = await fetch('/api/manager/biosecurity-logs?categories=Personnel%20Biosecurity%20Logs,Visitors', {
             headers: {
                 Accept: 'application/json',
             },

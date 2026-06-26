@@ -74,6 +74,12 @@ let taskLastRowPages = {
     completed: 0,
 };
 let availableHouseOptions = [];
+let taskFormOptions = {
+    houses: [],
+    task_categories: [],
+    priority_levels: [],
+};
+let nextTaskRowUid = 0;
 const addTaskRequiredFields = [
     { name: "worker_name", label: "Assign Flockman" },
     { name: "task_category", label: "Task" },
@@ -122,52 +128,20 @@ async function loadTaskFormOptions() {
             "Select worker",
         );
 
-        const houseSelect = document.getElementById("taskHouseNumber");
-        const penSelect = document.getElementById("taskPenNumber");
+        taskFormOptions = {
+            houses: data.houses || [],
+            task_categories: data.task_categories || [],
+            priority_levels: data.priority_levels || [],
+        };
 
         availableHouseOptions = [...new Set((data.houses || [])
             .map((house) => String(house.number ?? "").trim())
             .filter(Boolean))]
             .sort((a, b) => a.localeCompare(b));
 
-        fillSelect(
-            houseSelect,
-            data.houses || [],
-            "id",
-            "number",
-            "Select house",
-        );
-
-        fillSelect(
-            penSelect,
-            [],
-            "number",
-            "label",
-            "Select pen",
-        );
-
-        if (houseSelect) {
-            houseSelect.onchange = async (event) => {
-                await loadPensForHouse(event.target.value);
-            };
-
-            if (houseSelect.value) {
-                await loadPensForHouse(houseSelect.value);
-            }
-        }
-
-        const taskCategorySelect = document.getElementById("taskCategory");
-        fillSimpleSelect(
-            taskCategorySelect,
-            data.task_categories || [],
-            "Select task category",
-        );
-
-        fillSimpleSelect(
-            document.getElementById("taskPriority"),
-            data.priority_levels || [],
-            "Select priority",
-        );
+        document.querySelectorAll("#tasksContainer .manager-task-row").forEach((row) => {
+            populateTaskRowSelects(row);
+        });
 
         refreshTaskFilterOptions();
         setupTaskSelectPlaceholderState();
@@ -594,14 +568,21 @@ function setupAddTaskModal() {
     const openButton = document.getElementById("openAddTaskModal");
     const form = document.getElementById("addTaskForm");
     const formError = document.getElementById("addTaskFormError");
+    const addRowButton = document.getElementById("addTaskRowBtn");
 
     if (openButton) {
         openButton.addEventListener("click", async () => {
             await loadTaskFormOptions();
+            form?.reset();
+            resetAddTaskRows();
             clearAddTaskFormError();
             openTaskModal("addTaskModal");
         });
     }
+
+    addRowButton?.addEventListener("click", () => {
+        addNewTaskRow({ scrollToRow: true });
+    });
 
     if (form) {
         form.querySelectorAll("input, select, textarea").forEach((field) => {
@@ -615,16 +596,11 @@ function setupAddTaskModal() {
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
 
-            const missingFields = validateAddTaskRequiredFields(form, payload);
-            if (missingFields.length) {
-                showAddTaskFormError(formError, missingFields);
+            const validation = validateAddTaskForm(form, payload);
+            if (!validation.isValid) {
+                showAddTaskFormError(formError, validation.message || validation.missingFields);
                 return;
             }
-
-            const textareaElement = document.getElementById("taskDetailedDescription");
-
-            const date = payload.date_assigned || "";
-            const time = payload.time_assigned || "";
 
             const toLocalDateTimeString = (dateObj) => {
                 const pad = (value) => String(value).padStart(2, "0");
@@ -633,43 +609,41 @@ function setupAddTaskModal() {
             };
 
             const timeAssigned = toLocalDateTimeString(new Date());
-            const finishBy = date && time ? `${date}T${time}:00` : null;
-
-            // Use textarea element value directly if FormData didn't capture it
-            const detailedTaskValue = payload.detailed_task || textareaElement?.value || "";
-
-            const body = {
+            const taskPayloads = validation.tasks.map((task) => ({
                 user_employeeid: payload.worker_name,
-                tasktype: payload.task_category,
-                prioritylevel: payload.priority_level,
-                house_houseid: payload.house_number,
-                pennumber: payload.pen_number,
+                tasktype: task.taskCategory,
+                prioritylevel: task.priorityLevel,
+                house_houseid: task.houseNumber,
+                pennumber: task.penNumber,
                 timeassigned: timeAssigned,
-                finishby: finishBy,
-                detailedtask: detailedTaskValue,
+                finishby: `${task.dateAssigned}T${task.timeAssigned}:00`,
+                detailedtask: task.detailedTask,
                 status: "Pending",
-            };
+            }));
 
             try {
                 const token = document.querySelector('meta[name="csrf-token"]')?.content;
-                const response = await fetch("/api/manager/tasks", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": token || "",
-                    },
-                    body: JSON.stringify(body),
-                });
+                for (const body of taskPayloads) {
+                    const response = await fetch("/api/manager/tasks", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": token || "",
+                        },
+                        body: JSON.stringify(body),
+                    });
 
-                const responseText = await response.text();
+                    const responseText = await response.text();
 
-                if (!response.ok) {
-                    throw new Error(responseText || `Failed to save task (${response.status}).`);
+                    if (!response.ok) {
+                        throw new Error(responseText || `Failed to save task (${response.status}).`);
+                    }
                 }
 
                 await renderManagerTasks();
                 closeTaskModal("addTaskModal");
                 form.reset();
+                resetAddTaskRows();
                 setupTaskSelectPlaceholderState();
             } catch (error) {
                 console.error("Failed to save new task:", error);
@@ -679,26 +653,270 @@ function setupAddTaskModal() {
     }
 }
 
-function validateAddTaskRequiredFields(form, payload) {
-    const missingFields = addTaskRequiredFields.filter(({ name }) => {
-        return !String(payload[name] ?? "").trim();
+function resetAddTaskRows() {
+    const container = document.getElementById("tasksContainer");
+    if (!container) return;
+
+    container.innerHTML = "";
+    nextTaskRowUid = 0;
+    addNewTaskRow();
+}
+
+function addNewTaskRow({ scrollToRow = false } = {}) {
+    const container = document.getElementById("tasksContainer");
+    if (!container) return null;
+
+    const rowUid = nextTaskRowUid;
+    nextTaskRowUid += 1;
+
+    container.insertAdjacentHTML("beforeend", generateTaskRowHtml(rowUid));
+    const row = container.lastElementChild;
+    populateTaskRowSelects(row);
+    bindTaskRowEvents(row);
+    updateTaskCountBadge();
+    setupTaskSelectPlaceholderState();
+
+    if (scrollToRow && row) {
+        row.scrollIntoView({ behavior: "smooth", block: "start" });
+        row.querySelector("select[name='task_category']")?.focus({ preventScroll: true });
+    }
+
+    return row;
+}
+
+function generateTaskRowHtml(rowUid) {
+    return `
+        <div class="manager-task-row" data-task-row="${rowUid}">
+            <div class="manager-task-row-header">
+                <h4 class="manager-task-row-title">Task</h4>
+                <button type="button" class="manager-task-row-remove-btn" aria-label="Remove task">&times;</button>
+            </div>
+
+            <div class="manager-task-row-grid">
+                <div class="manager-task-form-field">
+                    <label>Task*</label>
+                    <select name="task_category" class="task-select-placeholder task-category-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Priority Level*</label>
+                    <select name="priority_level" class="task-select-placeholder task-priority-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>House Number*</label>
+                    <select name="house_number" class="task-select-placeholder task-house-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Pen Number*</label>
+                    <select name="pen_number" class="task-select-placeholder task-pen-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Date to finish*</label>
+                    <input type="date" name="date_assigned" class="task-date-input">
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Time to finish*</label>
+                    <input type="time" name="time_assigned" class="task-time-input">
+                </div>
+                <div class="manager-task-form-field full">
+                    <label>Detailed Task</label>
+                    <textarea name="detailed_task" class="task-detailed-textarea" rows="2" placeholder="Write a clear and specific task instruction here."></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function populateTaskRowSelects(row) {
+    if (!row) return;
+
+    fillSimpleSelect(
+        row.querySelector(".task-category-select"),
+        taskFormOptions.task_categories,
+        "Select task category",
+    );
+
+    fillSimpleSelect(
+        row.querySelector(".task-priority-select"),
+        taskFormOptions.priority_levels,
+        "Select priority",
+    );
+
+    fillSelect(
+        row.querySelector(".task-house-select"),
+        taskFormOptions.houses,
+        "id",
+        "number",
+        "Select house",
+    );
+
+    fillSelect(
+        row.querySelector(".task-pen-select"),
+        [],
+        "number",
+        "label",
+        "Select pen",
+    );
+}
+
+function bindTaskRowEvents(row) {
+    if (!row) return;
+
+    row.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => clearTaskFieldError(field));
+        field.addEventListener("change", () => clearTaskFieldError(field));
     });
+
+    row.querySelector(".task-house-select")?.addEventListener("change", async () => {
+        await loadPensForTaskRow(row);
+    });
+
+    row.querySelector(".task-category-select")?.addEventListener("change", async () => {
+        await loadPensForTaskRow(row);
+    });
+
+    row.querySelector(".manager-task-row-remove-btn")?.addEventListener("click", () => {
+        if (document.querySelectorAll("#tasksContainer .manager-task-row").length <= 1) {
+            return;
+        }
+
+        row.remove();
+        updateTaskCountBadge();
+        clearAddTaskFormError();
+    });
+}
+
+async function loadPensForTaskRow(row) {
+    const houseSelect = row.querySelector(".task-house-select");
+    const penSelect = row.querySelector(".task-pen-select");
+    const taskType = row.querySelector(".task-category-select")?.value || "";
+    if (!penSelect) return;
+
+    if (!houseSelect?.value) {
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams();
+        if (taskType) {
+            params.set("task_type", taskType);
+        }
+        const query = params.toString() ? `?${params.toString()}` : "";
+        const response = await fetch(`/api/manager/tasks/houses/${houseSelect.value}/pens${query}`);
+        const data = await response.json();
+        fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error("Failed to load pens for selected house.", error);
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    }
+}
+
+function updateTaskCountBadge() {
+    const rows = [...document.querySelectorAll("#tasksContainer .manager-task-row")];
+    const badge = document.getElementById("taskCountBadge");
+
+    rows.forEach((row, index) => {
+        const title = row.querySelector(".manager-task-row-title");
+        if (title) {
+            title.textContent = `Task ${index + 1}`;
+        }
+    });
+
+    if (badge) {
+        badge.textContent = rows.length;
+    }
+}
+
+function validateAddTaskForm(form, payload) {
+    const missingFields = [];
+    const tasks = [];
 
     clearAddTaskRequiredFieldHighlights(false);
 
-    missingFields.forEach(({ name }) => {
-        const field = form.elements[name];
-        field?.closest(".manager-task-form-field")?.classList.add("has-error");
+    if (!String(payload.worker_name ?? "").trim()) {
+        missingFields.push({ name: "worker_name", label: "Assign Flockman" });
+        form.elements.worker_name?.closest(".manager-task-form-field")?.classList.add("has-error");
+    }
+
+    const rows = [...document.querySelectorAll("#tasksContainer .manager-task-row")];
+    let previousFinishAt = null;
+    let hasSequenceErrors = false;
+
+    rows.forEach((row) => {
+        const values = getTaskRowValues(row);
+
+        Object.entries({
+            task_category: values.taskCategory,
+            priority_level: values.priorityLevel,
+            house_number: values.houseNumber,
+            pen_number: values.penNumber,
+            date_assigned: values.dateAssigned,
+            time_assigned: values.timeAssigned,
+        }).forEach(([name, value]) => {
+            if (!String(value ?? "").trim()) {
+                missingFields.push({ name });
+                row.querySelector(`[name="${name}"]`)?.closest(".manager-task-form-field")?.classList.add("has-error");
+            }
+        });
+
+        if (values.dateAssigned && values.timeAssigned) {
+            const finishAt = new Date(`${values.dateAssigned}T${values.timeAssigned}:00`);
+            if (previousFinishAt && finishAt <= previousFinishAt) {
+                hasSequenceErrors = true;
+                row.querySelector("[name='date_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+                row.querySelector("[name='time_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+            }
+            previousFinishAt = finishAt;
+        }
+
+        tasks.push(values);
     });
 
     if (missingFields.length) {
         shouldTrackAddTaskRequiredHighlights = true;
-        form.elements[missingFields[0].name]?.focus();
+        const firstMissing = form.querySelector(`[name="${missingFields[0].name}"]`);
+        firstMissing?.focus();
     } else {
         shouldTrackAddTaskRequiredHighlights = false;
     }
 
-    return missingFields;
+    if (missingFields.length) {
+        return {
+            isValid: false,
+            missingFields,
+            tasks,
+        };
+    }
+
+    if (hasSequenceErrors) {
+        return {
+            isValid: false,
+            missingFields,
+            tasks,
+            message: "Each succeeding task must finish later than the task before it.",
+        };
+    }
+
+    return {
+        isValid: missingFields.length === 0,
+        missingFields,
+        tasks,
+    };
+}
+
+function getTaskRowValues(row) {
+    return {
+        taskCategory: row.querySelector("[name='task_category']")?.value || "",
+        priorityLevel: row.querySelector("[name='priority_level']")?.value || "",
+        houseNumber: row.querySelector("[name='house_number']")?.value || "",
+        penNumber: row.querySelector("[name='pen_number']")?.value || "",
+        dateAssigned: row.querySelector("[name='date_assigned']")?.value || "",
+        timeAssigned: row.querySelector("[name='time_assigned']")?.value || "",
+        detailedTask: row.querySelector("[name='detailed_task']")?.value || "",
+    };
 }
 
 function showAddTaskFormError(formError, messageOrFields) {

@@ -39,6 +39,7 @@ const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
         { name: 'ppe', label: 'PPE' },
         { name: 'sanitation', label: 'Sanitation' },
         { name: 'monitored_by', label: 'Monitored By' },
+        { name: 'photo_data', label: 'Visitor Photo' },
     ],
 };
 
@@ -532,6 +533,8 @@ function closeVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (cameraModal) {
         cameraModal.classList.remove('show');
@@ -546,6 +549,16 @@ function closeVisitorCameraModal() {
     if (snapshot) {
         snapshot.style.display = 'none';
     }
+    if (video) {
+        video.style.display = 'block';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+    }
+    if (useButton) {
+        useButton.disabled = true;
+    }
 
     visitorPhotoDataUrl = null;
     visitorCameraStream = null;
@@ -555,6 +568,7 @@ async function openVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
     const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (!cameraModal || !video || !snapshot || !useButton) return;
@@ -568,7 +582,12 @@ async function openVisitorCameraModal() {
         visitorCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = visitorCameraStream;
         video.play();
+        video.style.display = 'block';
         snapshot.style.display = 'none';
+        if (captureButton) {
+            captureButton.textContent = 'Capture';
+            captureButton.dataset.mode = 'capture';
+        }
         useButton.disabled = true;
         cameraModal.classList.add('show');
     } catch (error) {
@@ -581,9 +600,21 @@ function captureVisitorPhoto() {
     const video = document.getElementById('visitorCameraVideo');
     const canvas = document.getElementById('visitorCameraCanvas');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
     const useButton = document.getElementById('useVisitorPhotoBtn');
 
-    if (!video || !canvas || !snapshot || !useButton) return;
+    if (!video || !canvas || !snapshot || !captureButton || !useButton) return;
+
+    if (captureButton.dataset.mode === 'recapture') {
+        visitorPhotoDataUrl = null;
+        snapshot.style.display = 'none';
+        video.style.display = 'block';
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+        useButton.disabled = true;
+        video.play();
+        return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -594,6 +625,9 @@ function captureVisitorPhoto() {
     visitorPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     snapshot.src = visitorPhotoDataUrl;
     snapshot.style.display = 'block';
+    video.style.display = 'none';
+    captureButton.textContent = 'Recapture';
+    captureButton.dataset.mode = 'recapture';
     useButton.disabled = false;
 }
 
@@ -677,6 +711,12 @@ function attachVisitorPhoto() {
         preview.style.display = 'block';
     }
     if (status) status.textContent = '';
+    preview?.closest('.bio-field')?.classList.remove('has-error');
+
+    const form = document.getElementById('addBioForm');
+    if (!form?.querySelector('.bio-field.has-error')) {
+        clearAddBioFormError();
+    }
 
     // close camera modal but keep photo data for save
     closeVisitorCameraModal();
@@ -817,11 +857,15 @@ function setupAddModal() {
         clearAddBioFormError();
 
         const photoInput = document.getElementById('add_photo_url');
+        const photoDataInput = document.getElementById('add_photo_data');
         const photoPreview = document.getElementById('add_photo_preview');
         const photoStatus = document.getElementById('add_photo_status');
 
         if (photoInput) {
             photoInput.value = '';
+        }
+        if (photoDataInput) {
+            photoDataInput.value = '';
         }
         if (photoPreview) {
             photoPreview.style.display = 'none';
@@ -1059,6 +1103,22 @@ function markMissingAddBioRequiredFields(missingFields) {
     missingFields.forEach((field) => {
         getAddBioRequiredFieldWrapper(field)?.classList.add('has-error');
     });
+
+    const firstMissingField = missingFields[0];
+    if (firstMissingField?.name === 'photo_data') {
+        document.getElementById('add_open_camera_btn')?.focus();
+        return;
+    }
+
+    const form = document.getElementById('addBioForm');
+    form?.elements[firstMissingField?.name]?.focus();
+}
+
+function syncAddBioButtonVisibility() {
+    const openBtn = document.getElementById('openAddBioModal');
+    if (!openBtn) return;
+
+    openBtn.hidden = state.selectedCategory !== 'Visitors';
 }
 
 function bindEvents() {
@@ -1073,9 +1133,12 @@ function bindEvents() {
             categoryButtons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
+            syncAddBioButtonVisibility();
             renderCurrentTable();
         });
     });
+
+    syncAddBioButtonVisibility();
 
     // Add event listeners for search and date filters
     const nameSearchInput = document.getElementById('bioNameSearch');

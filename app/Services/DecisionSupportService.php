@@ -9,6 +9,7 @@ use App\Models\SensorReading;
 use App\Models\Sensor;
 use App\Models\Inventory;
 use App\Models\Pen;
+use App\Models\PopulationRecord;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -159,7 +160,7 @@ class DecisionSupportService
                             $existingRec->update(['status' => 'archived']);
                         }
 
-                        Log::info("Decision support skipped for house {$house->id}, pen {$pen->id}: no current sensor readings.");
+                        Log::info("Decision support skipped for house {$house->id}, pen {$pen->id}: no current sensor or mortality evidence.");
                         continue;
                     }
 
@@ -257,6 +258,7 @@ class DecisionSupportService
             'timestamp' => now()->toIso8601String(),
             'sensors' => $sensorData,
             'flock' => $this->currentFlockSnapshot($house, $pen),
+            'mortality' => $this->currentMortalitySnapshot($house, $pen),
             'environment' => [
                 'temperature_celsius' => $this->currentHouseTemperature($sensorData),
                 'ammonia_ppm' => $this->currentHouseAmmonia($sensorData),
@@ -281,6 +283,7 @@ class DecisionSupportService
         $decisions = [];
         $thermalDecision = $this->evaluateBroilerThermalCondition($dataSnapshot);
         $ammoniaDecision = $this->evaluateBroilerAmmoniaCondition($dataSnapshot);
+        $mortalityDecision = $this->evaluateMortalityCondition($dataSnapshot);
 
         if ($thermalDecision) {
             $decisions[] = $thermalDecision;
@@ -288,6 +291,10 @@ class DecisionSupportService
 
         if ($ammoniaDecision) {
             $decisions[] = $ammoniaDecision;
+        }
+
+        if ($mortalityDecision) {
+            $decisions[] = $mortalityDecision;
         }
 
         foreach ($this->evaluateResourceLevels($dataSnapshot) as $resourceDecision) {
@@ -320,15 +327,18 @@ class DecisionSupportService
         $flock = $dataSnapshot['flock'];
         $thermal = $dataSnapshot['thermal_status'] ?? [];
         $ammonia = $dataSnapshot['ammonia_status'] ?? [];
+        $mortality = $dataSnapshot['mortality'] ?? [];
         $feed = $dataSnapshot['resources']['feed'] ?? [];
         $water = $dataSnapshot['resources']['water'] ?? [];
         $pen = $dataSnapshot['pen'] ?? null;
         $penName = $pen['name'] ?? 'Unassigned Pen';
 
-        $prompt = "You are an expert AI Decision Support System for commercial broiler poultry farms operating in tropical climates like the Philippines. Analyze the supplied, already-calculated flock, temperature, and ammonia facts and produce immediate operational guidance for the farm manager.\n\n";
+        $prompt = "You are an expert AI Decision Support System thinking like an experienced broiler poultry farm owner in Lucban, Quezon, Philippines. Analyze the supplied, already-calculated flock, temperature, ammonia, feeder, drinker, and mortality facts and produce immediate operational guidance for the farm manager.\n\n";
         $prompt .= "**Farm Context:**\n";
         $prompt .= "- House: {$dataSnapshot['house_name']}\n";
         $prompt .= "- Pen: {$penName}\n";
+        $prompt .= "- Location: Lucban, Quezon, Philippines\n";
+        $prompt .= "- Available equipment: heaters for warming poultry houses/pens and fans for cooling/ventilation\n";
         $prompt .= "- Current Date: {$flock['current_date']}\n";
         $prompt .= "- Placement Date: " . ($flock['placement_date'] ?? 'No active placement date') . "\n";
         $prompt .= "- Flock Age: " . ($flock['age_days'] ?? 'Unknown') . " Days Old (" . ($flock['week_label'] ?? 'Unknown Week') . ")\n";
@@ -344,6 +354,7 @@ class DecisionSupportService
         $prompt .= "- Thermal Condition: " . ($thermal['condition'] ?? 'Unknown') . "\n";
         $prompt .= "- Target Range: " . ($thermal['target_range'] ?? 'Unknown') . "\n";
         $prompt .= "- Ammonia Status: " . $this->formatAmmoniaStatus($dataSnapshot['environment']['ammonia_ppm'] ?? null, $ammonia['condition'] ?? 'Unknown') . "\n";
+        $prompt .= "- Mortality Status: " . $this->formatMortalityStatus($mortality) . "\n";
         $prompt .= "- House Type: tropical broiler house\n\n";
 
         $prompt .= "**Rule-Based Decisions:**\n";
@@ -351,7 +362,7 @@ class DecisionSupportService
             $prompt .= "- Category: {$decision['category']}; Severity: {$decision['severity']}; Rule: {$decision['rule']}\n";
             $prompt .= "  Finding: {$decision['finding']}\n";
             $prompt .= "  Evidence: {$decision['evidence']}\n";
-            $prompt .= "  Required action: {$decision['action']}\n";
+            $prompt .= "  Fallback action if AI generation fails: {$decision['action']}\n";
         }
 
         $prompt .= "**Instructions:**\n";
@@ -361,15 +372,32 @@ class DecisionSupportService
         $prompt .= "   - HIGH Water Use + LOW/DROPPING Feed Use = Indicates HEAT STRESS.\n";
         $prompt .= "   - LOW Water Use + LOW Feed Use = Indicates COLD STRESS or HIGH AMMONIA LEVELS.\n";
         $prompt .= "   - RAPID WATER DROP + WET BEDDING = Predicts an impending AMMONIA SPIKE. If wet bedding is not measured, tell the farmer to physically inspect bedding and drinker equipment.\n";
-        $prompt .= "4. Use the Final Output Contract below for section names and ordering.\n";
+        $prompt .= "4. If Mortality Status is Warning or Critical, explain the likely meaning using only the supplied temperature, ammonia, feeder, drinker, flock age, and mortality facts, then include immediate actions for carcass removal, bird observation, environment checks, and escalation if mortality continues.\n";
+        $prompt .= "5. You are responsible for writing the Immediate Actions section. Create practical next-step actions from the facts as an experienced Lucban, Quezon poultry farm owner would. Use heaters when cold stress is present, fans/curtains/ventilation when heat stress or ammonia risk is present, and physical pen inspection when mortality is elevated.\n";
+        $prompt .= "6. Treat the fallback actions above as backup guidance only. You may use, combine, or rewrite them, but do not simply copy every fallback action word-for-word unless it is the clearest action.\n";
+        $prompt .= "7. Use the Final Output Contract below for section names and ordering.\n";
         $prompt .= "   2. **🚨 EMERGENCY ACTION REQUIRED (Only show this if condition is STRESS, HIGH RISK, or DANGER):**\n";
-        $prompt .= "5. Do not mention OpenAI, prompts, or uncertainty. Do not invent unavailable data.\n";
+        $prompt .= "8. Do not mention OpenAI, prompts, fallback actions, or uncertainty. Do not invent unavailable data.\n";
         $prompt .= "\n**Final Output Contract - overrides the legacy section list above:**\n";
         $prompt .= "1. **REFILL ALERTS (Only display if levels breach or near system-configured thresholds):**\n";
-        $prompt .= "2. **Cross-Environmental Diagnostics (Temperature & Ammonia Analysis):**\n";
+        $prompt .= "2. **Cross-Environmental Diagnostics (Temperature, Ammonia & Mortality Analysis):**\n";
         $prompt .= "3. **Immediate Actions (Next 5-30 Minutes):**\n";
         $prompt .= "Omit the REFILL ALERTS section entirely when feeder and drinker statuses are both normal. Refill alerts must name the specific resource and reference the breached configured threshold directly. Immediate actions must be 3-4 short, bolded physical steps involving feeding, watering, or environmental correction.\n";
         $prompt .= "When displaying ammonia, write it as [value]ppm - [condition], for example 11.7ppm - Moderate Risk. If ammonia has no reading, write No Reading.\n";
+        $prompt .= "\n**Strict Website Display Format:**\n";
+        $prompt .= "The website converts Cross-Environmental Diagnostics into one current-readings paragraph, then displays Immediate Actions as action rows. To match the website layout, do not output emergency headings, extra headings, summary paragraphs, introductions, conclusions, or explanations outside the section rows below.\n";
+        $prompt .= "Return only this format:\n";
+        $prompt .= "1. **REFILL ALERTS (Only display if levels breach or near system-configured thresholds):**\n";
+        $prompt .= "   - [Only if needed: resource name, current level, threshold, and immediate refill/access step]\n";
+        $prompt .= "2. **Cross-Environmental Diagnostics (Temperature, Ammonia & Mortality Analysis):**\n";
+        $prompt .= "   - Current Temperature: [temperature value exactly as supplied]; Thermal Condition: [thermal condition exactly as supplied].\n";
+        $prompt .= "   - Ammonia: [ammonia value exactly as supplied, formatted as valueppm - condition, or No Reading].\n";
+        $prompt .= "   - Mortality: [mortality status exactly as supplied].\n";
+        $prompt .= "3. **Immediate Actions (Next 5-30 Minutes):**\n";
+        $prompt .= "   - [Short practical action written by AI]\n";
+        $prompt .= "   - [Short practical action written by AI]\n";
+        $prompt .= "   - [Short practical action written by AI]\n";
+        $prompt .= "Keep Cross-Environmental Diagnostics factual only. Put all advice only inside Immediate Actions. Use 2-4 immediate action bullets.\n";
 
         return $prompt;
     }
@@ -385,7 +413,7 @@ class DecisionSupportService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You generate broiler poultry decision support from supplied rule calculations. Preserve the requested section order exactly and prioritize configured feeder/drinker threshold alerts plus temperature and ammonia diagnostics.',
+                        'content' => 'You generate broiler poultry decision support from supplied rule calculations while thinking like an experienced poultry farm owner in Lucban, Quezon, Philippines. Preserve the requested website display format exactly: Cross-Environmental Diagnostics factual rows first, then Immediate Actions rows. Do not add extra sections or headings. You are responsible for writing practical immediate actions from the supplied facts, using known farm equipment such as heaters and fans when relevant. Do not invent facts.',
                     ],
                     [
                         'role' => 'user',
@@ -393,7 +421,7 @@ class DecisionSupportService
                     ],
                 ],
                 'temperature' => 0.3,
-                'max_tokens' => 700,
+                'max_tokens' => 900,
             ]);
 
             return $response->choices[0]->message->content;
@@ -448,6 +476,25 @@ class DecisionSupportService
         return is_numeric($ammonia)
             ? round((float) $ammonia, 1) . 'ppm - ' . $condition
             : 'No Reading';
+    }
+
+    protected function formatMortalityStatus(array $mortality): string
+    {
+        $count = (int) ($mortality['today_count'] ?? 0);
+        $rate = is_numeric($mortality['rate_percent'] ?? null)
+            ? round((float) $mortality['rate_percent'], 2)
+            : 0;
+        $condition = $mortality['condition']
+            ?? $mortality['status']
+            ?? 'Pending rule evaluation';
+        $previousAverage = is_numeric($mortality['previous_6_day_average'] ?? null)
+            ? round((float) $mortality['previous_6_day_average'], 2)
+            : 0;
+        $previousAverageText = $previousAverage == 1
+            ? '1 mortality per day'
+            : "{$previousAverage} mortalities per day";
+
+        return "{$count} today ({$rate}%); {$condition}; For the past 6 days, the pen had an average of {$previousAverageText}.";
     }
 
     protected function formatTemperatureStatus($temperature): string
@@ -521,6 +568,7 @@ class DecisionSupportService
         $water = $dataSnapshot['resources']['water'] ?? [];
         $temperature = $dataSnapshot['environment']['temperature_celsius'] ?? null;
         $ammonia = $dataSnapshot['environment']['ammonia_ppm'] ?? null;
+        $mortality = $dataSnapshot['mortality'] ?? [];
         $thermalCondition = $dataSnapshot['thermal_status']['condition'] ?? 'Unknown';
         $ammoniaCondition = $dataSnapshot['ammonia_status']['condition'] ?? 'Unknown';
         $decisions = collect($ruleDecisions);
@@ -531,6 +579,10 @@ class DecisionSupportService
             ->values();
         $diagnostics = $decisions
             ->where('category', 'cross_environmental_diagnostic')
+            ->values();
+        $mortalityAlerts = $decisions
+            ->where('category', 'mortality')
+            ->whereIn('severity', ['critical', 'warning'])
             ->values();
         $actions = $decisions
             ->sortByDesc(fn ($decision) => match ($decision['severity'] ?? 'normal') {
@@ -562,13 +614,20 @@ class DecisionSupportService
             $lines[] = '';
         }
 
-        $lines[] = '2. **Cross-Environmental Diagnostics (Temperature & Ammonia Analysis):**';
+        $lines[] = '2. **Cross-Environmental Diagnostics (Temperature, Ammonia & Mortality Analysis):**';
         $lines[] = '   - Current Temperature: ' . $this->formatTemperatureStatus($temperature) . "; Thermal Condition: {$thermalCondition}.";
         $lines[] = '   - Ammonia: ' . $this->formatAmmoniaStatus($ammonia, $ammoniaCondition) . '.';
+        $lines[] = '   - Mortality: ' . $this->formatMortalityStatus($mortality) . '.';
 
         if ($diagnostics->isNotEmpty()) {
             foreach ($diagnostics as $diagnostic) {
                 $lines[] = '   - ' . $diagnostic['finding'] . ' ' . $diagnostic['action'];
+            }
+        }
+
+        if ($mortalityAlerts->isNotEmpty()) {
+            foreach ($mortalityAlerts as $alert) {
+                $lines[] = '   - Meaning: ' . ($alert['meaning'] ?? $alert['finding']) . ' ' . $alert['action'];
             }
         }
 
@@ -658,6 +717,72 @@ class DecisionSupportService
             'week_number' => $weekNumber,
             'week_label' => self::BROILER_TEMPERATURE_THRESHOLDS[$weekNumber]['week_label'],
             'running_batches_count' => $runningBatches->count(),
+        ];
+    }
+
+    protected function currentMortalitySnapshot(House $house, ?Pen $pen = null): array
+    {
+        $currentDate = now()->startOfDay();
+        $query = PopulationRecord::query()
+            ->whereHas('pen', function ($penQuery) use ($house) {
+                $penQuery->where('house_id', $house->id)
+                    ->whereNull('archived_at')
+                    ->whereNotNull('current_batch_id')
+                    ->whereHas('currentBatch', function ($batchQuery) {
+                        $batchQuery->where('status', 'Running');
+                    });
+            });
+
+        if ($pen) {
+            $query->where('pen_id', $pen->id);
+        }
+
+        $batchStartedAt = $pen?->currentBatch?->started_at ?? $pen?->batch_started_at;
+        if ($batchStartedAt) {
+            $query->where('recorded_at', '>=', Carbon::parse($batchStartedAt)->startOfDay());
+        }
+
+        $todaysRecords = (clone $query)
+            ->whereBetween('recorded_at', [
+                $currentDate->copy()->startOfDay(),
+                $currentDate->copy()->endOfDay(),
+            ])
+            ->get();
+
+        $previousRecords = (clone $query)
+            ->whereBetween('recorded_at', [
+                $currentDate->copy()->subDays(6)->startOfDay(),
+                $currentDate->copy()->subDay()->endOfDay(),
+            ])
+            ->get();
+
+        $todayMortality = (int) $todaysRecords->sum('mortality');
+        $previousDailyTotals = $previousRecords
+            ->groupBy(fn ($record) => Carbon::parse($record->recorded_at)->toDateString())
+            ->map(fn ($records) => (int) $records->sum('mortality'))
+            ->values();
+        $previousAverage = $previousDailyTotals->isEmpty()
+            ? 0
+            : round((float) $previousDailyTotals->avg(), 2);
+        $currentPopulation = (int) ($pen?->population ?? 0);
+        $startingPopulation = $currentPopulation + $todayMortality;
+        $mortalityRate = $startingPopulation > 0
+            ? round(($todayMortality / $startingPopulation) * 100, 2)
+            : 0.0;
+        $spikeRatio = $previousAverage > 0
+            ? round($todayMortality / $previousAverage, 2)
+            : null;
+
+        return [
+            'date' => $currentDate->toDateString(),
+            'today_count' => $todayMortality,
+            'current_population' => $currentPopulation,
+            'starting_population' => $startingPopulation,
+            'rate_percent' => $mortalityRate,
+            'previous_6_day_average' => $previousAverage,
+            'spike_ratio' => $spikeRatio,
+            'records_count' => $todaysRecords->count(),
+            'source' => 'population_record',
         ];
     }
 
@@ -1054,6 +1179,71 @@ class DecisionSupportService
         ];
     }
 
+    protected function evaluateMortalityCondition(array &$dataSnapshot): ?array
+    {
+        $mortality = $dataSnapshot['mortality'] ?? [];
+        $todayCount = (int) ($mortality['today_count'] ?? 0);
+        $rate = (float) ($mortality['rate_percent'] ?? 0);
+        $previousAverage = (float) ($mortality['previous_6_day_average'] ?? 0);
+        $spikeRatio = $mortality['spike_ratio'] ?? null;
+
+        if ($todayCount <= 0) {
+            $dataSnapshot['mortality_status'] = [
+                'condition' => 'Normal',
+                'risk_level' => 'normal',
+            ];
+            $dataSnapshot['mortality']['condition'] = 'Normal';
+            $dataSnapshot['mortality']['status'] = 'normal';
+            return null;
+        }
+
+        $isSpike = is_numeric($spikeRatio) && $spikeRatio >= 2 && $todayCount >= 3;
+        $condition = 'Normal';
+        $severity = 'normal';
+        $rule = 'mortality_within_expected_daily_range';
+
+        if ($rate >= 2 || $todayCount >= 10 || ($isSpike && $rate >= 1)) {
+            $condition = 'Critical';
+            $severity = 'critical';
+            $rule = 'mortality_critical_daily_loss';
+        } elseif ($rate >= 1 || $todayCount >= 5 || $isSpike) {
+            $condition = 'Warning';
+            $severity = 'warning';
+            $rule = 'mortality_elevated_daily_loss';
+        }
+
+        $dataSnapshot['mortality_status'] = [
+            'condition' => $condition,
+            'risk_level' => $severity,
+            'warning_rate_percent' => 1,
+            'critical_rate_percent' => 2,
+            'spike_ratio_threshold' => 2,
+        ];
+        $dataSnapshot['mortality']['condition'] = $condition;
+        $dataSnapshot['mortality']['status'] = $severity;
+
+        if ($severity === 'normal') {
+            return null;
+        }
+
+        $meaning = $this->mortalityMeaning($dataSnapshot, $condition);
+        $previousAverageText = $previousAverage == 1
+            ? '1 mortality per day'
+            : "{$previousAverage} mortalities per day";
+
+        return [
+            'category' => 'mortality',
+            'severity' => $severity,
+            'rule' => $rule,
+            'finding' => "Mortality is {$condition} for this pen today.",
+            'evidence' => "Today's mortality: {$todayCount}; mortality rate: {$rate}%. For the past 6 days, the pen had an average of {$previousAverageText}. Spike ratio: " . ($spikeRatio ?? 'not available') . '.',
+            'action' => $this->primaryMortalityAction($condition),
+            'meaning' => $meaning,
+            'mortality_status' => $dataSnapshot['mortality_status'],
+            'mortality' => $dataSnapshot['mortality'],
+        ];
+    }
+
     protected function broilerWeekNumber(int $ageDays): int
     {
         return match (true) {
@@ -1082,6 +1272,44 @@ class DecisionSupportService
             'Moderate Risk' => 'Improve minimum ventilation and correct wet litter before ammonia reaches respiratory-damaging levels.',
             default => 'Maintain litter dryness, ventilation cycles, and routine ammonia monitoring.',
         };
+    }
+
+    protected function primaryMortalityAction(string $condition): string
+    {
+        return $condition === 'Critical'
+            ? 'Remove mortalities immediately, inspect live birds and the dead-bird location, verify water/feed access and air quality, and contact a poultry technician or veterinarian if losses continue.'
+            : 'Remove mortalities, inspect the affected pen for clustered deaths or weak birds, and recheck temperature, ammonia, feed, water, and litter condition today.';
+    }
+
+    protected function mortalityMeaning(array $dataSnapshot, string $condition): string
+    {
+        $thermalCondition = $dataSnapshot['thermal_status']['condition'] ?? 'Unknown';
+        $ammoniaCondition = $dataSnapshot['ammonia_status']['condition'] ?? 'Unknown';
+        $feedStatus = $dataSnapshot['resources']['feed']['status'] ?? 'normal';
+        $waterStatus = $dataSnapshot['resources']['water']['status'] ?? 'normal';
+        $possibleCauses = [];
+
+        if (in_array($thermalCondition, ['Cold Stress', 'Heat Stress', 'Severe Heat Danger'], true)) {
+            $possibleCauses[] = "temperature stress ({$thermalCondition})";
+        }
+
+        if (in_array($ammoniaCondition, ['Moderate Risk', 'High Risk', 'Critical Danger'], true)) {
+            $possibleCauses[] = "ammonia exposure ({$ammoniaCondition})";
+        }
+
+        if (in_array($feedStatus, ['warning', 'critical'], true)) {
+            $possibleCauses[] = 'limited feed access';
+        }
+
+        if (in_array($waterStatus, ['warning', 'critical'], true)) {
+            $possibleCauses[] = 'limited water access or drinker problems';
+        }
+
+        if (empty($possibleCauses)) {
+            $possibleCauses[] = 'disease, handling stress, uneven brooding, crowding, or a localized pen problem';
+        }
+
+        return "The {$condition} mortality level may indicate " . implode(', ', $possibleCauses) . '.';
     }
 
     protected function formatBroilerDecisionRecommendation(array $decision): string
@@ -1286,14 +1514,18 @@ class DecisionSupportService
             return true;
         }
 
-        return !isset($snapshot['flock'], $snapshot['environment'], $snapshot['resources'], $snapshot['thermal_status'], $snapshot['ammonia_status'], $snapshot['pen']);
+        return !isset($snapshot['flock'], $snapshot['environment'], $snapshot['resources'], $snapshot['thermal_status'], $snapshot['ammonia_status'], $snapshot['mortality'], $snapshot['mortality_status'], $snapshot['pen']);
     }
 
     protected function snapshotHasSensorReadings(?array $snapshot): bool
     {
-        return !empty($snapshot['sensors']) && collect($snapshot['sensors'])->contains(function ($sensor) {
+        $hasSensorReadings = !empty($snapshot['sensors']) && collect($snapshot['sensors'])->contains(function ($sensor) {
             return array_key_exists('value', $sensor) && is_numeric($sensor['value']);
         });
+
+        $hasMortalityRecord = (int) ($snapshot['mortality']['today_count'] ?? 0) > 0;
+
+        return $hasSensorReadings || $hasMortalityRecord;
     }
 
     /**

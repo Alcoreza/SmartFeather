@@ -616,6 +616,11 @@ function parseRecommendationRow(line) {
         return ammoniaRow;
     }
 
+    const mortalityRow = normalizeMortalityRecommendationRow(withoutBullet);
+    if (mortalityRow) {
+        return mortalityRow;
+    }
+
     const labelMatch = stripMarkdownBold(withoutBullet).match(/^([^:]{2,44}):\s*(.+)$/);
 
     if (labelMatch) {
@@ -669,6 +674,39 @@ function normalizeAmmoniaRecommendationRow(line) {
         value: numericReading
             ? `${numericReading[0]}ppm${condition ? ` - ${condition}` : ''}`
             : 'No Reading',
+    };
+}
+
+function normalizeMortalityRecommendationRow(line) {
+    const normalized = stripMarkdownBold(line).trim();
+    const match = normalized.match(/^(?:Current\s+)?Mortality:\s*(.+)$/i);
+    if (!match) {
+        return null;
+    }
+
+    const parts = match[1]
+        .replace(/\.$/, '')
+        .split(';')
+        .map((part) => part.trim())
+        .filter(Boolean);
+    const reading = parts[0] || 'No mortality record';
+    const statusIndex = parts.findIndex((part, index) => (
+        index > 0 && /^(normal|warning|critical|pending rule evaluation)$/i.test(part)
+    ));
+    const condition = statusIndex > -1 ? parts[statusIndex] : '';
+    const context = parts
+        .slice(1)
+        .filter((_, index) => index + 1 !== statusIndex)
+        .join('; ');
+
+    return {
+        kind: 'fact',
+        label: 'Mortality',
+        value: [
+            reading,
+            condition,
+            context,
+        ].filter(Boolean).join(' - '),
     };
 }
 
@@ -736,6 +774,7 @@ function buildCrossEnvironmentalReport(rows) {
 function supervisorFactSentence(facts) {
     const temperature = facts.find((row) => String(row.label || '').toLowerCase().includes('temperature'));
     const ammonia = facts.find((row) => String(row.label || '').toLowerCase().includes('ammonia'));
+    const mortality = facts.find((row) => String(row.label || '').toLowerCase().includes('mortality'));
     const parts = [];
 
     if (temperature) {
@@ -746,8 +785,12 @@ function supervisorFactSentence(facts) {
         parts.push(readingReportPart('ammonia', ammonia.value));
     }
 
+    if (mortality) {
+        parts.push(mortalityReportPart(mortality.value));
+    }
+
     const otherFacts = facts
-        .filter((row) => row !== temperature && row !== ammonia)
+        .filter((row) => row !== temperature && row !== ammonia && row !== mortality)
         .map((row) => `${String(row.label || '').toLowerCase()} at ${cleanStatusValue(row.value)}`);
 
     parts.push(...otherFacts);
@@ -757,6 +800,22 @@ function supervisorFactSentence(facts) {
     }
 
     return `Current readings show ${joinReportParts(parts)}.`;
+}
+
+function mortalityReportPart(value) {
+    const parts = String(value || '')
+        .split(/\s+-\s+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    const reading = parts[0] || 'no mortality record';
+    const condition = parts[1] || '';
+    const context = parts.slice(2).join(', ');
+
+    if (!condition) {
+        return `mortality at ${reading}`;
+    }
+
+    return `mortality at ${reading}, which is reported as ${condition}${context ? ` (${context})` : ''}`;
 }
 
 function readingReportPart(label, value) {

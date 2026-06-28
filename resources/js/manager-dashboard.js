@@ -400,6 +400,7 @@ function createOrUpdateChart(canvas, slide) {
                 },
                 y: {
                     beginAtZero: true,
+                    ...(slide.maxValue ? { max: slide.maxValue } : {}),
                     border: {
                         display: false,
                     },
@@ -581,7 +582,7 @@ function createOrUpdateEnvironmentChart(canvas, slide) {
                 },
                 y: {
                     beginAtZero: true,
-                    max: slide.maxValue || 35,
+                    max: slide.maxValue || environmentalMaxForSlide(slide),
                     border: {
                         display: false,
                     },
@@ -596,6 +597,12 @@ function createOrUpdateEnvironmentChart(canvas, slide) {
             },
         },
     });
+}
+
+function environmentalMaxForSlide(slide) {
+    const label = String(slide?.label || "").toLowerCase();
+
+    return label.includes("ammonia") ? 30 : 45;
 }
 
 async function renderResourceCarousel() {

@@ -200,6 +200,7 @@ if (! function_exists('dashboardMonitoringGraphsData')) {
                     'datasets' => $buildDatasets('temperature'),
                     'borderColor' => '#17643a',
                     'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                    'maxValue' => 45,
                 ],
                 [
                     'label' => 'Ammonia',
@@ -208,6 +209,7 @@ if (! function_exists('dashboardMonitoringGraphsData')) {
                     'datasets' => $buildDatasets('ammonia'),
                     'borderColor' => '#b7791f',
                     'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                    'maxValue' => 30,
                 ],
             ],
         ];
@@ -296,7 +298,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => $temperatureByHouse,
                     'borderColor' => '#17643a',
                     'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
-                    'maxValue' => 35,
+                    'maxValue' => 45,
                 ],
                 [
                     'label' => 'Ammonia',
@@ -305,7 +307,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => $ammoniaByHouse,
                     'borderColor' => '#b7791f',
                     'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
-                    'maxValue' => 25,
+                    'maxValue' => 30,
                 ],
             ],
         ]);
@@ -320,7 +322,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => [24, 23],
                     'borderColor' => '#17643a',
                     'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
-                    'maxValue' => 35,
+                    'maxValue' => 45,
                 ],
                 [
                     'label' => 'Ammonia',
@@ -329,7 +331,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => [8, 10],
                     'borderColor' => '#b7791f',
                     'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
-                    'maxValue' => 25,
+                    'maxValue' => 30,
                 ],
             ],
         ]);

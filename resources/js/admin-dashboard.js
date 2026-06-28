@@ -276,7 +276,7 @@ function createOrUpdateAdminChart(canvas, slide) {
         adminMonitoringChart.destroy();
     }
 
-    adminMonitoringChart = createAdminBarChart(canvas, slide);
+    adminMonitoringChart = createAdminBarChart(canvas, slide, slide.maxValue || null);
 }
 
 function createAdminBarChart(canvas, slide, maxValue = null) {
@@ -466,7 +466,7 @@ function createOrUpdateAdminEnvironmentChart(canvas, slide) {
         adminEnvironmentChart.destroy();
     }
 
-    adminEnvironmentChart = createAdminBarChart(canvas, slide, slide.maxValue || 35);
+    adminEnvironmentChart = createAdminBarChart(canvas, slide, slide.maxValue || 45);
 }
 
 async function renderAdminResourceCarousel() {

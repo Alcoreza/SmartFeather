@@ -384,9 +384,17 @@ function applyTaskFilters(items, filters) {
 function renderUnifiedTaskTable(section, items) {
     const thead = document.getElementById("managerTasksTableHead");
     const tbody = document.getElementById("managerTasksTableBody");
+    const table = tbody?.closest(".manager-task-table");
     if (!tbody) return;
 
     const columns = TASK_TABLE_COLUMNS[section] || TASK_TABLE_COLUMNS.pending;
+    table?.classList.remove(
+        "manager-task-table-pending",
+        "manager-task-table-for-approval",
+        "manager-task-table-completed",
+    );
+    table?.classList.add(`manager-task-table-${section.replace("_", "-")}`);
+
     if (thead) {
         thead.innerHTML = `<tr>${columns.map((column) => `<th>${column.label}</th>`).join("")}</tr>`;
     }

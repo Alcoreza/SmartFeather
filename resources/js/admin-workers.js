@@ -16,7 +16,7 @@ function generateUsername(firstName, lastName) {
     const initial = (firstName || '').trim().charAt(0);
     const surname = (lastName || '').trim();
 
-    return `${initial}${surname}`.toUpperCase();
+    return `${initial}${surname}`.toLowerCase();
 }
 
 function syncUsernamePreview() {
@@ -41,11 +41,13 @@ function syncUsernamePreview() {
 const passwordInput = document.getElementById('passwordModalPassword');
 const confirmPasswordInput = document.getElementById('passwordModalConfirm');
 const oldPasswordInput = document.getElementById('passwordModalOldPassword');
+const addPasswordInput = document.getElementById('AddPassword');
+const addConfirmPasswordInput = document.getElementById('AddConfirmPassword');
 const confirmPasswordMessage = document.getElementById('confirmPasswordMessage');
 const oldPasswordMessage = document.getElementById('oldPasswordMessage');
+const addConfirmPasswordMessage = document.getElementById('addConfirmPasswordMessage');
 const phoneInput = document.getElementById('PhoneNumber');
 const birthdayInput = document.getElementById('Birthday');
-let pendingPassword = null;
 
 const workerRequiredFields = [
     { id: 'FirstName', label: 'First Name' },
@@ -53,7 +55,9 @@ const workerRequiredFields = [
     { id: 'Role', label: 'Role' },
     { id: 'PhoneNumber', label: 'Phone Number' },
     { id: 'Birthday', label: 'Birthday' },
-    { id: 'Gender', label: 'Gender' }
+    { id: 'Gender', label: 'Gender' },
+    { id: 'AddPassword', label: 'Password' },
+    { id: 'AddConfirmPassword', label: 'Confirm Password' }
 ];
 
 let shouldTrackRequiredHighlights = false;
@@ -64,6 +68,10 @@ function clearConfirmPasswordMessage() {
 
 function clearOldPasswordMessage() {
     oldPasswordMessage.textContent = '';
+}
+
+function clearAddConfirmPasswordMessage() {
+    if (addConfirmPasswordMessage) addConfirmPasswordMessage.textContent = '';
 }
 
 function validateConfirmPassword() {
@@ -92,8 +100,20 @@ function resetConfirmPasswordState() {
     clearOldPasswordMessage();
 }
 
+function resetAddPasswordState() {
+    if (addPasswordInput) addPasswordInput.value = '';
+    if (addConfirmPasswordInput) addConfirmPasswordInput.value = '';
+    clearAddConfirmPasswordMessage();
+    clearRequiredFieldHighlight(addPasswordInput);
+    clearRequiredFieldHighlight(addConfirmPasswordInput);
+}
+
 function isAddMode() {
     return !document.getElementById('EmployeeId').value;
+}
+
+function onlyDigits(value) {
+    return (value || '').replace(/\D/g, '');
 }
 
 function setPasswordModalMode(mode) {
@@ -110,12 +130,19 @@ function setPasswordModalMode(mode) {
 
     if (editPasswordBtn) {
         editPasswordBtn.textContent = isEditMode ? 'Change Password' : 'Set Password';
+        editPasswordBtn.style.display = isEditMode ? '' : 'none';
     }
 }
 
 function setAddModeRequirements(isAddMode) {
+    const addPasswordFields = document.getElementById('addPasswordFields');
+
+    if (addPasswordFields) {
+        addPasswordFields.style.display = isAddMode ? '' : 'none';
+    }
+
     if (!isAddMode) {
-        resetConfirmPasswordState();
+        resetAddPasswordState();
     }
 }
 
@@ -203,11 +230,129 @@ function showRequiredFieldsError() {
     return true;
 }
 
+function showPhoneNumberError(message = 'Phone number already in use.') {
+    phoneInput?.closest('.admin-worker-field')?.classList.add('has-error');
+    showWorkerFormError(message);
+    setTimeout(() => phoneInput?.focus(), 350);
+}
+
+function validatePhoneNumberField() {
+    const phoneNumber = phoneInput?.value || '';
+
+    if (!phoneNumber) {
+        return true;
+    }
+
+    if (phoneNumber.length < 11) {
+        showPhoneNumberError('Invalid phone number.');
+        return false;
+    }
+
+    if (!/^09\d{9}$/.test(phoneNumber)) {
+        showPhoneNumberError('Invalid phone number.');
+        return false;
+    }
+
+    return true;
+}
+
+async function checkPhoneNumberAvailability(phoneNumber, employeeId) {
+    if (!phoneNumber) return true;
+
+    try {
+        const response = await fetch(`${BASE_URL}/check-phone`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                PhoneNumber: phoneNumber,
+                EmployeeId: employeeId || null
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.available === false) {
+            showPhoneNumberError('Phone number already in use.');
+            return false;
+        }
+
+        if (!response.ok && result.errors?.PhoneNumber) {
+            showPhoneNumberError(result.errors.PhoneNumber[0] || 'Phone number already in use.');
+            return false;
+        }
+
+        return response.ok;
+    } catch (error) {
+        console.error(error);
+        showWorkerFormError('Unable to verify phone number. Please try again.');
+        return false;
+    }
+}
+
+function validateAddPasswordFields() {
+    if (!isAddMode()) {
+        clearAddConfirmPasswordMessage();
+        return true;
+    }
+
+    const password = addPasswordInput?.value || '';
+    const confirmPassword = addConfirmPasswordInput?.value || '';
+
+    clearAddConfirmPasswordMessage();
+    clearRequiredFieldHighlight(addPasswordInput);
+    clearRequiredFieldHighlight(addConfirmPasswordInput);
+
+    if (!password || !confirmPassword) {
+        return true;
+    }
+
+    if (password.length < 8) {
+        addPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
+        if (addConfirmPasswordMessage) {
+            addConfirmPasswordMessage.textContent = 'Password must be at least 8 characters.';
+        }
+        return false;
+    }
+
+    if (password !== confirmPassword) {
+        addConfirmPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
+        if (addConfirmPasswordMessage) {
+            addConfirmPasswordMessage.textContent = 'Passwords do not match.';
+        }
+        return false;
+    }
+
+    return true;
+}
+
 [passwordInput, confirmPasswordInput, oldPasswordInput].forEach(input => {
     input?.addEventListener('input', () => {
         validateConfirmPassword();
         clearOldPasswordMessage();
     });
+});
+
+[addPasswordInput, addConfirmPasswordInput].forEach(input => {
+    input?.addEventListener('input', () => {
+        validateAddPasswordFields();
+        clearWorkerFormError();
+    });
+});
+
+phoneInput?.addEventListener('input', () => {
+    phoneInput.value = onlyDigits(phoneInput.value).slice(0, 11);
+    clearRequiredFieldHighlight(phoneInput);
+
+    if (['Phone number already in use.', 'Invalid phone number.'].includes(document.getElementById('workerFormError')?.textContent)) {
+        clearWorkerFormError();
+    }
+});
+
+birthdayInput?.addEventListener('input', () => {
+    clearRequiredFieldHighlight(birthdayInput);
 });
 
 // ================= PROFILE MODAL =================
@@ -457,8 +602,8 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     document.getElementById('workerModalTitle').innerText = 'Add Employee';
     document.getElementById('workerForm').reset();
     document.getElementById('EmployeeId').value = '';
-    pendingPassword = null;
     resetConfirmPasswordState();
+    resetAddPasswordState();
     clearRequiredFieldHighlights();
     clearWorkerFormError();
     setAddModeRequirements(true);
@@ -502,8 +647,8 @@ function populateEditModal(user) {
     document.getElementById('Birthday').value = user.Birthday ?? '';
     document.getElementById('Gender').value = user.Gender ?? '';
     document.getElementById('Address').value = user.Address ?? '';
-    pendingPassword = null;
     resetConfirmPasswordState();
+    resetAddPasswordState();
     clearRequiredFieldHighlights();
     clearWorkerFormError();
     setPasswordModalMode('edit');
@@ -524,8 +669,11 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (isAddMode() && !pendingPassword) {
-        showWorkerFormError('Please set a password for the new employee before saving.');
+    if (!validateAddPasswordFields()) {
+        return;
+    }
+
+    if (!validatePhoneNumberField()) {
         return;
     }
 
@@ -541,12 +689,16 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         Birthday: document.getElementById('Birthday').value || null,
         Gender: document.getElementById('Gender').value || null,
         Address: document.getElementById('Address').value || null,
-        Password: pendingPassword || null
+        Password: isAddMode() ? addPasswordInput?.value || null : null
     };
 
     if (!data.Password) delete data.Password;
 
     try {
+        if (!await checkPhoneNumberAvailability(data.PhoneNumber, id)) {
+            return;
+        }
+
         const method = id ? 'PUT' : 'POST';
         const url = id ? `${BASE_URL}/${id}` : BASE_URL;
 
@@ -559,10 +711,18 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
             body: JSON.stringify(data)
         });
 
-        if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
+        if (!res.ok) {
+            const err = await res.json();
+            if (err.errors?.PhoneNumber) {
+                showPhoneNumberError('Phone number already in use.');
+                return;
+            }
+
+            alert('Error: ' + JSON.stringify(err.errors ?? err));
+            return;
+        }
 
         closeModal('workerModal');
-        pendingPassword = null;
         await loadEmployees();
     } catch (err) { console.error(err); alert('Network error'); }
 });
@@ -591,13 +751,6 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
 
     if (!password) {
         clearConfirmPasswordMessage();
-        return;
-    }
-
-    if (!employeeId) {
-        pendingPassword = password;
-        clearWorkerFormError();
-        closeModal('passwordModal');
         return;
     }
 
@@ -732,7 +885,7 @@ document.getElementById('roleFilter')?.addEventListener('change', e => {
 // =============== REMOVE NATIVE REQUIRED ATTRIBUTES ===============
 function removeNativeRequiredAttributes() {
     [
-        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'Password', 'ConfirmPassword'
+        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'AddPassword', 'AddConfirmPassword'
     ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.removeAttribute('required');

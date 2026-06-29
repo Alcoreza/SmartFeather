@@ -121,7 +121,7 @@ class EmployeeController extends Controller
         return response()->json([
             'available' => ! $exists,
             'message' => $exists
-                ? 'This phone number is already assigned to another employee.'
+                ? 'Phone number already in use.'
                 : 'Phone number is available.',
         ]);
     }
@@ -174,7 +174,7 @@ class EmployeeController extends Controller
         return [
             'PhoneNumber.regex' => 'Phone number must use 09XXXXXXXXX format.',
             'PhoneNumber.size' => 'Phone number must be exactly 11 digits.',
-            'PhoneNumber.unique' => 'This phone number is already assigned to another employee.',
+            'PhoneNumber.unique' => 'Phone number already in use.',
             'Username.unique' => 'This username is already assigned to another employee.',
             'Birthday.before' => 'Birthday must be earlier than today.',
             'Role.in' => 'Select a valid role.',

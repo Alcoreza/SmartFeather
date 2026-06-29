@@ -20,6 +20,29 @@ const adminSensorAddRequiredFields = [
 let shouldTrackAdminSensorRequiredHighlights = false;
 let pendingAdminSensorAddPayload = null;
 
+const adminSensorSectionDisplayOrder = {
+    "Ammonia Sensor": 1,
+    "Temperature Sensor": 2,
+    "Feed Sensor": 3,
+    "Water Sensor": 4,
+};
+
+function sortAdminSensorSections(sections) {
+    return sections
+        .map((section, index) => ({ section, index }))
+        .sort((left, right) => {
+            const leftType = left.section.sensor_type || left.section.title || "";
+            const rightType = right.section.sensor_type || right.section.title || "";
+            const leftOrder = adminSensorSectionDisplayOrder[leftType] ?? 999;
+            const rightOrder = adminSensorSectionDisplayOrder[rightType] ?? 999;
+
+            return leftOrder === rightOrder
+                ? left.index - right.index
+                : leftOrder - rightOrder;
+        })
+        .map(({ section }) => section);
+}
+
 function showAdminSensorConfirmModal(message, title = "Confirm Save", confirmText = "Confirm") {
     return new Promise((resolve) => {
         const existing = document.getElementById("adminSensorGenericConfirmModal");
@@ -109,7 +132,9 @@ async function renderAdminSensorSections() {
     try {
         const response = await fetch("/api/admin/sensors");
         const data = await response.json();
-        const sections = Array.isArray(data.sections) ? data.sections : [];
+        const sections = sortAdminSensorSections(
+            Array.isArray(data.sections) ? data.sections : [],
+        );
 
         mount.innerHTML = sections
             .map((section) => createAdminSectionMarkup(section))
@@ -185,7 +210,7 @@ function createAdminSectionMarkup(section) {
                     <thead>
                         <tr>
                             <th>Sensor Name</th>
-                            <th>House Number</th>
+                            <th>House</th>
                             <th>Pen Number</th>
                             ${showsResourceColumn ? "<th>Resource No.</th>" : ""}
                             <th>Value</th>

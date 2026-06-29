@@ -4,6 +4,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     await renderManagerSensorSections();
 });
 
+const managerSensorSectionDisplayOrder = {
+    "Ammonia Sensor": 1,
+    "Temperature Sensor": 2,
+    "Feed Sensor": 3,
+    "Water Sensor": 4,
+};
+
+function sortManagerSensorSections(sections) {
+    return sections
+        .map((section, index) => ({ section, index }))
+        .sort((left, right) => {
+            const leftType = left.section.sensor_type || left.section.title || "";
+            const rightType = right.section.sensor_type || right.section.title || "";
+            const leftOrder = managerSensorSectionDisplayOrder[leftType] ?? 999;
+            const rightOrder = managerSensorSectionDisplayOrder[rightType] ?? 999;
+
+            return leftOrder === rightOrder
+                ? left.index - right.index
+                : leftOrder - rightOrder;
+        })
+        .map(({ section }) => section);
+}
+
 async function renderManagerSensorSections() {
     const mount = document.getElementById("managerSensorSections");
     if (!mount) return;
@@ -12,7 +35,9 @@ async function renderManagerSensorSections() {
         const response = await fetch("/api/manager/sensors");
         const data = await response.json();
 
-        const sections = Array.isArray(data.sections) ? data.sections : [];
+        const sections = sortManagerSensorSections(
+            Array.isArray(data.sections) ? data.sections : [],
+        );
 
         mount.innerHTML = sections
             .map((section, index) => createSectionMarkup(section, index))

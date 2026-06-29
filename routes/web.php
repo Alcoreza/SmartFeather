@@ -21,6 +21,7 @@ Route::post('/api/login', [AuthController::class, 'login'])->middleware('throttl
 
 // API endpoint to get current user info
 Route::get('/api/user', [ProfileController::class, 'getCurrentUser'])->middleware('auth.session');
+Route::post('/api/profile/check-phone', [ProfileController::class, 'checkPhone'])->middleware('auth.session');
 
 /*
 |--------------------------------------------------------------------------

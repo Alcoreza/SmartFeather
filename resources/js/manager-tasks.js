@@ -171,7 +171,7 @@ function fillSimpleSelect(select, items, placeholder) {
 
 function setupTaskFilters() {
     document.querySelectorAll("[data-task-status]").forEach((button) => {
-        button.addEventListener("click", async () => {
+        button.addEventListener("click", () => {
             const nextStatus = button.dataset.taskStatus;
 
             if (!TASK_STATUS_OPTIONS.includes(nextStatus) || nextStatus === selectedTaskStatus) {
@@ -181,8 +181,8 @@ function setupTaskFilters() {
             selectedTaskStatus = nextStatus;
             taskRowPages[selectedTaskStatus] = taskRowPages[selectedTaskStatus] || 0;
             syncTaskStatusButtons();
-            await renderManagerTasks(false);
             renderCurrentTaskTable();
+            renderManagerTasks();
         });
     });
 

@@ -264,10 +264,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
     let pendingLogoutUrl = null;
 
+    function sameOriginLogoutUrl(url) {
+        try {
+            const parsedUrl = new URL(url || "/logout", window.location.origin);
+            return `${parsedUrl.pathname}${parsedUrl.search}`;
+        } catch (error) {
+            return "/logout";
+        }
+    }
+
     function submitLogout(url) {
         const form = document.createElement("form");
         form.method = "POST";
-        form.action = url;
+        form.action = sameOriginLogoutUrl(url);
         form.style.display = "none";
 
         const token = document.querySelector('meta[name="csrf-token"]')?.content;

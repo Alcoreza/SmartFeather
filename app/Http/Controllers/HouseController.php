@@ -203,6 +203,8 @@ class HouseController extends Controller
                 ],
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
+            ], [
+                'house_number.unique' => 'House number already exists.',
             ]);
 
             $house->update($validated);

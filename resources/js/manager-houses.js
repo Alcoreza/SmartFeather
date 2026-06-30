@@ -487,7 +487,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!houseResponse.ok) {
             const error = await houseResponse.json();
-            throw new Error(error.message || "Failed to update house");
+            throw new Error(getHouseValidationMessage(error, "Failed to update house"));
         }
 
         const penResponse = await fetch(`/api/pens/${payload.currentPen.id}`, {
@@ -502,7 +502,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!penResponse.ok) {
             const error = await penResponse.json();
-            throw new Error(error.message || "Failed to update pen");
+            throw new Error(getHouseValidationMessage(error, "Failed to update pen"));
         }
 
         const productionResponse = await fetch(
@@ -521,9 +521,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!productionResponse.ok) {
             const error = await productionResponse.json();
             throw new Error(
-                error.message || "Failed to update production data",
+                getHouseValidationMessage(error, "Failed to update production data"),
             );
         }
+    }
+
+    function getHouseValidationMessage(error, fallbackMessage = "Unable to save changes") {
+        if (error?.errors && typeof error.errors === "object") {
+            const firstError = Object.values(error.errors)
+                .flat()
+                .find((message) => message);
+
+            if (firstError) {
+                return firstError;
+            }
+        }
+
+        return error?.message || fallbackMessage;
     }
 
     function populateEditPenFields(pen, house) {
@@ -1608,7 +1622,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             await fetchHouses();
         } catch (error) {
             console.error("Error updating data:", error);
-            await showHouseNoticeModal(`Error: ${error.message}`, "Unable to Update House");
+            closeEditHouseConfirmModal();
+            await showHouseNoticeModal(error.message, "Unable to Update House");
+            editHouseModal?.classList.add("show");
         } finally {
             confirmEditHouseSave.disabled = false;
         }

@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupTaskSelectPlaceholderState();
     setupManagerTaskModals();
     setupAddTaskModal();
+    setupEditTaskModal();
     setupManagerProfileModal();
     refreshTaskFilterOptions();
     renderCurrentTaskTable();
@@ -28,6 +29,7 @@ const TASK_TABLE_COLUMNS = {
         { key: "priority", label: "Priority" },
         { key: "time_assigned", label: "Time<br>Assigned" },
         { key: "finish_by", label: "Finish<br>By" },
+        { key: "actions", label: "Actions" },
     ],
     for_approval: [
         { key: "name", label: "Name" },
@@ -57,6 +59,9 @@ const TASK_TABLE_COLUMNS = {
 };
 
 let taskPendingVerify = null;
+let taskPendingDelete = null;
+let taskPendingEdit = null;
+let taskDataFingerprint = "";
 let selectedTaskStatus = "pending";
 let taskDataCache = {
     pending: [],
@@ -100,14 +105,19 @@ async function renderManagerTasks(shouldRender = true) {
         const response = await fetch("/api/manager/tasks");
         const data = await response.json();
 
-        taskDataCache = {
+        const nextTaskData = {
             pending: data.pending || [],
             for_approval: data.for_approval || [],
             completed: data.completed || [],
         };
+        const nextFingerprint = JSON.stringify(nextTaskData);
+        const hasChanged = nextFingerprint !== taskDataFingerprint;
+
+        taskDataCache = nextTaskData;
+        taskDataFingerprint = nextFingerprint;
 
         refreshTaskFilterOptions();
-        if (shouldRender) {
+        if (shouldRender && hasChanged) {
             renderCurrentTaskTable();
         }
     } catch (error) {
@@ -161,7 +171,7 @@ function fillSimpleSelect(select, items, placeholder) {
 
 function setupTaskFilters() {
     document.querySelectorAll("[data-task-status]").forEach((button) => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", async () => {
             const nextStatus = button.dataset.taskStatus;
 
             if (!TASK_STATUS_OPTIONS.includes(nextStatus) || nextStatus === selectedTaskStatus) {
@@ -171,6 +181,7 @@ function setupTaskFilters() {
             selectedTaskStatus = nextStatus;
             taskRowPages[selectedTaskStatus] = taskRowPages[selectedTaskStatus] || 0;
             syncTaskStatusButtons();
+            await renderManagerTasks(false);
             renderCurrentTaskTable();
         });
     });
@@ -385,6 +396,7 @@ function renderUnifiedTaskTable(section, items) {
     const thead = document.getElementById("managerTasksTableHead");
     const tbody = document.getElementById("managerTasksTableBody");
     const table = tbody?.closest(".manager-task-table");
+    const tableWrap = tbody?.closest(".manager-task-table-wrap");
     if (!tbody) return;
 
     const columns = TASK_TABLE_COLUMNS[section] || TASK_TABLE_COLUMNS.pending;
@@ -394,6 +406,12 @@ function renderUnifiedTaskTable(section, items) {
         "manager-task-table-completed",
     );
     table?.classList.add(`manager-task-table-${section.replace("_", "-")}`);
+    tableWrap?.classList.remove(
+        "manager-task-table-wrap-pending",
+        "manager-task-table-wrap-for-approval",
+        "manager-task-table-wrap-completed",
+    );
+    tableWrap?.classList.add(`manager-task-table-wrap-${section.replace("_", "-")}`);
 
     if (thead) {
         thead.innerHTML = `<tr>${columns.map((column) => `<th>${column.label}</th>`).join("")}</tr>`;
@@ -423,11 +441,12 @@ function renderUnifiedTaskTable(section, items) {
 
     updateTaskRowPagination(section, items);
     bindPhotoButtons();
+    if (section === "pending") bindPendingTaskActionButtons();
     if (section === "for_approval") bindVerifyButtons();
     animateTaskRows();
 }
 
-function renderTaskCell(key, item) {
+function renderTaskCell(key, item, section) {
     if (key === "priority") {
         return renderTaskPriorityBadge(item.priority);
     }
@@ -455,7 +474,39 @@ function renderTaskCell(key, item) {
         </button>`;
     }
 
-    return item[key] ?? "";
+    if (key === "actions" && section === "pending") {
+        return `<div class="manager-task-action-group">
+            <button
+                type="button"
+                class="manager-task-action-btn manager-task-edit-btn"
+                data-edit-task='${encodeTaskPayload(item)}'
+                aria-label="Edit task"
+                title="Edit"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                </svg>
+            </button>
+            <button
+                type="button"
+                class="manager-task-action-btn manager-task-delete-btn"
+                data-delete-task='${encodeTaskPayload(item)}'
+                aria-label="Delete task"
+                title="Delete"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v5"></path>
+                    <path d="M14 11v5"></path>
+                </svg>
+            </button>
+        </div>`;
+    }
+
+    return escapeHtml(item[key] ?? "");
 }
 
 function renderTaskPriorityBadge(priority) {
@@ -532,6 +583,30 @@ function bindVerifyButtons() {
     });
 }
 
+function bindPendingTaskActionButtons() {
+    document.querySelectorAll("[data-edit-task]").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const task = decodeTaskPayload(button.dataset.editTask || "");
+            if (task) {
+                await openEditTaskModal(task);
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-delete-task]").forEach((button) => {
+        button.addEventListener("click", () => {
+            taskPendingDelete = decodeTaskPayload(button.dataset.deleteTask || "");
+
+            const text = document.getElementById("deleteTaskText");
+            if (text && taskPendingDelete) {
+                text.textContent = `Delete ${taskPendingDelete.task_assigned} for ${taskPendingDelete.name}? This action cannot be undone.`;
+            }
+
+            openTaskModal("deleteTaskModal");
+        });
+    });
+}
+
 function setupManagerTaskModals() {
     document.querySelectorAll("[data-close-task-modal]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -558,6 +633,34 @@ function setupManagerTaskModals() {
 
             taskPendingVerify = null;
             closeTaskModal("taskVerifyModal");
+        });
+    }
+
+    const deleteButton = document.getElementById("confirmTaskDelete");
+    if (deleteButton) {
+        deleteButton.addEventListener("click", async () => {
+            if (taskPendingDelete) {
+                await deletePendingTask(taskPendingDelete.id);
+            }
+
+            taskPendingDelete = null;
+            closeTaskModal("deleteTaskModal");
+        });
+    }
+
+    const editButton = document.getElementById("confirmEditTask");
+    if (editButton) {
+        editButton.addEventListener("click", async () => {
+            let saved = false;
+
+            if (taskPendingEdit) {
+                saved = await savePendingTaskEdit(taskPendingEdit.id, taskPendingEdit.payload);
+            }
+
+            if (saved) {
+                taskPendingEdit = null;
+                closeTaskModal("confirmEditTaskModal");
+            }
         });
     }
 
@@ -658,6 +761,219 @@ function setupAddTaskModal() {
                 showAddTaskFormError(formError, "Unable to save task. Please try again.");
             }
         });
+    }
+}
+
+function setupEditTaskModal() {
+    const form = document.getElementById("editTaskForm");
+    const formError = document.getElementById("editTaskFormError");
+
+    if (!form) return;
+
+    form.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => clearEditTaskFieldError(field));
+        field.addEventListener("change", () => clearEditTaskFieldError(field));
+    });
+
+    form.querySelector(".task-house-select")?.addEventListener("change", async () => {
+        await loadPensForEditTaskForm();
+    });
+
+    form.querySelector(".task-category-select")?.addEventListener("change", async () => {
+        await loadPensForEditTaskForm();
+    });
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        if (!taskPendingEdit?.item) {
+            return;
+        }
+
+        const validation = validateEditTaskForm(form);
+        if (!validation.isValid) {
+            showEditTaskFormError(formError, validation.message || "Please fill in the required fields.");
+            return;
+        }
+
+        taskPendingEdit = {
+            item: taskPendingEdit.item,
+            id: taskPendingEdit.item.id,
+            payload: validation.payload,
+        };
+
+        closeTaskModal("editTaskModal");
+        openTaskModal("confirmEditTaskModal");
+    });
+}
+
+async function openEditTaskModal(task) {
+    taskPendingEdit = { item: task };
+    await loadTaskFormOptions();
+
+    const form = document.getElementById("editTaskForm");
+    if (!form) return;
+
+    clearEditTaskFormError();
+    form.reset();
+
+    const workerField = document.getElementById("editTaskWorkerName");
+    if (workerField) {
+        workerField.value = task.name || "";
+    }
+
+    populateTaskRowSelects(form);
+
+    form.querySelector("[name='task_category']").value = task.task_assigned || "";
+    form.querySelector("[name='priority_level']").value = task.priority || "";
+    form.querySelector("[name='house_number']").value = task.house_id || "";
+    form.querySelector("[name='detailed_task']").value = task.detailed_task || "";
+
+    const finishParts = splitTaskDateTime(task.finish_by);
+    form.querySelector("[name='date_assigned']").value = finishParts.date;
+    form.querySelector("[name='time_assigned']").value = finishParts.time;
+
+    await loadPensForEditTaskForm(task.pen_id);
+    setupTaskSelectPlaceholderState();
+    openTaskModal("editTaskModal");
+}
+
+async function loadPensForEditTaskForm(selectedPenId = null) {
+    const form = document.getElementById("editTaskForm");
+    if (!form) return;
+
+    const houseSelect = form.querySelector(".task-house-select");
+    const penSelect = form.querySelector(".task-pen-select");
+    const taskType = form.querySelector(".task-category-select")?.value || "";
+    if (!penSelect) return;
+
+    if (!houseSelect?.value) {
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams();
+        if (taskType) {
+            params.set("task_type", taskType);
+        }
+        const query = params.toString() ? `?${params.toString()}` : "";
+        const response = await fetch(`/api/manager/tasks/houses/${houseSelect.value}/pens${query}`);
+        const data = await response.json();
+        fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+        penSelect.value = String(selectedPenId || taskPendingEdit?.item?.pen_id || "");
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error("Failed to load pens for task edit.", error);
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    }
+}
+
+function validateEditTaskForm(form) {
+    const missingFields = [];
+    const values = getTaskRowValues(form);
+
+    clearEditTaskRequiredFieldHighlights(false);
+
+    Object.entries({
+        task_category: values.taskCategory,
+        priority_level: values.priorityLevel,
+        house_number: values.houseNumber,
+        pen_number: values.penNumber,
+        date_assigned: values.dateAssigned,
+        time_assigned: values.timeAssigned,
+    }).forEach(([name, value]) => {
+        if (!String(value ?? "").trim()) {
+            missingFields.push({ name });
+            form.querySelector(`[name="${name}"]`)?.closest(".manager-task-form-field")?.classList.add("has-error");
+        }
+    });
+
+    if (missingFields.length) {
+        form.querySelector(`[name="${missingFields[0].name}"]`)?.focus();
+
+        return {
+            isValid: false,
+            message: "Please fill in the required fields.",
+        };
+    }
+
+    return {
+        isValid: true,
+        payload: {
+            tasktype: values.taskCategory,
+            prioritylevel: values.priorityLevel,
+            house_houseid: values.houseNumber,
+            pennumber: values.penNumber,
+            finishby: `${values.dateAssigned} ${values.timeAssigned}:00`,
+            detailedtask: values.detailedTask,
+        },
+    };
+}
+
+function splitTaskDateTime(value) {
+    const parts = String(value || "").trim().split(/\s+/);
+    const timeParts = String(parts[1] || "").split(":");
+
+    return {
+        date: parts[0] || "",
+        time: timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : "",
+    };
+}
+
+async function savePendingTaskEdit(taskId, payload) {
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${taskId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": token || "",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to update task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+        closeTaskModal("editTaskModal");
+        return true;
+    } catch (error) {
+        console.error("Failed to update task:", error);
+        closeTaskModal("confirmEditTaskModal");
+        openTaskModal("editTaskModal");
+        showEditTaskFormError(
+            document.getElementById("editTaskFormError"),
+            "Unable to save task changes. Please try again.",
+        );
+        return false;
+    }
+}
+
+async function deletePendingTask(taskId) {
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${taskId}`, {
+            method: "DELETE",
+            headers: {
+                "X-CSRF-TOKEN": token || "",
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to delete task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+    } catch (error) {
+        console.error("Failed to delete task:", error);
+        alert("Error deleting task: " + error.message);
     }
 }
 
@@ -962,6 +1278,43 @@ function clearAddTaskRequiredFieldHighlights(resetTracking = true) {
     form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
         field.classList.remove("has-error");
     });
+}
+
+function showEditTaskFormError(formError, message) {
+    if (!formError) return;
+
+    formError.textContent = message;
+    formError.classList.add("show");
+    formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function clearEditTaskFormError() {
+    const formError = document.getElementById("editTaskFormError");
+
+    formError?.classList.remove("show");
+    if (formError) {
+        formError.textContent = "";
+    }
+
+    clearEditTaskRequiredFieldHighlights();
+}
+
+function clearEditTaskRequiredFieldHighlights(resetTracking = true) {
+    const form = document.getElementById("editTaskForm");
+
+    form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
+        field.classList.remove("has-error");
+    });
+}
+
+function clearEditTaskFieldError(field) {
+    field.closest(".manager-task-form-field")?.classList.remove("has-error");
+
+    const form = document.getElementById("editTaskForm");
+    const hasErrors = form?.querySelector(".manager-task-form-field.has-error");
+    if (!hasErrors) {
+        clearEditTaskFormError();
+    }
 }
 
 function clearTaskFieldError(field) {

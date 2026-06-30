@@ -395,6 +395,10 @@ body {
     flex: 0 0 auto;
 }
 
+.manager-task-table-wrap-pending {
+    overflow-x: hidden;
+}
+
 .manager-task-empty {
     padding: 1.2rem !important;
     text-align: center !important;
@@ -411,41 +415,46 @@ body {
 }
 
 .manager-task-table-pending {
-    min-width: 1040px;
+    min-width: 0;
 }
 
 .manager-task-table-pending th:nth-child(1),
 .manager-task-table-pending td:nth-child(1) {
-    width: 13%;
+    width: 12%;
 }
 
 .manager-task-table-pending th:nth-child(2),
 .manager-task-table-pending td:nth-child(2) {
-    width: 13%;
+    width: 12%;
 }
 
 .manager-task-table-pending th:nth-child(3),
 .manager-task-table-pending td:nth-child(3),
 .manager-task-table-pending th:nth-child(4),
 .manager-task-table-pending td:nth-child(4) {
-    width: 9%;
+    width: 8%;
 }
 
 .manager-task-table-pending th:nth-child(5),
 .manager-task-table-pending td:nth-child(5) {
-    width: 19%;
+    width: 18%;
 }
 
 .manager-task-table-pending th:nth-child(6),
 .manager-task-table-pending td:nth-child(6) {
-    width: 10%;
+    width: 9%;
 }
 
 .manager-task-table-pending th:nth-child(7),
 .manager-task-table-pending td:nth-child(7),
 .manager-task-table-pending th:nth-child(8),
 .manager-task-table-pending td:nth-child(8) {
-    width: 13.5%;
+    width: 12%;
+}
+
+.manager-task-table-pending th:nth-child(9),
+.manager-task-table-pending td:nth-child(9) {
+    width: 9%;
 }
 
 .manager-task-table-for-approval {
@@ -586,6 +595,7 @@ body {
 .manager-task-table-pending td:nth-child(6),
 .manager-task-table-pending td:nth-child(7),
 .manager-task-table-pending td:nth-child(8),
+.manager-task-table-pending td:nth-child(9),
 .manager-task-table-for-approval td:nth-child(6),
 .manager-task-table-for-approval td:nth-child(7),
 .manager-task-table-for-approval td:nth-child(8),
@@ -601,6 +611,7 @@ body {
 
 .manager-task-table-pending td:nth-child(7),
 .manager-task-table-pending td:nth-child(8),
+.manager-task-table-pending td:nth-child(9),
 .manager-task-table-for-approval td:nth-child(8),
 .manager-task-table-for-approval td:nth-child(9),
 .manager-task-table-completed td:nth-child(9),
@@ -843,15 +854,15 @@ body {
 }
 
 .manager-task-action-btn {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    padding: 0;
     border: 1.5px solid rgba(23, 100, 58, 0.24);
-    border-radius: 6px;
+    border-radius: 8px;
     background: #ffffff;
     color: #1b5e20;
     font: inherit;
-    font-size: 1rem;
-    font-weight: 700;
     box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
     cursor: pointer;
     display: inline-flex;
@@ -864,8 +875,26 @@ body {
         background 0.2s ease;
 }
 
+.manager-task-action-btn svg {
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+}
+
 .manager-task-action-btn + .manager-task-action-btn {
     margin-left: 6px;
+}
+
+.manager-task-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.manager-task-action-group .manager-task-action-btn + .manager-task-action-btn {
+    margin-left: 0;
 }
 
 .manager-task-action-btn:hover {
@@ -1477,7 +1506,7 @@ body {
     }
 
     .manager-task-table-pending {
-        min-width: 1040px;
+        min-width: 0;
     }
 
     .manager-task-table-for-approval {
@@ -1554,12 +1583,16 @@ body {
         padding: 12px;
     }
 
+    .manager-task-table-wrap-pending {
+        overflow-x: auto;
+    }
+
     .manager-task-table {
         min-width: 860px;
     }
 
     .manager-task-table-pending {
-        min-width: 1040px;
+        min-width: 860px;
     }
 
     .manager-task-table-for-approval {
@@ -1639,7 +1672,7 @@ body {
     }
 
     .manager-task-table-pending {
-        min-width: 1040px;
+        min-width: 980px;
     }
 
     .manager-task-table-for-approval {

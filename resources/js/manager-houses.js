@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
     const HOUSE_FETCH_TIMEOUT_MS = 30000;
     const addHouseRequiredFields = [
-        { id: "houseName", label: "House Number" },
+        { id: "houseName", label: "House Name" },
         { id: "housePenCount", label: "Number of Pens" },
     ];
     let shouldTrackAddHouseRequiredHighlights = false;

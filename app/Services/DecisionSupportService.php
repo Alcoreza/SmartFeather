@@ -382,7 +382,7 @@ class DecisionSupportService
         $prompt .= "1. **REFILL ALERTS (Only display if levels breach or near system-configured thresholds):**\n";
         $prompt .= "2. **Cross-Environmental Diagnostics (Temperature, Ammonia & Mortality Analysis):**\n";
         $prompt .= "3. **Immediate Actions (Next 5-30 Minutes):**\n";
-        $prompt .= "Omit the REFILL ALERTS section entirely when feeder and drinker statuses are both normal. Refill alerts must name the specific resource and reference the breached configured threshold directly. Immediate actions must be 3-4 short, bolded physical steps involving feeding, watering, or environmental correction.\n";
+        $prompt .= "Omit the REFILL ALERTS section entirely when feeder and drinker statuses are both normal. Refill alerts must name the specific resource and reference the breached configured threshold directly. Do not recommend refilling feeder or drinker equipment when the supplied feeder and drinker status evaluations are Normal; in that case, only mention verifying physical access if feeding or watering must be referenced. Immediate actions must be 2-4 short, bolded physical steps involving environmental correction, bird inspection, mortality handling, or feeder/drinker access checks when relevant.\n";
         $prompt .= "When displaying ammonia, write it as [value]ppm - [condition], for example 11.7ppm - Moderate Risk. If ammonia has no reading, write No Reading.\n";
         $prompt .= "\n**Strict Website Display Format:**\n";
         $prompt .= "The website converts Cross-Environmental Diagnostics into one current-readings paragraph, then displays Immediate Actions as action rows. To match the website layout, do not output emergency headings, extra headings, summary paragraphs, introductions, conclusions, or explanations outside the section rows below.\n";
@@ -413,7 +413,7 @@ class DecisionSupportService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You generate broiler poultry decision support from supplied rule calculations while thinking like an experienced poultry farm owner in Lucban, Quezon, Philippines. Preserve the requested website display format exactly: Cross-Environmental Diagnostics factual rows first, then Immediate Actions rows. Do not add extra sections or headings. You are responsible for writing practical immediate actions from the supplied facts, using known farm equipment such as heaters and fans when relevant. Do not invent facts.',
+                        'content' => 'You generate broiler poultry decision support from supplied rule calculations while thinking like an experienced poultry farm owner in Lucban, Quezon, Philippines. Preserve the requested website display format exactly: Cross-Environmental Diagnostics factual rows first, then Immediate Actions rows. Do not add extra sections or headings. You are responsible for writing practical immediate actions from the supplied facts, using known farm equipment such as heaters and fans when relevant. Do not recommend feed or water refill unless supplied resource status or rule decisions explicitly show warning or critical resource levels. Do not invent facts.',
                     ],
                     [
                         'role' => 'user',
@@ -840,8 +840,10 @@ class DecisionSupportService
                     ->skip(1)
                     ->first();
 
-                $currentValue = (float) $sensor['value'];
-                $previousValue = $previousReading ? (float) $previousReading->value : null;
+                $currentValue = $this->resourceLevelPercent($sensor['value']);
+                $previousValue = $previousReading
+                    ? $this->resourceLevelPercent($previousReading->value)
+                    : null;
                 $hoursSincePrevious = null;
                 $dropPoints = null;
                 $dropRatePerHour = null;
@@ -924,6 +926,20 @@ class DecisionSupportService
         }
 
         return 'normal';
+    }
+
+    protected function resourceLevelPercent($value): float
+    {
+        $containerHeightInches = 8.5;
+
+        if ($containerHeightInches <= 0) {
+            return 0;
+        }
+
+        $remainingInches = $containerHeightInches - (float) $value;
+        $percent = ($remainingInches / $containerHeightInches) * 100;
+
+        return round(max(0, min(100, $percent)), 1);
     }
 
     protected function highestResourceStatus(array $statuses): string

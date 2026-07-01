@@ -252,7 +252,56 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, { passive: true });
 
+    const prefetchedSidebarLinks = new Set();
+
+    function isPrefetchableSidebarLink(link) {
+        if (!link || link.matches("[data-logout-trigger]")) {
+            return false;
+        }
+
+        const href = link.getAttribute("href");
+
+        if (!href || href.startsWith("#")) {
+            return false;
+        }
+
+        try {
+            const url = new URL(href, window.location.origin);
+
+            return url.origin === window.location.origin &&
+                url.pathname !== window.location.pathname;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function prefetchSidebarPage(link) {
+        if (!isPrefetchableSidebarLink(link)) {
+            return;
+        }
+
+        const url = new URL(link.getAttribute("href"), window.location.origin);
+        const cacheKey = url.pathname + url.search;
+
+        if (prefetchedSidebarLinks.has(cacheKey)) {
+            return;
+        }
+
+        prefetchedSidebarLinks.add(cacheKey);
+
+        const prefetchLink = document.createElement("link");
+        prefetchLink.rel = "prefetch";
+        prefetchLink.href = cacheKey;
+        prefetchLink.as = "document";
+
+        document.head.appendChild(prefetchLink);
+    }
+
     document.querySelectorAll(".sidebar-nav a, .admin-sidebar-nav a").forEach((link) => {
+        link.addEventListener("mouseenter", () => prefetchSidebarPage(link), { passive: true });
+        link.addEventListener("focus", () => prefetchSidebarPage(link), { passive: true });
+        link.addEventListener("touchstart", () => prefetchSidebarPage(link), { passive: true });
+
         link.addEventListener("click", () => {
             if (window.matchMedia("(max-width: 992px)").matches && !link.matches("[data-logout-trigger]")) {
                 closeResponsiveSidebars();

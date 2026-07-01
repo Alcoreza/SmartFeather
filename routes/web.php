@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
@@ -217,8 +218,25 @@ if (! function_exists('dashboardMonitoringGraphsData')) {
     }
 }
 
+if (! function_exists('dashboardCachedData')) {
+    function dashboardCachedData(string $key, int $seconds, callable $callback): array
+    {
+        try {
+            return Cache::remember($key, now()->addSeconds($seconds), $callback);
+        } catch (\Throwable) {
+            return $callback();
+        }
+    }
+}
+
 Route::get('/api/manager/dashboard/monitoring-graphs', function () {
-    return response()->json(dashboardMonitoringGraphsData());
+    $weekKey = now()->startOfWeek(\Carbon\CarbonInterface::SUNDAY)->toDateString();
+
+    return response()->json(dashboardCachedData(
+        "web_dashboard_monitoring_graphs:{$weekKey}",
+        120,
+        fn () => dashboardMonitoringGraphsData()
+    ));
 })->middleware(['auth.session', 'check.role:Manager']);
 
 Route::get('/api/manager/dashboard/realtime', function () {
@@ -235,7 +253,8 @@ Route::get('/api/manager/dashboard/realtime', function () {
 })->middleware(['auth.session', 'check.role:Manager']);
 
 Route::get('/api/manager/dashboard/environment-by-house', function () {
-    try {
+    return response()->json(dashboardCachedData('web_dashboard_environment_by_house', 30, function () {
+        try {
         $houses = \App\Models\House::with([
             'pens' => function ($query) {
                 $query->whereNull('archived_at')
@@ -290,7 +309,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
 
         $houseLabels = $houses->pluck('house_number')->toArray();
 
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Temperature',
@@ -311,10 +330,10 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'maxValue' => 30,
                 ],
             ],
-        ]);
+        ];
     } catch (\Exception $e) {
         \Log::error('Environment by house error: ' . $e->getMessage());
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Temperature',
@@ -335,12 +354,14 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'maxValue' => 30,
                 ],
             ],
-        ]);
+        ];
     }
+    }));
 })->middleware(['auth.session', 'check.role:Manager,Admin']);
 
 Route::get('/api/manager/dashboard/resources-by-house', function () {
-    try {
+    return response()->json(dashboardCachedData('web_dashboard_resources_by_house', 30, function () {
+        try {
         $houses = \App\Models\House::with([
             'pens' => function ($query) {
                 $query->whereNull('archived_at')
@@ -405,7 +426,7 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
 
         $houseLabels = $houses->pluck('house_number')->toArray();
 
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Feed',
@@ -426,10 +447,10 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
                     'maxValue' => 100,
                 ],
             ],
-        ]);
+        ];
     } catch (\Exception $e) {
         \Log::error('Resources by house error: ' . $e->getMessage());
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Feed',
@@ -450,8 +471,9 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
                     'maxValue' => 100,
                 ],
             ],
-        ]);
+        ];
     }
+    }));
 })->middleware(['auth.session', 'check.role:Manager,Admin']);
 
 Route::get('/api/manager/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
@@ -571,7 +593,13 @@ Route::get('/api/admin/dashboard/realtime', function () {
 })->middleware(['auth.session', 'check.role:Admin']);
 
 Route::get('/api/admin/dashboard/monitoring-graphs', function () {
-    return response()->json(dashboardMonitoringGraphsData());
+    $weekKey = now()->startOfWeek(\Carbon\CarbonInterface::SUNDAY)->toDateString();
+
+    return response()->json(dashboardCachedData(
+        "web_dashboard_monitoring_graphs:{$weekKey}",
+        120,
+        fn () => dashboardMonitoringGraphsData()
+    ));
 })->middleware(['auth.session', 'check.role:Admin']);
 
 Route::get('/api/admin/dashboard/environment-by-house', function () {

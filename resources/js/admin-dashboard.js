@@ -12,10 +12,13 @@ let activeAdminResourceSlideIndex = 0;
 document.addEventListener("DOMContentLoaded", async () => {
     resetInitialAdminRealtimeWidgets();
 
-    await renderAdminRealtimeMonitoring();
-    await renderAdminMonitoringCarousel();
-    await renderAdminEnvironmentCarousel();
-    await renderAdminResourceCarousel();
+    await Promise.all([
+        renderAdminRealtimeMonitoring(),
+        renderAdminMonitoringCarousel(),
+        renderAdminEnvironmentCarousel(),
+        renderAdminResourceCarousel(),
+    ]);
+
     setupAdminProfileModal();
 });
 

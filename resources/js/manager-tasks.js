@@ -1,6 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    await Promise.all([renderManagerTasks(false), loadTaskFormOptions()]);
-
+document.addEventListener("DOMContentLoaded", () => {
     setupTaskFilters();
     setupTaskRowPaginationControls();
     setupTaskSelectPlaceholderState();
@@ -11,6 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     refreshTaskFilterOptions();
     renderCurrentTaskTable();
     animateTaskSections();
+    renderManagerTasks();
+    loadTaskFormOptions();
 });
 
 const ALL_HOUSES_OPTION = "All houses";
@@ -78,6 +78,7 @@ let taskLastRowPages = {
     for_approval: 0,
     completed: 0,
 };
+let isTaskDataLoading = true;
 let availableHouseOptions = [];
 let taskFormOptions = {
     houses: [],
@@ -115,12 +116,15 @@ async function renderManagerTasks(shouldRender = true) {
 
         taskDataCache = nextTaskData;
         taskDataFingerprint = nextFingerprint;
+        isTaskDataLoading = false;
 
         refreshTaskFilterOptions();
         if (shouldRender && hasChanged) {
             renderCurrentTaskTable();
         }
     } catch (error) {
+        isTaskDataLoading = false;
+        renderCurrentTaskTable();
         console.error("Failed to load manager tasks.", error);
     }
 }
@@ -452,6 +456,12 @@ function renderUnifiedTaskTable(section, items) {
     const filteredItems = applyTaskFilters(items, taskFilters);
     const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
     taskRowPages[section] = Math.min(taskRowPages[section], totalPages - 1);
+
+    if (isTaskDataLoading) {
+        tbody.innerHTML = `<tr><td colspan="${columns.length}" class="manager-task-empty">Loading tasks...</td></tr>`;
+        updateTaskRowPagination(section, items);
+        return;
+    }
 
     if (!filteredItems.length) {
         tbody.innerHTML = `<tr><td colspan="${columns.length}" class="manager-task-empty">No tasks match the selected filters.</td></tr>`;

@@ -11,7 +11,7 @@ let resourceChart = null;
 let resourceSlides = [];
 let activeResourceSlideIndex = 0;
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     resetInitialRealtimeWidgets();
 
     const cards = document.querySelectorAll(".dashboard-card");
@@ -31,10 +31,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     });
 
-    await renderRealtimeMonitoring();
-    await renderMonitoringCarousel();
-    await renderEnvironmentCarousel();
-    await renderResourceCarousel();
+    renderRealtimeMonitoring();
+    renderMonitoringCarousel();
+    renderEnvironmentCarousel();
+    renderResourceCarousel();
 });
 
 function resetInitialRealtimeWidgets() {

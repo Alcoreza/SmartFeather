@@ -1,7 +1,8 @@
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     setupManagerProfileModal();
     setupSensorModals();
-    await renderManagerSensorSections();
+    renderManagerSensorLoading();
+    renderManagerSensorSections();
 });
 
 const managerSensorSectionDisplayOrder = {
@@ -56,6 +57,40 @@ async function renderManagerSensorSections() {
             </div>
         `;
     }
+}
+
+function renderManagerSensorLoading() {
+    const mount = document.getElementById("managerSensorSections");
+    if (!mount) return;
+
+    mount.innerHTML = `
+        <section class="manager-sensor-section" style="opacity: 1; transform: none;">
+            <div class="manager-sensor-section-head">
+                <div class="manager-sensor-section-main">
+                    <h2 class="manager-sensor-section-title">Sensors</h2>
+                </div>
+            </div>
+            <div class="manager-sensor-table-wrap">
+                <table class="manager-sensor-table">
+                    <thead>
+                        <tr>
+                            <th>Sensor Name</th>
+                            <th>House</th>
+                            <th>Pen</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="manager-sensor-empty">Loading sensors...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
 }
 
 function createSectionMarkup(section, index) {

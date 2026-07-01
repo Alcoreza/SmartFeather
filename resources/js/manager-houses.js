@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     let tabs = document.querySelectorAll(".house-tab");
     let houses = [];
 
@@ -89,6 +89,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         { id: "housePenCount", label: "Number of Pens" },
     ];
     let shouldTrackAddHouseRequiredHighlights = false;
+
+    function renderHouseLoadingState() {
+        if (housesTabsContainer) {
+            housesTabsContainer.innerHTML = `
+                <button type="button" class="add-house-btn" id="openAddHouseModal" aria-label="Add house">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                </button>
+            `;
+            document.getElementById("openAddHouseModal")?.addEventListener("click", openAddModal);
+        }
+
+        if (houseStatus) {
+            houseStatus.textContent = "Loading...";
+            houseStatus.classList.remove("chip-green");
+            houseStatus.classList.add("chip-gray");
+        }
+        if (houseBatch) houseBatch.textContent = "Loading...";
+        if (housePen) {
+            housePen.innerHTML = '<option value="">Loading pens...</option>';
+            housePen.value = "";
+        }
+        if (houseTemperature) houseTemperature.textContent = "--";
+        if (houseAmmonia) houseAmmonia.textContent = "--";
+        if (infoGrid) {
+            infoGrid.innerHTML = '<div class="info-card"><span>Loading farm details...</span></div>';
+        }
+        if (feedRow) feedRow.innerHTML = '<div class="resource-item">Loading feeders...</div>';
+        if (waterRow) waterRow.innerHTML = '<div class="resource-item">Loading drinkers...</div>';
+    }
 
     function isAddHouseRequiredFieldEmpty(field) {
         if (field.capacityField) {
@@ -1854,6 +1886,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    await fetchHouses();
-    startHouseSensorRefresh();
+    renderHouseLoadingState();
+    fetchHouses().then(startHouseSensorRefresh);
 });

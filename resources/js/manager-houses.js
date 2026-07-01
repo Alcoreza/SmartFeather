@@ -1082,6 +1082,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function fetchHousesResponse(options = {}) {
         const controller = new AbortController();
+        const requestHeaders = new Headers(options.headers || {});
+
+        requestHeaders.set("Cache-Control", "no-cache");
+        requestHeaders.set("Pragma", "no-cache");
+
         const timeoutId = window.setTimeout(
             () => controller.abort(),
             HOUSE_FETCH_TIMEOUT_MS,
@@ -1090,6 +1095,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             return await fetch("/api/houses", {
                 ...options,
+                cache: "no-store",
+                headers: requestHeaders,
                 signal: controller.signal,
             });
         } catch (error) {

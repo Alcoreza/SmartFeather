@@ -23,7 +23,7 @@ const TASK_TABLE_COLUMNS = {
     pending: [
         { key: "name", label: "Name" },
         { key: "task_assigned", label: "Task<br>Assigned" },
-        { key: "house_number", label: "House<br>Number" },
+        { key: "house_number", label: "House" },
         { key: "pen_number", label: "Pen<br>Number" },
         { key: "detailed_task", label: "Detailed<br>Task" },
         { key: "priority", label: "Priority" },
@@ -34,7 +34,7 @@ const TASK_TABLE_COLUMNS = {
     for_approval: [
         { key: "name", label: "Name" },
         { key: "task_assigned", label: "Task<br>Assigned" },
-        { key: "house_number", label: "House<br>Number" },
+        { key: "house_number", label: "House" },
         { key: "pen_number", label: "Pen<br>Number" },
         { key: "detailed_task", label: "Detailed<br>Task" },
         { key: "photo", label: "Photo" },
@@ -46,7 +46,7 @@ const TASK_TABLE_COLUMNS = {
     completed: [
         { key: "name", label: "Name" },
         { key: "task_assigned", label: "Task<br>Assigned" },
-        { key: "house_number", label: "House<br>Number" },
+        { key: "house_number", label: "House" },
         { key: "pen_number", label: "Pen<br>Number" },
         { key: "detailed_task", label: "Detailed<br>Task" },
         { key: "photo", label: "Photo" },
@@ -89,7 +89,7 @@ const addTaskRequiredFields = [
     { name: "worker_name", label: "Assign Flockman" },
     { name: "task_category", label: "Task" },
     { name: "priority_level", label: "Priority Level" },
-    { name: "house_number", label: "House Number" },
+    { name: "house_number", label: "House" },
     { name: "pen_number", label: "Pen Number" },
     { name: "time_assigned", label: "Time to finish" },
     { name: "date_assigned", label: "Date to finish" },
@@ -1026,7 +1026,7 @@ function generateTaskRowHtml(rowUid) {
                     <select name="priority_level" class="task-select-placeholder task-priority-select"></select>
                 </div>
                 <div class="manager-task-form-field">
-                    <label>House Number*</label>
+                    <label>House*</label>
                     <select name="house_number" class="task-select-placeholder task-house-select"></select>
                 </div>
                 <div class="manager-task-form-field">

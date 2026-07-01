@@ -18,7 +18,7 @@
 
             <div class="manager-sensor-modal-grid">
                 <div class="manager-sensor-modal-field">
-                    <label>House Number</label>
+                    <label>House Name</label>
                     <input type="text" id="sensorViewHouse" readonly>
                 </div>
 

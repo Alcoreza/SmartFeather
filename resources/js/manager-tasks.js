@@ -669,12 +669,13 @@ function setupManagerTaskModals() {
     const confirmButton = document.getElementById("confirmTaskVerify");
     if (confirmButton) {
         confirmButton.addEventListener("click", async () => {
-            if (taskPendingVerify) {
-                await updateTaskStatus(taskPendingVerify.id, "Completed");
-            }
-
+            const taskToVerify = taskPendingVerify;
             taskPendingVerify = null;
             closeTaskModal("taskVerifyModal");
+
+            if (taskToVerify) {
+                await updateTaskStatus(taskToVerify.id, "Completed");
+            }
         });
     }
 
@@ -1015,7 +1016,7 @@ async function deletePendingTask(taskId) {
         await renderManagerTasks();
     } catch (error) {
         console.error("Failed to delete task:", error);
-        alert("Error deleting task: " + error.message);
+        await showTaskNoticeModal(`Error deleting task: ${error.message}`, "Unable to Delete Task");
     }
 }
 
@@ -1407,6 +1408,65 @@ function closeTaskModal(id) {
     document.body.style.overflow = "";
 }
 
+function ensureTaskNoticeModal() {
+    let modal = document.getElementById("taskNoticeModal");
+
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.className = "manager-task-modal-backdrop confirm-modal-top";
+    modal.id = "taskNoticeModal";
+    modal.innerHTML = `
+        <div class="manager-task-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="taskNoticeTitle">
+            <div class="manager-task-modal-header center">
+                <h2 id="taskNoticeTitle">Task Updated</h2>
+                <div class="manager-task-header-line"></div>
+            </div>
+
+            <div class="manager-task-confirm-body">
+                <p id="taskNoticeText">Task updated successfully.</p>
+
+                <div class="manager-task-confirm-actions">
+                    <button type="button" class="manager-task-btn confirm" id="taskNoticeOk">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeTaskModal("taskNoticeModal");
+        }
+    });
+
+    modal.querySelector("#taskNoticeOk")?.addEventListener("click", () => {
+        closeTaskModal("taskNoticeModal");
+    });
+
+    return modal;
+}
+
+function showTaskNoticeModal(message, title = "Task Updated") {
+    const modal = ensureTaskNoticeModal();
+    const titleElement = modal.querySelector("#taskNoticeTitle");
+    const textElement = modal.querySelector("#taskNoticeText");
+
+    if (titleElement) {
+        titleElement.textContent = title;
+    }
+
+    if (textElement) {
+        textElement.textContent = message;
+    }
+
+    openTaskModal("taskNoticeModal");
+    modal.querySelector("#taskNoticeOk")?.focus();
+}
+
 function animateTaskSections() {
     const sections = document.querySelectorAll(".manager-task-section");
 
@@ -1557,10 +1617,10 @@ async function updateTaskStatus(taskId, newStatus) {
         }
 
         await renderManagerTasks();
-        alert(`Task marked as ${newStatus}!`);
+        showTaskNoticeModal(`Task marked as ${newStatus}.`);
     } catch (error) {
         console.error("Failed to update task status:", error);
-        alert("Error updating task: " + error.message);
+        showTaskNoticeModal(`Error updating task: ${error.message}`, "Unable to Update Task");
     }
 }
 

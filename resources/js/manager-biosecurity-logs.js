@@ -21,6 +21,44 @@ let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
 let shouldTrackAddBioRequiredHighlights = false;
 
+function ensureBioNoticeModal() {
+    let modal = document.getElementById('bioNoticeModal');
+
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'bioNoticeModal';
+    modal.className = 'bio-modal-overlay';
+    modal.innerHTML = `
+        <div class="bio-modal bio-confirm-modal">
+            <div class="bio-modal-header">
+                <h2 id="bioNoticeTitle">Biosecurity Notice</h2>
+                <div class="bio-modal-line"></div>
+            </div>
+            <div class="bio-confirm-body">
+                <p class="bio-form-confirm-text" id="bioNoticeMessage"></p>
+                <div class="bio-modal-actions">
+                    <button type="button" class="bio-btn bio-btn-save" id="bioNoticeOk">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#bioNoticeOk')?.addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.classList.remove('show');
+    });
+
+    return modal;
+}
+
+function showBioNotice(message, title = 'Biosecurity Notice') {
+    const modal = ensureBioNoticeModal();
+    modal.querySelector('#bioNoticeTitle').textContent = title;
+    modal.querySelector('#bioNoticeMessage').textContent = message;
+    modal.classList.add('show');
+}
+
 const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
     'Personnel Biosecurity Logs': [
         { name: 'name', label: 'Name' },
@@ -574,7 +612,7 @@ async function openVisitorCameraModal() {
     if (!cameraModal || !video || !snapshot || !useButton) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera access is not available in this browser.');
+        showBioNotice('Camera access is not available in this browser.', 'Camera Unavailable');
         return;
     }
 
@@ -592,7 +630,7 @@ async function openVisitorCameraModal() {
         cameraModal.classList.add('show');
     } catch (error) {
         console.error('Camera error:', error);
-        alert('Could not access the camera. Please allow camera access or use a supported browser.');
+        showBioNotice('Could not access the camera. Please allow camera access or use a supported browser.', 'Camera Unavailable');
     }
 }
 
@@ -637,7 +675,7 @@ async function uploadVisitorPhoto() {
     const openCameraButton = document.getElementById('add_open_camera_btn');
 
     if (!visitorPhotoDataUrl) {
-        alert('Please capture a photo first.');
+        showBioNotice('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -680,7 +718,7 @@ async function uploadVisitorPhoto() {
         closeVisitorCameraModal();
     } catch (error) {
         console.error('Error uploading visitor photo:', error);
-        alert('Failed to upload photo. Please try again.');
+        showBioNotice('Failed to upload photo. Please try again.', 'Upload Failed');
         if (status) {
             status.textContent = 'Upload failed. Try again.';
         }
@@ -701,7 +739,7 @@ function attachVisitorPhoto() {
     const status = document.getElementById('add_photo_status');
 
     if (!visitorPhotoDataUrl) {
-        alert('Please capture a photo first.');
+        showBioNotice('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -781,7 +819,7 @@ function setupEditModal() {
             const logId = logIdInput?.value;
 
             if (!logId) {
-                alert('Invalid log ID');
+                showBioNotice('Invalid log ID.', 'Unable to Update Log');
                 return;
             }
 
@@ -808,9 +846,10 @@ function setupEditModal() {
 
                 // Reload logs to show the updated entry
                 loadBiosecurityLogs();
+                showBioNotice('Biosecurity log updated successfully.', 'Log Updated');
             } catch (error) {
                 console.error('Error updating log:', error);
-                alert('Failed to update log. Please try again.');
+                showBioNotice('Failed to update log. Please try again.', 'Unable to Update Log');
             }
         });
     }
@@ -972,6 +1011,7 @@ function setupAddModal() {
 
                 // Reload logs to show the new entry
                 loadBiosecurityLogs();
+                showBioNotice('Biosecurity log saved successfully.', 'Log Saved');
             } catch (error) {
                 console.error('Error saving log:', error);
                 showAddBioFormError(formError, 'Failed to save log. Please try again.');

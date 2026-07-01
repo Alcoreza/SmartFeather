@@ -7,10 +7,50 @@ const employeesCache = new Map();
 let adminWorkersCurrentPage = 0;
 let adminWorkersLastPage = 0;
 let adminWorkersCurrentRole = 'All';
+let pendingWorkerSave = null;
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function ensureAdminWorkerNoticeModal() {
+    let modal = document.getElementById('adminWorkerNoticeModal');
+
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'adminWorkerNoticeModal';
+    modal.className = 'admin-worker-modal-backdrop confirm-modal-top';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+        <div class="admin-worker-modal-card admin-delete-worker-card">
+            <div class="admin-worker-modal-header">
+                <h2 id="adminWorkerNoticeTitle">Employee Updated</h2>
+                <div class="admin-worker-header-line"></div>
+            </div>
+            <div class="admin-worker-modal-body">
+                <p class="admin-delete-worker-text" id="adminWorkerNoticeMessage"></p>
+                <div class="admin-worker-modal-actions single">
+                    <button type="button" class="admin-worker-btn save" id="adminWorkerNoticeOk">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#adminWorkerNoticeOk')?.addEventListener('click', () => closeModal('adminWorkerNoticeModal'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal('adminWorkerNoticeModal');
+    });
+
+    return modal;
+}
+
+function showAdminWorkerNotice(message, title = 'Employee Updated') {
+    const modal = ensureAdminWorkerNoticeModal();
+    modal.querySelector('#adminWorkerNoticeTitle').textContent = title;
+    modal.querySelector('#adminWorkerNoticeMessage').textContent = message;
+    openModal('adminWorkerNoticeModal');
+}
 
 function generateUsername(firstName, lastName) {
     const initial = (firstName || '').trim().charAt(0);
@@ -423,7 +463,7 @@ async function loadEmployees() {
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employees');
+        showAdminWorkerNotice('Failed to load employees.', 'Unable to Load Employees');
     }
 }
 
@@ -629,7 +669,10 @@ async function openEditModal(id) {
         const user = await res.json();
         populateEditModal(user);
         openModal('workerModal');
-    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Failed to fetch employee data.', 'Unable to Load Employee');
+    }
 }
 
 function populateEditModal(user) {
@@ -694,6 +737,15 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
 
     if (!data.Password) delete data.Password;
 
+    pendingWorkerSave = { id, data };
+    const confirmMessage = document.getElementById('saveWorkerConfirmMessage');
+    if (confirmMessage) {
+        confirmMessage.textContent = id ? 'Save changes to this employee?' : 'Save this new employee?';
+    }
+    openModal('saveWorkerConfirmModal');
+});
+
+async function saveEmployee({ id, data }) {
     try {
         if (!await checkPhoneNumberAvailability(data.PhoneNumber, id)) {
             return;
@@ -718,13 +770,26 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
                 return;
             }
 
-            alert('Error: ' + JSON.stringify(err.errors ?? err));
+            showWorkerFormError('Unable to save employee. Please check the details and try again.');
             return;
         }
 
         closeModal('workerModal');
         await loadEmployees();
-    } catch (err) { console.error(err); alert('Network error'); }
+        showAdminWorkerNotice(id ? 'Employee changes saved.' : 'Employee added successfully.');
+    } catch (err) {
+        console.error(err);
+        showWorkerFormError('Network error. Please try again.');
+    }
+}
+
+document.getElementById('confirmSaveWorkerBtn')?.addEventListener('click', async () => {
+    if (!pendingWorkerSave) return;
+
+    const savePayload = pendingWorkerSave;
+    pendingWorkerSave = null;
+    closeModal('saveWorkerConfirmModal');
+    await saveEmployee(savePayload);
 });
 
 document.getElementById('editPasswordBtn')?.addEventListener('click', () => {
@@ -777,15 +842,16 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
                 return;
             }
 
-            alert('Error: ' + JSON.stringify(err.errors ?? err));
+            showAdminWorkerNotice('Unable to update password. Please try again.', 'Password Not Updated');
             return;
         }
 
         closeModal('passwordModal');
         await loadEmployees();
+        showAdminWorkerNotice('Password updated successfully.', 'Password Updated');
     } catch (err) {
         console.error(err);
-        alert('Network error');
+        showAdminWorkerNotice('Network error. Please try again.', 'Password Not Updated');
     }
 });
 
@@ -805,11 +871,18 @@ document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', asy
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
         });
 
-        if (!res.ok) { alert('Error deleting employee'); return; }
+        if (!res.ok) {
+            showAdminWorkerNotice('Error deactivating employee.', 'Unable to Deactivate Employee');
+            return;
+        }
 
         closeModal('deleteWorkerModal');
         await loadEmployees();
-    } catch (err) { console.error(err); alert('Network error'); }
+        showAdminWorkerNotice('Employee deactivated successfully.');
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Network error. Please try again.', 'Unable to Deactivate Employee');
+    }
 });
 
 // ================= VIEW EMPLOYEE =================
@@ -828,7 +901,10 @@ async function openViewModal(id) {
         employeesCache.set(String(user.EmployeeId), user);
         populateViewModal(user);
         openModal('viewModal');
-    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Failed to fetch employee data.', 'Unable to Load Employee');
+    }
 }
 
 function populateViewModal(user) {
@@ -865,7 +941,13 @@ document.addEventListener('click', e => {
 
 // ================= CLOSE MODALS =================
 document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
-    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-admin-modal')));
+    btn.addEventListener('click', () => {
+        const modalId = btn.getAttribute('data-close-admin-modal');
+        if (modalId === 'saveWorkerConfirmModal') {
+            pendingWorkerSave = null;
+        }
+        closeModal(modalId);
+    });
 });
 
 // ================= INITIAL LOAD =================

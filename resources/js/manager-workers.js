@@ -7,6 +7,46 @@ let workersCurrentPage = 0;
 let workersLastPage = 0;
 let workersCurrentRole = 'All';
 
+function ensureWorkerNoticeModal() {
+    let modal = document.getElementById('workerNoticeModal');
+
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'workerNoticeModal';
+    modal.className = 'worker-modal-backdrop';
+    modal.innerHTML = `
+        <div class="worker-modal-card worker-view-card">
+            <div class="worker-view-header">
+                <h2 id="workerNoticeTitle">Employee Notice</h2>
+                <div class="worker-header-line"></div>
+            </div>
+            <div class="worker-view-body">
+                <div class="worker-field">
+                    <p id="workerNoticeMessage"></p>
+                </div>
+            </div>
+            <div class="worker-view-actions">
+                <button type="button" class="worker-close-pill" id="workerNoticeOk">OK</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#workerNoticeOk')?.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.classList.remove('active');
+    });
+
+    return modal;
+}
+
+function showWorkerNotice(message, title = 'Employee Notice') {
+    const modal = ensureWorkerNoticeModal();
+    modal.querySelector('#workerNoticeTitle').textContent = title;
+    modal.querySelector('#workerNoticeMessage').textContent = message;
+    modal.classList.add('active');
+}
+
 // ================= PROFILE MODAL =================
 async function populateProfileModal() {
     try {
@@ -65,7 +105,7 @@ async function loadEmployees() {
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employees');
+        showWorkerNotice('Failed to load employees.', 'Unable to Load Employees');
     }
 }
 
@@ -224,7 +264,7 @@ async function openViewModal(id) {
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employee');
+        showWorkerNotice('Failed to load employee.', 'Unable to Load Employee');
     }
 }
 

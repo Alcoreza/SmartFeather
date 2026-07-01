@@ -125,18 +125,34 @@ async function renderManagerTasks(shouldRender = true) {
     }
 }
 
-async function loadTaskFormOptions() {
+async function loadTaskFormOptions({ preserveSelections = false } = {}) {
+    const workerSelect = document.getElementById("taskWorkerName");
+    const selectedWorker = preserveSelections ? workerSelect?.value || "" : "";
+    const rowSelections = preserveSelections
+        ? Array.from(document.querySelectorAll("#tasksContainer .manager-task-row")).map((row) => ({
+            row,
+            taskCategory: row.querySelector(".task-category-select")?.value || "",
+            priority: row.querySelector(".task-priority-select")?.value || "",
+            house: row.querySelector(".task-house-select")?.value || "",
+            pen: row.querySelector(".task-pen-select")?.value || "",
+        }))
+        : [];
+
     try {
         const response = await fetch("/api/manager/tasks/form-options");
         const data = await response.json();
 
         fillSelect(
-            document.getElementById("taskWorkerName"),
+            workerSelect,
             data.workers || [],
             "id",
             "name",
             "Select worker",
         );
+
+        if (preserveSelections && selectedWorker && workerSelect) {
+            workerSelect.value = selectedWorker;
+        }
 
         taskFormOptions = {
             houses: data.houses || [],
@@ -151,6 +167,22 @@ async function loadTaskFormOptions() {
 
         document.querySelectorAll("#tasksContainer .manager-task-row").forEach((row) => {
             populateTaskRowSelects(row);
+
+            if (!preserveSelections) return;
+
+            const selection = rowSelections.find((item) => item.row === row);
+            if (!selection) return;
+
+            const taskSelect = row.querySelector(".task-category-select");
+            const prioritySelect = row.querySelector(".task-priority-select");
+            const houseSelect = row.querySelector(".task-house-select");
+
+            if (taskSelect && selection.taskCategory) taskSelect.value = selection.taskCategory;
+            if (prioritySelect && selection.priority) prioritySelect.value = selection.priority;
+            if (houseSelect && selection.house) {
+                houseSelect.value = selection.house;
+                loadPensForTaskRow(row, selection.pen);
+            }
         });
 
         refreshTaskFilterOptions();
@@ -682,12 +714,12 @@ function setupAddTaskModal() {
     const addRowButton = document.getElementById("addTaskRowBtn");
 
     if (openButton) {
-        openButton.addEventListener("click", async () => {
-            await loadTaskFormOptions();
+        openButton.addEventListener("click", () => {
             form?.reset();
             resetAddTaskRows();
             clearAddTaskFormError();
             openTaskModal("addTaskModal");
+            loadTaskFormOptions({ preserveSelections: true });
         });
     }
 
@@ -1109,7 +1141,7 @@ function bindTaskRowEvents(row) {
     });
 }
 
-async function loadPensForTaskRow(row) {
+async function loadPensForTaskRow(row, selectedPenValue = "") {
     const houseSelect = row.querySelector(".task-house-select");
     const penSelect = row.querySelector(".task-pen-select");
     const taskType = row.querySelector(".task-category-select")?.value || "";
@@ -1130,6 +1162,9 @@ async function loadPensForTaskRow(row) {
         const response = await fetch(`/api/manager/tasks/houses/${houseSelect.value}/pens${query}`);
         const data = await response.json();
         fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+        if (selectedPenValue) {
+            penSelect.value = selectedPenValue;
+        }
         setupTaskSelectPlaceholderState();
     } catch (error) {
         console.error("Failed to load pens for selected house.", error);

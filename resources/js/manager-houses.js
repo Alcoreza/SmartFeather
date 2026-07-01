@@ -77,9 +77,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     let activePenIndex = 0;
     let pendingAddHousePayload = null;
     let pendingEditHousePayload = null;
-    let houseSensorRefreshTimer = null;
-    let isRefreshingHouseSensors = false;
-    const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+    let houseEnvironmentRefreshTimer = null;
+    let houseResourceRefreshTimer = null;
+    let isRefreshingHouseEnvironment = false;
+    let isRefreshingHouseResources = false;
+    const HOUSE_ENVIRONMENT_REFRESH_INTERVAL_MS = 8 * 1000;
+    const HOUSE_RESOURCE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
     const HOUSE_FETCH_TIMEOUT_MS = 30000;
     const addHouseRequiredFields = [
         { id: "houseName", label: "House Name" },
@@ -988,7 +991,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    function applyLatestSensorReadings(apiHouses) {
+    function applyLatestSensorReadings(apiHouses, options = {}) {
+        const { updateEnvironment = true, updateResources = true } = options;
+
         (apiHouses || []).forEach((apiHouse) => {
             const house = houses.find(
                 (item) => Number(item.id) === Number(apiHouse.id),
@@ -1005,78 +1010,89 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 const sensorReadings = apiPen.sensor_readings;
 
-                pen.feeder_count = stableResourceCount(
-                    apiPen.feeder_count,
-                    pen.feeder_count,
-                    pen.feeders,
-                );
-                pen.drinker_count = stableResourceCount(
-                    apiPen.drinker_count,
-                    pen.drinker_count,
-                    pen.drinkers,
-                );
-                pen.temperature = getSensorReadingDisplay(
-                    sensorReadings,
-                    "temperature",
-                    "0 deg",
-                );
-                pen.ammonia = getSensorReadingDisplay(
-                    sensorReadings,
-                    "ammonia",
-                    "0 ppm",
-                );
-                pen.temperatureValue = getSensorReadingValue(
-                    sensorReadings,
-                    "temperature",
-                );
-                pen.ammoniaValue = getSensorReadingValue(
-                    sensorReadings,
-                    "ammonia",
-                );
-                pen.feeders = buildNumberedResourceReadings(
-                    sensorReadings,
-                    "feeders",
-                    pen.feeder_count,
-                    "Feeder",
-                );
-                pen.drinkers = buildNumberedResourceReadings(
-                    sensorReadings,
-                    "drinkers",
-                    pen.drinker_count,
-                    "Drinker",
-                );
+                if (updateEnvironment) {
+                    pen.temperature = getSensorReadingDisplay(
+                        sensorReadings,
+                        "temperature",
+                        "0 deg",
+                    );
+                    pen.ammonia = getSensorReadingDisplay(
+                        sensorReadings,
+                        "ammonia",
+                        "0 ppm",
+                    );
+                    pen.temperatureValue = getSensorReadingValue(
+                        sensorReadings,
+                        "temperature",
+                    );
+                    pen.ammoniaValue = getSensorReadingValue(
+                        sensorReadings,
+                        "ammonia",
+                    );
+                }
+
+                if (updateResources) {
+                    pen.feeder_count = stableResourceCount(
+                        apiPen.feeder_count,
+                        pen.feeder_count,
+                        pen.feeders,
+                    );
+                    pen.drinker_count = stableResourceCount(
+                        apiPen.drinker_count,
+                        pen.drinker_count,
+                        pen.drinkers,
+                    );
+                    pen.feeders = buildNumberedResourceReadings(
+                        sensorReadings,
+                        "feeders",
+                        pen.feeder_count,
+                        "Feeder",
+                    );
+                    pen.drinkers = buildNumberedResourceReadings(
+                        sensorReadings,
+                        "drinkers",
+                        pen.drinker_count,
+                        "Drinker",
+                    );
+                }
             });
         });
     }
 
-    function renderActiveSensorReadings() {
+    function renderActiveSensorReadings(options = {}) {
+        const { updateEnvironment = true, updateResources = true } = options;
         const currentPen = houses[activeHouseIndex]?.pens?.[activePenIndex];
 
         if (!currentPen) return;
 
-        if (houseTemperature) houseTemperature.textContent = currentPen.temperature;
-        if (houseAmmonia) houseAmmonia.textContent = currentPen.ammonia;
-        if (
-            feedRow &&
-            !updateResourceRowValues(feedRow, currentPen.feeders, "feed")
-        ) {
-            feedRow.innerHTML = buildResourceRow(
-                currentPen.feeders,
-                "feed",
-                currentPen.feeder_count,
-                "Feeder",
-            );
+        if (updateEnvironment) {
+            if (houseTemperature) houseTemperature.textContent = currentPen.temperature;
+            if (houseAmmonia) houseAmmonia.textContent = currentPen.ammonia;
         }
-        if (
-            waterRow &&
-            !updateResourceRowValues(waterRow, currentPen.drinkers, "water")
-        ) {
-            waterRow.innerHTML = buildResourceRow(
-                currentPen.drinkers,
-                "water",
-                currentPen.drinker_count,
-                "Drinker",
-            );
+
+        if (updateResources) {
+            if (
+                feedRow &&
+                !updateResourceRowValues(feedRow, currentPen.feeders, "feed")
+            ) {
+                feedRow.innerHTML = buildResourceRow(
+                    currentPen.feeders,
+                    "feed",
+                    currentPen.feeder_count,
+                    "Feeder",
+                );
+            }
+            if (
+                waterRow &&
+                !updateResourceRowValues(waterRow, currentPen.drinkers, "water")
+            ) {
+                waterRow.innerHTML = buildResourceRow(
+                    currentPen.drinkers,
+                    "water",
+                    currentPen.drinker_count,
+                    "Drinker",
+                );
+            }
         }
     }
 
@@ -1110,7 +1126,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    async function refreshHouseSensorReadings() {
+    async function refreshHouseSensorReadings(options = {}) {
+        const { updateEnvironment = true, updateResources = true } = options;
         const response = await fetchHousesResponse({
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
@@ -1121,8 +1138,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const result = await response.json();
 
-        applyLatestSensorReadings(result.data || []);
-        renderActiveSensorReadings();
+        applyLatestSensorReadings(result.data || [], { updateEnvironment, updateResources });
+        renderActiveSensorReadings({ updateEnvironment, updateResources });
     }
 
     function populatePenOptions(house) {
@@ -1301,21 +1318,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function startHouseSensorRefresh() {
-        if (houseSensorRefreshTimer) return;
+        if (!houseEnvironmentRefreshTimer) {
+            houseEnvironmentRefreshTimer = setInterval(async () => {
+                if (isRefreshingHouseEnvironment) return;
 
-        houseSensorRefreshTimer = setInterval(async () => {
-            if (isRefreshingHouseSensors) return;
+                isRefreshingHouseEnvironment = true;
 
-            isRefreshingHouseSensors = true;
+                try {
+                    await refreshHouseSensorReadings({
+                        updateEnvironment: true,
+                        updateResources: false,
+                    });
+                } catch (error) {
+                    console.error("Error refreshing house environment readings:", error);
+                } finally {
+                    isRefreshingHouseEnvironment = false;
+                }
+            }, HOUSE_ENVIRONMENT_REFRESH_INTERVAL_MS);
+        }
 
-            try {
-                await refreshHouseSensorReadings();
-            } catch (error) {
-                console.error("Error refreshing house sensor readings:", error);
-            } finally {
-                isRefreshingHouseSensors = false;
-            }
-        }, HOUSE_SENSOR_REFRESH_INTERVAL_MS);
+        if (!houseResourceRefreshTimer) {
+            houseResourceRefreshTimer = setInterval(async () => {
+                if (isRefreshingHouseResources) return;
+
+                isRefreshingHouseResources = true;
+
+                try {
+                    await refreshHouseSensorReadings({
+                        updateEnvironment: false,
+                        updateResources: true,
+                    });
+                } catch (error) {
+                    console.error("Error refreshing house resource readings:", error);
+                } finally {
+                    isRefreshingHouseResources = false;
+                }
+            }, HOUSE_RESOURCE_REFRESH_INTERVAL_MS);
+        }
     }
 
     function renderNoHouses() {

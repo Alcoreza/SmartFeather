@@ -132,6 +132,36 @@ class MobileTaskController extends Controller
         ]);
     }
 
+    public function getFlockmanTasksOverview(Request $request)
+    {
+        $employeeId = (int) $request->attributes->get('mobile_employee_id');
+
+        $validated = $request->validate([
+            'per_page' => 'nullable|integer|min:1|max:20',
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 10);
+        $clearedTaskIds = $this->clearedTaskIds($employeeId);
+        $counts = $this->taskCounts($employeeId);
+
+        return response()->json([
+            'success' => true,
+            'counts' => $counts,
+            'pending' => [
+                'tasks' => $this->mobileTaskRows($employeeId, 'Pending', 1, $perPage, $clearedTaskIds),
+                'pagination' => $this->paginationRow(1, $perPage, $counts['pending']),
+            ],
+            'for_approval' => [
+                'tasks' => $this->mobileTaskRows($employeeId, 'For Approval', 1, $perPage, $clearedTaskIds),
+                'pagination' => $this->paginationRow(1, $perPage, $counts['for_approval']),
+            ],
+            'completed' => [
+                'tasks' => $this->mobileTaskRows($employeeId, 'Completed', 1, $perPage, $clearedTaskIds),
+                'pagination' => $this->paginationRow(1, $perPage, $counts['completed']),
+            ],
+        ]);
+    }
+
     public function getSubmittedTaskDetail(Request $request)
     {
         $employeeId = (int) $request->attributes->get('mobile_employee_id');
@@ -631,6 +661,110 @@ class MobileTaskController extends Controller
             $bucket,
             ltrim($path, '/')
         );
+    }
+
+    private function clearedTaskIds(int $employeeId)
+    {
+        $latestEntry = DB::table('personnel_entry_logs')
+            ->where('employee_id', $employeeId)
+            ->whereRaw('UPPER(status) = ?', ['IN'])
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$latestEntry) {
+            return collect();
+        }
+
+        return DB::table('personnel_biosecurity_logs')
+            ->where('employee_id', $employeeId)
+            ->where('personnel_entry_log_id', $latestEntry->id)
+            ->whereNotNull('task_id')
+            ->where('created_at', '>=', Carbon::now()->subHours(24))
+            ->pluck('task_id')
+            ->map(fn($taskId) => (int) $taskId)
+            ->unique()
+            ->values();
+    }
+
+    private function taskCounts(int $employeeId): array
+    {
+        $countRows = Task::query()
+            ->where('user_employeeid', $employeeId)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return [
+            'pending' => (int) ($countRows['Pending'] ?? 0),
+            'for_approval' => (int) ($countRows['For Approval'] ?? 0),
+            'completed' => (int) ($countRows['Completed'] ?? 0),
+        ];
+    }
+
+    private function mobileTaskRows(int $employeeId, string $status, int $page, int $perPage, $clearedTaskIds)
+    {
+        $offset = ($page - 1) * $perPage;
+
+        return Task::query()
+            ->leftJoin('house', 'tasks.house_houseid', '=', 'house.id')
+            ->leftJoin('pen', function ($join) {
+                $join->on('tasks.house_houseid', '=', 'pen.house_id')
+                    ->on('tasks.pennumber', '=', 'pen.id');
+            })
+            ->where('tasks.user_employeeid', $employeeId)
+            ->where('tasks.status', $status)
+            ->orderByDesc('tasks.timeassigned')
+            ->offset($offset)
+            ->limit($perPage)
+            ->get([
+                'tasks.taskid',
+                'tasks.tasktype',
+                'tasks.detailedtask',
+                'tasks.timeassigned',
+                'tasks.finishby',
+                'tasks.status',
+                'tasks.notes',
+                'tasks.time_completed',
+                'tasks.user_employeeid',
+                'tasks.house_houseid',
+                'tasks.pennumber',
+                'tasks.prioritylevel',
+                'tasks.photourl',
+                'house.house_number as house_number',
+                'pen.pen_name as pen_name',
+            ])
+            ->map(fn($task) => [
+                'taskid' => $task->taskid,
+                'tasktype' => $task->tasktype,
+                'detailedtask' => $task->detailedtask,
+                'timeassigned' => $this->formatDateTimeForMobile($task->timeassigned),
+                'finishby' => $this->formatDateTimeForMobile($task->finishby),
+                'status' => $task->status,
+                'notes' => $task->notes,
+                'time_completed' => $this->formatDateTimeForMobile($task->time_completed),
+                'user_employeeid' => $task->user_employeeid,
+                'house_houseid' => $task->house_houseid,
+                'pennumber' => $task->pennumber,
+                'prioritylevel' => $task->prioritylevel,
+                'photourl' => $this->buildTaskPhotoUrl($task->photourl),
+                'submitted_at' => $this->formatDateTimeForMobile($task->time_completed),
+                'submitted_fields' => [],
+                'house_number' => $task->house_number,
+                'pen_name' => $task->pen_name,
+                'biosecurity_cleared' => $clearedTaskIds->contains((int) $task->taskid),
+            ])
+            ->values();
+    }
+
+    private function paginationRow(int $page, int $perPage, int $total): array
+    {
+        return [
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'has_more' => ($page * $perPage) < $total,
+        ];
     }
 
     private function formatDateTimeForMobile($value): ?string

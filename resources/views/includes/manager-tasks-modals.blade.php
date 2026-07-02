@@ -182,7 +182,7 @@
                 </div>
                 <div class="manager-task-form-field">
                     <label>Date to finish*</label>
-                    <input type="date" name="date_assigned" class="task-date-input">
+                    <input type="date" name="date_assigned" class="task-date-input" min="{{ now()->toDateString() }}">
                 </div>
             </div>
             <div class="manager-task-form-field full">

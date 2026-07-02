@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTaskFilters();
     setupTaskRowPaginationControls();
     setupTaskSelectPlaceholderState();
+    setupTaskDateRestrictions();
     setupManagerTaskModals();
     setupAddTaskModal();
     setupEditTaskModal();
@@ -100,6 +101,27 @@ let taskFilters = {
     house: ALL_HOUSES_OPTION,
     priority: ALL_PRIORITY_OPTION,
 };
+
+function getTodayDateInputValue() {
+    const today = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+}
+
+function isDateBeforeToday(dateValue) {
+    return String(dateValue || "") < getTodayDateInputValue();
+}
+
+function applyTaskDateRestrictions(scope = document) {
+    scope.querySelectorAll("input.task-date-input[type='date']").forEach((field) => {
+        field.min = getTodayDateInputValue();
+    });
+}
+
+function setupTaskDateRestrictions() {
+    applyTaskDateRestrictions();
+}
 
 async function renderManagerTasks(shouldRender = true) {
     try {
@@ -728,6 +750,7 @@ function setupAddTaskModal() {
         openButton.addEventListener("click", () => {
             form?.reset();
             resetAddTaskRows();
+            applyTaskDateRestrictions(form || document);
             clearAddTaskFormError();
             openTaskModal("addTaskModal");
             loadTaskFormOptions({ preserveSelections: true });
@@ -859,6 +882,7 @@ async function openEditTaskModal(task) {
 
     clearEditTaskFormError();
     form.reset();
+    applyTaskDateRestrictions(form);
 
     const workerField = document.getElementById("editTaskWorkerName");
     if (workerField) {
@@ -919,6 +943,7 @@ function validateEditTaskForm(form) {
     const values = getTaskRowValues(form);
 
     clearEditTaskRequiredFieldHighlights(false);
+    applyTaskDateRestrictions(form);
 
     Object.entries({
         task_category: values.taskCategory,
@@ -940,6 +965,16 @@ function validateEditTaskForm(form) {
         return {
             isValid: false,
             message: "Please fill in the required fields.",
+        };
+    }
+
+    if (isDateBeforeToday(values.dateAssigned)) {
+        form.querySelector("[name='date_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+        form.querySelector("[name='date_assigned']")?.focus();
+
+        return {
+            isValid: false,
+            message: "Date to finish cannot be earlier than today.",
         };
     }
 
@@ -1040,6 +1075,7 @@ function addNewTaskRow({ scrollToRow = false } = {}) {
     const row = container.lastElementChild;
     populateTaskRowSelects(row);
     bindTaskRowEvents(row);
+    applyTaskDateRestrictions(row);
     updateTaskCountBadge();
     setupTaskSelectPlaceholderState();
 
@@ -1078,7 +1114,7 @@ function generateTaskRowHtml(rowUid) {
                 </div>
                 <div class="manager-task-form-field">
                     <label>Date to finish*</label>
-                    <input type="date" name="date_assigned" class="task-date-input">
+                    <input type="date" name="date_assigned" class="task-date-input" min="${getTodayDateInputValue()}">
                 </div>
                 <div class="manager-task-form-field">
                     <label>Time to finish*</label>
@@ -1205,6 +1241,7 @@ function validateAddTaskForm(form, payload) {
     const tasks = [];
 
     clearAddTaskRequiredFieldHighlights(false);
+    applyTaskDateRestrictions(form);
 
     if (!String(payload.worker_name ?? "").trim()) {
         missingFields.push({ name: "worker_name", label: "Assign Flockman" });
@@ -1213,6 +1250,7 @@ function validateAddTaskForm(form, payload) {
 
     const rows = [...document.querySelectorAll("#tasksContainer .manager-task-row")];
     let previousFinishAt = null;
+    let hasPastFinishDateErrors = false;
     let hasSequenceErrors = false;
 
     rows.forEach((row) => {
@@ -1231,6 +1269,11 @@ function validateAddTaskForm(form, payload) {
                 row.querySelector(`[name="${name}"]`)?.closest(".manager-task-form-field")?.classList.add("has-error");
             }
         });
+
+        if (values.dateAssigned && isDateBeforeToday(values.dateAssigned)) {
+            hasPastFinishDateErrors = true;
+            row.querySelector("[name='date_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+        }
 
         if (values.dateAssigned && values.timeAssigned) {
             const finishAt = new Date(`${values.dateAssigned}T${values.timeAssigned}:00`);
@@ -1258,6 +1301,15 @@ function validateAddTaskForm(form, payload) {
             isValid: false,
             missingFields,
             tasks,
+        };
+    }
+
+    if (hasPastFinishDateErrors) {
+        return {
+            isValid: false,
+            missingFields,
+            tasks,
+            message: "Date to finish cannot be earlier than today.",
         };
     }
 

@@ -18,6 +18,10 @@ class AuthenticateSession
             return $this->unauthenticated($request);
         }
 
+        if ($this->sessionWasRecentlyVerified($request)) {
+            return $next($request);
+        }
+
         $user = User::find($request->session()->get('user_id'));
 
         if (
@@ -31,7 +35,22 @@ class AuthenticateSession
             return $this->unauthenticated($request);
         }
 
+        $request->session()->put('auth_verified_at', now()->timestamp);
+
         return $next($request);
+    }
+
+    private function sessionWasRecentlyVerified(Request $request): bool
+    {
+        $seconds = (int) env('AUTH_SESSION_RECHECK_SECONDS', 30);
+
+        if ($seconds <= 0) {
+            return false;
+        }
+
+        $verifiedAt = (int) $request->session()->get('auth_verified_at', 0);
+
+        return $verifiedAt > 0 && now()->timestamp - $verifiedAt < $seconds;
     }
 
     private function unauthenticated(Request $request)

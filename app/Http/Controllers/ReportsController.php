@@ -9,6 +9,7 @@ use App\Models\PopulationRecord;
 use App\Models\WeightSamplingLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -22,7 +23,10 @@ class ReportsController extends Controller
             'house' => $request->query('house', ''),
         ];
 
-        return response()->json([
+        $cacheKey = 'manager_reports_index:' . md5(json_encode($filters));
+
+        return response()->json(Cache::remember($cacheKey, now()->addSeconds(30), function () use ($filters) {
+            return [
             'filters' => array_merge($filters, [
                 'options' => $this->getReportFilterOptions(),
             ]),
@@ -32,7 +36,8 @@ class ReportsController extends Controller
                 'feed_consumption' => $this->getFeedConsumptionReport($filters),
                 'mortality' => $this->getMortalityReport($filters),
             ],
-        ]);
+            ];
+        }));
     }
 
     private function getSummaryStatistics(array $filters): array

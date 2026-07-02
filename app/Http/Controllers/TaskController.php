@@ -7,6 +7,7 @@ use App\Models\House;
 use App\Models\Pen;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
@@ -15,6 +16,7 @@ class TaskController extends Controller
 {
     public function index()
     {
+        return response()->json(Cache::remember('manager_tasks_index', now()->addSeconds(15), function () {
         $tasks = Task::with(['employee', 'house', 'pen'])
             ->orderBy('timeassigned', 'desc')
             ->get()
@@ -59,11 +61,12 @@ class TaskController extends Controller
                 ];
             });
 
-        return response()->json([
+        return [
             'pending' => $tasks->where('status', 'pending')->values(),
             'for_approval' => $tasks->where('status', 'for_approval')->values(),
             'completed' => $tasks->where('status', 'completed')->values(),
-        ]);
+        ];
+        }));
     }
 
     private function buildTaskPhotoUrl(?string $path): ?string
@@ -164,6 +167,7 @@ class TaskController extends Controller
             }
 
             $task = Task::create($validated);
+            $this->clearTaskCaches();
 
             return response()->json($task, 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -219,6 +223,7 @@ class TaskController extends Controller
             });
 
             $task->update($updateData);
+            $this->clearTaskCaches();
 
             return response()->json($task, 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -235,6 +240,7 @@ class TaskController extends Controller
         try {
             $task = Task::findOrFail($taskId);
             $task->delete();
+            $this->clearTaskCaches();
 
             return response()->json(['message' => 'Task deleted successfully'], 200);
         } catch (\Exception $e) {
@@ -245,6 +251,7 @@ class TaskController extends Controller
 
     public function formOptions()
     {
+        return response()->json(Cache::remember('manager_tasks_form_options', now()->addSeconds(15), function () {
         $pendingWorkerIds = Task::where('status', 'Pending')
             ->pluck('user_employeeid')
             ->unique()
@@ -288,13 +295,14 @@ class TaskController extends Controller
             })
             ->toArray();
 
-        return response()->json([
+        return [
             'workers' => $workers,
             'houses' => $houses,
             'pens' => [],
             'task_categories' => $taskCategories,
             'priority_levels' => ['Low', 'Medium', 'High'],
-        ]);
+        ];
+        }));
     }
 
     private function finishDateIsPast(?string $finishBy): bool
@@ -309,8 +317,10 @@ class TaskController extends Controller
     public function getPensForHouse(Request $request, $houseId)
     {
         $allowWithoutRunningBatch = $this->isChickPlacementTask($request->query('task_type'));
+        $cacheKey = 'manager_tasks_pens_for_house:' . $houseId . ':' . ($allowWithoutRunningBatch ? 'all' : 'running');
 
-        $pens = Pen::where('house_id', $houseId)
+        $pens = Cache::remember($cacheKey, now()->addSeconds(30), function () use ($houseId, $allowWithoutRunningBatch) {
+            return Pen::where('house_id', $houseId)
             ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get(['id', 'pen_name'])
@@ -325,6 +335,7 @@ class TaskController extends Controller
                     'disabledReason' => !$allowWithoutRunningBatch && !$hasRunningBatch ? 'no running batch' : null,
                 ];
             });
+        });
 
         return response()->json(['pens' => $pens]);
     }
@@ -334,7 +345,8 @@ class TaskController extends Controller
      */
     public function getAllWorkers()
     {
-        $workers = Employee::whereRaw('is_active is true')
+        $workers = Cache::remember('manager_tasks_all_workers', now()->addSeconds(30), function () {
+            return Employee::whereRaw('is_active is true')
             ->get()
             ->map(function (Employee $employee) {
                 $fullName = trim(sprintf(
@@ -350,7 +362,15 @@ class TaskController extends Controller
                     'name' => $fullName ?: 'Unknown',
                 ];
             });
+        });
 
         return response()->json(['workers' => $workers]);
+    }
+
+    private function clearTaskCaches(): void
+    {
+        Cache::forget('manager_tasks_index');
+        Cache::forget('manager_tasks_form_options');
+        Cache::forget('manager_tasks_all_workers');
     }
 }

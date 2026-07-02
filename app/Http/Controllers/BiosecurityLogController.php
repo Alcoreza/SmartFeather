@@ -9,6 +9,7 @@ use App\Models\VisitorLog;
 use App\Models\PersonnelEntryLog;
 use App\Models\WeightSamplingLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -22,6 +23,9 @@ class BiosecurityLogController extends Controller
     {
         try {
             $requestedCategories = $this->getRequestedLogCategories($request);
+            $cacheKey = 'biosecurity_logs_index:' . md5(implode('|', $requestedCategories));
+
+            return response()->json(Cache::remember($cacheKey, now()->addSeconds(15), function () use ($requestedCategories) {
             $groupedLogs = [];
 
             if (in_array('Personnel Biosecurity Logs', $requestedCategories, true)) {
@@ -57,10 +61,11 @@ class BiosecurityLogController extends Controller
             // Get overview stats
             $overview = $this->getOverview();
 
-            return response()->json([
+            return [
                 'overview' => $overview,
                 'logs' => $groupedLogs,
-            ]);
+            ];
+            }));
         } catch (\Exception $e) {
             return response()->json([
                 'error' => $e->getMessage(),
@@ -129,6 +134,7 @@ class BiosecurityLogController extends Controller
         $validated = $this->convertIdsToValues($type, $validated);
 
         $log = $this->createLog($type, $validated);
+        $this->clearBiosecurityLogCaches();
 
         return response()->json([
             'message' => 'Log created successfully',
@@ -232,6 +238,7 @@ class BiosecurityLogController extends Controller
         $validated = $this->convertIdsToValues($type, $validated, $log);
 
         $log->update($validated);
+        $this->clearBiosecurityLogCaches();
 
         return response()->json([
             'message' => 'Log updated successfully',
@@ -248,6 +255,7 @@ class BiosecurityLogController extends Controller
 
         $log = $this->findLog($type, $id);
         $log->delete();
+        $this->clearBiosecurityLogCaches();
 
         return response()->json([
             'message' => 'Log deleted successfully',
@@ -648,5 +656,15 @@ class BiosecurityLogController extends Controller
             'personnel_entered' => $personnelEntered,
             'visitors_entered' => $visitorsEntered,
         ];
+    }
+
+    private function clearBiosecurityLogCaches(): void
+    {
+        foreach ([
+            'Cleaning|Personnel Biosecurity Logs|Visitors|Personnel Entry Logs|Weight Sampling',
+            'Personnel Biosecurity Logs|Visitors',
+        ] as $categories) {
+            Cache::forget('biosecurity_logs_index:' . md5($categories));
+        }
     }
 }

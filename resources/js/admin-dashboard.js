@@ -15,8 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([
         renderAdminRealtimeMonitoring(),
         renderAdminMonitoringCarousel(),
-        renderAdminEnvironmentCarousel(),
-        renderAdminResourceCarousel(),
+        renderAdminHouseSensorSummaryCarousels(),
     ]);
 
     setupAdminProfileModal();
@@ -462,6 +461,76 @@ async function renderAdminEnvironmentCarousel() {
     } catch (error) {
         console.error("Failed to load admin environment monitoring data.", error);
     }
+}
+
+async function renderAdminHouseSensorSummaryCarousels() {
+    try {
+        const response = await fetch("/api/admin/dashboard/house-sensor-summary");
+        const data = await response.json();
+
+        renderAdminEnvironmentCarouselFromData(data.environment || {});
+        renderAdminResourceCarouselFromData(data.resources || {});
+    } catch (error) {
+        console.error("Failed to load admin house sensor summary data.", error);
+    }
+}
+
+function renderAdminEnvironmentCarouselFromData(data) {
+    const canvas = document.getElementById("adminEnvironmentChart");
+    const caption = document.getElementById("adminEnvGraphCaption");
+    const dots = document.querySelectorAll(".admin-env-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    adminEnvironmentSlides = Array.isArray(data.slides) ? data.slides : [];
+    if (!adminEnvironmentSlides.length) return;
+
+    createOrUpdateAdminEnvironmentChart(canvas, adminEnvironmentSlides[0]);
+    updateAdminGraphCaption(caption, adminEnvironmentSlides[0]);
+    updateAdminDots(dots, 0);
+
+    dots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.slide);
+            if (Number.isNaN(index) || !adminEnvironmentSlides[index]) return;
+
+            activeAdminEnvironmentSlideIndex = index;
+            createOrUpdateAdminEnvironmentChart(canvas, adminEnvironmentSlides[index]);
+            updateAdminGraphCaption(caption, adminEnvironmentSlides[index]);
+            updateAdminDots(dots, index);
+        });
+    });
+}
+
+function renderAdminResourceCarouselFromData(data) {
+    const canvas = document.getElementById("adminResourceChart");
+    const caption = document.getElementById("adminResourceGraphCaption");
+    const dots = document.querySelectorAll(".admin-resource-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    adminResourceSlides = Array.isArray(data.slides) ? data.slides : [];
+    if (!adminResourceSlides.length) return;
+
+    createOrUpdateAdminResourceChart(canvas, adminResourceSlides[0]);
+    updateAdminGraphCaption(caption, adminResourceSlides[0]);
+    updateAdminDots(dots, 0);
+
+    dots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.slide);
+            if (Number.isNaN(index) || !adminResourceSlides[index]) return;
+
+            activeAdminResourceSlideIndex = index;
+            createOrUpdateAdminResourceChart(canvas, adminResourceSlides[index]);
+            updateAdminGraphCaption(caption, adminResourceSlides[index]);
+            updateAdminDots(dots, index);
+        });
+    });
 }
 
 function createOrUpdateAdminEnvironmentChart(canvas, slide) {

@@ -33,8 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderRealtimeMonitoring();
     renderMonitoringCarousel();
-    renderEnvironmentCarousel();
-    renderResourceCarousel();
+    renderHouseSensorSummaryCarousels();
 });
 
 function resetInitialRealtimeWidgets() {
@@ -493,6 +492,86 @@ async function renderEnvironmentCarousel() {
     } catch (error) {
         console.error("Failed to load environment monitoring data.", error);
     }
+}
+
+async function renderHouseSensorSummaryCarousels() {
+    try {
+        const response = await fetch("/api/manager/dashboard/house-sensor-summary");
+        const data = await response.json();
+
+        renderEnvironmentCarouselFromData(data.environment || {});
+        renderResourceCarouselFromData(data.resources || {});
+    } catch (error) {
+        console.error("Failed to load house sensor summary data.", error);
+    }
+}
+
+function renderEnvironmentCarouselFromData(data) {
+    const canvas = document.getElementById("environmentChart");
+    const caption = document.getElementById("envGraphCaption");
+    const dots = document.querySelectorAll(".env-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    environmentSlides = Array.isArray(data.slides) ? data.slides : [];
+
+    if (!environmentSlides.length) {
+        return;
+    }
+
+    createOrUpdateEnvironmentChart(canvas, environmentSlides[0]);
+    updateGraphCaption(caption, environmentSlides[0]);
+    updateDots(dots, 0);
+
+    dots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.slide);
+            if (Number.isNaN(index) || !environmentSlides[index]) {
+                return;
+            }
+
+            activeEnvironmentSlideIndex = index;
+            createOrUpdateEnvironmentChart(canvas, environmentSlides[index]);
+            updateGraphCaption(caption, environmentSlides[index]);
+            updateDots(dots, index);
+        });
+    });
+}
+
+function renderResourceCarouselFromData(data) {
+    const canvas = document.getElementById("resourceChart");
+    const caption = document.getElementById("resourceGraphCaption");
+    const dots = document.querySelectorAll(".resource-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    resourceSlides = Array.isArray(data.slides) ? data.slides : [];
+
+    if (!resourceSlides.length) {
+        return;
+    }
+
+    createOrUpdateResourceChart(canvas, resourceSlides[0]);
+    updateGraphCaption(caption, resourceSlides[0]);
+    updateDots(dots, 0);
+
+    dots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.slide);
+            if (Number.isNaN(index) || !resourceSlides[index]) {
+                return;
+            }
+
+            activeResourceSlideIndex = index;
+            createOrUpdateResourceChart(canvas, resourceSlides[index]);
+            updateGraphCaption(caption, resourceSlides[index]);
+            updateDots(dots, index);
+        });
+    });
 }
 
 function createOrUpdateEnvironmentChart(canvas, slide) {

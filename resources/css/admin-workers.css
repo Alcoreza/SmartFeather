@@ -111,11 +111,11 @@
 }
 
 .admin-workers-name-col {
-    width: 52%;
+    width: 56%;
 }
 
 .admin-workers-role-col {
-    width: 24%;
+    width: 20%;
 }
 
 .admin-workers-actions-col {
@@ -397,9 +397,18 @@
 
 .admin-worker-modal-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 12px;
     margin-top: 18px;
+}
+
+.admin-worker-modal-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-left: auto;
 }
 
 .admin-worker-modal-actions.single {
@@ -424,15 +433,14 @@
     background: linear-gradient(180deg, #8a8a8a, #767676);
 }
 
-.admin-worker-field > .admin-worker-btn {
-    width: fit-content;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .admin-worker-btn.save {
     background: linear-gradient(180deg, #2c8748, #1f6f2b);
+}
+
+.admin-worker-btn.password {
+    background: #f3f8f2;
+    color: #17452d;
+    border: 1px solid rgba(23, 100, 58, 0.18);
 }
 
 .admin-worker-btn.delete {
@@ -500,7 +508,18 @@
 
     .admin-worker-modal-actions,
     .admin-worker-modal-actions.single {
+        align-items: stretch;
+        flex-direction: column;
         justify-content: center;
+    }
+
+    .admin-worker-modal-action-group {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .admin-worker-modal-actions .admin-worker-btn {
+        flex: 1 1 0;
     }
 
     .admin-worker-modal-card {
@@ -619,5 +638,441 @@
     .admin-worker-modal-backdrop.show .admin-worker-modal-card,
     .admin-worker-modal-backdrop[style*="display: flex"] .admin-worker-modal-card {
         animation: none;
+    }
+}
+
+/* Manager-aligned admin workers surface */
+.admin-main {
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.admin-workers-topbar {
+    min-width: 0;
+}
+
+.admin-workers-toolbar {
+    min-width: 0;
+}
+
+.admin-add-worker-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #0f5c2b, #063320);
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(6, 51, 32, 0.16);
+}
+
+.admin-add-worker-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(6, 51, 32, 0.2);
+}
+
+.admin-add-worker-btn svg {
+    width: 19px;
+    height: 19px;
+}
+
+.admin-workers-filter {
+    min-width: 180px;
+    width: auto;
+    height: 42px;
+    padding: 0 40px 0 14px;
+    border: 1.5px solid rgba(23, 100, 58, 0.24);
+    border-radius: 12px;
+    background-color: #ffffff;
+    color: #1b5e20;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
+    appearance: none;
+    cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #1d6a37 50%),
+        linear-gradient(135deg, #1d6a37 50%, transparent 50%);
+    background-position:
+        calc(100% - 20px) calc(50% - 3px),
+        calc(100% - 10px) calc(50% - 3px);
+    background-size:
+        10px 10px,
+        10px 10px;
+    background-repeat: no-repeat;
+}
+
+.admin-workers-filter:hover {
+    background-color: #f9fff9;
+    border-color: rgba(87, 196, 81, 0.38);
+    box-shadow: 0 4px 12px rgba(6, 51, 32, 0.05);
+}
+
+.admin-workers-card {
+    height: auto;
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid rgba(87, 196, 81, 0.12);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(10, 24, 15, 0.035);
+    backdrop-filter: none;
+    overflow: hidden;
+}
+
+.admin-workers-table-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex: 0 0 auto;
+    min-height: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-workers-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.admin-workers-table thead th {
+    padding: 11px 12px;
+    text-align: center;
+    color: #1f3f2b;
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.admin-workers-table thead th:first-child,
+.admin-workers-table tbody td:first-child {
+    text-align: left;
+    padding-left: 16px;
+}
+
+.admin-workers-table thead th:not(:first-child),
+.admin-workers-table tbody td:not(:first-child) {
+    text-align: center;
+}
+
+.admin-workers-table tbody tr,
+.admin-workers-table tbody tr:hover {
+    transform: none;
+}
+
+.admin-workers-table tbody td {
+    height: 62px;
+    padding: 12px;
+    font-size: 0.94rem;
+    font-weight: 550;
+    line-height: 1.15;
+    color: #102016;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(87, 196, 81, 0.08);
+    vertical-align: middle;
+}
+
+.admin-workers-table tbody tr:hover td {
+    background: #f6fcf6;
+}
+
+.admin-workers-table tbody td:first-child,
+.admin-workers-table tbody td:last-child {
+    border-radius: 0;
+}
+
+.admin-workers-placeholder-row td {
+    background: transparent !important;
+    color: transparent;
+    box-shadow: none;
+    pointer-events: none;
+    border-bottom-color: transparent;
+}
+
+.admin-worker-action-group {
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.admin-worker-icon-btn {
+    width: 34px;
+    height: 34px;
+    box-shadow: none;
+}
+
+.admin-worker-icon-btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 8px 16px rgba(104, 114, 125, 0.14);
+}
+
+.admin-worker-icon-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.admin-workers-pagination {
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(87, 196, 81, 0.1);
+}
+
+.admin-workers-pagination.is-hidden {
+    display: none;
+    visibility: visible;
+}
+
+.admin-workers-page-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(87, 196, 81, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1b5e20;
+    font-size: 0.9rem;
+}
+
+.admin-workers-page-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    color: #062c17;
+    border-color: rgba(87, 196, 81, 0.6);
+    box-shadow: 0 4px 12px rgba(87, 196, 81, 0.15);
+}
+
+.admin-workers-page-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    position: relative;
+    --dot-size: 10px;
+    --dot-gap: 8px;
+    min-height: 18px;
+    overflow: visible;
+}
+
+.admin-workers-page-dot {
+    width: 10px;
+    height: 10px;
+    border: 1px solid rgba(87, 196, 81, 0.4);
+    background: rgba(255, 255, 255, 0.9);
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.admin-workers-page-dot:hover {
+    background: rgba(87, 196, 81, 0.2);
+    border-color: rgba(87, 196, 81, 0.6);
+}
+
+.admin-workers-page-dot.active {
+    background: linear-gradient(135deg, #63d15f, #57c451);
+    border-color: rgba(87, 196, 81, 0.6);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.22);
+    transform: scale(1.08);
+}
+
+.admin-workers-page-dots[data-page-direction="next"] .admin-workers-page-dot:not(.active) {
+    animation: adminWorkersDotCarouselNext 0.24s ease both;
+}
+
+.admin-workers-page-dots[data-page-direction="prev"] .admin-workers-page-dot:not(.active) {
+    animation: adminWorkersDotCarouselPrev 0.24s ease both;
+}
+
+.admin-workers-page-dots[data-page-direction="next"] .admin-workers-page-dot.active,
+.admin-workers-page-dots[data-page-direction="prev"] .admin-workers-page-dot.active {
+    animation: adminWorkersActiveDotIn 0.24s ease both;
+}
+
+.admin-workers-table tbody tr {
+    animation-delay: var(--row-delay, 0s);
+}
+
+.admin-workers-placeholder-row {
+    animation: none !important;
+}
+
+@keyframes adminWorkersDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes adminWorkersDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes adminWorkersActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-main {
+        padding-inline: 18px;
+    }
+
+    .admin-workers-topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .admin-workers-title {
+        text-align: left;
+        font-size: clamp(1.65rem, 7vw, 2.1rem);
+        line-height: 1.08;
+        letter-spacing: 0;
+    }
+
+    .admin-workers-divider {
+        margin: 12px 0 18px;
+    }
+
+    .admin-workers-toolbar {
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .admin-workers-toolbar-actions {
+        justify-content: flex-start;
+    }
+
+    .admin-add-worker-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+
+    .admin-workers-filter {
+        width: 100%;
+        height: 38px;
+        border-radius: 10px;
+        font-size: 0.84rem;
+    }
+
+    .admin-workers-card {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .admin-workers-table-wrap {
+        margin-inline: -12px;
+        padding-inline: 12px;
+        padding-bottom: 8px;
+    }
+
+    .admin-workers-table {
+        min-width: 560px;
+    }
+
+    .admin-workers-table thead th,
+    .admin-workers-table tbody td {
+        padding: 10px 8px;
+        font-size: 0.82rem;
+        line-height: 1.12;
+    }
+
+    .admin-workers-table tbody td {
+        height: 54px;
+    }
+
+    .admin-workers-table thead th:first-child,
+    .admin-workers-table tbody td:first-child {
+        padding-left: 12px;
+    }
+
+    .admin-worker-action-group {
+        gap: 6px;
+    }
+
+    .admin-worker-icon-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .admin-workers-pagination {
+        gap: 10px;
+        flex-wrap: wrap;
+        padding-top: 12px;
+    }
+
+    .admin-workers-page-btn {
+        min-height: 38px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .admin-workers-page-dots {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-main {
+        padding-inline: 14px;
+    }
+
+    .admin-workers-card {
+        margin-inline: -4px;
+        padding: 10px;
+    }
+
+    .admin-workers-table-wrap {
+        margin-inline: -10px;
+        padding-inline: 10px;
+    }
+
+    .admin-workers-table {
+        min-width: 600px;
+    }
+
+    .admin-workers-table thead th,
+    .admin-workers-table tbody td {
+        padding-inline: 6px;
+        font-size: 0.76rem;
+    }
+
+    .admin-workers-pagination {
+        align-items: stretch;
+    }
+
+    .admin-workers-page-dots {
+        order: -1;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .admin-workers-page-btn {
+        flex: 1 1 0;
     }
 }

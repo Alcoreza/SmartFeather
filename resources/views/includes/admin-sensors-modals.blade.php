@@ -18,7 +18,7 @@
 
             <div class="admin-sensor-modal-grid">
                 <div class="admin-sensor-modal-field">
-                    <label>House Number</label>
+                    <label>House Name</label>
                     <input type="text" id="adminSensorViewHouse" readonly>
                 </div>
 
@@ -58,7 +58,7 @@
 
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
-                    <label for="adminSensorEditHouse">House Number</label>
+                    <label for="adminSensorEditHouse">House Name</label>
                     <select id="adminSensorEditHouse" name="house_houseid"
                         class="admin-sensor-select-placeholder"></select>
                 </div>
@@ -115,7 +115,7 @@
 
             <div class="admin-sensor-form-grid">
                 <div class="admin-sensor-form-field">
-                    <label for="adminSensorAddHouse">House Number</label>
+                    <label for="adminSensorAddHouse">House Name</label>
                     <select id="adminSensorAddHouse" name="house_houseid"
                         class="admin-sensor-select-placeholder"></select>
                 </div>

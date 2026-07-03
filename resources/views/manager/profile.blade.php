@@ -200,7 +200,8 @@
 
                         <div class="profile-edit-field">
                             <label for="profileEditPhoneNumber">Phone number</label>
-                            <input type="text" id="profileEditPhoneNumber" name="PhoneNumber" value="{{ old('PhoneNumber', $user->PhoneNumber ?? '') }}">
+                            <input type="text" id="profileEditPhoneNumber" name="PhoneNumber" value="{{ old('PhoneNumber', $user->PhoneNumber ?? '') }}" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="09XXXXXXXXX">
+                            <div class="profile-edit-field-error" id="profileEditPhoneError" aria-live="polite"></div>
                         </div>
 
                         <div class="profile-edit-field">
@@ -213,7 +214,7 @@
                                 Cancel
                             </button>
                             <button type="submit" class="profile-edit-btn save-btn">
-                                Save changes
+                                Save
                             </button>
                         </div>
                     </form>

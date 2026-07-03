@@ -560,6 +560,12 @@
     margin-bottom: 3px;
 }
 
+.resource-value.no-current-reading {
+    color: #667069;
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
 .feed-text {
     color: #be8539;
 }
@@ -908,6 +914,36 @@
     color: #333333;
     font-size: 1rem;
     line-height: 1.5;
+}
+
+#archiveHouseModal .modal-actions {
+    margin-top: 28px;
+    gap: 12px;
+}
+
+#archiveHouseModal .cancel-btn,
+#archiveHouseModal .delete-btn {
+    min-width: 108px;
+    min-height: 42px;
+    padding: 9px 24px;
+    border-radius: 999px;
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+#archiveHouseModal .delete-btn {
+    border: none;
+    background: #dc3545;
+    color: #ffffff;
+    cursor: pointer;
+    transition: 0.2s ease;
+    box-shadow: 0 5px 12px rgba(220, 53, 69, 0.16);
+}
+
+#archiveHouseModal .delete-btn:hover {
+    background: #c82333;
+    box-shadow: 0 9px 18px rgba(200, 35, 51, 0.2);
 }
 
 .edit-data-modal {
@@ -1434,6 +1470,12 @@
     font-weight: 800;
 }
 
+.resource-value.no-current-reading {
+    color: var(--admin-text-soft);
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
 @media (max-width: 1180px) {
     .houses-workspace,
     .resource-grid {
@@ -1568,6 +1610,12 @@
     line-height: 1;
 }
 
+.sensor-reading-value.no-current-reading {
+    color: var(--admin-text-soft);
+    font-size: 1.15rem;
+    line-height: 1.15;
+}
+
 .sensor-helper {
     color: var(--admin-text-soft);
     font-size: 0.86rem;
@@ -1580,6 +1628,13 @@
 
 .ammonia-stat .sensor-reading-value {
     color: #17643a;
+}
+
+.temperature-stat .sensor-reading-value.no-current-reading,
+.ammonia-stat .sensor-reading-value.no-current-reading {
+    color: var(--admin-text-soft);
+    font-size: 1.15rem;
+    line-height: 1.15;
 }
 
 .info-panel {
@@ -1932,4 +1987,257 @@
     box-shadow: none;
     border-radius: 0;
     padding: 0;
+}
+
+/* Manager-aligned Farm Management refinements */
+.add-house-btn {
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(23, 100, 58, 0.24);
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1b5e20;
+    font-size: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.12);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.add-house-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 64%,
+        transparent 100%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+    pointer-events: none;
+}
+
+.add-house-btn:hover {
+    transform: none;
+    box-shadow: 0 10px 20px rgba(6, 51, 32, 0.14);
+}
+
+.add-house-btn:hover::before {
+    transform: translateX(120%);
+}
+
+.add-house-btn svg {
+    width: 21px;
+    height: 21px;
+    position: relative;
+    z-index: 1;
+}
+
+.add-house-btn:active {
+    transform: scale(0.97);
+}
+
+@media (max-width: 1180px) {
+    .cycle-panel .houses-actions {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.cycle-panel .toolbar-btn {
+    position: relative;
+    overflow: hidden;
+    min-height: 42px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.94rem;
+    font-weight: 800;
+    box-shadow: 0 8px 16px rgba(6, 51, 32, 0.1);
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.cycle-panel .toolbar-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 36%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 64%,
+        transparent 100%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+    pointer-events: none;
+}
+
+.cycle-panel .toolbar-btn:hover {
+    transform: none;
+    filter: none;
+    box-shadow:
+        0 10px 20px rgba(6, 51, 32, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.cycle-panel .toolbar-btn:hover::before {
+    transform: translateX(120%);
+}
+
+.cycle-panel .toolbar-btn:active {
+    transform: scale(0.98);
+    box-shadow:
+        0 5px 12px rgba(6, 51, 32, 0.1),
+        inset 0 2px 6px rgba(4, 35, 24, 0.14);
+}
+
+.cycle-panel .btn-edit {
+    background: #edf4ee;
+    border-color: rgba(23, 100, 58, 0.14);
+    color: #063320;
+}
+
+.cycle-panel .btn-edit::before {
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 34%,
+        rgba(23, 100, 58, 0.16) 50%,
+        transparent 66%,
+        transparent 100%
+    );
+}
+
+.cycle-panel .btn-file {
+    background: #063320;
+    border-color: rgba(184, 239, 189, 0.16);
+    color: #ffffff;
+}
+
+.cycle-panel .btn-file:hover {
+    background: #0d4a2d;
+}
+
+.cycle-panel .btn-end {
+    background: #8f1f1d;
+    border-color: rgba(143, 31, 29, 0.16);
+    color: #ffffff;
+}
+
+.cycle-panel .btn-end:hover {
+    background: #a92c27;
+}
+
+.cycle-panel .btn-archive {
+    background: #eee6d8;
+    border-color: rgba(105, 85, 54, 0.16);
+    color: #513d1d;
+}
+
+.cycle-panel .btn-archive::before {
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        transparent 34%,
+        rgba(105, 85, 54, 0.16) 50%,
+        transparent 66%,
+        transparent 100%
+    );
+}
+
+.cycle-panel .btn-archive:hover {
+    background: #e4dac9;
+}
+
+@media (max-width: 768px) {
+    .cycle-panel .houses-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1180px) {
+    .houses-side-column {
+        position: fixed;
+        right: 18px;
+        bottom: 76px;
+        z-index: 1700;
+        width: min(360px, calc(100vw - 36px));
+        max-height: none;
+        margin-top: 0;
+        overflow: visible;
+        opacity: 0;
+        pointer-events: none;
+        transform-origin: bottom right;
+        transform: translateY(14px) scale(0.98);
+        transition:
+            opacity 0.18s ease,
+            transform 0.18s ease;
+    }
+
+    .houses-side-column.is-floating-open {
+        opacity: 1;
+        pointer-events: none;
+        transform: translateY(0) scale(1);
+    }
+
+    .houses-side-column .cycle-panel {
+        pointer-events: auto;
+        box-shadow: 0 22px 48px rgba(4, 44, 24, 0.22);
+    }
+
+    .flock-batch-float-btn {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 1750;
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 150px;
+        min-height: 58px;
+        padding: 0 18px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 999px;
+        background: #042b1a;
+        color: #ffffff;
+        box-shadow: 0 18px 36px rgba(4, 44, 24, 0.28);
+        cursor: pointer;
+    }
+
+    .flock-batch-float-btn.is-active {
+        background: #105c34;
+    }
+
+    .flock-batch-float-icon {
+        width: 22px;
+        height: 22px;
+        flex: 0 0 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2.4;
+    }
+
+    .flock-batch-float-btn strong {
+        font-size: 0.88rem;
+        font-weight: 800;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+    }
 }

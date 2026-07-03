@@ -1,4 +1,5 @@
 const FARM_ACTIVITY_ROWS_PER_PAGE = 8;
+const FARM_ACTIVITY_DOT_LIMIT = 5;
 
 const farmRecordState = {
     selectedRecord: 'Hatch and Mortality Check',
@@ -7,6 +8,7 @@ const farmRecordState = {
 
 let farmActivityPagination = {};
 let currentFarmActivityData = {};
+let farmActivityLastPages = {};
 
 const FARM_RECORD_CONFIG = {
     'Hatch and Mortality Check': {
@@ -208,17 +210,6 @@ function formatRecordCount(count) {
     return `${count} ${count === 1 ? 'record' : 'records'}`;
 }
 
-function getPageRangeText(totalRows, currentPage = 0) {
-    if (!totalRows) {
-        return '0 records';
-    }
-
-    const start = currentPage * FARM_ACTIVITY_ROWS_PER_PAGE + 1;
-    const end = Math.min(totalRows, start + FARM_ACTIVITY_ROWS_PER_PAGE - 1);
-
-    return `Showing ${start}-${end} of ${totalRows}`;
-}
-
 function getInventoryMovement(row) {
     const added = Number(row.added ?? 0);
     const deducted = Number(row.deducted ?? 0);
@@ -282,8 +273,9 @@ function renderFarmActivityPaginationControls(cardKey, totalRows) {
     const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
     const shouldHide = totalRows <= FARM_ACTIVITY_ROWS_PER_PAGE;
     const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
+    const visiblePages = getVisibleFarmActivityPages(totalPages, currentPage);
 
-    const dotsHtml = Array.from({ length: totalPages }, (_, index) => `
+    const dotsHtml = visiblePages.map((index) => `
         <button
             type="button"
             class="reports-page-dot ${index === currentPage ? 'active' : ''}"
@@ -298,7 +290,7 @@ function renderFarmActivityPaginationControls(cardKey, totalRows) {
             <button type="button" class="reports-page-btn" data-farm-activity-prev="${cardKey}">
                 Previous
             </button>
-            <div class="reports-page-dots" data-farm-activity-dots="${cardKey}">
+            <div class="reports-page-dots" data-page-direction="still" data-farm-activity-dots="${cardKey}">
                 ${dotsHtml}
             </div>
             <button type="button" class="reports-page-btn" data-farm-activity-next="${cardKey}">
@@ -306,6 +298,23 @@ function renderFarmActivityPaginationControls(cardKey, totalRows) {
             </button>
         </div>
     `;
+}
+
+function getVisibleFarmActivityPages(totalPages, currentPage) {
+    if (totalPages <= FARM_ACTIVITY_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(FARM_ACTIVITY_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + FARM_ACTIVITY_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - FARM_ACTIVITY_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function updateFarmActivityCard(cardKey, rows) {
@@ -332,6 +341,9 @@ function updateFarmActivityPagination(cardKey, totalRows) {
     const dotsContainer = document.querySelector(`[data-farm-activity-dots="${cardKey}"]`);
     const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
     const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
+    const lastPage = farmActivityLastPages[cardKey] ?? currentPage;
+    const direction = currentPage > lastPage ? 'next' : currentPage < lastPage ? 'prev' : 'still';
+    const visiblePages = getVisibleFarmActivityPages(totalPages, currentPage);
 
     if (pagination) {
         pagination.classList.toggle('is-hidden', totalRows <= FARM_ACTIVITY_ROWS_PER_PAGE);
@@ -346,7 +358,8 @@ function updateFarmActivityPagination(cardKey, totalRows) {
     }
 
     if (dotsContainer) {
-        dotsContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        dotsContainer.dataset.pageDirection = direction;
+        dotsContainer.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="reports-page-dot ${index === currentPage ? 'active' : ''}"
@@ -356,6 +369,8 @@ function updateFarmActivityPagination(cardKey, totalRows) {
             ></button>
         `).join('');
     }
+
+    farmActivityLastPages[cardKey] = currentPage;
 }
 
 function reRenderFarmActivityCard(cardKey) {
@@ -369,12 +384,10 @@ function reRenderFarmActivityCard(cardKey) {
 
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, allRows.length);
-    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
         formatRecordCount(allRows.length),
-        getPageRangeText(allRows.length, currentPage),
         `
             ${tableHtml}
             ${paginationHtml}
@@ -425,12 +438,10 @@ function renderSingleRecord(recordType, recordData) {
     const paginatedRows = updateFarmActivityCard(cardKey, rows);
     const tableHtml = renderRecordTable(section.columns, paginatedRows);
     const paginationHtml = renderFarmActivityPaginationControls(cardKey, rows.length);
-    const currentPage = farmActivityPagination[cardKey]?.currentPage || 0;
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
         formatRecordCount(rows.length),
-        getPageRangeText(rows.length, currentPage),
         `
             ${tableHtml}
             ${paginationHtml}
@@ -440,13 +451,12 @@ function renderSingleRecord(recordType, recordData) {
     updateFarmActivityPagination(cardKey, rows.length);
 }
 
-function renderFarmActivityCardShell(title, countText, pageText, contentHtml) {
+function renderFarmActivityCardShell(title, countText, contentHtml) {
     return `
         <section class="reports-card farm-record-card">
             <div class="farm-record-card-header">
                 <div>
                     <h2>${escapeHtml(title)}</h2>
-                    <p>${escapeHtml(pageText)}</p>
                 </div>
                 <div class="farm-record-card-badges">
                     <span class="farm-record-count">${escapeHtml(countText)}</span>
@@ -470,7 +480,6 @@ function renderMultiRecord(recordType, recordData) {
                     <div class="farm-record-card-header">
                         <div>
                             <h2>${escapeHtml(section.title)}</h2>
-                            <p>${escapeHtml(getPageRangeText(rows.length))}</p>
                         </div>
                         <div class="farm-record-card-badges">
                             <span class="farm-record-count">${escapeHtml(formatRecordCount(rows.length))}</span>
@@ -623,7 +632,7 @@ async function loadChickPlacementRecords() {
 
 function formatHouseNumber(value) {
     if (!value) return '--';
-    return String(value).startsWith('House ') ? value : `House ${value}`;
+    return String(value);
 }
 
 function renderLoading() {

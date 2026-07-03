@@ -6,6 +6,63 @@ const loginErrorMessage = document.getElementById('loginErrorMessage');
 const closeLoginErrorModal = document.getElementById('closeLoginErrorModal');
 const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 const loginSubmitLabel = loginSubmitBtn?.querySelector('.go-btn-label');
+const LOGGED_OUT_FLAG = 'smartfeather:logged-out';
+
+function hideLoginPageWhileChecking() {
+    document.documentElement.style.visibility = 'hidden';
+}
+
+function showLoginPageAfterChecking() {
+    document.documentElement.style.visibility = '';
+}
+
+async function redirectAuthenticatedUser(options = {}) {
+    if (sessionStorage.getItem(LOGGED_OUT_FLAG) === '1') {
+        showLoginPageAfterChecking();
+        return;
+    }
+
+    if (options.hideWhileChecking) {
+        hideLoginPageWhileChecking();
+    }
+
+    try {
+        const response = await fetch('/api/user', {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            cache: 'no-store',
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            showLoginPageAfterChecking();
+            return;
+        }
+
+        const data = await response.json();
+        sessionStorage.removeItem(LOGGED_OUT_FLAG);
+
+        if (data.Role === 'Admin') {
+            window.location.replace('/admin/dashboard');
+        } else if (data.Role === 'Manager') {
+            window.location.replace('/manager/dashboard');
+        } else {
+            showLoginPageAfterChecking();
+        }
+    } catch (error) {
+        console.error('Login session check failed.', error);
+        showLoginPageAfterChecking();
+    }
+}
+
+window.addEventListener('pageshow', (event) => {
+    const navigationEntry = performance.getEntriesByType('navigation')[0];
+    const restoredFromHistory = event.persisted || navigationEntry?.type === 'back_forward';
+
+    redirectAuthenticatedUser({ hideWhileChecking: restoredFromHistory });
+});
 
 function setLoginLoading(isLoading) {
     if (!loginSubmitBtn || !loginSubmitLabel) return;
@@ -17,7 +74,7 @@ function setLoginLoading(isLoading) {
 
 function showLoginError(message = 'Wrong username or password.', title = 'Login Failed') {
     if (!loginErrorModal || !loginErrorMessage) {
-        alert(message);
+        console.error(`${title}: ${message}`);
         return;
     }
 
@@ -103,7 +160,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             return;
         }
 
-        sessionStorage.removeItem('smartfeather:logged-out');
+        sessionStorage.removeItem(LOGGED_OUT_FLAG);
 
         if (data.user.Role === 'Admin') {
             // Use replace() instead of href to replace history entry

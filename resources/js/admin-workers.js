@@ -1,83 +1,65 @@
 const BASE_URL = '/api/admin/workers';
-const ADMIN_WORKERS_ROWS_PER_PAGE = 5;
-const EMPLOYEE_PHONE_PATTERN = /^09\d{9}$/;
+const ADMIN_WORKERS_ROWS_PER_PAGE = 7;
+const ADMIN_WORKERS_DOT_LIMIT = 5;
 
 let deleteId = null;
 const employeesCache = new Map();
 let adminWorkersCurrentPage = 0;
+let adminWorkersLastPage = 0;
 let adminWorkersCurrentRole = 'All';
 let pendingWorkerSave = null;
+let isWorkerSaveSubmitting = false;
+let isWorkerPasswordSubmitting = false;
+let isWorkerDeleteSubmitting = false;
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-function showAdminWorkerConfirmModal(message, title = 'Confirm Save', confirmText = 'Confirm') {
-    return new Promise((resolve) => {
-        document.getElementById('adminWorkerGenericConfirmModal')?.remove();
+function ensureAdminWorkerNoticeModal() {
+    let modal = document.getElementById('adminWorkerNoticeModal');
 
-        const modal = document.createElement('div');
-        modal.className = 'admin-worker-modal-backdrop confirm-modal-top';
-        modal.id = 'adminWorkerGenericConfirmModal';
-        modal.style.display = 'flex';
-        modal.innerHTML = `
-            <div class="admin-worker-modal-card admin-delete-worker-card">
-                <div class="admin-worker-modal-header">
-                    <h2></h2>
-                    <div class="admin-worker-header-line"></div>
-                </div>
-                <div class="admin-worker-modal-body">
-                    <p class="admin-delete-worker-text"></p>
-                    <div class="admin-worker-modal-actions">
-                        <button type="button" class="admin-worker-btn cancel" data-confirm-cancel>Cancel</button>
-                        <button type="button" class="admin-worker-btn save" data-confirm-ok></button>
-                    </div>
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'adminWorkerNoticeModal';
+    modal.className = 'admin-worker-modal-backdrop confirm-modal-top';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+        <div class="admin-worker-modal-card admin-delete-worker-card">
+            <div class="admin-worker-modal-header">
+                <h2 id="adminWorkerNoticeTitle">Employee Updated</h2>
+                <div class="admin-worker-header-line"></div>
+            </div>
+            <div class="admin-worker-modal-body">
+                <p class="admin-delete-worker-text" id="adminWorkerNoticeMessage"></p>
+                <div class="admin-worker-modal-actions single">
+                    <button type="button" class="admin-worker-btn save" id="adminWorkerNoticeOk">OK</button>
                 </div>
             </div>
-        `;
-
-        modal.querySelector('h2').textContent = title;
-        modal.querySelector('p').textContent = message;
-        modal.querySelector('[data-confirm-ok]').textContent = confirmText;
-
-        const close = (confirmed) => {
-            modal.remove();
-            resolve(confirmed);
-        };
-
-        modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
-        modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close(false);
-        });
-
-        document.body.appendChild(modal);
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#adminWorkerNoticeOk')?.addEventListener('click', () => closeModal('adminWorkerNoticeModal'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal('adminWorkerNoticeModal');
     });
+
+    return modal;
 }
 
-function usernamePart(value) {
-    return String(value || '').replace(/[^a-z0-9]/gi, '');
+function showAdminWorkerNotice(message, title = 'Employee Updated') {
+    const modal = ensureAdminWorkerNoticeModal();
+    modal.querySelector('#adminWorkerNoticeTitle').textContent = title;
+    modal.querySelector('#adminWorkerNoticeMessage').textContent = message;
+    openModal('adminWorkerNoticeModal');
 }
 
-function usernameSuffixPart(value) {
-    const suffix = usernamePart(value).toLowerCase();
-
-    if (suffix === 'junior') return 'jr';
-    if (suffix === 'senior') return 'sr';
-
-    return suffix;
-}
-
-function generateUsername(firstName, lastName, suffix = '') {
+function generateUsername(firstName, lastName) {
     const initial = (firstName || '').trim().charAt(0);
-    const surname = usernamePart(lastName);
-    const suffixPart = usernameSuffixPart(suffix);
+    const surname = (lastName || '').trim();
 
-    return `${initial}${surname}${suffixPart}`.toLowerCase();
-}
-
-function normalizeUsername(value) {
-    return String(value || '').trim().toLowerCase();
+    return `${initial}${surname}`.toLowerCase();
 }
 
 function syncUsernamePreview() {
@@ -96,22 +78,19 @@ function syncUsernamePreview() {
 
     const firstName = document.getElementById('FirstName').value || '';
     const lastName = document.getElementById('LastName').value || '';
-    const suffix = document.getElementById('Suffix').value || '';
-    usernameInput.value = generateUsername(firstName, lastName, suffix);
+    usernameInput.value = generateUsername(firstName, lastName);
 }
 
 const passwordInput = document.getElementById('passwordModalPassword');
 const confirmPasswordInput = document.getElementById('passwordModalConfirm');
 const oldPasswordInput = document.getElementById('passwordModalOldPassword');
-const confirmPasswordMessage = document.getElementById('confirmPasswordMessage');
-const oldPasswordMessage = document.getElementById('oldPasswordMessage');
-const phoneInput = document.getElementById('PhoneNumber');
-const birthdayInput = document.getElementById('Birthday');
-const addPasswordFields = document.getElementById('addPasswordFields');
 const addPasswordInput = document.getElementById('AddPassword');
 const addConfirmPasswordInput = document.getElementById('AddConfirmPassword');
-const editPasswordField = document.getElementById('editPasswordField');
-let pendingPassword = null;
+const confirmPasswordMessage = document.getElementById('confirmPasswordMessage');
+const oldPasswordMessage = document.getElementById('oldPasswordMessage');
+const addConfirmPasswordMessage = document.getElementById('addConfirmPasswordMessage');
+const phoneInput = document.getElementById('PhoneNumber');
+const birthdayInput = document.getElementById('Birthday');
 
 const workerRequiredFields = [
     { id: 'FirstName', label: 'First Name' },
@@ -120,235 +99,11 @@ const workerRequiredFields = [
     { id: 'PhoneNumber', label: 'Phone Number' },
     { id: 'Birthday', label: 'Birthday' },
     { id: 'Gender', label: 'Gender' },
-    { id: 'AddPassword', label: 'Password', addOnly: true },
-    { id: 'AddConfirmPassword', label: 'Confirm Password', addOnly: true }
+    { id: 'AddPassword', label: 'Password' },
+    { id: 'AddConfirmPassword', label: 'Confirm Password' }
 ];
 
 let shouldTrackRequiredHighlights = false;
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-function getReadableErrorMessage(error) {
-    if (!error) return 'Unable to save employee. Please try again.';
-
-    if (error.errors) {
-        const messages = Object.values(error.errors).flat().filter(Boolean);
-        if (messages.length) return messages.join(' ');
-    }
-
-    return error.message || error.error || 'Unable to save employee. Please try again.';
-}
-
-async function parseErrorResponse(response) {
-    const contentType = response.headers.get('content-type') || '';
-
-    if (contentType.includes('application/json')) {
-        return response.json();
-    }
-
-    const text = await response.text();
-    return {
-        message: text
-            ? `Server error (${response.status}). Please try again or check the Laravel log.`
-            : `Request failed (${response.status}). Please try again.`,
-    };
-}
-
-function getTodayDateValue() {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
-    return `${today.getFullYear()}-${month}-${day}`;
-}
-
-function getYesterdayDateValue() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const day = String(yesterday.getDate()).padStart(2, '0');
-
-    return `${yesterday.getFullYear()}-${month}-${day}`;
-}
-
-function setBirthdayMaxDate() {
-    if (birthdayInput) {
-        birthdayInput.max = getYesterdayDateValue();
-    }
-}
-
-function sanitizePhoneValue(value) {
-    return String(value || '').replace(/\D/g, '').slice(0, 11);
-}
-
-function markWorkerFieldError(input, message) {
-    input?.closest('.admin-worker-field')?.classList.add('has-error');
-    showWorkerFormError(message);
-    setTimeout(() => input?.focus(), 150);
-}
-
-function clearWorkerFieldError(input) {
-    input?.closest('.admin-worker-field')?.classList.remove('has-error');
-
-    const hasErrors = document.querySelector('#workerForm .admin-worker-field.has-error');
-    if (!hasErrors) {
-        clearWorkerFormError();
-    }
-}
-
-function getWorkerInputForErrorKey(key) {
-    const fieldMap = {
-        FirstName: 'FirstName',
-        MiddleName: 'MiddleName',
-        LastName: 'LastName',
-        Suffix: 'Suffix',
-        Role: 'Role',
-        PhoneNumber: 'PhoneNumber',
-        Birthday: 'Birthday',
-        Gender: 'Gender',
-        Address: 'Address',
-        Username: 'Username',
-        Password: isAddMode() ? 'AddPassword' : 'passwordModalPassword',
-    };
-
-    return document.getElementById(fieldMap[key] || key);
-}
-
-function showBackendValidationErrors(error) {
-    if (!error?.errors) {
-        showWorkerFormError(getReadableErrorMessage(error));
-        return;
-    }
-
-    if (error.errors.PhoneNumber?.length) {
-        const phoneInput = getWorkerInputForErrorKey('PhoneNumber');
-        markWorkerFieldError(phoneInput, error.errors.PhoneNumber[0]);
-    } else {
-        showWorkerFormError(getReadableErrorMessage(error));
-    }
-
-    Object.keys(error.errors).forEach((key) => {
-        getWorkerInputForErrorKey(key)?.closest('.admin-worker-field')?.classList.add('has-error');
-    });
-}
-
-function validateWorkerFormats() {
-    const phoneValue = phoneInput?.value.trim() || '';
-
-    if (!EMPLOYEE_PHONE_PATTERN.test(phoneValue)) {
-        markWorkerFieldError(phoneInput, 'Phone number must use 09XXXXXXXXX format.');
-        return false;
-    }
-
-    const birthdayValue = birthdayInput?.value || '';
-    if (!birthdayValue || Number.isNaN(new Date(birthdayValue).getTime())) {
-        markWorkerFieldError(birthdayInput, 'Please enter a valid birthday.');
-        return false;
-    }
-
-    if (birthdayValue >= getTodayDateValue()) {
-        markWorkerFieldError(birthdayInput, 'Birthday must be earlier than today.');
-        return false;
-    }
-
-    return true;
-}
-
-function validateAddPasswordFields() {
-    if (!isAddMode()) {
-        return true;
-    }
-
-    const password = addPasswordInput?.value || '';
-    const confirmPassword = addConfirmPasswordInput?.value || '';
-
-    if (!password) {
-        markWorkerFieldError(addPasswordInput, 'Please enter a password.');
-        return false;
-    }
-
-    if (password.length < 8) {
-        markWorkerFieldError(addPasswordInput, 'Password must be at least 8 characters.');
-        return false;
-    }
-
-    if (!confirmPassword) {
-        markWorkerFieldError(addConfirmPasswordInput, 'Please confirm the password.');
-        return false;
-    }
-
-    if (password !== confirmPassword) {
-        addPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
-        markWorkerFieldError(addConfirmPasswordInput, 'Passwords do not match.');
-        return false;
-    }
-
-    clearWorkerFieldError(addPasswordInput);
-    clearWorkerFieldError(addConfirmPasswordInput);
-    return true;
-}
-
-function validateBirthdayField(showError = false) {
-    const birthdayValue = birthdayInput?.value || '';
-
-    if (!birthdayValue) {
-        return true;
-    }
-
-    if (Number.isNaN(new Date(birthdayValue).getTime()) || birthdayValue >= getTodayDateValue()) {
-        if (showError) {
-            markWorkerFieldError(birthdayInput, 'Birthday must be earlier than today.');
-        } else {
-            birthdayInput?.closest('.admin-worker-field')?.classList.add('has-error');
-        }
-
-        return false;
-    }
-
-    birthdayInput?.closest('.admin-worker-field')?.classList.remove('has-error');
-    const hasErrors = document.querySelector('#workerForm .admin-worker-field.has-error');
-    if (!hasErrors) {
-        clearWorkerFormError();
-    }
-
-    return true;
-}
-
-async function validateEmployeePhoneAvailability(employeeId = '') {
-    const response = await fetch(`${BASE_URL}/check-phone`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        },
-        body: JSON.stringify({
-            PhoneNumber: phoneInput?.value || '',
-            EmployeeId: employeeId || null,
-        }),
-    });
-
-    const result = await parseErrorResponse(response);
-
-    if (!response.ok) {
-        showBackendValidationErrors(result);
-        return false;
-    }
-
-    if (!result.available) {
-        markWorkerFieldError(phoneInput, result.message || 'This phone number is already assigned to another employee.');
-        return false;
-    }
-
-    clearWorkerFieldError(phoneInput);
-    return true;
-}
 
 function clearConfirmPasswordMessage() {
     confirmPasswordMessage.textContent = '';
@@ -356,6 +111,10 @@ function clearConfirmPasswordMessage() {
 
 function clearOldPasswordMessage() {
     oldPasswordMessage.textContent = '';
+}
+
+function clearAddConfirmPasswordMessage() {
+    if (addConfirmPasswordMessage) addConfirmPasswordMessage.textContent = '';
 }
 
 function validateConfirmPassword() {
@@ -372,11 +131,6 @@ function validateConfirmPassword() {
         return false;
     }
 
-    if (password.length < 8) {
-        confirmPasswordMessage.textContent = 'Password must be at least 8 characters.';
-        return false;
-    }
-
     clearConfirmPasswordMessage();
     return true;
 }
@@ -385,14 +139,24 @@ function resetConfirmPasswordState() {
     if (passwordInput) passwordInput.value = '';
     if (confirmPasswordInput) confirmPasswordInput.value = '';
     if (oldPasswordInput) oldPasswordInput.value = '';
-    if (addPasswordInput) addPasswordInput.value = '';
-    if (addConfirmPasswordInput) addConfirmPasswordInput.value = '';
     clearConfirmPasswordMessage();
     clearOldPasswordMessage();
 }
 
+function resetAddPasswordState() {
+    if (addPasswordInput) addPasswordInput.value = '';
+    if (addConfirmPasswordInput) addConfirmPasswordInput.value = '';
+    clearAddConfirmPasswordMessage();
+    clearRequiredFieldHighlight(addPasswordInput);
+    clearRequiredFieldHighlight(addConfirmPasswordInput);
+}
+
 function isAddMode() {
     return !document.getElementById('EmployeeId').value;
+}
+
+function onlyDigits(value) {
+    return (value || '').replace(/\D/g, '');
 }
 
 function setPasswordModalMode(mode) {
@@ -400,14 +164,6 @@ function setPasswordModalMode(mode) {
     const oldPasswordField = document.getElementById('passwordModalOldPasswordField');
 
     const isEditMode = mode === 'edit';
-
-    if (addPasswordFields) {
-        addPasswordFields.style.display = isEditMode ? 'none' : 'grid';
-    }
-
-    if (editPasswordField) {
-        editPasswordField.style.display = isEditMode ? 'block' : 'none';
-    }
 
     if (oldPasswordField) {
         oldPasswordField.style.display = isEditMode ? 'block' : 'none';
@@ -417,20 +173,23 @@ function setPasswordModalMode(mode) {
 
     if (editPasswordBtn) {
         editPasswordBtn.textContent = isEditMode ? 'Change Password' : 'Set Password';
+        editPasswordBtn.style.display = isEditMode ? '' : 'none';
     }
 }
 
 function setAddModeRequirements(isAddMode) {
+    const addPasswordFields = document.getElementById('addPasswordFields');
+
+    if (addPasswordFields) {
+        addPasswordFields.style.display = isAddMode ? '' : 'none';
+    }
+
     if (!isAddMode) {
-        resetConfirmPasswordState();
+        resetAddPasswordState();
     }
 }
 
 function isRequiredFieldEmpty(field) {
-    if (field.addOnly && !isAddMode()) {
-        return false;
-    }
-
     return !(document.getElementById(field.id)?.value || '').trim();
 }
 
@@ -514,11 +273,129 @@ function showRequiredFieldsError() {
     return true;
 }
 
+function showPhoneNumberError(message = 'Phone number already in use.') {
+    phoneInput?.closest('.admin-worker-field')?.classList.add('has-error');
+    showWorkerFormError(message);
+    setTimeout(() => phoneInput?.focus(), 350);
+}
+
+function validatePhoneNumberField() {
+    const phoneNumber = phoneInput?.value || '';
+
+    if (!phoneNumber) {
+        return true;
+    }
+
+    if (phoneNumber.length < 11) {
+        showPhoneNumberError('Invalid phone number.');
+        return false;
+    }
+
+    if (!/^09\d{9}$/.test(phoneNumber)) {
+        showPhoneNumberError('Invalid phone number.');
+        return false;
+    }
+
+    return true;
+}
+
+async function checkPhoneNumberAvailability(phoneNumber, employeeId) {
+    if (!phoneNumber) return true;
+
+    try {
+        const response = await fetch(`${BASE_URL}/check-phone`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                PhoneNumber: phoneNumber,
+                EmployeeId: employeeId || null
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.available === false) {
+            showPhoneNumberError('Phone number already in use.');
+            return false;
+        }
+
+        if (!response.ok && result.errors?.PhoneNumber) {
+            showPhoneNumberError(result.errors.PhoneNumber[0] || 'Phone number already in use.');
+            return false;
+        }
+
+        return response.ok;
+    } catch (error) {
+        console.error(error);
+        showWorkerFormError('Unable to verify phone number. Please try again.');
+        return false;
+    }
+}
+
+function validateAddPasswordFields() {
+    if (!isAddMode()) {
+        clearAddConfirmPasswordMessage();
+        return true;
+    }
+
+    const password = addPasswordInput?.value || '';
+    const confirmPassword = addConfirmPasswordInput?.value || '';
+
+    clearAddConfirmPasswordMessage();
+    clearRequiredFieldHighlight(addPasswordInput);
+    clearRequiredFieldHighlight(addConfirmPasswordInput);
+
+    if (!password || !confirmPassword) {
+        return true;
+    }
+
+    if (password.length < 8) {
+        addPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
+        if (addConfirmPasswordMessage) {
+            addConfirmPasswordMessage.textContent = 'Password must be at least 8 characters.';
+        }
+        return false;
+    }
+
+    if (password !== confirmPassword) {
+        addConfirmPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
+        if (addConfirmPasswordMessage) {
+            addConfirmPasswordMessage.textContent = 'Passwords do not match.';
+        }
+        return false;
+    }
+
+    return true;
+}
+
 [passwordInput, confirmPasswordInput, oldPasswordInput].forEach(input => {
     input?.addEventListener('input', () => {
         validateConfirmPassword();
         clearOldPasswordMessage();
     });
+});
+
+[addPasswordInput, addConfirmPasswordInput].forEach(input => {
+    input?.addEventListener('input', () => {
+        validateAddPasswordFields();
+        clearWorkerFormError();
+    });
+});
+
+phoneInput?.addEventListener('input', () => {
+    phoneInput.value = onlyDigits(phoneInput.value).slice(0, 11);
+    clearRequiredFieldHighlight(phoneInput);
+
+    if (['Phone number already in use.', 'Invalid phone number.'].includes(document.getElementById('workerFormError')?.textContent)) {
+        clearWorkerFormError();
+    }
+});
+
+birthdayInput?.addEventListener('input', () => {
+    clearRequiredFieldHighlight(birthdayInput);
 });
 
 // ================= PROFILE MODAL =================
@@ -589,7 +466,7 @@ async function loadEmployees() {
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employees');
+        showAdminWorkerNotice('Failed to load employees.', 'Unable to Load Employees');
     }
 }
 
@@ -629,18 +506,18 @@ function renderWorkersTable() {
     const pageWorkers = filteredWorkers.slice(start, start + ADMIN_WORKERS_ROWS_PER_PAGE);
     const placeholderRows = ADMIN_WORKERS_ROWS_PER_PAGE - pageWorkers.length;
 
-    table.innerHTML = pageWorkers.map(user => {
+    table.innerHTML = pageWorkers.map((user, index) => {
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
         return `
-            <tr data-id="${escapeHtml(user.EmployeeId)}">
-                <td>${escapeHtml(fullName)}</td>
-                <td>${escapeHtml(user.Role)}</td>
+            <tr data-id="${user.EmployeeId}" style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
+                <td>${fullName}</td>
+                <td>${user.Role}</td>
                 <td class="text-center">
                     <div class="admin-worker-action-group">
                         
                         <!-- VIEW -->
-                        <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                        <button class="admin-worker-icon-btn admin-view-btn view-btn" type="button" data-id="${user.EmployeeId}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
@@ -648,15 +525,15 @@ function renderWorkersTable() {
                         </button>
 
                         <!-- EDIT -->
-                        <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                        <button class="admin-worker-icon-btn admin-edit-btn edit-btn" type="button" data-id="${user.EmployeeId}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 20h9"></path>
                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                             </svg>
                         </button>
 
-                        <!-- DEACTIVATE -->
-                        <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                        <!-- DELETE -->
+                        <button class="admin-worker-icon-btn admin-delete-btn delete-btn" type="button" data-id="${user.EmployeeId}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 6h18"></path>
                                 <path d="M8 6V4h8v2"></path>
@@ -701,7 +578,18 @@ function updateAdminWorkersPagination(totalRows) {
     }
 
     if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        const visiblePages = getVisibleAdminWorkerPages(totalPages, adminWorkersCurrentPage);
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(adminWorkersCurrentPage));
+        const direction = adminWorkersCurrentPage > adminWorkersLastPage
+            ? 'next'
+            : adminWorkersCurrentPage < adminWorkersLastPage
+                ? 'prev'
+                : 'still';
+
+        dots.dataset.pageDirection = direction;
+        dots.style.setProperty('--active-dot-index', activeDotIndex);
+
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="admin-workers-page-dot ${index === adminWorkersCurrentPage ? 'active' : ''}"
@@ -710,7 +598,25 @@ function updateAdminWorkersPagination(totalRows) {
                 aria-current="${index === adminWorkersCurrentPage ? 'page' : 'false'}"
             ></button>
         `).join('');
+        adminWorkersLastPage = adminWorkersCurrentPage;
     }
+}
+
+function getVisibleAdminWorkerPages(totalPages, currentPage) {
+    if (totalPages <= ADMIN_WORKERS_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(ADMIN_WORKERS_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + ADMIN_WORKERS_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - ADMIN_WORKERS_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function setupAdminWorkersPagination() {
@@ -720,7 +626,8 @@ function setupAdminWorkersPagination() {
     });
 
     document.querySelector('[data-admin-workers-next]')?.addEventListener('click', () => {
-        adminWorkersCurrentPage += 1;
+        const totalPages = Math.max(1, Math.ceil(getFilteredAdminWorkers().length / ADMIN_WORKERS_ROWS_PER_PAGE));
+        adminWorkersCurrentPage = Math.min(totalPages - 1, adminWorkersCurrentPage + 1);
         renderWorkersTable();
     });
 
@@ -738,20 +645,18 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     document.getElementById('workerModalTitle').innerText = 'Add Employee';
     document.getElementById('workerForm').reset();
     document.getElementById('EmployeeId').value = '';
-    pendingPassword = null;
     resetConfirmPasswordState();
+    resetAddPasswordState();
     clearRequiredFieldHighlights();
     clearWorkerFormError();
     setAddModeRequirements(true);
     setPasswordModalMode('add');
-    setBirthdayMaxDate();
     syncUsernamePreview();
     openModal('workerModal');
 });
 
 document.getElementById('FirstName')?.addEventListener('input', syncUsernamePreview);
 document.getElementById('LastName')?.addEventListener('input', syncUsernamePreview);
-document.getElementById('Suffix')?.addEventListener('input', syncUsernamePreview);
 
 async function openEditModal(id) {
     const cachedUser = employeesCache.get(String(id));
@@ -767,7 +672,10 @@ async function openEditModal(id) {
         const user = await res.json();
         populateEditModal(user);
         openModal('workerModal');
-    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Failed to fetch employee data.', 'Unable to Load Employee');
+    }
 }
 
 function populateEditModal(user) {
@@ -777,7 +685,7 @@ function populateEditModal(user) {
     document.getElementById('MiddleName').value = user.MiddleName ?? '';
     document.getElementById('LastName').value = user.LastName;
     document.getElementById('Suffix').value = user.Suffix ?? '';
-    document.getElementById('Username').value = normalizeUsername(user.Username);
+    document.getElementById('Username').value = user.Username ?? '';
     document.getElementById('Username').readOnly = false;
     document.getElementById('usernameHint').style.display = 'none';
     document.getElementById('Role').value = user.Role;
@@ -785,8 +693,8 @@ function populateEditModal(user) {
     document.getElementById('Birthday').value = user.Birthday ?? '';
     document.getElementById('Gender').value = user.Gender ?? '';
     document.getElementById('Address').value = user.Address ?? '';
-    pendingPassword = null;
     resetConfirmPasswordState();
+    resetAddPasswordState();
     clearRequiredFieldHighlights();
     clearWorkerFormError();
     setPasswordModalMode('edit');
@@ -807,94 +715,92 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (!validateWorkerFormats()) {
-        return;
-    }
-
     if (!validateAddPasswordFields()) {
         return;
     }
 
-    const id = document.getElementById('EmployeeId').value;
-
-    try {
-        const phoneAvailable = await validateEmployeePhoneAvailability(id);
-        if (!phoneAvailable) {
-            return;
-        }
-    } catch (err) {
-        console.error(err);
-        showWorkerFormError('Unable to check phone number. Please try again.');
+    if (!validatePhoneNumberField()) {
         return;
     }
 
-    const addPassword = addPasswordInput?.value || null;
+    const id = document.getElementById('EmployeeId').value;
     const data = {
         FirstName: document.getElementById('FirstName').value,
         MiddleName: document.getElementById('MiddleName').value || null,
         LastName: document.getElementById('LastName').value,
         Suffix: document.getElementById('Suffix').value || null,
-        Username: normalizeUsername(document.getElementById('Username').value),
+        Username: document.getElementById('Username').value,
         Role: document.getElementById('Role').value,
         PhoneNumber: document.getElementById('PhoneNumber').value || null,
         Birthday: document.getElementById('Birthday').value || null,
         Gender: document.getElementById('Gender').value || null,
         Address: document.getElementById('Address').value || null,
-        Password: isAddMode() ? addPassword : null
+        Password: isAddMode() ? addPasswordInput?.value || null : null
     };
 
     if (!data.Password) delete data.Password;
 
-    pendingWorkerSave = {
-        id,
-        method: id ? 'PUT' : 'POST',
-        url: id ? `${BASE_URL}/${id}` : BASE_URL,
-        data,
-    };
-
-    const fullName = `${data.FirstName || ''} ${data.MiddleName || ''} ${data.LastName || ''} ${data.Suffix || ''}`.trim();
+    pendingWorkerSave = { id, data };
     const confirmMessage = document.getElementById('saveWorkerConfirmMessage');
     if (confirmMessage) {
-        confirmMessage.textContent = id
-            ? `Save changes to ${fullName || 'this employee'}?`
-            : `Add ${fullName || 'this employee'} as a new employee?`;
+        confirmMessage.textContent = id ? 'Save changes to this employee?' : 'Save this new employee?';
     }
-
     openModal('saveWorkerConfirmModal');
 });
 
-document.getElementById('confirmSaveWorkerBtn')?.addEventListener('click', async () => {
-    if (!pendingWorkerSave) {
-        closeModal('saveWorkerConfirmModal');
-        return;
-    }
-
+async function saveEmployee({ id, data }) {
     try {
-        const res = await fetch(pendingWorkerSave.url, {
-            method: pendingWorkerSave.method,
+        if (!await checkPhoneNumberAvailability(data.PhoneNumber, id)) {
+            return;
+        }
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${BASE_URL}/${id}` : BASE_URL;
+
+        const res = await fetch(url, {
+            method,
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify(pendingWorkerSave.data)
+            body: JSON.stringify(data)
         });
 
         if (!res.ok) {
-            const err = await parseErrorResponse(res);
-            closeModal('saveWorkerConfirmModal');
-            showBackendValidationErrors(err);
+            const err = await res.json();
+            if (err.errors?.PhoneNumber) {
+                showPhoneNumberError('Phone number already in use.');
+                return;
+            }
+
+            showWorkerFormError('Unable to save employee. Please check the details and try again.');
             return;
         }
 
-        closeModal('saveWorkerConfirmModal');
         closeModal('workerModal');
-        pendingPassword = null;
-        pendingWorkerSave = null;
         await loadEmployees();
+        showAdminWorkerNotice(id ? 'Employee changes saved.' : 'Employee added successfully.');
     } catch (err) {
         console.error(err);
-        closeModal('saveWorkerConfirmModal');
-        showWorkerFormError('Network error. Please check your connection and try again.');
+        showWorkerFormError('Network error. Please try again.');
+    }
+}
+
+document.getElementById('confirmSaveWorkerBtn')?.addEventListener('click', async () => {
+    if (isWorkerSaveSubmitting || !pendingWorkerSave) return;
+
+    const savePayload = pendingWorkerSave;
+    pendingWorkerSave = null;
+    const button = document.getElementById('confirmSaveWorkerBtn');
+    isWorkerSaveSubmitting = true;
+    if (button) button.disabled = true;
+    closeModal('saveWorkerConfirmModal');
+
+    try {
+        await saveEmployee(savePayload);
+    } finally {
+        isWorkerSaveSubmitting = false;
+        if (button) button.disabled = false;
     }
 });
 
@@ -909,33 +815,12 @@ workerRequiredFields.forEach(field => {
     input?.addEventListener('change', () => syncRequiredFieldHighlight(field));
 });
 
-phoneInput?.addEventListener('input', () => {
-    phoneInput.value = sanitizePhoneValue(phoneInput.value);
-    if (EMPLOYEE_PHONE_PATTERN.test(phoneInput.value)) {
-        clearWorkerFieldError(phoneInput);
-    }
-});
-
-birthdayInput?.addEventListener('change', () => {
-    setBirthdayMaxDate();
-    validateBirthdayField(true);
-});
-
-birthdayInput?.addEventListener('input', () => {
-    validateBirthdayField(true);
-});
-
-[addPasswordInput, addConfirmPasswordInput].forEach((input) => {
-    input?.addEventListener('input', () => {
-        if (addPasswordInput?.value && addConfirmPasswordInput?.value && addPasswordInput.value === addConfirmPasswordInput.value && addPasswordInput.value.length >= 8) {
-            clearWorkerFieldError(addPasswordInput);
-            clearWorkerFieldError(addConfirmPasswordInput);
-        }
-    });
-});
-
 document.getElementById('passwordForm')?.addEventListener('submit', async e => {
     e.preventDefault();
+
+    if (isWorkerPasswordSubmitting) {
+        return;
+    }
 
     if (!validateConfirmPassword()) {
         return;
@@ -950,23 +835,14 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (!employeeId) {
-        pendingPassword = password;
-        clearWorkerFormError();
-        closeModal('passwordModal');
-        return;
-    }
-
     if (!oldPassword) {
         oldPasswordMessage.textContent = 'Please enter your current password.';
         return;
     }
 
-    const confirmed = await showAdminWorkerConfirmModal('Save this password change?', 'Save Password');
-
-    if (!confirmed) {
-        return;
-    }
+    isWorkerPasswordSubmitting = true;
+    const submitButton = e.submitter || document.querySelector('#passwordForm button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
 
     try {
         const res = await fetch(`${BASE_URL}/${employeeId}`, {
@@ -979,26 +855,30 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
         });
 
         if (!res.ok) {
-            const err = await parseErrorResponse(res);
+            const err = await res.json();
 
             if (err.errors?.old_password) {
                 oldPasswordMessage.textContent = err.errors.old_password[0];
                 return;
             }
 
-            oldPasswordMessage.textContent = getReadableErrorMessage(err);
+            showAdminWorkerNotice('Unable to update password. Please try again.', 'Password Not Updated');
             return;
         }
 
         closeModal('passwordModal');
         await loadEmployees();
+        showAdminWorkerNotice('Password updated successfully.', 'Password Updated');
     } catch (err) {
         console.error(err);
-        alert('Network error');
+        showAdminWorkerNotice('Network error. Please try again.', 'Password Not Updated');
+    } finally {
+        isWorkerPasswordSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
     }
 });
 
-// ================= DEACTIVATE EMPLOYEE =================
+// ================= DELETE EMPLOYEE =================
 function openDeleteModal(id) {
     deleteId = id;
     const row = document.querySelector(`tr[data-id="${id}"]`);
@@ -1008,6 +888,12 @@ function openDeleteModal(id) {
 }
 
 document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', async () => {
+    if (isWorkerDeleteSubmitting || !deleteId) return;
+
+    const button = document.getElementById('confirmDeleteWorkerBtn');
+    isWorkerDeleteSubmitting = true;
+    if (button) button.disabled = true;
+
     try {
         const res = await fetch(`${BASE_URL}/${deleteId}`, {
             method: 'DELETE',
@@ -1015,14 +901,20 @@ document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', asy
         });
 
         if (!res.ok) {
-            const err = await parseErrorResponse(res);
-            alert(getReadableErrorMessage(err) || 'Error deactivating employee');
+            showAdminWorkerNotice('Error deactivating employee.', 'Unable to Deactivate Employee');
             return;
         }
 
         closeModal('deleteWorkerModal');
         await loadEmployees();
-    } catch (err) { console.error(err); alert('Network error'); }
+        showAdminWorkerNotice('Employee deactivated successfully.');
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Network error. Please try again.', 'Unable to Deactivate Employee');
+    } finally {
+        isWorkerDeleteSubmitting = false;
+        if (button) button.disabled = false;
+    }
 });
 
 // ================= VIEW EMPLOYEE =================
@@ -1041,14 +933,17 @@ async function openViewModal(id) {
         employeesCache.set(String(user.EmployeeId), user);
         populateViewModal(user);
         openModal('viewModal');
-    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Failed to fetch employee data.', 'Unable to Load Employee');
+    }
 }
 
 function populateViewModal(user) {
     const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
     document.getElementById('view_name').innerText = fullName;
-    document.getElementById('view_username').innerText = normalizeUsername(user.Username);
+    document.getElementById('view_username').innerText = user.Username ?? '';
     document.getElementById('view_role').innerText = user.Role;
     document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
     document.getElementById('view_birthday').innerText = user.Birthday ?? '';
@@ -1078,13 +973,18 @@ document.addEventListener('click', e => {
 
 // ================= CLOSE MODALS =================
 document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
-    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-admin-modal')));
+    btn.addEventListener('click', () => {
+        const modalId = btn.getAttribute('data-close-admin-modal');
+        if (modalId === 'saveWorkerConfirmModal') {
+            pendingWorkerSave = null;
+        }
+        closeModal(modalId);
+    });
 });
 
 // ================= INITIAL LOAD =================
 document.addEventListener('DOMContentLoaded', () => {
     setupAdminWorkersPagination();
-    setBirthdayMaxDate();
     loadEmployees();
     setupAdminProfileModal();
 });
@@ -1099,15 +999,7 @@ document.getElementById('roleFilter')?.addEventListener('change', e => {
 // =============== REMOVE NATIVE REQUIRED ATTRIBUTES ===============
 function removeNativeRequiredAttributes() {
     [
-        'FirstName',
-        'LastName',
-        'Role',
-        'PhoneNumber',
-        'Birthday',
-        'Password',
-        'ConfirmPassword',
-        'AddPassword',
-        'AddConfirmPassword'
+        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'AddPassword', 'AddConfirmPassword'
     ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.removeAttribute('required');

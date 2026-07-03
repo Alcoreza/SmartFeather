@@ -254,7 +254,15 @@
     padding: 18px 18px 20px;
     min-height: 420px;
     box-shadow: 0 6px 16px rgba(10, 24, 15, 0.035);
+    overflow: hidden;
+}
+
+.record-table-scroll {
+    width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
 
 .record-table {
@@ -275,9 +283,9 @@
 }
 
 .record-table th {
-    background: #f2faf3;
-    border-bottom: 1px solid rgba(87, 196, 81, 0.12);
-    color: #4f5f55;
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
+    color: #1f3f2b;
     font-size: 0.9rem;
     font-weight: 800;
     line-height: 1.1;
@@ -407,6 +415,11 @@
     display: flex;
     align-items: center;
     gap: 9px;
+    position: relative;
+    --dot-size: 11px;
+    --dot-gap: 9px;
+    min-height: 19px;
+    overflow: visible;
 }
 
 .record-page-dot {
@@ -422,7 +435,12 @@
     line-height: 0;
     cursor: pointer;
     box-shadow: none;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .record-page-dot:hover {
@@ -433,7 +451,54 @@
 .record-page-dot.active {
     background: #57c451 !important;
     border-color: #57c451 !important;
-    box-shadow: none;
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.18);
+    transform: scale(1.08);
+}
+
+.record-page-dots[data-page-direction="next"] .record-page-dot:not(.active) {
+    animation: recordDotCarouselNext 0.24s ease both;
+}
+
+.record-page-dots[data-page-direction="prev"] .record-page-dot:not(.active) {
+    animation: recordDotCarouselPrev 0.24s ease both;
+}
+
+.record-page-dots[data-page-direction="next"] .record-page-dot.active,
+.record-page-dots[data-page-direction="prev"] .record-page-dot.active {
+    animation: recordActiveDotIn 0.24s ease both;
+}
+
+@keyframes recordDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes recordDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes recordActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
 }
 
 .record-inventory-topbar,
@@ -479,13 +544,25 @@
 }
 
 @media (max-width: 768px) {
+    .record-inventory-topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+
     .record-inventory-title {
         text-align: left;
-        font-size: 1.8rem;
+        font-size: clamp(1.55rem, 7vw, 1.9rem);
+        line-height: 1.08;
+    }
+
+    .record-inventory-divider {
+        margin-top: 12px;
     }
 
     .record-inventory-controls {
         grid-template-columns: auto 1fr;
+        gap: 8px;
     }
 
     .record-tabs {
@@ -505,14 +582,206 @@
     }
 
     .record-date-filters {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .record-date-filter {
+        flex: 1 1 13rem;
+    }
+
+    .record-date-filter input {
+        max-width: none;
+    }
+}
+
+@media (max-width: 620px) {
+    .record-inventory-main {
+        padding-bottom: 40px;
+    }
+
+    .record-inventory-controls {
+        grid-template-columns: 2.4rem 1fr;
+    }
+
+    .record-back-btn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .record-tabs {
+        gap: 4px;
+        padding: 5px;
+    }
+
+    .record-tab {
+        min-height: 32px;
+        padding: 7px 8px;
+        font-size: 0.82rem;
+    }
+
+    .record-filter-wrap,
+    .record-date-filters {
+        padding: 5px;
+        border-radius: 10px;
+    }
+
+    .record-date-filters {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 7px;
+    }
+
+    .record-date-filter {
+        align-items: stretch;
+        flex: none;
+        flex-direction: column;
+        gap: 4px;
+        white-space: normal;
+    }
+
+    .record-date-filter span {
+        font-size: 0.72rem;
+    }
+
+    .record-date-filter input,
+    .record-filter-select,
+    .record-clear-filters-btn {
+        width: 100%;
+        height: 34px;
+        font-size: 0.8rem;
+    }
+
+    .record-clear-filters-btn {
+        min-height: 34px;
     }
 
     .record-table-card {
-        overflow-x: auto;
+        min-height: 0;
+        padding: 12px;
+        overflow: hidden;
+    }
+
+    .record-table-scroll {
+        margin-inline: -12px;
+        padding-inline: 12px;
+        padding-bottom: 8px;
     }
 
     .record-table {
-        min-width: 820px;
+        width: 100%;
+        min-width: 880px;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .record-table th,
+    .record-table td {
+        padding: 9px 7px;
+        font-size: 0.78rem;
+        line-height: 1.12;
+        white-space: nowrap;
+    }
+
+    .record-table td {
+        height: 52px;
+        text-align: center;
+    }
+
+    .record-table td:first-child {
+        width: 22%;
+        padding-left: 12px;
+        text-align: left;
+    }
+
+    .record-table td:last-child {
+        border-bottom: 1px solid rgba(87, 196, 81, 0.08);
+    }
+
+    .record-movement-badge {
+        min-width: 96px;
+        min-height: 26px;
+        padding: 4px 10px;
+        font-size: 0.76rem;
+    }
+
+    .record-placeholder-row {
+        display: none !important;
+    }
+
+    .record-table tr:not([style]) td,
+    .record-table tr.record-placeholder-row td {
+        text-align: center;
+    }
+
+    .record-pagination {
+        gap: 10px;
+        padding-top: 14px;
+    }
+
+    .record-page-btn {
+        min-width: 0;
+        min-height: 38px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .record-page-dots {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 420px) {
+    .record-inventory-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .record-back-btn,
+    .record-tabs {
+        grid-column: 1;
+    }
+
+    .record-back-btn {
+        justify-self: start;
+    }
+
+    .record-table-card {
+        margin-inline: -4px;
+        padding: 10px;
+    }
+
+    .record-table-scroll {
+        margin-inline: -10px;
+        padding-inline: 10px;
+    }
+
+    .record-table {
+        min-width: 920px;
+    }
+
+    .record-table th,
+    .record-table td {
+        padding-inline: 6px;
+        font-size: 0.74rem;
+    }
+
+    .record-movement-badge {
+        min-width: 88px;
+        font-size: 0.72rem;
+    }
+
+    .record-pagination {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .record-page-dots {
+        order: -1;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .record-page-btn {
+        flex: 1 1 0;
     }
 }

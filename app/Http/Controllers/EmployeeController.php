@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -15,7 +16,8 @@ class EmployeeController extends Controller
 
     public function index()
     {
-        $employees = Employee::whereRaw('is_active is true')
+        $employees = Cache::remember('employees_active_index', now()->addSeconds(30), function () {
+            return Employee::whereRaw('is_active is true')
             ->orderBy('EmployeeId', 'asc')
             ->get()
             ->map(function ($u) {
@@ -33,6 +35,7 @@ class EmployeeController extends Controller
                 'Username' => $u->Username,
                 'is_active' => (bool) $u->is_active,
             ];
+        });
         });
 
         return response()->json($employees);
@@ -65,6 +68,8 @@ class EmployeeController extends Controller
         $this->ensureUniqueEmployeeName($data);
 
         $employee = Employee::create($data);
+        $this->clearEmployeeCaches();
+
         return response()->json($employee, 201);
     }
 
@@ -101,6 +106,8 @@ class EmployeeController extends Controller
         unset($data['OldPassword']);
 
         $employee->update($data);
+        $this->clearEmployeeCaches();
+
         return response()->json($employee);
     }
 
@@ -121,7 +128,7 @@ class EmployeeController extends Controller
         return response()->json([
             'available' => ! $exists,
             'message' => $exists
-                ? 'This phone number is already assigned to another employee.'
+                ? 'Phone number already in use.'
                 : 'Phone number is available.',
         ]);
     }
@@ -134,18 +141,28 @@ class EmployeeController extends Controller
             ->where('EmployeeId', $employee->EmployeeId)
             ->update(['is_active' => DB::raw('false')]);
 
+        $this->clearEmployeeCaches();
+
         return response()->json(['message' => 'Employee deactivated successfully.'], 200);
+    }
+
+    private function clearEmployeeCaches(): void
+    {
+        Cache::forget('employees_active_index');
+        Cache::forget('manager_tasks_form_options');
+        Cache::forget('manager_tasks_all_workers');
     }
 
     private function employeeRules(?int $employeeId, bool $isCreate): array
     {
         $required = $isCreate ? ['required'] : ['sometimes', 'required'];
+        $noNumbers = 'not_regex:/\d/';
 
         return [
-            'FirstName' => [...$required, 'string', 'max:100'],
-            'MiddleName' => ['nullable', 'string', 'max:100'],
-            'LastName' => [...$required, 'string', 'max:100'],
-            'Suffix' => ['nullable', 'string', 'max:20'],
+            'FirstName' => [...$required, 'string', 'max:100', $noNumbers],
+            'MiddleName' => ['nullable', 'string', 'max:100', $noNumbers],
+            'LastName' => [...$required, 'string', 'max:100', $noNumbers],
+            'Suffix' => ['nullable', 'string', 'max:20', $noNumbers],
             'Role' => [...$required, 'string', Rule::in(['Manager', 'Admin', 'Flockman'])],
             'PhoneNumber' => [
                 ...$required,
@@ -173,12 +190,16 @@ class EmployeeController extends Controller
         return [
             'PhoneNumber.regex' => 'Phone number must use 09XXXXXXXXX format.',
             'PhoneNumber.size' => 'Phone number must be exactly 11 digits.',
-            'PhoneNumber.unique' => 'This phone number is already assigned to another employee.',
+            'PhoneNumber.unique' => 'Phone number already in use.',
             'Username.unique' => 'This username is already assigned to another employee.',
             'Birthday.before' => 'Birthday must be earlier than today.',
             'Role.in' => 'Select a valid role.',
             'Gender.in' => 'Select a valid gender.',
             'Password.min' => 'Password must be at least 8 characters.',
+            'FirstName.not_regex' => 'First name cannot contain numbers.',
+            'MiddleName.not_regex' => 'Middle name cannot contain numbers.',
+            'LastName.not_regex' => 'Last name cannot contain numbers.',
+            'Suffix.not_regex' => 'Suffix cannot contain numbers.',
         ];
     }
 

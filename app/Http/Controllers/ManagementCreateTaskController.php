@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Management;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -33,6 +34,8 @@ class ManagementCreateTaskController extends Controller
             Management::create([
                 'task' => $taskType,
             ]);
+
+            Cache::forget('manager_tasks_form_options');
 
             return response()->json(['task' => $taskType], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -96,6 +99,8 @@ class ManagementCreateTaskController extends Controller
             ]);
 
             DB::commit();
+
+            app(InventoryController::class)->clearInventoryCaches();
 
             return response()->json([
                 'success' => true,

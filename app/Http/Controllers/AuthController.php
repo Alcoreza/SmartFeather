@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -58,8 +59,8 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        // Completely destroy the session
-        $request->session()->flush();
+        // Completely destroy the session and rotate the CSRF token.
+        $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         // Redirect to login with cache control headers
@@ -67,6 +68,8 @@ class AuthController extends Controller
             ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT')
+            ->header('Clear-Site-Data', '"cache"')
+            ->withCookie(Cookie::forget(config('session.cookie'), config('session.path'), config('session.domain')))
             ->with('message', 'Logged out successfully');
     }
 }

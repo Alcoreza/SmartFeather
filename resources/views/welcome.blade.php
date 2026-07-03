@@ -13,7 +13,6 @@
                 <img class="landing-brand-logo" src="{{ asset('images/AppLogoSmartFeather-favicon.png') }}" alt="" aria-hidden="true">
                 <span class="landing-brand-copy">
                     <span class="landing-brand-title">SmartFeather</span>
-                    <span class="landing-brand-subtitle">for MJBJ Corporation</span>
                 </span>
             </a>
 
@@ -93,9 +92,13 @@
                             <span class="landing-module-number">01</span>
                             <span class="landing-module-icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24">
-                                    <path d="M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z"></path>
-                                    <path d="M10 5v12"></path>
-                                    <path d="M10 17h.01"></path>
+                                    <path d="M10 13.5V5a3 3 0 0 0-6 0v8.5a5 5 0 1 0 6 0Z"></path>
+                                    <path d="M7 5v10"></path>
+                                    <path d="M7 18h.01"></path>
+                                    <path d="M15 7c1.25-1.15 3.05-1.15 4.3 0"></path>
+                                    <path d="M14 11c1.85-1.65 4.15-1.65 6 0"></path>
+                                    <path d="M16 15c.8-.65 1.7-.65 2.5 0"></path>
+                                    <path d="M17.25 18h.01"></path>
                                 </svg>
                             </span>
                         </div>
@@ -174,5 +177,36 @@
                 </div>
             </section>
         </main>
+
+        <footer class="landing-footer">
+            <div class="landing-footer-inner">
+                <div class="landing-footer-brand">
+                    <img class="landing-footer-logo" src="{{ asset('images/AppLogoSmartFeather-favicon.png') }}" alt="" aria-hidden="true">
+                    <div>
+                        <h2>SmartFeather</h2>
+                        <p>Farm monitoring, task coordination, and reviewable poultry records for MJBJ Corporation.</p>
+                    </div>
+                </div>
+
+                <div class="landing-footer-links" aria-label="SmartFeather footer links">
+                    <div>
+                        <span>Navigate</span>
+                        <a href="{{ route('landing') }}">Home</a>
+                        <a href="{{ route('login') }}">Login</a>
+                    </div>
+                    <div>
+                        <span>Coverage</span>
+                        <p>House monitoring</p>
+                        <p>Biosecurity tasks</p>
+                        <p>Inventory records</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="landing-footer-bottom">
+                <p>&copy; {{ now()->year }} SmartFeather for MJBJ Corporation. All rights reserved.</p>
+                <span>Built for daily poultry operations.</span>
+            </div>
+        </footer>
     </div>
 @endsection

@@ -73,20 +73,21 @@
                 <div class="admin-worker-field">
                     <label>Password*</label>
                     <input type="password" id="AddPassword" autocomplete="new-password">
+                    <small style="display:block; color:#4b5563; font-size:0.85rem; margin-top:6px;">Minimum 8 characters.</small>
                 </div>
                 <div class="admin-worker-field">
                     <label>Confirm Password*</label>
                     <input type="password" id="AddConfirmPassword" autocomplete="new-password">
+                    <small id="addConfirmPasswordMessage" class="admin-worker-field-error" aria-live="polite"></small>
                 </div>
             </div>
 
-            <div class="admin-worker-field" id="editPasswordField">
-                <button type="button" id="editPasswordBtn" class="admin-worker-btn save">Edit Password</button>
-            </div>
-
             <div class="admin-worker-modal-actions">
-                <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="workerModal">Cancel</button>
-                <button type="submit" class="admin-worker-btn save">Save</button>
+                <button type="button" id="editPasswordBtn" class="admin-worker-btn password">Edit Password</button>
+                <div class="admin-worker-modal-action-group">
+                    <button type="button" class="admin-worker-btn cancel" data-close-admin-modal="workerModal">Cancel</button>
+                    <button type="submit" class="admin-worker-btn save">Save</button>
+                </div>
             </div>
         </form>
     </div>

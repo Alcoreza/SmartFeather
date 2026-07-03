@@ -12,6 +12,7 @@
 
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @vite('resources/js/manager-dashboard.js')
     @vite('resources/js/manager-decision-support.js')
 @endpush

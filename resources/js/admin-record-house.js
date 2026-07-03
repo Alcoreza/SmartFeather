@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nextButton = document.querySelector('[data-record-next]');
     const dots = document.querySelector('[data-record-dots]');
     const RECORD_ROWS_PER_PAGE = 10;
+    const RECORD_DOT_LIMIT = 5;
+    let lastPage = 0;
 
     // Fetch records from API
     async function fetchPenRecords() {
@@ -148,6 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updatePagination(totalRows) {
         const totalPages = Math.max(1, Math.ceil(totalRows / RECORD_ROWS_PER_PAGE));
+        const direction = currentPage > lastPage ? 'next' : currentPage < lastPage ? 'prev' : 'still';
+        const visiblePages = getVisibleRecordPages(totalPages, currentPage);
 
         if (pagination) {
             pagination.classList.toggle('is-hidden', totalRows <= RECORD_ROWS_PER_PAGE);
@@ -162,7 +166,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (dots) {
-            dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+            dots.dataset.pageDirection = direction;
+            dots.innerHTML = visiblePages.map((index) => `
                 <button
                     type="button"
                     class="record-page-dot ${index === currentPage ? 'active' : ''}"
@@ -172,6 +177,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ></button>
             `).join('');
         }
+
+        lastPage = currentPage;
+    }
+
+    function getVisibleRecordPages(totalPages, currentPage) {
+        if (totalPages <= RECORD_DOT_LIMIT) {
+            return Array.from({ length: totalPages }, (_, index) => index);
+        }
+
+        const centerOffset = Math.floor(RECORD_DOT_LIMIT / 2);
+        let start = Math.max(0, currentPage - centerOffset);
+        let end = start + RECORD_DOT_LIMIT;
+
+        if (end > totalPages) {
+            end = totalPages;
+            start = Math.max(0, end - RECORD_DOT_LIMIT);
+        }
+
+        return Array.from({ length: end - start }, (_, index) => start + index);
     }
 
     function setupPagination() {

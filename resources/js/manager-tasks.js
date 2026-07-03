@@ -1,28 +1,30 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    await Promise.all([renderManagerTasks(), loadTaskFormOptions()]);
-
-    document.querySelectorAll(".task-date-input").forEach(applyTaskDateMinimum);
+document.addEventListener("DOMContentLoaded", () => {
     setupTaskFilters();
     setupTaskRowPaginationControls();
     setupTaskSelectPlaceholderState();
+    setupTaskDateRestrictions();
     setupManagerTaskModals();
     setupAddTaskModal();
     setupEditTaskModal();
-    setupDeleteTaskModal();
     setupManagerProfileModal();
+    refreshTaskFilterOptions();
+    renderCurrentTaskTable();
     animateTaskSections();
+    renderManagerTasks();
+    loadTaskFormOptions();
 });
 
 const ALL_HOUSES_OPTION = "All houses";
 const ALL_PRIORITY_OPTION = "All priority";
 const PRIORITY_ORDER = ["Low", "Medium", "High"];
 const TASK_ROWS_PER_PAGE = 5;
+const TASK_DOT_LIMIT = 5;
 const TASK_STATUS_OPTIONS = ["pending", "for_approval", "completed"];
 const TASK_TABLE_COLUMNS = {
     pending: [
         { key: "name", label: "Name" },
         { key: "task_assigned", label: "Task<br>Assigned" },
-        { key: "house_number", label: "House<br>Number" },
+        { key: "house_number", label: "House" },
         { key: "pen_number", label: "Pen<br>Number" },
         { key: "detailed_task", label: "Detailed<br>Task" },
         { key: "priority", label: "Priority" },
@@ -33,7 +35,7 @@ const TASK_TABLE_COLUMNS = {
     for_approval: [
         { key: "name", label: "Name" },
         { key: "task_assigned", label: "Task<br>Assigned" },
-        { key: "house_number", label: "House<br>Number" },
+        { key: "house_number", label: "House" },
         { key: "pen_number", label: "Pen<br>Number" },
         { key: "detailed_task", label: "Detailed<br>Task" },
         { key: "photo", label: "Photo" },
@@ -45,7 +47,7 @@ const TASK_TABLE_COLUMNS = {
     completed: [
         { key: "name", label: "Name" },
         { key: "task_assigned", label: "Task<br>Assigned" },
-        { key: "house_number", label: "House<br>Number" },
+        { key: "house_number", label: "House" },
         { key: "pen_number", label: "Pen<br>Number" },
         { key: "detailed_task", label: "Detailed<br>Task" },
         { key: "photo", label: "Photo" },
@@ -58,7 +60,14 @@ const TASK_TABLE_COLUMNS = {
 };
 
 let taskPendingVerify = null;
-let pendingAddTasks = [];
+let taskPendingDelete = null;
+let taskPendingEdit = null;
+let taskPendingAdd = null;
+let isTaskVerifySaving = false;
+let isTaskDeleteSaving = false;
+let isTaskEditSaving = false;
+let isTaskAddSaving = false;
+let taskDataFingerprint = "";
 let selectedTaskStatus = "pending";
 let taskDataCache = {
     pending: [],
@@ -70,12 +79,24 @@ let taskRowPages = {
     for_approval: 0,
     completed: 0,
 };
+let taskLastRowPages = {
+    pending: 0,
+    for_approval: 0,
+    completed: 0,
+};
+let isTaskDataLoading = true;
 let availableHouseOptions = [];
+let taskFormOptions = {
+    houses: [],
+    task_categories: [],
+    priority_levels: [],
+};
+let nextTaskRowUid = 0;
 const addTaskRequiredFields = [
     { name: "worker_name", label: "Assign Flockman" },
     { name: "task_category", label: "Task" },
     { name: "priority_level", label: "Priority Level" },
-    { name: "house_number", label: "House Number" },
+    { name: "house_number", label: "House" },
     { name: "pen_number", label: "Pen Number" },
     { name: "time_assigned", label: "Time to finish" },
     { name: "date_assigned", label: "Date to finish" },
@@ -86,59 +107,125 @@ let taskFilters = {
     priority: ALL_PRIORITY_OPTION,
 };
 
-function getTodayDateValue() {
+function getTodayDateInputValue() {
     const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+    const pad = (value) => String(value).padStart(2, "0");
 
-    return `${today.getFullYear()}-${month}-${day}`;
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 }
 
-function applyTaskDateMinimum(input) {
-    if (input) {
-        input.min = getTodayDateValue();
-    }
+function isDateBeforeToday(dateValue) {
+    return String(dateValue || "") < getTodayDateInputValue();
 }
 
-function isPastTaskDate(value) {
-    return Boolean(value) && value < getTodayDateValue();
+function applyTaskDateRestrictions(scope = document) {
+    scope.querySelectorAll("input.task-date-input[type='date']").forEach((field) => {
+        field.min = getTodayDateInputValue();
+    });
 }
 
-async function renderManagerTasks() {
+function setupTaskDateRestrictions() {
+    applyTaskDateRestrictions();
+}
+
+async function renderManagerTasks(shouldRender = true) {
     try {
         const response = await fetch("/api/manager/tasks");
         const data = await response.json();
 
-        taskDataCache = {
+        const nextTaskData = {
             pending: data.pending || [],
             for_approval: data.for_approval || [],
             completed: data.completed || [],
         };
-        syncAvailableHouseOptions();
+        const nextFingerprint = JSON.stringify(nextTaskData);
+        const hasChanged = nextFingerprint !== taskDataFingerprint;
+
+        taskDataCache = nextTaskData;
+        taskDataFingerprint = nextFingerprint;
+        isTaskDataLoading = false;
 
         refreshTaskFilterOptions();
-        renderCurrentTaskTable();
+        if (shouldRender && hasChanged) {
+            renderCurrentTaskTable();
+        }
     } catch (error) {
+        isTaskDataLoading = false;
+        renderCurrentTaskTable();
         console.error("Failed to load manager tasks.", error);
     }
 }
 
-let formOptionsCache = null;
+async function loadTaskFormOptions({ preserveSelections = false } = {}) {
+    const workerSelect = document.getElementById("taskWorkerName");
+    let selectedWorker = preserveSelections ? workerSelect?.value || "" : "";
+    let rowSelections = preserveSelections
+        ? Array.from(document.querySelectorAll("#tasksContainer .manager-task-row")).map((row) => ({
+            row,
+            taskCategory: row.querySelector(".task-category-select")?.value || "",
+            priority: row.querySelector(".task-priority-select")?.value || "",
+            house: row.querySelector(".task-house-select")?.value || "",
+            pen: row.querySelector(".task-pen-select")?.value || "",
+        }))
+        : [];
 
-async function loadTaskFormOptions() {
     try {
         const response = await fetch("/api/manager/tasks/form-options");
         const data = await response.json();
-        formOptionsCache = data;
-        syncAvailableHouseOptions();
+
+        if (preserveSelections) {
+            selectedWorker = workerSelect?.value || selectedWorker;
+            rowSelections = Array.from(document.querySelectorAll("#tasksContainer .manager-task-row")).map((row) => ({
+                row,
+                taskCategory: row.querySelector(".task-category-select")?.value || "",
+                priority: row.querySelector(".task-priority-select")?.value || "",
+                house: row.querySelector(".task-house-select")?.value || "",
+                pen: row.querySelector(".task-pen-select")?.value || "",
+            }));
+        }
 
         fillSelect(
-            document.getElementById("taskWorkerName"),
-            (data.workers || []).filter((worker) => !worker.disabled),
+            workerSelect,
+            data.workers || [],
             "id",
             "name",
             "Select worker",
         );
+
+        if (preserveSelections && selectedWorker && workerSelect) {
+            workerSelect.value = selectedWorker;
+        }
+
+        taskFormOptions = {
+            houses: data.houses || [],
+            task_categories: data.task_categories || [],
+            priority_levels: data.priority_levels || [],
+        };
+
+        availableHouseOptions = [...new Set((data.houses || [])
+            .map((house) => String(house.number ?? "").trim())
+            .filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b));
+
+        document.querySelectorAll("#tasksContainer .manager-task-row").forEach((row) => {
+            populateTaskRowSelects(row);
+
+            if (!preserveSelections) return;
+
+            const selection = rowSelections.find((item) => item.row === row);
+            if (!selection) return;
+
+            const taskSelect = row.querySelector(".task-category-select");
+            const prioritySelect = row.querySelector(".task-priority-select");
+            const houseSelect = row.querySelector(".task-house-select");
+
+            if (taskSelect && selection.taskCategory) taskSelect.value = selection.taskCategory;
+            if (prioritySelect && selection.priority) prioritySelect.value = selection.priority;
+            if (houseSelect && selection.house) {
+                houseSelect.value = selection.house;
+                loadPensForTaskRow(row, selection.pen);
+            }
+        });
 
         refreshTaskFilterOptions();
         setupTaskSelectPlaceholderState();
@@ -151,8 +238,8 @@ function fillSimpleSelect(select, items, placeholder) {
     if (!select) return;
 
     select.innerHTML = `
-        <option value="">${escapeHtml(placeholder)}</option>
-        ${items.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}
+        <option value="">${placeholder}</option>
+        ${items.map((item) => `<option value="${item}">${item}</option>`).join("")}
     `;
 }
 
@@ -169,6 +256,7 @@ function setupTaskFilters() {
             taskRowPages[selectedTaskStatus] = taskRowPages[selectedTaskStatus] || 0;
             syncTaskStatusButtons();
             renderCurrentTaskTable();
+            renderManagerTasks();
         });
     });
 
@@ -260,7 +348,20 @@ function updateTaskRowPagination(section, totalItems) {
     }
 
     if (dotsContainer) {
-        dotsContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        const visiblePages = getVisibleTaskPages(totalPages, taskRowPages[section]);
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(taskRowPages[section]));
+        const direction = taskRowPages[section] > taskLastRowPages[section]
+            ? "next"
+            : taskRowPages[section] < taskLastRowPages[section]
+                ? "prev"
+                : "still";
+        dotsContainer.dataset.pageDirection = direction;
+        dotsContainer.style.setProperty("--active-dot-index", activeDotIndex);
+        dotsContainer.style.setProperty("--active-dot-offset", `${activeDotIndex * 18}px`);
+        const dotTrackWidth = (visiblePages.length * 10) + (Math.max(0, visiblePages.length - 1) * 8);
+        dotsContainer.style.setProperty("--dot-track-width", `${dotTrackWidth}px`);
+        dotsContainer.style.setProperty("--dot-track-half", `${dotTrackWidth / 2}px`);
+        dotsContainer.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="manager-task-page-dot ${index === taskRowPages[section] ? 'active' : ''}"
@@ -268,7 +369,25 @@ function updateTaskRowPagination(section, totalItems) {
                 aria-label="Go to page ${index + 1}"
             ></button>
         `).join("");
+        taskLastRowPages[section] = taskRowPages[section];
     }
+}
+
+function getVisibleTaskPages(totalPages, currentPage) {
+    if (totalPages <= TASK_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(TASK_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + TASK_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - TASK_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function refreshTaskFilterOptions() {
@@ -318,18 +437,6 @@ function buildHouseFilterOptions() {
     return [ALL_HOUSES_OPTION, ...values.sort((a, b) => a.localeCompare(b))];
 }
 
-function syncAvailableHouseOptions() {
-    const taskHouseNumbers = Object.values(taskDataCache)
-        .flat()
-        .map((task) => String(task.house_number ?? "").trim())
-        .filter(Boolean);
-    const formHouseNumbers = (formOptionsCache?.houses || [])
-        .map((house) => String(house.number ?? "").trim())
-        .filter(Boolean);
-
-    availableHouseOptions = [...new Set([...taskHouseNumbers, ...formHouseNumbers])];
-}
-
 function buildPriorityFilterOptions() {
     return [ALL_PRIORITY_OPTION, ...PRIORITY_ORDER];
 }
@@ -363,12 +470,23 @@ function renderUnifiedTaskTable(section, items) {
     const thead = document.getElementById("managerTasksTableHead");
     const tbody = document.getElementById("managerTasksTableBody");
     const table = tbody?.closest(".manager-task-table");
+    const tableWrap = tbody?.closest(".manager-task-table-wrap");
     if (!tbody) return;
 
-    table?.classList.toggle("manager-task-table-for-approval", section === "for_approval");
-    table?.classList.toggle("manager-task-table-completed", section === "completed");
-
     const columns = TASK_TABLE_COLUMNS[section] || TASK_TABLE_COLUMNS.pending;
+    table?.classList.remove(
+        "manager-task-table-pending",
+        "manager-task-table-for-approval",
+        "manager-task-table-completed",
+    );
+    table?.classList.add(`manager-task-table-${section.replace("_", "-")}`);
+    tableWrap?.classList.remove(
+        "manager-task-table-wrap-pending",
+        "manager-task-table-wrap-for-approval",
+        "manager-task-table-wrap-completed",
+    );
+    tableWrap?.classList.add(`manager-task-table-wrap-${section.replace("_", "-")}`);
+
     if (thead) {
         thead.innerHTML = `<tr>${columns.map((column) => `<th>${column.label}</th>`).join("")}</tr>`;
     }
@@ -376,6 +494,12 @@ function renderUnifiedTaskTable(section, items) {
     const filteredItems = applyTaskFilters(items, taskFilters);
     const totalPages = Math.max(1, Math.ceil(filteredItems.length / TASK_ROWS_PER_PAGE));
     taskRowPages[section] = Math.min(taskRowPages[section], totalPages - 1);
+
+    if (isTaskDataLoading) {
+        tbody.innerHTML = `<tr><td colspan="${columns.length}" class="manager-task-empty">Loading tasks...</td></tr>`;
+        updateTaskRowPagination(section, items);
+        return;
+    }
 
     if (!filteredItems.length) {
         tbody.innerHTML = `<tr><td colspan="${columns.length}" class="manager-task-empty">No tasks match the selected filters.</td></tr>`;
@@ -390,27 +514,32 @@ function renderUnifiedTaskTable(section, items) {
     tbody.innerHTML = pageItems
         .map((item) => `
             <tr>
-                ${columns.map((column) => `<td>${renderTaskCell(column.key, item, section)}</td>`).join("")}
+                ${columns.map((column) => `<td data-task-label="${escapeHtml(stripHtml(column.label))}">${renderTaskCell(column.key, item, section)}</td>`).join("")}
             </tr>
         `)
         .join("");
 
     updateTaskRowPagination(section, items);
     bindPhotoButtons();
+    if (section === "pending") bindPendingTaskActionButtons();
     if (section === "for_approval") bindVerifyButtons();
     animateTaskRows();
 }
 
 function renderTaskCell(key, item, section) {
+    if (key === "priority") {
+        return renderTaskPriorityBadge(item.priority);
+    }
+
     if (key === "photo") {
         return item.photo_url
             ? `<button
                 type="button"
                 class="manager-task-photo-link"
-                data-photo-name="${escapeHtml(item.photo_name)}"
-                data-photo-url="${escapeHtml(item.photo_url)}"
+                data-photo-name="${item.photo_name}"
+                data-photo-url="${item.photo_url}"
             >
-                <img src="${escapeHtml(item.photo_url)}" alt="${escapeHtml(item.photo_name)}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
+                <img src="${item.photo_url}" alt="${item.photo_name}" style="max-width:120px; max-height:80px; object-fit:cover; border-radius:6px;">
             </button>`
             : "No photo";
     }
@@ -425,26 +554,61 @@ function renderTaskCell(key, item, section) {
         </button>`;
     }
 
-    if (key === "actions") {
-        return `<button
-            type="button"
-            class="manager-task-action-btn manager-task-edit-btn"
-            data-task-id="${escapeHtml(item.id)}"
-            title="Edit task"
-        >
-            ✎
-        </button>
-        <button
-            type="button"
-            class="manager-task-action-btn manager-task-delete-btn"
-            data-task-id="${escapeHtml(item.id)}"
-            title="Delete task"
-        >
-            ✕
-        </button>`;
+    if (key === "actions" && section === "pending") {
+        return `<div class="manager-task-action-group">
+            <button
+                type="button"
+                class="manager-task-action-btn manager-task-edit-btn"
+                data-edit-task='${encodeTaskPayload(item)}'
+                aria-label="Edit task"
+                title="Edit"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                </svg>
+            </button>
+            <button
+                type="button"
+                class="manager-task-action-btn manager-task-delete-btn"
+                data-delete-task='${encodeTaskPayload(item)}'
+                aria-label="Delete task"
+                title="Delete"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v5"></path>
+                    <path d="M14 11v5"></path>
+                </svg>
+            </button>
+        </div>`;
     }
 
     return escapeHtml(item[key] ?? "");
+}
+
+function renderTaskPriorityBadge(priority) {
+    const priorityText = String(priority ?? "").trim();
+    const priorityClass = ["low", "medium", "high"].includes(priorityText.toLowerCase())
+        ? priorityText.toLowerCase()
+        : "unset";
+
+    return `<span class="manager-task-priority-badge ${escapeHtml(priorityClass)}">${escapeHtml(priorityText || "Unset")}</span>`;
+}
+
+function stripHtml(value) {
+    return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function encodeTaskPayload(item) {
@@ -466,15 +630,6 @@ function decodeTaskPayload(value) {
         console.error("Failed to parse task payload.", error);
         return null;
     }
-}
-
-function escapeHtml(value) {
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
 }
 
 function bindPhotoButtons() {
@@ -508,6 +663,30 @@ function bindVerifyButtons() {
     });
 }
 
+function bindPendingTaskActionButtons() {
+    document.querySelectorAll("[data-edit-task]").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const task = decodeTaskPayload(button.dataset.editTask || "");
+            if (task) {
+                await openEditTaskModal(task);
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-delete-task]").forEach((button) => {
+        button.addEventListener("click", () => {
+            taskPendingDelete = decodeTaskPayload(button.dataset.deleteTask || "");
+
+            const text = document.getElementById("deleteTaskText");
+            if (text && taskPendingDelete) {
+                text.textContent = `Delete ${taskPendingDelete.task_assigned} for ${taskPendingDelete.name}? This action cannot be undone.`;
+            }
+
+            openTaskModal("deleteTaskModal");
+        });
+    });
+}
+
 function setupManagerTaskModals() {
     document.querySelectorAll("[data-close-task-modal]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -528,12 +707,94 @@ function setupManagerTaskModals() {
     const confirmButton = document.getElementById("confirmTaskVerify");
     if (confirmButton) {
         confirmButton.addEventListener("click", async () => {
-            if (taskPendingVerify) {
-                await updateTaskStatus(taskPendingVerify.id, "Completed");
-            }
+            if (isTaskVerifySaving) return;
 
+            const taskToVerify = taskPendingVerify;
             taskPendingVerify = null;
             closeTaskModal("taskVerifyModal");
+
+            if (taskToVerify) {
+                isTaskVerifySaving = true;
+                confirmButton.disabled = true;
+
+                try {
+                    await updateTaskStatus(taskToVerify.id, "Completed");
+                } finally {
+                    isTaskVerifySaving = false;
+                    confirmButton.disabled = false;
+                }
+            }
+        });
+    }
+
+    const deleteButton = document.getElementById("confirmTaskDelete");
+    if (deleteButton) {
+        deleteButton.addEventListener("click", async () => {
+            if (isTaskDeleteSaving || !taskPendingDelete) return;
+
+            const taskToDelete = taskPendingDelete;
+            taskPendingDelete = null;
+            isTaskDeleteSaving = true;
+            deleteButton.disabled = true;
+
+            try {
+                await deletePendingTask(taskToDelete.id);
+                closeTaskModal("deleteTaskModal");
+            } finally {
+                isTaskDeleteSaving = false;
+                deleteButton.disabled = false;
+            }
+        });
+    }
+
+    const editButton = document.getElementById("confirmEditTask");
+    if (editButton) {
+        editButton.addEventListener("click", async () => {
+            if (isTaskEditSaving || !taskPendingEdit) return;
+
+            isTaskEditSaving = true;
+            editButton.disabled = true;
+            let saved = false;
+
+            try {
+                saved = await savePendingTaskEdit(taskPendingEdit.id, taskPendingEdit.payload);
+            } finally {
+                isTaskEditSaving = false;
+                editButton.disabled = false;
+            }
+
+            if (saved) {
+                taskPendingEdit = null;
+                closeTaskModal("confirmEditTaskModal");
+            }
+        });
+    }
+
+    const addButton = document.getElementById("confirmAddTask");
+    if (addButton) {
+        addButton.addEventListener("click", async () => {
+            if (isTaskAddSaving) return;
+
+            if (!taskPendingAdd) {
+                closeTaskModal("confirmAddTaskModal");
+                return;
+            }
+
+            const pendingAdd = taskPendingAdd;
+            isTaskAddSaving = true;
+            addButton.disabled = true;
+            closeTaskModal("confirmAddTaskModal");
+
+            try {
+                const saved = await savePendingTaskAdd(pendingAdd.payloads);
+
+                if (saved) {
+                    taskPendingAdd = null;
+                }
+            } finally {
+                isTaskAddSaving = false;
+                addButton.disabled = false;
+            }
         });
     }
 
@@ -548,368 +809,625 @@ function setupManagerTaskModals() {
     });
 }
 
-function generateTaskRowHtml(rowIndex) {
-    return `
-        <div class="manager-task-row" data-row-index="${rowIndex}">
-            <div class="manager-task-row-header">
-                <h4 class="manager-task-row-title">Task ${rowIndex + 1}</h4>
-                ${rowIndex > 0 ? `<button type="button" class="manager-task-row-remove-btn remove-task-row-btn" data-row-index="${rowIndex}" title="Remove task">×</button>` : ''}
-            </div>
-            <div class="manager-task-form-grid">
-                <div class="manager-task-form-field">
-                    <label>Task*</label>
-                    <select name="task_category_${rowIndex}" class="task-select-placeholder task-category-select"></select>
-                </div>
-                <div class="manager-task-form-field">
-                    <label>Priority Level*</label>
-                    <select name="priority_level_${rowIndex}" class="task-select-placeholder task-priority-select"></select>
-                </div>
-                <div class="manager-task-form-field">
-                    <label>House Number*</label>
-                    <select name="house_number_${rowIndex}" class="task-select-placeholder task-house-select"></select>
-                </div>
-                <div class="manager-task-form-field">
-                    <label>Pen Number*</label>
-                    <select name="pen_number_${rowIndex}" class="task-select-placeholder task-pen-select"></select>
-                </div>
-                <div class="manager-task-form-field">
-                    <label>Time to finish*</label>
-                    <input type="time" name="time_assigned_${rowIndex}" class="task-time-input">
-                </div>
-                <div class="manager-task-form-field">
-                    <label>Date to finish*</label>
-                    <input type="date" name="date_assigned_${rowIndex}" class="task-date-input" min="${getTodayDateValue()}">
-                </div>
-            </div>
-            <div class="manager-task-form-field full">
-                <label>Detailed Task</label>
-                <textarea name="detailed_task_${rowIndex}" class="task-detailed-textarea" rows="3" placeholder="Write a clear and specific task instruction here."></textarea>
-            </div>
-        </div>
-    `;
-}
-
-function populateTaskRowOptions(rowIndex) {
-    const row = document.querySelector(`[data-row-index="${rowIndex}"]`);
-    if (!row || !formOptionsCache) return;
-
-    const taskCategorySelect = row.querySelector(".task-category-select");
-    const prioritySelect = row.querySelector(".task-priority-select");
-    const houseSelect = row.querySelector(".task-house-select");
-    const penSelect = row.querySelector(".task-pen-select");
-
-    fillSimpleSelect(
-        taskCategorySelect,
-        formOptionsCache.task_categories || [],
-        "Select task category",
-    );
-
-    fillSimpleSelect(
-        prioritySelect,
-        formOptionsCache.priority_levels || [],
-        "Select priority",
-    );
-
-    fillSelect(
-        houseSelect,
-        formOptionsCache.houses || [],
-        "id",
-        "number",
-        "Select house",
-    );
-
-    fillSelect(
-        penSelect,
-        [],
-        "number",
-        "label",
-        "Select pen",
-    );
-
-    const refreshPens = async () => {
-        const selectedHouseId = houseSelect?.value;
-        if (!selectedHouseId) {
-            fillSelect(penSelect, [], "number", "label", "Select pen");
-            return;
-        }
-
-        try {
-            const response = await fetch(getTaskPensUrl(selectedHouseId, taskCategorySelect?.value));
-            const data = await response.json();
-            fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
-            setupTaskSelectPlaceholderState();
-        } catch (error) {
-            console.error("Failed to load pens:", error);
-        }
-    };
-
-    houseSelect?.addEventListener("change", refreshPens);
-    taskCategorySelect?.addEventListener("change", refreshPens);
-}
-
 function setupAddTaskModal() {
     const openButton = document.getElementById("openAddTaskModal");
     const form = document.getElementById("addTaskForm");
     const formError = document.getElementById("addTaskFormError");
-    const tasksContainer = document.getElementById("tasksContainer");
-    const addTaskRowBtn = document.getElementById("addTaskRowBtn");
-    let nextTaskRowIndex = 0;
+    const addRowButton = document.getElementById("addTaskRowBtn");
 
     if (openButton) {
-        openButton.addEventListener("click", async () => {
-            await loadTaskFormOptions();
+        openButton.addEventListener("click", () => {
+            form?.reset();
+            resetAddTaskRows();
+            applyTaskDateRestrictions(form || document);
             clearAddTaskFormError();
-            
-            // Initialize with one task row
-            nextTaskRowIndex = 0;
-            tasksContainer.innerHTML = "";
-            addNewTaskRow();
-            
             openTaskModal("addTaskModal");
+            loadTaskFormOptions({ preserveSelections: true });
         });
     }
 
-    function addNewTaskRow() {
-        const rowIndex = nextTaskRowIndex;
-        nextTaskRowIndex += 1;
-        const rowHtml = generateTaskRowHtml(rowIndex);
-        tasksContainer.insertAdjacentHTML("beforeend", rowHtml);
-        
-        populateTaskRowOptions(rowIndex);
+    addRowButton?.addEventListener("click", () => {
+        addNewTaskRow({ scrollToRow: true });
+    });
 
-        // Set up remove button for this row
-        const removeBtn = tasksContainer.querySelector(`[data-row-index="${rowIndex}"] .remove-task-row-btn`);
-        if (removeBtn) {
-            removeBtn.addEventListener("click", (e) => {
-                e.preventDefault();
-                const rowElement = tasksContainer.querySelector(`[data-row-index="${rowIndex}"]`);
-                rowElement.remove();
-                updateTaskCountBadge();
-            });
-        }
-
-        // Set up field listeners for error clearing
-        const row = tasksContainer.querySelector(`[data-row-index="${rowIndex}"]`);
-        applyTaskDateMinimum(row.querySelector(".task-date-input"));
-
-        row.querySelectorAll("input, select, textarea").forEach((field) => {
+    if (form) {
+        form.querySelectorAll("input, select, textarea").forEach((field) => {
             field.addEventListener("input", () => clearTaskFieldError(field));
             field.addEventListener("change", () => clearTaskFieldError(field));
         });
 
-        updateTaskCountBadge();
-    }
-
-    function updateTaskCountBadge() {
-        const countBadge = document.getElementById("taskCountBadge");
-        const taskCount = tasksContainer.querySelectorAll(".manager-task-row").length;
-        if (countBadge) {
-            countBadge.textContent = taskCount;
-        }
-    }
-
-    if (addTaskRowBtn) {
-        addTaskRowBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            addNewTaskRow();
-        });
-    }
-
-    // Only set up form submission handler once
-    if (form && !form._taskSubmitHandlerSet) {
-        form._taskSubmitHandlerSet = true;
-
-        const handleFormSubmit = async (event) => {
+        form.addEventListener("submit", (event) => {
             event.preventDefault();
 
-            const workerNameSelect = document.getElementById("taskWorkerName");
-            const workerId = workerNameSelect?.value;
+            const formData = new FormData(form);
+            const payload = Object.fromEntries(formData.entries());
 
-            if (!workerId) {
-                showAddTaskFormError(formError, "Please select a flockman.");
+            const validation = validateAddTaskForm(form, payload);
+            if (!validation.isValid) {
+                showAddTaskFormError(formError, validation.message || validation.missingFields);
                 return;
             }
 
-            // Collect all task rows
-            const taskRows = tasksContainer.querySelectorAll(".manager-task-row");
-            if (taskRows.length === 0) {
-                showAddTaskFormError(formError, "Please add at least one task.");
-                return;
-            }
+            const toLocalDateTimeString = (dateObj) => {
+                const pad = (value) => String(value).padStart(2, "0");
+                return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}` +
+                    `T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+            };
 
-            // Validate all tasks
-            const tasks = [];
-            let hasRequiredErrors = false;
-            let hasScheduleErrors = false;
-            let previousFinishAt = null;
-            clearAddTaskRequiredFieldHighlights(false);
+            const timeAssigned = toLocalDateTimeString(new Date());
+            const taskPayloads = validation.tasks.map((task) => ({
+                user_employeeid: payload.worker_name,
+                tasktype: task.taskCategory,
+                prioritylevel: task.priorityLevel,
+                house_houseid: task.houseNumber,
+                pennumber: task.penNumber,
+                timeassigned: timeAssigned,
+                finishby: `${task.dateAssigned}T${task.timeAssigned}:00`,
+                detailedtask: task.detailedTask,
+                status: "Pending",
+            }));
 
-            taskRows.forEach((row) => {
-                const rowIndex = row.dataset.rowIndex;
-                const taskCategoryField = row.querySelector(`[name="task_category_${rowIndex}"]`);
-                const priorityLevelField = row.querySelector(`[name="priority_level_${rowIndex}"]`);
-                const houseNumberField = row.querySelector(`[name="house_number_${rowIndex}"]`);
-                const penNumberField = row.querySelector(`[name="pen_number_${rowIndex}"]`);
-                const timeAssignedField = row.querySelector(`[name="time_assigned_${rowIndex}"]`);
-                const dateAssignedField = row.querySelector(`[name="date_assigned_${rowIndex}"]`);
-                const detailedTaskField = row.querySelector(`[name="detailed_task_${rowIndex}"]`);
-                const requiredFields = [
-                    taskCategoryField,
-                    priorityLevelField,
-                    houseNumberField,
-                    penNumberField,
-                    timeAssignedField,
-                    dateAssignedField,
-                ];
-                const taskCategory = taskCategoryField?.value || "";
-                const priorityLevel = priorityLevelField?.value || "";
-                const houseNumber = houseNumberField?.value || "";
-                const penNumber = penNumberField?.value || "";
-                const timeAssigned = timeAssignedField?.value || "";
-                const dateAssigned = dateAssignedField?.value || "";
-                const detailedTask = detailedTaskField?.value || "";
-
-                // Check required fields
-                requiredFields.forEach((field) => {
-                    if (!String(field?.value || "").trim()) {
-                        field?.closest(".manager-task-form-field")?.classList.add("has-error");
-                    }
-                });
-
-                if (requiredFields.some((field) => !String(field?.value || "").trim())) {
-                    hasRequiredErrors = true;
-                    return;
-                }
-
-                if (isPastTaskDate(dateAssigned)) {
-                    hasScheduleErrors = true;
-                    dateAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
-                    return;
-                }
-
-                const toLocalDateTimeString = (dateObj) => {
-                    const pad = (value) => String(value).padStart(2, "0");
-                    return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}` +
-                        `T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
-                };
-
-                const timeAssignedNow = toLocalDateTimeString(new Date());
-                const finishBy = dateAssigned && timeAssigned ? `${dateAssigned}T${timeAssigned}:00` : null;
-                const finishAt = new Date(finishBy);
-
-                if (previousFinishAt && finishAt <= previousFinishAt) {
-                    hasScheduleErrors = true;
-                    timeAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
-                    dateAssignedField?.closest(".manager-task-form-field")?.classList.add("has-error");
-                    return;
-                }
-
-                previousFinishAt = finishAt;
-
-                tasks.push({
-                    user_employeeid: workerId,
-                    tasktype: taskCategory,
-                    prioritylevel: priorityLevel,
-                    house_houseid: houseNumber,
-                    pennumber: penNumber,
-                    timeassigned: timeAssignedNow,
-                    finishby: finishBy,
-                    detailedtask: detailedTask,
-                    status: "Pending",
-                });
-            });
-
-            if (hasRequiredErrors) {
-                showAddTaskFormError(formError, "Please fill in all required fields (marked with *).");
-                return;
-            }
-
-            if (hasScheduleErrors) {
-                showAddTaskFormError(formError, "Date to finish cannot be earlier than today.");
-                return;
-            }
-
-            pendingAddTasks = tasks;
+            taskPendingAdd = { payloads: taskPayloads };
 
             const confirmText = document.getElementById("confirmAddTaskText");
             if (confirmText) {
-                confirmText.textContent = tasks.length === 1
-                    ? "Are you sure you want to assign this task?"
-                    : `Are you sure you want to assign these ${tasks.length} tasks?`;
+                confirmText.textContent = taskPayloads.length > 1
+                    ? `Are you sure you want to assign these ${taskPayloads.length} tasks?`
+                    : "Are you sure you want to assign this task?";
             }
 
             openTaskModal("confirmAddTaskModal");
-        };
-
-        form.addEventListener("submit", handleFormSubmit);
-    }
-
-    const confirmAddTaskButton = document.getElementById("confirmAddTask");
-    if (confirmAddTaskButton && !confirmAddTaskButton._taskConfirmHandlerSet) {
-        confirmAddTaskButton._taskConfirmHandlerSet = true;
-        confirmAddTaskButton.addEventListener("click", () => submitPendingAddTasks(form, formError, tasksContainer));
+        });
     }
 }
 
-async function submitPendingAddTasks(form, formError, tasksContainer) {
-    if (!pendingAddTasks.length) {
-        closeTaskModal("confirmAddTaskModal");
-        return;
-    }
+async function savePendingTaskAdd(taskPayloads) {
+    const form = document.getElementById("addTaskForm");
+    const formError = document.getElementById("addTaskFormError");
 
     try {
         const token = document.querySelector('meta[name="csrf-token"]')?.content;
-
-        for (const task of pendingAddTasks) {
+        for (const body of taskPayloads) {
             const response = await fetch("/api/manager/tasks", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "X-CSRF-TOKEN": token || "",
                 },
-                body: JSON.stringify(task),
+                body: JSON.stringify(body),
             });
 
+            const responseText = await response.text();
+
             if (!response.ok) {
-                const responseText = await response.text();
                 throw new Error(responseText || `Failed to save task (${response.status}).`);
             }
         }
 
-        pendingAddTasks = [];
         await renderManagerTasks();
-        closeTaskModal("confirmAddTaskModal");
         closeTaskModal("addTaskModal");
-        form.reset();
-        tasksContainer.innerHTML = "";
+        form?.reset();
+        resetAddTaskRows();
         setupTaskSelectPlaceholderState();
+
+        return true;
     } catch (error) {
-        console.error("Failed to save tasks:", error);
-        closeTaskModal("confirmAddTaskModal");
-        showAddTaskFormError(formError, "Unable to save tasks. Please try again.");
+        console.error("Failed to save new task:", error);
+        showAddTaskFormError(formError, "Unable to save task. Please try again.");
+
+        return false;
     }
 }
 
-function validateAddTaskRequiredFields(form, payload) {
-    const missingFields = addTaskRequiredFields.filter(({ name }) => {
-        return !String(payload[name] ?? "").trim();
+function setupEditTaskModal() {
+    const form = document.getElementById("editTaskForm");
+    const formError = document.getElementById("editTaskFormError");
+
+    if (!form) return;
+
+    form.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => clearEditTaskFieldError(field));
+        field.addEventListener("change", () => clearEditTaskFieldError(field));
     });
 
-    clearAddTaskRequiredFieldHighlights(false);
+    form.querySelector(".task-house-select")?.addEventListener("change", async () => {
+        await loadPensForEditTaskForm();
+    });
 
-    missingFields.forEach(({ name }) => {
-        const field = form.elements[name];
-        field?.closest(".manager-task-form-field")?.classList.add("has-error");
+    form.querySelector(".task-category-select")?.addEventListener("change", async () => {
+        await loadPensForEditTaskForm();
+    });
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        if (!taskPendingEdit?.item) {
+            return;
+        }
+
+        const validation = validateEditTaskForm(form);
+        if (!validation.isValid) {
+            showEditTaskFormError(formError, validation.message || "Please fill in the required fields.");
+            return;
+        }
+
+        taskPendingEdit = {
+            item: taskPendingEdit.item,
+            id: taskPendingEdit.item.id,
+            payload: validation.payload,
+        };
+
+        closeTaskModal("editTaskModal");
+        openTaskModal("confirmEditTaskModal");
+    });
+}
+
+async function openEditTaskModal(task) {
+    taskPendingEdit = { item: task };
+    await loadTaskFormOptions();
+
+    const form = document.getElementById("editTaskForm");
+    if (!form) return;
+
+    clearEditTaskFormError();
+    form.reset();
+    applyTaskDateRestrictions(form);
+
+    const workerField = document.getElementById("editTaskWorkerName");
+    if (workerField) {
+        workerField.value = task.name || "";
+    }
+
+    populateTaskRowSelects(form);
+
+    form.querySelector("[name='task_category']").value = task.task_assigned || "";
+    form.querySelector("[name='priority_level']").value = task.priority || "";
+    form.querySelector("[name='house_number']").value = task.house_id || "";
+    form.querySelector("[name='detailed_task']").value = task.detailed_task || "";
+
+    const finishParts = splitTaskDateTime(task.finish_by);
+    form.querySelector("[name='date_assigned']").value = finishParts.date;
+    form.querySelector("[name='time_assigned']").value = finishParts.time;
+
+    await loadPensForEditTaskForm(task.pen_id);
+    setupTaskSelectPlaceholderState();
+    openTaskModal("editTaskModal");
+}
+
+async function loadPensForEditTaskForm(selectedPenId = null) {
+    const form = document.getElementById("editTaskForm");
+    if (!form) return;
+
+    const houseSelect = form.querySelector(".task-house-select");
+    const penSelect = form.querySelector(".task-pen-select");
+    const taskType = form.querySelector(".task-category-select")?.value || "";
+    if (!penSelect) return;
+
+    if (!houseSelect?.value) {
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams();
+        if (taskType) {
+            params.set("task_type", taskType);
+        }
+        const query = params.toString() ? `?${params.toString()}` : "";
+        const response = await fetch(`/api/manager/tasks/houses/${houseSelect.value}/pens${query}`);
+        const data = await response.json();
+        fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+        penSelect.value = String(selectedPenId || taskPendingEdit?.item?.pen_id || "");
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error("Failed to load pens for task edit.", error);
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    }
+}
+
+function validateEditTaskForm(form) {
+    const missingFields = [];
+    const values = getTaskRowValues(form);
+
+    clearEditTaskRequiredFieldHighlights(false);
+    applyTaskDateRestrictions(form);
+
+    Object.entries({
+        task_category: values.taskCategory,
+        priority_level: values.priorityLevel,
+        house_number: values.houseNumber,
+        pen_number: values.penNumber,
+        date_assigned: values.dateAssigned,
+        time_assigned: values.timeAssigned,
+    }).forEach(([name, value]) => {
+        if (!String(value ?? "").trim()) {
+            missingFields.push({ name });
+            form.querySelector(`[name="${name}"]`)?.closest(".manager-task-form-field")?.classList.add("has-error");
+        }
+    });
+
+    if (missingFields.length) {
+        form.querySelector(`[name="${missingFields[0].name}"]`)?.focus();
+
+        return {
+            isValid: false,
+            message: "Please fill in the required fields.",
+        };
+    }
+
+    if (isDateBeforeToday(values.dateAssigned)) {
+        form.querySelector("[name='date_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+        form.querySelector("[name='date_assigned']")?.focus();
+
+        return {
+            isValid: false,
+            message: "Date to finish cannot be earlier than today.",
+        };
+    }
+
+    return {
+        isValid: true,
+        payload: {
+            tasktype: values.taskCategory,
+            prioritylevel: values.priorityLevel,
+            house_houseid: values.houseNumber,
+            pennumber: values.penNumber,
+            finishby: `${values.dateAssigned} ${values.timeAssigned}:00`,
+            detailedtask: values.detailedTask,
+        },
+    };
+}
+
+function splitTaskDateTime(value) {
+    const parts = String(value || "").trim().split(/\s+/);
+    const timeParts = String(parts[1] || "").split(":");
+
+    return {
+        date: parts[0] || "",
+        time: timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : "",
+    };
+}
+
+async function savePendingTaskEdit(taskId, payload) {
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${taskId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": token || "",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to update task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+        closeTaskModal("editTaskModal");
+        return true;
+    } catch (error) {
+        console.error("Failed to update task:", error);
+        closeTaskModal("confirmEditTaskModal");
+        openTaskModal("editTaskModal");
+        showEditTaskFormError(
+            document.getElementById("editTaskFormError"),
+            "Unable to save task changes. Please try again.",
+        );
+        return false;
+    }
+}
+
+async function deletePendingTask(taskId) {
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(`/api/manager/tasks/${taskId}`, {
+            method: "DELETE",
+            headers: {
+                "X-CSRF-TOKEN": token || "",
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to delete task (${response.status}).`);
+        }
+
+        await renderManagerTasks();
+    } catch (error) {
+        console.error("Failed to delete task:", error);
+        await showTaskNoticeModal(`Error deleting task: ${error.message}`, "Unable to Delete Task");
+    }
+}
+
+function resetAddTaskRows() {
+    const container = document.getElementById("tasksContainer");
+    if (!container) return;
+
+    container.innerHTML = "";
+    nextTaskRowUid = 0;
+    addNewTaskRow();
+}
+
+function addNewTaskRow({ scrollToRow = false } = {}) {
+    const container = document.getElementById("tasksContainer");
+    if (!container) return null;
+
+    const rowUid = nextTaskRowUid;
+    nextTaskRowUid += 1;
+
+    container.insertAdjacentHTML("beforeend", generateTaskRowHtml(rowUid));
+    const row = container.lastElementChild;
+    populateTaskRowSelects(row);
+    bindTaskRowEvents(row);
+    applyTaskDateRestrictions(row);
+    updateTaskCountBadge();
+    setupTaskSelectPlaceholderState();
+
+    if (scrollToRow && row) {
+        row.scrollIntoView({ behavior: "smooth", block: "start" });
+        row.querySelector("select[name='task_category']")?.focus({ preventScroll: true });
+    }
+
+    return row;
+}
+
+function generateTaskRowHtml(rowUid) {
+    return `
+        <div class="manager-task-row" data-task-row="${rowUid}">
+            <div class="manager-task-row-header">
+                <h4 class="manager-task-row-title">Task</h4>
+                <button type="button" class="manager-task-row-remove-btn" aria-label="Remove task">&times;</button>
+            </div>
+
+            <div class="manager-task-row-grid">
+                <div class="manager-task-form-field">
+                    <label>Task*</label>
+                    <select name="task_category" class="task-select-placeholder task-category-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Priority Level*</label>
+                    <select name="priority_level" class="task-select-placeholder task-priority-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>House*</label>
+                    <select name="house_number" class="task-select-placeholder task-house-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Pen Number*</label>
+                    <select name="pen_number" class="task-select-placeholder task-pen-select"></select>
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Date to finish*</label>
+                    <input type="date" name="date_assigned" class="task-date-input" min="${getTodayDateInputValue()}">
+                </div>
+                <div class="manager-task-form-field">
+                    <label>Time to finish*</label>
+                    <input type="time" name="time_assigned" class="task-time-input">
+                </div>
+                <div class="manager-task-form-field full">
+                    <label>Detailed Task</label>
+                    <textarea name="detailed_task" class="task-detailed-textarea" rows="2" placeholder="Write a clear and specific task instruction here."></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function populateTaskRowSelects(row) {
+    if (!row) return;
+
+    fillSimpleSelect(
+        row.querySelector(".task-category-select"),
+        taskFormOptions.task_categories,
+        "Select task category",
+    );
+
+    fillSimpleSelect(
+        row.querySelector(".task-priority-select"),
+        taskFormOptions.priority_levels,
+        "Select priority",
+    );
+
+    fillSelect(
+        row.querySelector(".task-house-select"),
+        taskFormOptions.houses,
+        "id",
+        "number",
+        "Select house",
+    );
+
+    fillSelect(
+        row.querySelector(".task-pen-select"),
+        [],
+        "number",
+        "label",
+        "Select pen",
+    );
+}
+
+function bindTaskRowEvents(row) {
+    if (!row) return;
+
+    row.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => clearTaskFieldError(field));
+        field.addEventListener("change", () => clearTaskFieldError(field));
+    });
+
+    row.querySelector(".task-house-select")?.addEventListener("change", async () => {
+        await loadPensForTaskRow(row);
+    });
+
+    row.querySelector(".task-category-select")?.addEventListener("change", async () => {
+        await loadPensForTaskRow(row);
+    });
+
+    row.querySelector(".manager-task-row-remove-btn")?.addEventListener("click", () => {
+        if (document.querySelectorAll("#tasksContainer .manager-task-row").length <= 1) {
+            return;
+        }
+
+        row.remove();
+        updateTaskCountBadge();
+        clearAddTaskFormError();
+    });
+}
+
+async function loadPensForTaskRow(row, selectedPenValue = "") {
+    const houseSelect = row.querySelector(".task-house-select");
+    const penSelect = row.querySelector(".task-pen-select");
+    const taskType = row.querySelector(".task-category-select")?.value || "";
+    if (!penSelect) return;
+
+    if (!houseSelect?.value) {
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams();
+        if (taskType) {
+            params.set("task_type", taskType);
+        }
+        const query = params.toString() ? `?${params.toString()}` : "";
+        const response = await fetch(`/api/manager/tasks/houses/${houseSelect.value}/pens${query}`);
+        const data = await response.json();
+        fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
+        if (selectedPenValue) {
+            penSelect.value = selectedPenValue;
+        }
+        setupTaskSelectPlaceholderState();
+    } catch (error) {
+        console.error("Failed to load pens for selected house.", error);
+        fillSelect(penSelect, [], "number", "label", "Select pen");
+        setupTaskSelectPlaceholderState();
+    }
+}
+
+function updateTaskCountBadge() {
+    const rows = [...document.querySelectorAll("#tasksContainer .manager-task-row")];
+    const badge = document.getElementById("taskCountBadge");
+
+    rows.forEach((row, index) => {
+        const title = row.querySelector(".manager-task-row-title");
+        if (title) {
+            title.textContent = `Task ${index + 1}`;
+        }
+    });
+
+    if (badge) {
+        badge.textContent = rows.length;
+    }
+}
+
+function validateAddTaskForm(form, payload) {
+    const missingFields = [];
+    const tasks = [];
+
+    clearAddTaskRequiredFieldHighlights(false);
+    applyTaskDateRestrictions(form);
+
+    if (!String(payload.worker_name ?? "").trim()) {
+        missingFields.push({ name: "worker_name", label: "Assign Flockman" });
+        form.elements.worker_name?.closest(".manager-task-form-field")?.classList.add("has-error");
+    }
+
+    const rows = [...document.querySelectorAll("#tasksContainer .manager-task-row")];
+    let previousFinishAt = null;
+    let hasPastFinishDateErrors = false;
+    let hasSequenceErrors = false;
+
+    rows.forEach((row) => {
+        const values = getTaskRowValues(row);
+
+        Object.entries({
+            task_category: values.taskCategory,
+            priority_level: values.priorityLevel,
+            house_number: values.houseNumber,
+            pen_number: values.penNumber,
+            date_assigned: values.dateAssigned,
+            time_assigned: values.timeAssigned,
+        }).forEach(([name, value]) => {
+            if (!String(value ?? "").trim()) {
+                missingFields.push({ name });
+                row.querySelector(`[name="${name}"]`)?.closest(".manager-task-form-field")?.classList.add("has-error");
+            }
+        });
+
+        if (values.dateAssigned && isDateBeforeToday(values.dateAssigned)) {
+            hasPastFinishDateErrors = true;
+            row.querySelector("[name='date_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+        }
+
+        if (values.dateAssigned && values.timeAssigned) {
+            const finishAt = new Date(`${values.dateAssigned}T${values.timeAssigned}:00`);
+            if (previousFinishAt && finishAt <= previousFinishAt) {
+                hasSequenceErrors = true;
+                row.querySelector("[name='date_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+                row.querySelector("[name='time_assigned']")?.closest(".manager-task-form-field")?.classList.add("has-error");
+            }
+            previousFinishAt = finishAt;
+        }
+
+        tasks.push(values);
     });
 
     if (missingFields.length) {
         shouldTrackAddTaskRequiredHighlights = true;
-        form.elements[missingFields[0].name]?.focus();
+        const firstMissing = form.querySelector(`[name="${missingFields[0].name}"]`);
+        firstMissing?.focus();
     } else {
         shouldTrackAddTaskRequiredHighlights = false;
     }
 
-    return missingFields;
+    if (missingFields.length) {
+        return {
+            isValid: false,
+            missingFields,
+            tasks,
+        };
+    }
+
+    if (hasPastFinishDateErrors) {
+        return {
+            isValid: false,
+            missingFields,
+            tasks,
+            message: "Date to finish cannot be earlier than today.",
+        };
+    }
+
+    if (hasSequenceErrors) {
+        return {
+            isValid: false,
+            missingFields,
+            tasks,
+            message: "Each succeeding task must finish later than the task before it.",
+        };
+    }
+
+    return {
+        isValid: missingFields.length === 0,
+        missingFields,
+        tasks,
+    };
+}
+
+function getTaskRowValues(row) {
+    return {
+        taskCategory: row.querySelector("[name='task_category']")?.value || "",
+        priorityLevel: row.querySelector("[name='priority_level']")?.value || "",
+        houseNumber: row.querySelector("[name='house_number']")?.value || "",
+        penNumber: row.querySelector("[name='pen_number']")?.value || "",
+        dateAssigned: row.querySelector("[name='date_assigned']")?.value || "",
+        timeAssigned: row.querySelector("[name='time_assigned']")?.value || "",
+        detailedTask: row.querySelector("[name='detailed_task']")?.value || "",
+    };
 }
 
 function showAddTaskFormError(formError, messageOrFields) {
@@ -947,6 +1465,43 @@ function clearAddTaskRequiredFieldHighlights(resetTracking = true) {
     form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
         field.classList.remove("has-error");
     });
+}
+
+function showEditTaskFormError(formError, message) {
+    if (!formError) return;
+
+    formError.textContent = message;
+    formError.classList.add("show");
+    formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function clearEditTaskFormError() {
+    const formError = document.getElementById("editTaskFormError");
+
+    formError?.classList.remove("show");
+    if (formError) {
+        formError.textContent = "";
+    }
+
+    clearEditTaskRequiredFieldHighlights();
+}
+
+function clearEditTaskRequiredFieldHighlights(resetTracking = true) {
+    const form = document.getElementById("editTaskForm");
+
+    form?.querySelectorAll(".manager-task-form-field.has-error").forEach((field) => {
+        field.classList.remove("has-error");
+    });
+}
+
+function clearEditTaskFieldError(field) {
+    field.closest(".manager-task-form-field")?.classList.remove("has-error");
+
+    const form = document.getElementById("editTaskForm");
+    const hasErrors = form?.querySelector(".manager-task-form-field.has-error");
+    if (!hasErrors) {
+        clearEditTaskFormError();
+    }
 }
 
 function clearTaskFieldError(field) {
@@ -991,52 +1546,69 @@ function closeTaskModal(id) {
     if (!modal) return;
 
     modal.classList.remove("show");
-    if (!document.querySelector(".manager-task-modal-backdrop.show")) {
-        document.body.style.overflow = "";
-    }
+
+    const hasOpenModal = Array.from(document.querySelectorAll(".manager-task-modal-backdrop.show"))
+        .some((openModal) => openModal.id !== id);
+    document.body.style.overflow = hasOpenModal ? "hidden" : "";
 }
 
-function showTaskNoticeModal(message, title = "Notice") {
-    return new Promise((resolve) => {
-        document.getElementById("taskNoticeModal")?.remove();
+function ensureTaskNoticeModal() {
+    let modal = document.getElementById("taskNoticeModal");
 
-        const modal = document.createElement("div");
-        modal.className = "manager-task-modal-backdrop confirm-modal-top show";
-        modal.id = "taskNoticeModal";
-        modal.innerHTML = `
-            <div class="manager-task-confirm-modal">
-                <div class="manager-task-modal-header center">
-                    <h2></h2>
-                    <div class="manager-task-header-line"></div>
-                </div>
-                <div class="manager-task-confirm-body">
-                    <p></p>
-                    <div class="manager-task-confirm-actions">
-                        <button type="button" class="manager-task-btn confirm" data-notice-ok>OK</button>
-                    </div>
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.className = "manager-task-modal-backdrop confirm-modal-top";
+    modal.id = "taskNoticeModal";
+    modal.innerHTML = `
+        <div class="manager-task-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="taskNoticeTitle">
+            <div class="manager-task-modal-header center">
+                <h2 id="taskNoticeTitle">Task Updated</h2>
+                <div class="manager-task-header-line"></div>
+            </div>
+
+            <div class="manager-task-confirm-body">
+                <p id="taskNoticeText">Task updated successfully.</p>
+
+                <div class="manager-task-confirm-actions">
+                    <button type="button" class="manager-task-btn confirm" id="taskNoticeOk">OK</button>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        modal.querySelector("h2").textContent = title;
-        modal.querySelector("p").textContent = message;
+    document.body.appendChild(modal);
 
-        const close = () => {
-            modal.remove();
-            if (!document.querySelector(".manager-task-modal-backdrop.show")) {
-                document.body.style.overflow = "";
-            }
-            resolve();
-        };
-
-        document.body.style.overflow = "hidden";
-        modal.querySelector("[data-notice-ok]").addEventListener("click", close);
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) close();
-        });
-
-        document.body.appendChild(modal);
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeTaskModal("taskNoticeModal");
+        }
     });
+
+    modal.querySelector("#taskNoticeOk")?.addEventListener("click", () => {
+        closeTaskModal("taskNoticeModal");
+    });
+
+    return modal;
+}
+
+function showTaskNoticeModal(message, title = "Task Updated") {
+    const modal = ensureTaskNoticeModal();
+    const titleElement = modal.querySelector("#taskNoticeTitle");
+    const textElement = modal.querySelector("#taskNoticeText");
+
+    if (titleElement) {
+        titleElement.textContent = title;
+    }
+
+    if (textElement) {
+        textElement.textContent = message;
+    }
+
+    openTaskModal("taskNoticeModal");
+    modal.querySelector("#taskNoticeOk")?.focus();
 }
 
 function animateTaskSections() {
@@ -1160,8 +1732,7 @@ async function loadPensForHouse(houseId) {
     }
 
     try {
-        const taskType = document.getElementById("taskCategory")?.value || "";
-        const response = await fetch(getTaskPensUrl(houseId, taskType));
+        const response = await fetch(`/api/manager/tasks/houses/${houseId}/pens`);
         const data = await response.json();
         fillSelect(penSelect, data.pens || [], "number", "label", "Select pen");
         setupTaskSelectPlaceholderState();
@@ -1170,16 +1741,6 @@ async function loadPensForHouse(houseId) {
         fillSelect(penSelect, [], "number", "label", "Select pen");
         setupTaskSelectPlaceholderState();
     }
-}
-
-function getTaskPensUrl(houseId, taskType = "") {
-    const params = new URLSearchParams();
-    if (taskType) {
-        params.set("task_type", taskType);
-    }
-
-    const query = params.toString();
-    return `/api/manager/tasks/houses/${houseId}/pens${query ? `?${query}` : ""}`;
 }
 
 async function updateTaskStatus(taskId, newStatus) {
@@ -1200,10 +1761,10 @@ async function updateTaskStatus(taskId, newStatus) {
         }
 
         await renderManagerTasks();
-        await showTaskNoticeModal(`Task marked as ${newStatus}.`, "Task Updated");
+        showTaskNoticeModal(`Task marked as ${newStatus}.`);
     } catch (error) {
         console.error("Failed to update task status:", error);
-        await showTaskNoticeModal(`Error updating task: ${error.message}`, "Unable to Update Task");
+        showTaskNoticeModal(`Error updating task: ${error.message}`, "Unable to Update Task");
     }
 }
 
@@ -1211,312 +1772,17 @@ function fillSelect(select, items, valueKey, labelKey, placeholder) {
     if (!select) return;
 
     select.innerHTML = `
-        <option value="">${escapeHtml(placeholder)}</option>
+        <option value="">${placeholder}</option>
         ${items.map((item) => {
             const value = item[valueKey];
             const label = item.label ?? item[labelKey];
             const disabled = item.disabled ? 'disabled' : '';
-            const note = item.disabled ? ` (${item.disabledReason || 'pending task'})` : '';
+            const reason = String(item.disabledReason || "").trim();
+            const note = item.disabled
+                ? ` (${reason || "unavailable"})`
+                : '';
             const style = item.disabled ? 'style="color:#999;"' : '';
-            return `<option value="${escapeHtml(value)}" ${disabled} ${style}>${escapeHtml(label)}${escapeHtml(note)}</option>`;
+            return `<option value="${value}" ${disabled} ${style}>${label}${note}</option>`;
         }).join("")}
     `;
-}
-
-let editingTaskId = null;
-let pendingEditTaskPayload = null;
-
-function setupEditTaskModal() {
-    document.addEventListener('click', (event) => {
-        const editBtn = event.target.closest('.manager-task-edit-btn');
-        if (!editBtn) return;
-
-        editingTaskId = editBtn.dataset.taskId;
-        openEditTaskModal(editingTaskId);
-    });
-
-    const editForm = document.getElementById('editTaskForm');
-    if (editForm) {
-        editForm.addEventListener('submit', handleEditTaskSubmit);
-    }
-
-    const confirmEditTaskButton = document.getElementById('confirmEditTask');
-    if (confirmEditTaskButton && !confirmEditTaskButton._taskEditConfirmHandlerSet) {
-        confirmEditTaskButton._taskEditConfirmHandlerSet = true;
-        confirmEditTaskButton.addEventListener('click', submitPendingEditTask);
-    }
-
-    setupEditTaskHouseChange();
-}
-
-function openEditTaskModal(taskId) {
-    const allTasks = [...taskDataCache.pending, ...taskDataCache.for_approval, ...taskDataCache.completed];
-    const task = allTasks.find(t => t.id == taskId);
-
-    if (!task) {
-        console.error('Task not found');
-        return;
-    }
-
-    populateEditTaskForm(task);
-    openTaskModal('editTaskModal');
-}
-
-function populateEditTaskForm(task) {
-    const workerNameInput = document.querySelector('#editTaskModal #editTaskWorkerName');
-    const taskCategorySelect = document.querySelector('#editTaskModal .task-category-select');
-    const prioritySelect = document.querySelector('#editTaskModal .task-priority-select');
-    const houseSelect = document.querySelector('#editTaskModal .task-house-select');
-    const penSelect = document.querySelector('#editTaskModal .task-pen-select');
-    const timeInput = document.querySelector('#editTaskModal .task-time-input');
-    const dateInput = document.querySelector('#editTaskModal .task-date-input');
-    const detailedTaskTextarea = document.querySelector('#editTaskModal .task-detailed-textarea');
-
-    applyTaskDateMinimum(dateInput);
-
-    // Populate worker name (read-only)
-    if (workerNameInput) {
-        workerNameInput.value = task.name || 'Unknown';
-    }
-
-    if (formOptionsCache) {
-        // Ensure the current task type is included in the options
-        const taskCategories = formOptionsCache.task_categories || [];
-        const currentTaskType = (task.task_assigned || '').trim();
-
-        if (currentTaskType && !taskCategories.includes(currentTaskType)) {
-            taskCategories.unshift(currentTaskType);
-        }
-
-        fillSimpleSelect(taskCategorySelect, taskCategories, 'Select task category');
-        fillSimpleSelect(prioritySelect, formOptionsCache.priority_levels || [], 'Select priority');
-        fillSelect(houseSelect, formOptionsCache.houses || [], 'id', 'number', 'Select house');
-    }
-
-    // Set task category and priority by matching the values
-    taskCategorySelect.value = (task.task_assigned || '').trim();
-    prioritySelect.value = (task.priority || '').trim();
-
-    // Set house dropdown value
-    houseSelect.value = task.house_id || '';
-
-    if (task.finish_by) {
-        const [date, time] = task.finish_by.split(' ');
-        dateInput.value = date;
-        if (time) {
-            timeInput.value = time.slice(0, 5);
-        }
-    }
-
-    detailedTaskTextarea.value = task.detailed_task || '';
-
-    // Update select placeholder state for task category and priority
-    setupTaskSelectPlaceholderState();
-
-    // Load pens for the selected house
-    loadPensForEditForm(task.house_id, task.pen_id, taskCategorySelect.value);
-}
-
-async function loadPensForEditForm(houseId, penId, taskType = '') {
-    const penSelect = document.querySelector('#editTaskModal .task-pen-select');
-
-    if (!houseId) {
-        fillSelect(penSelect, [], 'number', 'label', 'Select pen');
-        setupTaskSelectPlaceholderState();
-        return;
-    }
-
-    try {
-        const response = await fetch(getTaskPensUrl(houseId, taskType));
-        const data = await response.json();
-        fillSelect(penSelect, data.pens || [], 'number', 'label', 'Select pen');
-
-        // Pre-select the pen
-        if (penId) {
-            penSelect.value = penId;
-        }
-
-        setupTaskSelectPlaceholderState();
-    } catch (error) {
-        console.error('Failed to load pens:', error);
-        fillSelect(penSelect, [], 'number', 'label', 'Select pen');
-        setupTaskSelectPlaceholderState();
-    }
-}
-
-function setupEditTaskHouseChange() {
-    const houseSelect = document.querySelector('#editTaskModal .task-house-select');
-    const taskCategorySelect = document.querySelector('#editTaskModal .task-category-select');
-    const penSelect = document.querySelector('#editTaskModal .task-pen-select');
-    if (!houseSelect) return;
-
-    const refreshPens = async () => {
-        const selectedHouseId = houseSelect.value;
-
-        if (!selectedHouseId) {
-            fillSelect(penSelect, [], 'number', 'label', 'Select pen');
-            return;
-        }
-
-        try {
-            const response = await fetch(getTaskPensUrl(selectedHouseId, taskCategorySelect?.value));
-            const data = await response.json();
-            fillSelect(penSelect, data.pens || [], 'number', 'label', 'Select pen');
-            setupTaskSelectPlaceholderState();
-        } catch (error) {
-            console.error('Failed to load pens:', error);
-        }
-    };
-
-    houseSelect.addEventListener('change', refreshPens);
-    taskCategorySelect?.addEventListener('change', refreshPens);
-}
-
-async function handleEditTaskSubmit(event) {
-    event.preventDefault();
-
-    if (!editingTaskId) {
-        await showTaskNoticeModal('Error: Task ID not found.', "Unable to Edit Task");
-        return;
-    }
-
-    const form = event.target;
-    const formError = document.getElementById('editTaskFormError');
-    const taskCategory = form.querySelector('[name="task_category"]').value;
-    const priorityLevel = form.querySelector('[name="priority_level"]').value;
-    const houseNumber = form.querySelector('[name="house_number"]').value;
-    const penNumber = form.querySelector('[name="pen_number"]').value;
-    const timeAssigned = form.querySelector('[name="time_assigned"]').value;
-    const dateAssigned = form.querySelector('[name="date_assigned"]').value;
-    const detailedTask = form.querySelector('[name="detailed_task"]').value;
-
-    if (!taskCategory || !priorityLevel || !houseNumber || !penNumber || !timeAssigned || !dateAssigned) {
-        formError.textContent = 'Please fill in all required fields.';
-        formError.classList.add('show');
-        return;
-    }
-
-    if (isPastTaskDate(dateAssigned)) {
-        const dateField = form.querySelector('[name="date_assigned"]');
-        dateField?.closest('.manager-task-form-field')?.classList.add('has-error');
-        formError.textContent = 'Date to finish cannot be earlier than today.';
-        formError.classList.add('show');
-        return;
-    }
-
-    const finishBy = dateAssigned && timeAssigned ? `${dateAssigned} ${timeAssigned}:00` : null;
-
-    pendingEditTaskPayload = {
-        taskId: editingTaskId,
-        formError,
-        tasktype: taskCategory,
-        prioritylevel: priorityLevel,
-        house_houseid: houseNumber,
-        pennumber: penNumber,
-        finishby: finishBy,
-        detailedtask: detailedTask,
-    };
-
-    const confirmText = document.getElementById('confirmEditTaskText');
-    if (confirmText) {
-        confirmText.textContent = `Save changes to ${taskCategory}?`;
-    }
-
-    openTaskModal('confirmEditTaskModal');
-}
-
-async function submitPendingEditTask() {
-    if (!pendingEditTaskPayload) {
-        closeTaskModal('confirmEditTaskModal');
-        return;
-    }
-
-    const confirmButton = document.getElementById('confirmEditTask');
-    const payload = pendingEditTaskPayload;
-
-    try {
-        confirmButton.disabled = true;
-        const token = document.querySelector('meta[name="csrf-token"]')?.content;
-        const response = await fetch(`/api/manager/tasks/${payload.taskId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token || '',
-            },
-            body: JSON.stringify({
-                tasktype: payload.tasktype,
-                prioritylevel: payload.prioritylevel,
-                house_houseid: payload.house_houseid,
-                pennumber: payload.pennumber,
-                finishby: payload.finishby,
-                detailedtask: payload.detailedtask,
-            }),
-        });
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            throw new Error(responseText || `Failed to update task (${response.status}).`);
-        }
-
-        await renderManagerTasks();
-        closeTaskModal('confirmEditTaskModal');
-        closeTaskModal('editTaskModal');
-        editingTaskId = null;
-        pendingEditTaskPayload = null;
-        payload.formError.classList.remove('show');
-        payload.formError.textContent = '';
-    } catch (error) {
-        console.error('Failed to update task:', error);
-        closeTaskModal('confirmEditTaskModal');
-        payload.formError.textContent = 'Unable to update task. Please try again.';
-        payload.formError.classList.add('show');
-    } finally {
-        confirmButton.disabled = false;
-    }
-}
-
-let deletingTaskId = null;
-
-function setupDeleteTaskModal() {
-    document.addEventListener('click', (event) => {
-        const deleteBtn = event.target.closest('.manager-task-delete-btn');
-        if (!deleteBtn) return;
-
-        deletingTaskId = deleteBtn.dataset.taskId;
-        openTaskModal('deleteTaskModal');
-    });
-
-    const confirmButton = document.getElementById('confirmTaskDelete');
-    if (confirmButton) {
-        confirmButton.addEventListener('click', handleDeleteTaskConfirm);
-    }
-}
-
-async function handleDeleteTaskConfirm() {
-    if (!deletingTaskId) {
-        await showTaskNoticeModal('Error: Task ID not found.', "Unable to Delete Task");
-        return;
-    }
-
-    try {
-        const token = document.querySelector('meta[name="csrf-token"]')?.content;
-        const response = await fetch(`/api/manager/tasks/${deletingTaskId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': token || '',
-            },
-        });
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            throw new Error(responseText || `Failed to delete task (${response.status}).`);
-        }
-
-        await renderManagerTasks();
-        closeTaskModal('deleteTaskModal');
-        deletingTaskId = null;
-    } catch (error) {
-        console.error('Failed to delete task:', error);
-        await showTaskNoticeModal('Unable to delete task. Please try again.', "Unable to Delete Task");
-    }
 }

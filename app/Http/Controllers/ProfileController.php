@@ -69,14 +69,39 @@ class ProfileController extends Controller
             ],
             'Address' => ['required', 'string', 'max:255'],
         ], [
-            'PhoneNumber.regex' => 'Phone number must use 09XXXXXXXXX format.',
-            'PhoneNumber.size' => 'Phone number must be exactly 11 digits.',
-            'PhoneNumber.unique' => 'This phone number is already assigned to another employee.',
+            'PhoneNumber.regex' => 'Invalid phone number.',
+            'PhoneNumber.size' => 'Invalid phone number.',
+            'PhoneNumber.unique' => 'Phone number already in use.',
         ]);
 
         $user->update($validated);
 
         return redirect()->back()->with('profile_success', 'Profile updated successfully.');
+    }
+
+    public function checkPhone(Request $request)
+    {
+        $user = $this->currentUser();
+
+        if (!$user) {
+            return response()->json(['message' => 'Not authenticated'], 401);
+        }
+
+        $validated = $request->validate([
+            'PhoneNumber' => ['required', 'string', 'size:11', 'regex:/^09\d{9}$/'],
+        ], [
+            'PhoneNumber.regex' => 'Invalid phone number.',
+            'PhoneNumber.size' => 'Invalid phone number.',
+        ]);
+
+        $exists = User::where('PhoneNumber', $validated['PhoneNumber'])
+            ->where('EmployeeId', '!=', $user->EmployeeId)
+            ->exists();
+
+        return response()->json([
+            'available' => !$exists,
+            'message' => $exists ? 'Phone number already in use.' : '',
+        ], $exists ? 409 : 200);
     }
 
     public function getCurrentUser(Request $request)

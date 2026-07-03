@@ -11,6 +11,7 @@
 @endpush
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @vite('resources/js/admin-dashboard.js')
     @vite('resources/js/manager-decision-support.js')
 @endpush
@@ -23,7 +24,6 @@
             <div class="admin-topbar">
                 <div>
                     <h1 class="admin-page-title">Dashboard</h1>
-                    <p class="admin-page-subtitle">Monitor operations, live farm conditions, and critical alerts.</p>
                 </div>
             </div>
 

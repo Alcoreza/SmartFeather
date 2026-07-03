@@ -259,8 +259,6 @@ class MobileDashboardController extends Controller
             return [];
         }
 
-        $containerHeightInches = 8.5;
-
         $latestReadingIds = DB::table('sensor_readings')
             ->selectRaw('sensorid, max(reading_id) as latest_reading_id')
             ->groupBy('sensorid');
@@ -298,7 +296,7 @@ class MobileDashboardController extends Controller
             ->orderBy('s.drinker_number')
             ->orderBy('s.sensorid')
             ->get()
-            ->map(function ($row) use ($containerHeightInches) {
+            ->map(function ($row) {
                 $sensorType = strtolower(trim((string) $row->sensortype));
                 $isFeed = str_contains($sensorType, 'feed');
                 $isWater = str_contains($sensorType, 'water');
@@ -315,13 +313,23 @@ class MobileDashboardController extends Controller
                     $label = $row->sensorname ?: 'Resource';
                 }
 
-                $rawInches = (float) ($row->value ?? 0);
+                if ($row->value === null) {
+                    $percent = null;
+                    $recordedAt = null;
+                } else {
+                    $rawInches = (float) $row->value;
 
-                $percent = $containerHeightInches > 0
-                    ? (($containerHeightInches - $rawInches) / $containerHeightInches) * 100
-                    : 0;
+                    $containerHeightInches = $isWater ? 7.5 : 8.5;
 
-                $percent = round(max(0, min(100, $percent)), 1);
+                    $percent = (($containerHeightInches - $rawInches) / $containerHeightInches) * 100;
+
+                    $percent = max(0, min(100, $percent));
+                    $percent = floor($percent * 10) / 10;
+
+                    $recordedAt = $row->recorded_at
+                        ? Carbon::parse($row->recorded_at)->toDateTimeString()
+                        : null;
+                }
 
                 return [
                     'label' => $label,
@@ -329,9 +337,7 @@ class MobileDashboardController extends Controller
                     'unit' => '%',
                     'max' => 100,
                     'color' => $isFeed ? '#C88A3D' : '#3EA7B3',
-                    'recorded_at' => $row->recorded_at
-                        ? Carbon::parse($row->recorded_at)->toDateTimeString()
-                        : null,
+                    'recorded_at' => $recordedAt,
                 ];
             })
             ->values()

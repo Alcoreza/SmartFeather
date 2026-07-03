@@ -694,11 +694,7 @@ class SensorController extends Controller
             return '';
         }
 
-        if (preg_match('/\d+$/', $houseNumber, $matches)) {
-            return $matches[0];
-        }
-
-        return $houseNumber;
+        return (string) $houseNumber;
     }
 
     private function formatPenNumber($penName)
@@ -728,22 +724,31 @@ class SensorController extends Controller
     {
         if ($value === null) return 'No Data';
 
+        $displayValue = number_format($this->truncateToFirstDecimal((float) $value), 1);
+
         switch ($type) {
             case 'Temperature Sensor':
-                return number_format($value, 1) . ' °C';
+                return $displayValue . ' °C';
 
             case 'Ammonia Sensor':
-                return $value . ' ppm';
+                return $displayValue . ' ppm';
 
             case 'Feed Sensor':
-                return $value . ' mm';
+                return $displayValue . ' mm';
 
             case 'Water Sensor':
-                return $value . ' level';
+                return $displayValue . ' level';
 
             default:
-                return $value;
+                return is_numeric($value) ? $displayValue : $value;
         }
+    }
+
+    private function truncateToFirstDecimal(float $value): float
+    {
+        $shifted = $value * 10;
+
+        return ($value < 0 ? ceil($shifted) : floor($shifted)) / 10;
     }
 
     /**

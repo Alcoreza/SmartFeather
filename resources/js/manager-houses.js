@@ -113,8 +113,14 @@ document.addEventListener("DOMContentLoaded", () => {
             housePen.innerHTML = '<option value="">Loading pens...</option>';
             housePen.value = "";
         }
-        if (houseTemperature) houseTemperature.textContent = "--";
-        if (houseAmmonia) houseAmmonia.textContent = "--";
+        if (houseTemperature) {
+            houseTemperature.textContent = "--";
+            houseTemperature.classList.remove("no-current-reading");
+        }
+        if (houseAmmonia) {
+            houseAmmonia.textContent = "--";
+            houseAmmonia.classList.remove("no-current-reading");
+        }
         if (infoGrid) {
             infoGrid.innerHTML = '<div class="info-card"><span>Loading farm details...</span></div>';
         }
@@ -871,6 +877,29 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("");
     }
 
+    function truncateToFirstDecimal(value) {
+        const numberValue = Number(value);
+
+        if (!Number.isFinite(numberValue)) {
+            return null;
+        }
+
+        const shifted = numberValue * 10;
+
+        return (numberValue < 0 ? Math.ceil(shifted) : Math.floor(shifted)) / 10;
+    }
+
+    function formatResourcePercent(value) {
+        const truncatedValue = truncateToFirstDecimal(
+            Math.max(0, Math.min(100, value)),
+        );
+
+        return {
+            value: truncatedValue ?? 0,
+            label: `${(truncatedValue ?? 0).toFixed(1)}%`,
+        };
+    }
+
     function buildResourceRow(items, type, configuredCount = 0, label = "") {
         const resourceItems = Array.isArray(items) ? items : [];
         const count = Math.max(
@@ -882,24 +911,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 ...resourceItems,
                 ...Array.from({ length: count - resourceItems.length }, (_, index) => ({
                     label: `${label} ${resourceItems.length + index + 1}`,
-                    value: 0,
+                    value: null,
+                    formatted_value: "No current reading",
                 })),
             ]
             : resourceItems;
 
         return visibleItems
-            .map(
-                (item, index) => `
+            .map((item, index) => {
+                const rawValue = item?.value;
+                const value = Number(rawValue);
+                const hasCurrentReading =
+                    rawValue !== null &&
+                    rawValue !== undefined &&
+                    Number.isFinite(value);
+                const percent = hasCurrentReading
+                    ? formatResourcePercent(value)
+                    : { value: 0, label: "No current reading" };
+                const displayValue = hasCurrentReading
+                    ? percent.label
+                    : (item?.formatted_value || "No current reading");
+
+                return `
             <div class="resource-item stat-animate">
                 <div class="resource-bar-box">
-                    <div class="resource-bar ${type === "feed" ? "feed-bar" : "water-bar"}" style="width: ${item.value}%;"></div>
+                    <div class="resource-bar ${type === "feed" ? "feed-bar" : "water-bar"}" style="width: ${percent.value}%;"></div>
                 </div>
-                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"}">${escapeHtml(item.value)}%</div>
+                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"} ${hasCurrentReading ? "" : "no-current-reading"}">${escapeHtml(displayValue)}</div>
                 <div class="resource-label">${escapeHtml(item.label)}</div>
             </div>
             ${index < visibleItems.length - 1 ? '<div class="resource-line"></div>' : ""}
-        `,
-            )
+        `;
+            })
             .join("");
     }
 
@@ -914,19 +957,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         itemElements.forEach((element, index) => {
-            const value = Number(resourceItems[index]?.value ?? 0);
-            const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+            const rawValue = resourceItems[index]?.value;
+            const value = Number(rawValue);
+            const hasCurrentReading =
+                rawValue !== null &&
+                rawValue !== undefined &&
+                Number.isFinite(value);
+            const percent = hasCurrentReading
+                ? formatResourcePercent(value)
+                : { value: 0, label: "No current reading" };
             const bar = element.querySelector(".resource-bar");
             const valueElement = element.querySelector(".resource-value");
 
             if (bar) {
-                bar.style.width = `${safeValue}%`;
+                bar.style.width = `${percent.value}%`;
             }
 
             if (valueElement) {
-                valueElement.textContent = `${safeValue}%`;
+                valueElement.textContent = hasCurrentReading
+                    ? percent.label
+                    : (resourceItems[index]?.formatted_value || "No current reading");
                 valueElement.classList.toggle("feed-text", type === "feed");
                 valueElement.classList.toggle("water-text", type !== "feed");
+                valueElement.classList.toggle("no-current-reading", !hasCurrentReading);
             }
         });
 
@@ -944,6 +997,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function getSensorReadingDisplay(readings, type, fallback) {
         return readings?.[type]?.formatted_value || fallback;
+    }
+
+    function setSensorReadingText(element, value) {
+        if (!element) return;
+
+        const displayValue = value || "No current reading";
+        element.textContent = displayValue;
+        element.classList.toggle(
+            "no-current-reading",
+            displayValue === "No current reading",
+        );
     }
 
     function getSensorReadingValue(readings, type) {
@@ -1006,11 +1070,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return Array.from({ length: count }, (_, index) => {
             const number = index + 1;
-            const value = Number(resourceReadings?.[number]?.value ?? 0);
+            const rawValue = resourceReadings?.[number]?.value;
+            const value = Number(rawValue);
+            const hasCurrentReading =
+                rawValue !== null &&
+                rawValue !== undefined &&
+                Number.isFinite(value);
 
             return {
                 label: resourceReadings?.[number]?.label || `${label} ${number}`,
-                value: Number.isFinite(value) ? value : 0,
+                value: hasCurrentReading ? truncateToFirstDecimal(value) : null,
+                formatted_value:
+                    resourceReadings?.[number]?.formatted_value ||
+                    "No current reading",
             };
         });
     }
@@ -1046,12 +1118,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     pen.temperature = getSensorReadingDisplay(
                         sensorReadings,
                         "temperature",
-                        "0 deg",
+                        "No current reading",
                     );
                     pen.ammonia = getSensorReadingDisplay(
                         sensorReadings,
                         "ammonia",
-                        "0 ppm",
+                        "No current reading",
                     );
                     pen.temperatureValue = getSensorReadingValue(
                         sensorReadings,
@@ -1098,8 +1170,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!currentPen) return;
 
         if (updateEnvironment) {
-            if (houseTemperature) houseTemperature.textContent = currentPen.temperature;
-            if (houseAmmonia) houseAmmonia.textContent = currentPen.ammonia;
+            setSensorReadingText(houseTemperature, currentPen.temperature);
+            setSensorReadingText(houseAmmonia, currentPen.ammonia);
         }
 
         if (updateResources) {
@@ -1247,12 +1319,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             temperature: getSensorReadingDisplay(
                                 sensorReadings,
                                 "temperature",
-                                "0 deg",
+                                "No current reading",
                             ),
                             ammonia: getSensorReadingDisplay(
                                 sensorReadings,
                                 "ammonia",
-                                "0 ppm",
+                                "No current reading",
                             ),
                             temperatureValue: getSensorReadingValue(
                                 sensorReadings,
@@ -1400,8 +1472,14 @@ document.addEventListener("DOMContentLoaded", () => {
             housePen.innerHTML = '<option value="">No pens</option>';
             housePen.value = "";
         }
-        if (houseTemperature) houseTemperature.textContent = "--";
-        if (houseAmmonia) houseAmmonia.textContent = "--";
+        if (houseTemperature) {
+            houseTemperature.textContent = "--";
+            houseTemperature.classList.remove("no-current-reading");
+        }
+        if (houseAmmonia) {
+            houseAmmonia.textContent = "--";
+            houseAmmonia.classList.remove("no-current-reading");
+        }
         if (infoGrid) infoGrid.innerHTML = "";
         if (feedRow) feedRow.innerHTML = "";
         if (waterRow) waterRow.innerHTML = "";
@@ -1439,8 +1517,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (houseStatus) houseStatus.textContent = pen.status;
         if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
-        if (houseTemperature) houseTemperature.textContent = pen.temperature;
-        if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
+        setSensorReadingText(houseTemperature, pen.temperature);
+        setSensorReadingText(houseAmmonia, pen.ammonia);
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
         if (feedRow) {

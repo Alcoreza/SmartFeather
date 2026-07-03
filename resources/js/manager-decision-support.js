@@ -328,7 +328,7 @@ function normalizeSeverity(severity) {
 function formatHouseName(name) {
     const value = String(name || '').trim();
     if (!value) return 'Unknown House';
-    return /^house\b/i.test(value) ? value : `House ${value}`;
+    return value;
 }
 
 function formatPenName(name, id = null) {

@@ -62,6 +62,7 @@ const TASK_TABLE_COLUMNS = {
 let taskPendingVerify = null;
 let taskPendingDelete = null;
 let taskPendingEdit = null;
+let taskPendingAdd = null;
 let taskDataFingerprint = "";
 let selectedTaskStatus = "pending";
 let taskDataCache = {
@@ -729,6 +730,28 @@ function setupManagerTaskModals() {
         });
     }
 
+    const addButton = document.getElementById("confirmAddTask");
+    if (addButton) {
+        addButton.addEventListener("click", async () => {
+            if (!taskPendingAdd) {
+                closeTaskModal("confirmAddTaskModal");
+                return;
+            }
+
+            const pendingAdd = taskPendingAdd;
+            addButton.disabled = true;
+            closeTaskModal("confirmAddTaskModal");
+
+            const saved = await savePendingTaskAdd(pendingAdd.payloads);
+
+            if (saved) {
+                taskPendingAdd = null;
+            }
+
+            addButton.disabled = false;
+        });
+    }
+
     document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
             document
@@ -767,7 +790,7 @@ function setupAddTaskModal() {
             field.addEventListener("change", () => clearTaskFieldError(field));
         });
 
-        form.addEventListener("submit", async (event) => {
+        form.addEventListener("submit", (event) => {
             event.preventDefault();
 
             const formData = new FormData(form);
@@ -798,35 +821,55 @@ function setupAddTaskModal() {
                 status: "Pending",
             }));
 
-            try {
-                const token = document.querySelector('meta[name="csrf-token"]')?.content;
-                for (const body of taskPayloads) {
-                    const response = await fetch("/api/manager/tasks", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": token || "",
-                        },
-                        body: JSON.stringify(body),
-                    });
+            taskPendingAdd = { payloads: taskPayloads };
 
-                    const responseText = await response.text();
-
-                    if (!response.ok) {
-                        throw new Error(responseText || `Failed to save task (${response.status}).`);
-                    }
-                }
-
-                await renderManagerTasks();
-                closeTaskModal("addTaskModal");
-                form.reset();
-                resetAddTaskRows();
-                setupTaskSelectPlaceholderState();
-            } catch (error) {
-                console.error("Failed to save new task:", error);
-                showAddTaskFormError(formError, "Unable to save task. Please try again.");
+            const confirmText = document.getElementById("confirmAddTaskText");
+            if (confirmText) {
+                confirmText.textContent = taskPayloads.length > 1
+                    ? `Are you sure you want to assign these ${taskPayloads.length} tasks?`
+                    : "Are you sure you want to assign this task?";
             }
+
+            openTaskModal("confirmAddTaskModal");
         });
+    }
+}
+
+async function savePendingTaskAdd(taskPayloads) {
+    const form = document.getElementById("addTaskForm");
+    const formError = document.getElementById("addTaskFormError");
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        for (const body of taskPayloads) {
+            const response = await fetch("/api/manager/tasks", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": token || "",
+                },
+                body: JSON.stringify(body),
+            });
+
+            const responseText = await response.text();
+
+            if (!response.ok) {
+                throw new Error(responseText || `Failed to save task (${response.status}).`);
+            }
+        }
+
+        await renderManagerTasks();
+        closeTaskModal("addTaskModal");
+        form?.reset();
+        resetAddTaskRows();
+        setupTaskSelectPlaceholderState();
+
+        return true;
+    } catch (error) {
+        console.error("Failed to save new task:", error);
+        showAddTaskFormError(formError, "Unable to save task. Please try again.");
+
+        return false;
     }
 }
 
@@ -1457,7 +1500,10 @@ function closeTaskModal(id) {
     if (!modal) return;
 
     modal.classList.remove("show");
-    document.body.style.overflow = "";
+
+    const hasOpenModal = Array.from(document.querySelectorAll(".manager-task-modal-backdrop.show"))
+        .some((openModal) => openModal.id !== id);
+    document.body.style.overflow = hasOpenModal ? "hidden" : "";
 }
 
 function ensureTaskNoticeModal() {

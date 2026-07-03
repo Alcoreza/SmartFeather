@@ -19,6 +19,7 @@ const adminSensorAddRequiredFields = [
 
 let shouldTrackAdminSensorRequiredHighlights = false;
 let pendingAdminSensorAddPayload = null;
+let isAdminSensorStatusUpdating = false;
 
 const adminSensorSectionDisplayOrder = {
     "Ammonia Sensor": 1,
@@ -1548,12 +1549,20 @@ function bindAdminToggleStatusButtons() {
 function bindAdminStatusConfirmButton() {
     const confirmButton = document.getElementById("adminSensorStatusConfirm");
     if (!confirmButton) return;
+    if (confirmButton.dataset.statusBound === "true") return;
+
+    confirmButton.dataset.statusBound = "true";
 
     confirmButton.addEventListener("click", async () => {
+        if (isAdminSensorStatusUpdating) return;
+
         const sensorId = document.getElementById("adminSensorStatusId")?.value;
         const nextStatus = document.getElementById("adminSensorStatusValue")?.value;
 
         if (!sensorId || !nextStatus) return;
+
+        isAdminSensorStatusUpdating = true;
+        confirmButton.disabled = true;
 
         try {
             await apiRequest(`/api/admin/sensors/${sensorId}/status`, "PATCH", {
@@ -1565,6 +1574,9 @@ function bindAdminStatusConfirmButton() {
         } catch (error) {
             console.error("Failed to update sensor status.", error);
             await showAdminSensorNoticeModal(`Failed to update sensor status: ${error.message}`, "Unable to Update Status");
+        } finally {
+            isAdminSensorStatusUpdating = false;
+            confirmButton.disabled = false;
         }
     });
 }

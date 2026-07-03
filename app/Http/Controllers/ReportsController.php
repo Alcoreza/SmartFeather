@@ -733,9 +733,7 @@ class ReportsController extends Controller
             return '--';
         }
 
-        return str_starts_with((string) $value, 'House ')
-            ? (string) $value
-            : 'House ' . $value;
+        return (string) $value;
     }
 
     private function normalizeHouseNumber($value): string
@@ -750,7 +748,7 @@ class ReportsController extends Controller
         return array_values(array_unique([
             (string) $value,
             $normalized,
-            $this->formatHouseNumber($normalized),
+            'House ' . $normalized,
         ]));
     }
 

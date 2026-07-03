@@ -840,9 +840,9 @@ class DecisionSupportService
                     ->skip(1)
                     ->first();
 
-                $currentValue = $this->resourceLevelPercent($sensor['value']);
+                $currentValue = $this->resourceLevelPercent($sensor['value'], $type);
                 $previousValue = $previousReading
-                    ? $this->resourceLevelPercent($previousReading->value)
+                    ? $this->resourceLevelPercent($previousReading->value, $type)
                     : null;
                 $hoursSincePrevious = null;
                 $dropPoints = null;
@@ -893,7 +893,7 @@ class DecisionSupportService
         return [
             'type' => $type,
             'label' => $type === 'feed' ? 'Feeder' : 'Drinker',
-            'current_level' => $values->isEmpty() ? null : round($values->avg(), 1),
+            'current_level' => $values->isEmpty() ? null : $this->truncateToFirstDecimal((float) $values->avg()),
             'critical_low_threshold' => $criticalThresholds->isEmpty() ? null : round($criticalThresholds->max(), 1),
             'warning_refill_threshold' => $warningThresholds->isEmpty() ? null : round($warningThresholds->max(), 1),
             'critical_low_thresholds' => $criticalThresholds->unique()->sort()->values()->all(),
@@ -928,9 +928,9 @@ class DecisionSupportService
         return 'normal';
     }
 
-    protected function resourceLevelPercent($value): float
+    protected function resourceLevelPercent($value, string $type): float
     {
-        $containerHeightInches = 8.5;
+        $containerHeightInches = $type === 'water' ? 7.5 : 8.5;
 
         if ($containerHeightInches <= 0) {
             return 0;
@@ -939,7 +939,14 @@ class DecisionSupportService
         $remainingInches = $containerHeightInches - (float) $value;
         $percent = ($remainingInches / $containerHeightInches) * 100;
 
-        return round(max(0, min(100, $percent)), 1);
+        return $this->truncateToFirstDecimal(max(0, min(100, $percent)));
+    }
+
+    protected function truncateToFirstDecimal(float $value): float
+    {
+        $shifted = $value * 10;
+
+        return ($value < 0 ? ceil($shifted) : floor($shifted)) / 10;
     }
 
     protected function highestResourceStatus(array $statuses): string
@@ -1630,4 +1637,3 @@ class DecisionSupportService
         return $criticalFindings;
     }
 }
-

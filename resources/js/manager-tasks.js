@@ -63,6 +63,10 @@ let taskPendingVerify = null;
 let taskPendingDelete = null;
 let taskPendingEdit = null;
 let taskPendingAdd = null;
+let isTaskVerifySaving = false;
+let isTaskDeleteSaving = false;
+let isTaskEditSaving = false;
+let isTaskAddSaving = false;
 let taskDataFingerprint = "";
 let selectedTaskStatus = "pending";
 let taskDataCache = {
@@ -154,8 +158,8 @@ async function renderManagerTasks(shouldRender = true) {
 
 async function loadTaskFormOptions({ preserveSelections = false } = {}) {
     const workerSelect = document.getElementById("taskWorkerName");
-    const selectedWorker = preserveSelections ? workerSelect?.value || "" : "";
-    const rowSelections = preserveSelections
+    let selectedWorker = preserveSelections ? workerSelect?.value || "" : "";
+    let rowSelections = preserveSelections
         ? Array.from(document.querySelectorAll("#tasksContainer .manager-task-row")).map((row) => ({
             row,
             taskCategory: row.querySelector(".task-category-select")?.value || "",
@@ -168,6 +172,17 @@ async function loadTaskFormOptions({ preserveSelections = false } = {}) {
     try {
         const response = await fetch("/api/manager/tasks/form-options");
         const data = await response.json();
+
+        if (preserveSelections) {
+            selectedWorker = workerSelect?.value || selectedWorker;
+            rowSelections = Array.from(document.querySelectorAll("#tasksContainer .manager-task-row")).map((row) => ({
+                row,
+                taskCategory: row.querySelector(".task-category-select")?.value || "",
+                priority: row.querySelector(".task-priority-select")?.value || "",
+                house: row.querySelector(".task-house-select")?.value || "",
+                pen: row.querySelector(".task-pen-select")?.value || "",
+            }));
+        }
 
         fillSelect(
             workerSelect,
@@ -692,12 +707,22 @@ function setupManagerTaskModals() {
     const confirmButton = document.getElementById("confirmTaskVerify");
     if (confirmButton) {
         confirmButton.addEventListener("click", async () => {
+            if (isTaskVerifySaving) return;
+
             const taskToVerify = taskPendingVerify;
             taskPendingVerify = null;
             closeTaskModal("taskVerifyModal");
 
             if (taskToVerify) {
-                await updateTaskStatus(taskToVerify.id, "Completed");
+                isTaskVerifySaving = true;
+                confirmButton.disabled = true;
+
+                try {
+                    await updateTaskStatus(taskToVerify.id, "Completed");
+                } finally {
+                    isTaskVerifySaving = false;
+                    confirmButton.disabled = false;
+                }
             }
         });
     }
@@ -705,22 +730,37 @@ function setupManagerTaskModals() {
     const deleteButton = document.getElementById("confirmTaskDelete");
     if (deleteButton) {
         deleteButton.addEventListener("click", async () => {
-            if (taskPendingDelete) {
-                await deletePendingTask(taskPendingDelete.id);
-            }
+            if (isTaskDeleteSaving || !taskPendingDelete) return;
 
+            const taskToDelete = taskPendingDelete;
             taskPendingDelete = null;
-            closeTaskModal("deleteTaskModal");
+            isTaskDeleteSaving = true;
+            deleteButton.disabled = true;
+
+            try {
+                await deletePendingTask(taskToDelete.id);
+                closeTaskModal("deleteTaskModal");
+            } finally {
+                isTaskDeleteSaving = false;
+                deleteButton.disabled = false;
+            }
         });
     }
 
     const editButton = document.getElementById("confirmEditTask");
     if (editButton) {
         editButton.addEventListener("click", async () => {
+            if (isTaskEditSaving || !taskPendingEdit) return;
+
+            isTaskEditSaving = true;
+            editButton.disabled = true;
             let saved = false;
 
-            if (taskPendingEdit) {
+            try {
                 saved = await savePendingTaskEdit(taskPendingEdit.id, taskPendingEdit.payload);
+            } finally {
+                isTaskEditSaving = false;
+                editButton.disabled = false;
             }
 
             if (saved) {
@@ -733,22 +773,28 @@ function setupManagerTaskModals() {
     const addButton = document.getElementById("confirmAddTask");
     if (addButton) {
         addButton.addEventListener("click", async () => {
+            if (isTaskAddSaving) return;
+
             if (!taskPendingAdd) {
                 closeTaskModal("confirmAddTaskModal");
                 return;
             }
 
             const pendingAdd = taskPendingAdd;
+            isTaskAddSaving = true;
             addButton.disabled = true;
             closeTaskModal("confirmAddTaskModal");
 
-            const saved = await savePendingTaskAdd(pendingAdd.payloads);
+            try {
+                const saved = await savePendingTaskAdd(pendingAdd.payloads);
 
-            if (saved) {
-                taskPendingAdd = null;
+                if (saved) {
+                    taskPendingAdd = null;
+                }
+            } finally {
+                isTaskAddSaving = false;
+                addButton.disabled = false;
             }
-
-            addButton.disabled = false;
         });
     }
 
@@ -1731,7 +1777,10 @@ function fillSelect(select, items, valueKey, labelKey, placeholder) {
             const value = item[valueKey];
             const label = item.label ?? item[labelKey];
             const disabled = item.disabled ? 'disabled' : '';
-            const note = item.disabled ? ' (pending task)' : '';
+            const reason = String(item.disabledReason || "").trim();
+            const note = item.disabled
+                ? ` (${reason || "unavailable"})`
+                : '';
             const style = item.disabled ? 'style="color:#999;"' : '';
             return `<option value="${value}" ${disabled} ${style}>${label}${note}</option>`;
         }).join("")}

@@ -20,6 +20,8 @@ const adminSensorAddRequiredFields = [
 let shouldTrackAdminSensorRequiredHighlights = false;
 let pendingAdminSensorAddPayload = null;
 let isAdminSensorStatusUpdating = false;
+let isAdminSensorThresholdSaving = false;
+let isAdminSensorEditSaving = false;
 
 const adminSensorSectionDisplayOrder = {
     "Ammonia Sensor": 1,
@@ -1097,7 +1099,13 @@ function bindAdminThresholdButtons() {
 
     const saveButton = document.getElementById("adminSensorThresholdSave");
     if (saveButton) {
+        if (saveButton.dataset.thresholdBound === "true") return;
+
+        saveButton.dataset.thresholdBound = "true";
+
         saveButton.addEventListener("click", async () => {
+            if (isAdminSensorThresholdSaving) return;
+
             const type = document.getElementById("adminSensorThresholdType");
             const low = document.getElementById("adminSensorThresholdLow");
             const high = document.getElementById("adminSensorThresholdHigh");
@@ -1127,6 +1135,9 @@ function bindAdminThresholdButtons() {
                 return;
             }
 
+            isAdminSensorThresholdSaving = true;
+            saveButton.disabled = true;
+
             try {
                 const payload = {
                     sensor_type: type.value,
@@ -1140,6 +1151,9 @@ function bindAdminThresholdButtons() {
             } catch (error) {
                 console.error("Failed to save sensor thresholds.", error);
                 await showAdminSensorNoticeModal(`Failed to save sensor thresholds: ${error.message}`, "Unable to Save Thresholds");
+            } finally {
+                isAdminSensorThresholdSaving = false;
+                saveButton.disabled = false;
             }
         });
     }
@@ -1313,6 +1327,8 @@ function setupAdminSensorEditModal() {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        if (isAdminSensorEditSaving) return;
+
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
         normalizeAdminSensorResourcePayload(payload);
@@ -1332,6 +1348,10 @@ function setupAdminSensorEditModal() {
             return;
         }
 
+        isAdminSensorEditSaving = true;
+        const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+
         try {
             await apiRequest(`/api/admin/sensors/${sensorId}`, "PUT", payload);
             closeAdminSensorModal("adminSensorEditModal");
@@ -1340,6 +1360,9 @@ function setupAdminSensorEditModal() {
         } catch (error) {
             showAdminSensorEditFormError(error.message || "Failed to update sensor.");
             console.error("Failed to update sensor.", error);
+        } finally {
+            isAdminSensorEditSaving = false;
+            if (submitButton) submitButton.disabled = false;
         }
     });
 }

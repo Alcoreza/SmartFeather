@@ -259,8 +259,9 @@ class TaskController extends Controller
 
         $workers = Employee::where('Role', 'Flockman')
             ->whereRaw('is_active is true')
+            ->whereNotIn('EmployeeId', $pendingWorkerIds)
             ->get()
-            ->map(function (Employee $employee) use ($pendingWorkerIds) {
+            ->map(function (Employee $employee) {
                 $fullName = trim(sprintf(
                     '%s %s %s %s',
                     $employee->FirstName ?? '',
@@ -272,7 +273,6 @@ class TaskController extends Controller
                 return [
                     'id' => $employee->EmployeeId,
                     'name' => $fullName ?: 'Unknown',
-                    'disabled' => in_array($employee->EmployeeId, $pendingWorkerIds, true),
                 ];
             });
 

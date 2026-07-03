@@ -20,6 +20,8 @@ let bioIsMobilePagination = false;
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
 let shouldTrackAddBioRequiredHighlights = false;
+let isBioAddSubmitting = false;
+let isBioEditSubmitting = false;
 
 function ensureBioNoticeModal() {
     let modal = document.getElementById('bioNoticeModal');
@@ -815,6 +817,10 @@ function setupEditModal() {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
+            if (isBioEditSubmitting) {
+                return;
+            }
+
             const formData = new FormData(form);
             const logId = logIdInput?.value;
 
@@ -822,6 +828,10 @@ function setupEditModal() {
                 showBioNotice('Invalid log ID.', 'Unable to Update Log');
                 return;
             }
+
+            isBioEditSubmitting = true;
+            const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
             try {
                 const response = await fetch(`/api/manager/biosecurity-logs/${logId}`, {
@@ -850,6 +860,9 @@ function setupEditModal() {
             } catch (error) {
                 console.error('Error updating log:', error);
                 showBioNotice('Failed to update log. Please try again.', 'Unable to Update Log');
+            } finally {
+                isBioEditSubmitting = false;
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }
@@ -978,6 +991,10 @@ function setupAddModal() {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
+            if (isBioAddSubmitting) {
+                return;
+            }
+
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
             const missingFields = validateAddBioRequiredFields(form, payload);
@@ -986,6 +1003,10 @@ function setupAddModal() {
                 showAddBioFormError(formError, missingFields);
                 return;
             }
+
+            isBioAddSubmitting = true;
+            const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
             try {
                 const response = await fetch('/api/manager/biosecurity-logs', {
@@ -1015,6 +1036,9 @@ function setupAddModal() {
             } catch (error) {
                 console.error('Error saving log:', error);
                 showAddBioFormError(formError, 'Failed to save log. Please try again.');
+            } finally {
+                isBioAddSubmitting = false;
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }

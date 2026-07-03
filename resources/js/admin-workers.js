@@ -8,6 +8,9 @@ let adminWorkersCurrentPage = 0;
 let adminWorkersLastPage = 0;
 let adminWorkersCurrentRole = 'All';
 let pendingWorkerSave = null;
+let isWorkerSaveSubmitting = false;
+let isWorkerPasswordSubmitting = false;
+let isWorkerDeleteSubmitting = false;
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -784,12 +787,21 @@ async function saveEmployee({ id, data }) {
 }
 
 document.getElementById('confirmSaveWorkerBtn')?.addEventListener('click', async () => {
-    if (!pendingWorkerSave) return;
+    if (isWorkerSaveSubmitting || !pendingWorkerSave) return;
 
     const savePayload = pendingWorkerSave;
     pendingWorkerSave = null;
+    const button = document.getElementById('confirmSaveWorkerBtn');
+    isWorkerSaveSubmitting = true;
+    if (button) button.disabled = true;
     closeModal('saveWorkerConfirmModal');
-    await saveEmployee(savePayload);
+
+    try {
+        await saveEmployee(savePayload);
+    } finally {
+        isWorkerSaveSubmitting = false;
+        if (button) button.disabled = false;
+    }
 });
 
 document.getElementById('editPasswordBtn')?.addEventListener('click', () => {
@@ -805,6 +817,10 @@ workerRequiredFields.forEach(field => {
 
 document.getElementById('passwordForm')?.addEventListener('submit', async e => {
     e.preventDefault();
+
+    if (isWorkerPasswordSubmitting) {
+        return;
+    }
 
     if (!validateConfirmPassword()) {
         return;
@@ -823,6 +839,10 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
         oldPasswordMessage.textContent = 'Please enter your current password.';
         return;
     }
+
+    isWorkerPasswordSubmitting = true;
+    const submitButton = e.submitter || document.querySelector('#passwordForm button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
 
     try {
         const res = await fetch(`${BASE_URL}/${employeeId}`, {
@@ -852,6 +872,9 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
     } catch (err) {
         console.error(err);
         showAdminWorkerNotice('Network error. Please try again.', 'Password Not Updated');
+    } finally {
+        isWorkerPasswordSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
     }
 });
 
@@ -865,6 +888,12 @@ function openDeleteModal(id) {
 }
 
 document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', async () => {
+    if (isWorkerDeleteSubmitting || !deleteId) return;
+
+    const button = document.getElementById('confirmDeleteWorkerBtn');
+    isWorkerDeleteSubmitting = true;
+    if (button) button.disabled = true;
+
     try {
         const res = await fetch(`${BASE_URL}/${deleteId}`, {
             method: 'DELETE',
@@ -882,6 +911,9 @@ document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', asy
     } catch (err) {
         console.error(err);
         showAdminWorkerNotice('Network error. Please try again.', 'Unable to Deactivate Employee');
+    } finally {
+        isWorkerDeleteSubmitting = false;
+        if (button) button.disabled = false;
     }
 });
 

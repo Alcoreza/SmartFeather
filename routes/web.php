@@ -838,6 +838,7 @@ Route::prefix('api/admin/workers')->middleware(['auth.session', 'check.role:Admi
 
 Route::prefix('api/manager/inventory')->middleware(['auth.session', 'check.role:Manager'])->group(function () {
     Route::get('/snapshot', [InventoryController::class, 'snapshot']);
+    Route::post('/analysis', [InventoryController::class, 'generateAnalysis']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::put('/{id}', [InventoryController::class, 'update']);
     Route::delete('/{id}', [InventoryController::class, 'destroy']);

@@ -36,7 +36,18 @@ class InventoryController extends Controller
                 ->orderBy('item_name')
                 ->get();
 
-            return compact('feedItems', 'vitaminItems', 'feedTypeOptions', 'vitaminTypeOptions');
+            $analysisHouseOptions = DB::table('house as h')
+                ->join('pen as p', 'p.house_id', '=', 'h.id')
+                ->join('flock_batches as fb', 'fb.pen_id', '=', 'p.id')
+                ->select('h.id', 'h.house_number')
+                ->whereNull('h.archived_at')
+                ->whereNull('p.archived_at')
+                ->where('fb.status', 'Running')
+                ->distinct()
+                ->orderBy('h.house_number')
+                ->get();
+
+            return compact('feedItems', 'vitaminItems', 'feedTypeOptions', 'vitaminTypeOptions', 'analysisHouseOptions');
         });
 
         return view('manager.inventory', $viewData);

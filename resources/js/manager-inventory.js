@@ -142,9 +142,44 @@ async function apiRequest(url, method, data = null) {
 document.addEventListener("DOMContentLoaded", () => {
     setupCreateInventoryTypeModal();
     setupInventoryModals();
+    setupGenerateAnalysisModal();
     setupProfileModal();
     setupInventoryStockSync();
 });
+
+function setupGenerateAnalysisModal() {
+    const modal = document.getElementById("generateAnalysisModal");
+    const openBtn = document.getElementById("openGenerateAnalysisModal");
+    const closeBtn = document.getElementById("closeGenerateAnalysisModal");
+    const houseSelect = document.getElementById("analysisHouseSelect");
+
+    function openModal() {
+        if (houseSelect) {
+            houseSelect.value = "";
+        }
+
+        modal?.classList.add("show");
+    }
+
+    function closeModal() {
+        modal?.classList.remove("show");
+    }
+
+    openBtn?.addEventListener("click", openModal);
+    closeBtn?.addEventListener("click", closeModal);
+
+    modal?.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal?.classList.contains("show")) {
+            closeModal();
+        }
+    });
+}
 
 function setupInventoryStockSync() {
     const entries = document.querySelectorAll(".inventory-entry[data-id]");

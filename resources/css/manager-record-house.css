@@ -263,9 +263,9 @@
 }
 
 .record-table th {
-    background: #f2faf3;
-    border-bottom: 1px solid rgba(87, 196, 81, 0.12);
-    color: #4f5f55;
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
+    color: #1f3f2b;
     font-size: 0.9rem;
     font-weight: 800;
     line-height: 1.1;

@@ -467,9 +467,9 @@ body {
 .admin-maintenance-table th {
     padding: 11px 10px;
     text-align: center;
-    background: #f6f8f5;
-    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
-    color: #4f5f55;
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
+    color: #1f3f2b;
     font-size: 0.9rem;
     line-height: 1.1;
 }

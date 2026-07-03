@@ -1406,9 +1406,9 @@ body {
 .admin-sensor-table th {
     padding: 10px;
     text-align: center;
-    background: var(--sensor-section-tint, #f6f8f5);
-    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
-    color: #4f5f55;
+    background: var(--sensor-section-tint, #d4ead7);
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
+    color: #1f3f2b;
     font-size: 0.88rem;
     letter-spacing: 0;
     line-height: 1.1;

@@ -473,10 +473,10 @@ button.bio-category-btn:not(.active) svg {
     text-align: center;
     font-size: 0.9rem;
     font-weight: 800;
-    color: #4f5f55;
+    color: #1f3f2b;
     line-height: 1.1;
-    background: #f2faf3;
-    border-bottom: 1px solid rgba(87, 196, 81, 0.12);
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
 }
 
 .bio-table td {

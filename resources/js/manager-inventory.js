@@ -156,6 +156,8 @@ function setupGenerateAnalysisModal() {
     const message = document.getElementById("generateAnalysisMessage");
     const result = document.getElementById("generateAnalysisResult");
     const insight = document.getElementById("generateAnalysisInsight");
+    const analysisHouse = document.getElementById("generateAnalysisHouse");
+    const analysisTime = document.getElementById("generateAnalysisTime");
     const submitBtn = document.getElementById("submitGenerateAnalysis");
 
     if (!modal || !openBtn || openBtn.dataset.analysisModalReady === "true") {
@@ -188,7 +190,15 @@ function setupGenerateAnalysisModal() {
         }
 
         if (insight) {
-            insight.textContent = "";
+            insight.innerHTML = "";
+        }
+
+        if (analysisHouse) {
+            analysisHouse.textContent = "Selected house";
+        }
+
+        if (analysisTime) {
+            analysisTime.textContent = "Generated just now";
         }
     }
 
@@ -197,6 +207,69 @@ function setupGenerateAnalysisModal() {
 
         message.textContent = text || "";
         message.className = text ? `inventory-modal-message ${type}` : "inventory-modal-message";
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function splitInsightSentences(text) {
+        return String(text || "")
+            .split(/(?<=[.!?])\s+(?=[A-Z])/)
+            .map((sentence) => sentence.trim())
+            .filter(Boolean) || [];
+    }
+
+    function removePercentDetails(text) {
+        return String(text || "")
+            .replace(/\s*\([^)]*%[^)]*\)/g, "")
+            .replace(/\b\d+(?:\.\d+)?%\s*(?:of\s+[^,.!?]+)?/gi, "")
+            .replace(/\s+([,.!?])/g, "$1")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+    }
+
+    function formatAnalysisTime(value) {
+        if (!value) return "Generated just now";
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "Generated just now";
+
+        return `Generated ${date.toLocaleString([], {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        })}`;
+    }
+
+    function renderAnalysisResult(data) {
+        const insightText = removePercentDetails(data.insight || "No insight generated.");
+        const sentences = splitInsightSentences(insightText);
+
+        if (insight) {
+            insight.innerHTML = sentences.length
+                ? sentences.map((sentence) => `
+                    <div class="inventory-analysis-action-row">
+                        <span class="inventory-analysis-action-marker"></span>
+                        <span>${escapeHtml(sentence)}</span>
+                    </div>
+                `).join("")
+                : `<p class="inventory-analysis-empty">${escapeHtml(insightText)}</p>`;
+        }
+
+        if (analysisHouse) {
+            analysisHouse.textContent = data.house_name || "Selected house";
+        }
+
+        if (analysisTime) {
+            analysisTime.textContent = formatAnalysisTime(data.generated_at);
+        }
     }
 
     openBtn?.addEventListener("click", openModal);
@@ -238,15 +311,13 @@ function setupGenerateAnalysisModal() {
                 return;
             }
 
-            if (insight) {
-                insight.textContent = data.insight || "No insight generated.";
-            }
+            renderAnalysisResult(data);
 
             if (result) {
                 result.hidden = false;
             }
 
-            setMessage(data.used_ai ? "AI insight generated." : "Analysis generated from system rules.", "success");
+            setMessage("Analysis generated.", "success");
         } catch (error) {
             console.error(error);
             setMessage("Something went wrong while generating analysis.", "error");

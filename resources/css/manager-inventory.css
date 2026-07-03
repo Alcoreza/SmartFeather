@@ -800,16 +800,116 @@
     display: none;
 }
 
-.inventory-analysis-insight {
-    padding: 12px 14px;
-    border: 1px solid rgba(23, 100, 58, 0.16);
+.inventory-analysis-card {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(16, 92, 52, 0.1);
     border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 22px rgba(6, 51, 32, 0.08);
+    animation: inventoryAnalysisSlideIn 0.3s ease-out;
+}
+
+.inventory-analysis-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 9px;
+    border-bottom: 2px solid rgba(87, 196, 81, 0.1);
+}
+
+.inventory-analysis-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--manager-green-700, #17643a);
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.inventory-analysis-title svg {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+}
+
+.inventory-analysis-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 4px;
+    color: #66766b;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.inventory-analysis-text-section {
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid rgba(16, 92, 52, 0.08);
+    border-radius: 10px;
     background: #ffffff;
-    color: #1f2f26;
-    font-size: 0.92rem;
-    font-weight: 600;
-    line-height: 1.45;
-    white-space: pre-line;
+}
+
+.inventory-analysis-text-section h4 {
+    margin: 0;
+    padding: 7px 9px;
+    background: rgba(245, 249, 245, 0.95);
+    color: #173f29;
+    font-size: 0.76rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.inventory-analysis-insight {
+    display: grid;
+    gap: 6px;
+    padding: 8px 9px 9px;
+    color: #142218;
+    font-size: 0.82rem;
+    line-height: 1.38;
+    word-break: break-word;
+}
+
+.inventory-analysis-action-row {
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    padding: 8px 9px;
+    border-radius: 7px;
+    background: rgba(247, 250, 247, 0.9);
+    color: #142218;
+    font-weight: 650;
+}
+
+.inventory-analysis-action-marker {
+    width: 7px;
+    height: 7px;
+    margin-top: 0.45em;
+    border-radius: 999px;
+    background: #2e9d44;
+}
+
+.inventory-analysis-empty {
+    margin: 0;
+    color: #66766b;
+    font-weight: 700;
+}
+
+@keyframes inventoryAnalysisSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .inventory-modal-actions {

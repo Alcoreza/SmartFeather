@@ -203,6 +203,8 @@ class HouseController extends Controller
                 ],
                 'status' => 'nullable|string|max:50',
                 'start_date' => 'nullable|date',
+            ], [
+                'house_number.unique' => 'House number already exists.',
             ]);
 
             $house->update($validated);
@@ -507,7 +509,7 @@ class HouseController extends Controller
                         ->map(function ($record) use ($first) {
                             return [
                                 'id' => $record->pen_id,
-                                'house_name' => 'House ' . $first->house_number,
+                                'house_name' => $first->house_number,
                                 'pen_name' => $record->pen_name,
                                 'capacity' => $record->capacity ?? 0,
                                 'population' => $record->running_population ?? 0,
@@ -724,7 +726,7 @@ class HouseController extends Controller
                 'sensor_id' => null,
                 'sensor_name' => null,
                 'sensor_type' => $sensorType,
-                'value' => 0,
+                'value' => null,
                 'formatted_value' => $this->formatSensorReadingValue($sensorType, null),
                 'recorded_at' => null,
             ]);
@@ -759,41 +761,36 @@ class HouseController extends Controller
     private function formatSensorReadingValue(string $type, $value): string
     {
         if ($value === null) {
-            if ($type === 'temperature') {
-                return '0 deg';
-            } elseif ($type === 'feed' || $type === 'water') {
-                return '0%';
-            }
-            return '0 ppm';
+            return 'No current reading';
         }
 
         if ($type === 'temperature') {
-            return number_format((float) $value, 1) . ' deg';
+            return number_format($this->truncateToFirstDecimal((float) $value), 1) . ' deg';
         }
 
         if ($type === 'feed' || $type === 'water') {
-            return number_format($this->resourceLevelPercent($value), 0) . '%';
+            return number_format($this->resourceLevelPercent($value, $type), 1) . '%';
         }
 
-        return number_format((float) $value, 1) . ' ppm';
+        return number_format($this->truncateToFirstDecimal((float) $value), 1) . ' ppm';
     }
 
-    private function sensorReadingDisplayValue(string $type, $value): float
+    private function sensorReadingDisplayValue(string $type, $value): ?float
     {
         if ($value === null) {
-            return 0;
+            return null;
         }
 
         if ($type === 'feed' || $type === 'water') {
-            return $this->resourceLevelPercent($value);
+            return $this->resourceLevelPercent($value, $type);
         }
 
         return (float) $value;
     }
 
-    private function resourceLevelPercent($value): float
+    private function resourceLevelPercent($value, string $type): float
     {
-        $containerHeightInches = 8.5;
+        $containerHeightInches = $type === 'water' ? 7.5 : 8.5;
 
         if ($containerHeightInches <= 0) {
             return 0;
@@ -802,7 +799,14 @@ class HouseController extends Controller
         $remainingInches = $containerHeightInches - (float) $value;
         $percent = ($remainingInches / $containerHeightInches) * 100;
 
-        return round(max(0, min(100, $percent)), 1);
+        return $this->truncateToFirstDecimal(max(0, min(100, $percent)));
+    }
+
+    private function truncateToFirstDecimal(float $value): float
+    {
+        $shifted = $value * 10;
+
+        return ($value < 0 ? ceil($shifted) : floor($shifted)) / 10;
     }
 
     private function newerSensorReading(?array $current, array $candidate): array

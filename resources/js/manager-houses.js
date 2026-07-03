@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     let tabs = document.querySelectorAll(".house-tab");
     let houses = [];
 
@@ -77,15 +77,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     let activePenIndex = 0;
     let pendingAddHousePayload = null;
     let pendingEditHousePayload = null;
-    let houseSensorRefreshTimer = null;
-    let isRefreshingHouseSensors = false;
-    const HOUSE_SENSOR_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+    let houseEnvironmentRefreshTimer = null;
+    let houseResourceRefreshTimer = null;
+    let isRefreshingHouseEnvironment = false;
+    let isRefreshingHouseResources = false;
+    const HOUSE_ENVIRONMENT_REFRESH_INTERVAL_MS = 8 * 1000;
+    const HOUSE_RESOURCE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
     const HOUSE_FETCH_TIMEOUT_MS = 30000;
     const addHouseRequiredFields = [
-        { id: "houseName", label: "House Number" },
+        { id: "houseName", label: "House Name" },
         { id: "housePenCount", label: "Number of Pens" },
     ];
     let shouldTrackAddHouseRequiredHighlights = false;
+
+    function renderHouseLoadingState() {
+        if (housesTabsContainer) {
+            housesTabsContainer.innerHTML = `
+                <button type="button" class="add-house-btn" id="openAddHouseModal" aria-label="Add house">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                </button>
+            `;
+            document.getElementById("openAddHouseModal")?.addEventListener("click", openAddModal);
+        }
+
+        if (houseStatus) {
+            houseStatus.textContent = "Loading...";
+            houseStatus.classList.remove("chip-green");
+            houseStatus.classList.add("chip-gray");
+        }
+        if (houseBatch) houseBatch.textContent = "Loading...";
+        if (housePen) {
+            housePen.innerHTML = '<option value="">Loading pens...</option>';
+            housePen.value = "";
+        }
+        if (houseTemperature) {
+            houseTemperature.textContent = "--";
+            houseTemperature.classList.remove("no-current-reading");
+        }
+        if (houseAmmonia) {
+            houseAmmonia.textContent = "--";
+            houseAmmonia.classList.remove("no-current-reading");
+        }
+        if (infoGrid) {
+            infoGrid.innerHTML = '<div class="info-card"><span>Loading farm details...</span></div>';
+        }
+        if (feedRow) feedRow.innerHTML = '<div class="resource-item">Loading feeders...</div>';
+        if (waterRow) waterRow.innerHTML = '<div class="resource-item">Loading drinkers...</div>';
+    }
 
     function isAddHouseRequiredFieldEmpty(field) {
         if (field.capacityField) {
@@ -487,7 +528,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!houseResponse.ok) {
             const error = await houseResponse.json();
-            throw new Error(error.message || "Failed to update house");
+            throw new Error(getHouseValidationMessage(error, "Failed to update house"));
         }
 
         const penResponse = await fetch(`/api/pens/${payload.currentPen.id}`, {
@@ -502,7 +543,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!penResponse.ok) {
             const error = await penResponse.json();
-            throw new Error(error.message || "Failed to update pen");
+            throw new Error(getHouseValidationMessage(error, "Failed to update pen"));
         }
 
         const productionResponse = await fetch(
@@ -521,9 +562,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!productionResponse.ok) {
             const error = await productionResponse.json();
             throw new Error(
-                error.message || "Failed to update production data",
+                getHouseValidationMessage(error, "Failed to update production data"),
             );
         }
+    }
+
+    function getHouseValidationMessage(error, fallbackMessage = "Unable to save changes") {
+        if (error?.errors && typeof error.errors === "object") {
+            const firstError = Object.values(error.errors)
+                .flat()
+                .find((message) => message);
+
+            if (firstError) {
+                return firstError;
+            }
+        }
+
+        return error?.message || fallbackMessage;
     }
 
     function populateEditPenFields(pen, house) {
@@ -822,6 +877,29 @@ document.addEventListener("DOMContentLoaded", async () => {
             .join("");
     }
 
+    function truncateToFirstDecimal(value) {
+        const numberValue = Number(value);
+
+        if (!Number.isFinite(numberValue)) {
+            return null;
+        }
+
+        const shifted = numberValue * 10;
+
+        return (numberValue < 0 ? Math.ceil(shifted) : Math.floor(shifted)) / 10;
+    }
+
+    function formatResourcePercent(value) {
+        const truncatedValue = truncateToFirstDecimal(
+            Math.max(0, Math.min(100, value)),
+        );
+
+        return {
+            value: truncatedValue ?? 0,
+            label: `${(truncatedValue ?? 0).toFixed(1)}%`,
+        };
+    }
+
     function buildResourceRow(items, type, configuredCount = 0, label = "") {
         const resourceItems = Array.isArray(items) ? items : [];
         const count = Math.max(
@@ -833,24 +911,38 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ...resourceItems,
                 ...Array.from({ length: count - resourceItems.length }, (_, index) => ({
                     label: `${label} ${resourceItems.length + index + 1}`,
-                    value: 0,
+                    value: null,
+                    formatted_value: "No current reading",
                 })),
             ]
             : resourceItems;
 
         return visibleItems
-            .map(
-                (item, index) => `
+            .map((item, index) => {
+                const rawValue = item?.value;
+                const value = Number(rawValue);
+                const hasCurrentReading =
+                    rawValue !== null &&
+                    rawValue !== undefined &&
+                    Number.isFinite(value);
+                const percent = hasCurrentReading
+                    ? formatResourcePercent(value)
+                    : { value: 0, label: "No current reading" };
+                const displayValue = hasCurrentReading
+                    ? percent.label
+                    : (item?.formatted_value || "No current reading");
+
+                return `
             <div class="resource-item stat-animate">
                 <div class="resource-bar-box">
-                    <div class="resource-bar ${type === "feed" ? "feed-bar" : "water-bar"}" style="width: ${item.value}%;"></div>
+                    <div class="resource-bar ${type === "feed" ? "feed-bar" : "water-bar"}" style="width: ${percent.value}%;"></div>
                 </div>
-                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"}">${escapeHtml(item.value)}%</div>
+                <div class="resource-value ${type === "feed" ? "feed-text" : "water-text"} ${hasCurrentReading ? "" : "no-current-reading"}">${escapeHtml(displayValue)}</div>
                 <div class="resource-label">${escapeHtml(item.label)}</div>
             </div>
             ${index < visibleItems.length - 1 ? '<div class="resource-line"></div>' : ""}
-        `,
-            )
+        `;
+            })
             .join("");
     }
 
@@ -865,19 +957,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         itemElements.forEach((element, index) => {
-            const value = Number(resourceItems[index]?.value ?? 0);
-            const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+            const rawValue = resourceItems[index]?.value;
+            const value = Number(rawValue);
+            const hasCurrentReading =
+                rawValue !== null &&
+                rawValue !== undefined &&
+                Number.isFinite(value);
+            const percent = hasCurrentReading
+                ? formatResourcePercent(value)
+                : { value: 0, label: "No current reading" };
             const bar = element.querySelector(".resource-bar");
             const valueElement = element.querySelector(".resource-value");
 
             if (bar) {
-                bar.style.width = `${safeValue}%`;
+                bar.style.width = `${percent.value}%`;
             }
 
             if (valueElement) {
-                valueElement.textContent = `${safeValue}%`;
+                valueElement.textContent = hasCurrentReading
+                    ? percent.label
+                    : (resourceItems[index]?.formatted_value || "No current reading");
                 valueElement.classList.toggle("feed-text", type === "feed");
                 valueElement.classList.toggle("water-text", type !== "feed");
+                valueElement.classList.toggle("no-current-reading", !hasCurrentReading);
             }
         });
 
@@ -895,6 +997,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function getSensorReadingDisplay(readings, type, fallback) {
         return readings?.[type]?.formatted_value || fallback;
+    }
+
+    function setSensorReadingText(element, value) {
+        if (!element) return;
+
+        const displayValue = value || "No current reading";
+        element.textContent = displayValue;
+        element.classList.toggle(
+            "no-current-reading",
+            displayValue === "No current reading",
+        );
     }
 
     function getSensorReadingValue(readings, type) {
@@ -957,11 +1070,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         return Array.from({ length: count }, (_, index) => {
             const number = index + 1;
-            const value = Number(resourceReadings?.[number]?.value ?? 0);
+            const rawValue = resourceReadings?.[number]?.value;
+            const value = Number(rawValue);
+            const hasCurrentReading =
+                rawValue !== null &&
+                rawValue !== undefined &&
+                Number.isFinite(value);
 
             return {
                 label: resourceReadings?.[number]?.label || `${label} ${number}`,
-                value: Number.isFinite(value) ? value : 0,
+                value: hasCurrentReading ? truncateToFirstDecimal(value) : null,
+                formatted_value:
+                    resourceReadings?.[number]?.formatted_value ||
+                    "No current reading",
             };
         });
     }
@@ -974,7 +1095,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    function applyLatestSensorReadings(apiHouses) {
+    function applyLatestSensorReadings(apiHouses, options = {}) {
+        const { updateEnvironment = true, updateResources = true } = options;
+
         (apiHouses || []).forEach((apiHouse) => {
             const house = houses.find(
                 (item) => Number(item.id) === Number(apiHouse.id),
@@ -991,83 +1114,99 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 const sensorReadings = apiPen.sensor_readings;
 
-                pen.feeder_count = stableResourceCount(
-                    apiPen.feeder_count,
-                    pen.feeder_count,
-                    pen.feeders,
-                );
-                pen.drinker_count = stableResourceCount(
-                    apiPen.drinker_count,
-                    pen.drinker_count,
-                    pen.drinkers,
-                );
-                pen.temperature = getSensorReadingDisplay(
-                    sensorReadings,
-                    "temperature",
-                    "0 deg",
-                );
-                pen.ammonia = getSensorReadingDisplay(
-                    sensorReadings,
-                    "ammonia",
-                    "0 ppm",
-                );
-                pen.temperatureValue = getSensorReadingValue(
-                    sensorReadings,
-                    "temperature",
-                );
-                pen.ammoniaValue = getSensorReadingValue(
-                    sensorReadings,
-                    "ammonia",
-                );
-                pen.feeders = buildNumberedResourceReadings(
-                    sensorReadings,
-                    "feeders",
-                    pen.feeder_count,
-                    "Feeder",
-                );
-                pen.drinkers = buildNumberedResourceReadings(
-                    sensorReadings,
-                    "drinkers",
-                    pen.drinker_count,
-                    "Drinker",
-                );
+                if (updateEnvironment) {
+                    pen.temperature = getSensorReadingDisplay(
+                        sensorReadings,
+                        "temperature",
+                        "No current reading",
+                    );
+                    pen.ammonia = getSensorReadingDisplay(
+                        sensorReadings,
+                        "ammonia",
+                        "No current reading",
+                    );
+                    pen.temperatureValue = getSensorReadingValue(
+                        sensorReadings,
+                        "temperature",
+                    );
+                    pen.ammoniaValue = getSensorReadingValue(
+                        sensorReadings,
+                        "ammonia",
+                    );
+                }
+
+                if (updateResources) {
+                    pen.feeder_count = stableResourceCount(
+                        apiPen.feeder_count,
+                        pen.feeder_count,
+                        pen.feeders,
+                    );
+                    pen.drinker_count = stableResourceCount(
+                        apiPen.drinker_count,
+                        pen.drinker_count,
+                        pen.drinkers,
+                    );
+                    pen.feeders = buildNumberedResourceReadings(
+                        sensorReadings,
+                        "feeders",
+                        pen.feeder_count,
+                        "Feeder",
+                    );
+                    pen.drinkers = buildNumberedResourceReadings(
+                        sensorReadings,
+                        "drinkers",
+                        pen.drinker_count,
+                        "Drinker",
+                    );
+                }
             });
         });
     }
 
-    function renderActiveSensorReadings() {
+    function renderActiveSensorReadings(options = {}) {
+        const { updateEnvironment = true, updateResources = true } = options;
         const currentPen = houses[activeHouseIndex]?.pens?.[activePenIndex];
 
         if (!currentPen) return;
 
-        if (houseTemperature) houseTemperature.textContent = currentPen.temperature;
-        if (houseAmmonia) houseAmmonia.textContent = currentPen.ammonia;
-        if (
-            feedRow &&
-            !updateResourceRowValues(feedRow, currentPen.feeders, "feed")
-        ) {
-            feedRow.innerHTML = buildResourceRow(
-                currentPen.feeders,
-                "feed",
-                currentPen.feeder_count,
-                "Feeder",
-            );
+        if (updateEnvironment) {
+            setSensorReadingText(houseTemperature, currentPen.temperature);
+            setSensorReadingText(houseAmmonia, currentPen.ammonia);
         }
-        if (
-            waterRow &&
-            !updateResourceRowValues(waterRow, currentPen.drinkers, "water")
-        ) {
-            waterRow.innerHTML = buildResourceRow(
-                currentPen.drinkers,
-                "water",
-                currentPen.drinker_count,
-                "Drinker",
-            );
+
+        if (updateResources) {
+            if (
+                feedRow &&
+                !updateResourceRowValues(feedRow, currentPen.feeders, "feed")
+            ) {
+                feedRow.innerHTML = buildResourceRow(
+                    currentPen.feeders,
+                    "feed",
+                    currentPen.feeder_count,
+                    "Feeder",
+                );
+            }
+            if (
+                waterRow &&
+                !updateResourceRowValues(waterRow, currentPen.drinkers, "water")
+            ) {
+                waterRow.innerHTML = buildResourceRow(
+                    currentPen.drinkers,
+                    "water",
+                    currentPen.drinker_count,
+                    "Drinker",
+                );
+            }
         }
     }
 
     async function fetchHousesResponse(options = {}) {
         const controller = new AbortController();
+        const requestHeaders = new Headers(options.headers || {});
+
+        requestHeaders.set("Cache-Control", "no-cache");
+        requestHeaders.set("Pragma", "no-cache");
+
         const timeoutId = window.setTimeout(
             () => controller.abort(),
             HOUSE_FETCH_TIMEOUT_MS,
@@ -1076,6 +1215,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             return await fetch("/api/houses", {
                 ...options,
+                cache: "no-store",
+                headers: requestHeaders,
                 signal: controller.signal,
             });
         } catch (error) {
@@ -1089,7 +1230,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    async function refreshHouseSensorReadings() {
+    async function refreshHouseSensorReadings(options = {}) {
+        const { updateEnvironment = true, updateResources = true } = options;
         const response = await fetchHousesResponse({
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
@@ -1100,8 +1242,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const result = await response.json();
 
-        applyLatestSensorReadings(result.data || []);
-        renderActiveSensorReadings();
+        applyLatestSensorReadings(result.data || [], { updateEnvironment, updateResources });
+        renderActiveSensorReadings({ updateEnvironment, updateResources });
     }
 
     function populatePenOptions(house) {
@@ -1177,12 +1319,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                             temperature: getSensorReadingDisplay(
                                 sensorReadings,
                                 "temperature",
-                                "0 deg",
+                                "No current reading",
                             ),
                             ammonia: getSensorReadingDisplay(
                                 sensorReadings,
                                 "ammonia",
-                                "0 ppm",
+                                "No current reading",
                             ),
                             temperatureValue: getSensorReadingValue(
                                 sensorReadings,
@@ -1280,21 +1422,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function startHouseSensorRefresh() {
-        if (houseSensorRefreshTimer) return;
+        if (!houseEnvironmentRefreshTimer) {
+            houseEnvironmentRefreshTimer = setInterval(async () => {
+                if (isRefreshingHouseEnvironment) return;
 
-        houseSensorRefreshTimer = setInterval(async () => {
-            if (isRefreshingHouseSensors) return;
+                isRefreshingHouseEnvironment = true;
 
-            isRefreshingHouseSensors = true;
+                try {
+                    await refreshHouseSensorReadings({
+                        updateEnvironment: true,
+                        updateResources: false,
+                    });
+                } catch (error) {
+                    console.error("Error refreshing house environment readings:", error);
+                } finally {
+                    isRefreshingHouseEnvironment = false;
+                }
+            }, HOUSE_ENVIRONMENT_REFRESH_INTERVAL_MS);
+        }
 
-            try {
-                await refreshHouseSensorReadings();
-            } catch (error) {
-                console.error("Error refreshing house sensor readings:", error);
-            } finally {
-                isRefreshingHouseSensors = false;
-            }
-        }, HOUSE_SENSOR_REFRESH_INTERVAL_MS);
+        if (!houseResourceRefreshTimer) {
+            houseResourceRefreshTimer = setInterval(async () => {
+                if (isRefreshingHouseResources) return;
+
+                isRefreshingHouseResources = true;
+
+                try {
+                    await refreshHouseSensorReadings({
+                        updateEnvironment: false,
+                        updateResources: true,
+                    });
+                } catch (error) {
+                    console.error("Error refreshing house resource readings:", error);
+                } finally {
+                    isRefreshingHouseResources = false;
+                }
+            }, HOUSE_RESOURCE_REFRESH_INTERVAL_MS);
+        }
     }
 
     function renderNoHouses() {
@@ -1308,8 +1472,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             housePen.innerHTML = '<option value="">No pens</option>';
             housePen.value = "";
         }
-        if (houseTemperature) houseTemperature.textContent = "--";
-        if (houseAmmonia) houseAmmonia.textContent = "--";
+        if (houseTemperature) {
+            houseTemperature.textContent = "--";
+            houseTemperature.classList.remove("no-current-reading");
+        }
+        if (houseAmmonia) {
+            houseAmmonia.textContent = "--";
+            houseAmmonia.classList.remove("no-current-reading");
+        }
         if (infoGrid) infoGrid.innerHTML = "";
         if (feedRow) feedRow.innerHTML = "";
         if (waterRow) waterRow.innerHTML = "";
@@ -1347,8 +1517,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (houseStatus) houseStatus.textContent = pen.status;
         if (houseBatch) houseBatch.textContent = pen.batch || "No Batch";
-        if (houseTemperature) houseTemperature.textContent = pen.temperature;
-        if (houseAmmonia) houseAmmonia.textContent = pen.ammonia;
+        setSensorReadingText(houseTemperature, pen.temperature);
+        setSensorReadingText(houseAmmonia, pen.ammonia);
 
         if (infoGrid) infoGrid.innerHTML = buildInfoCards(pen.cards);
         if (feedRow) {
@@ -1608,7 +1778,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             await fetchHouses();
         } catch (error) {
             console.error("Error updating data:", error);
-            await showHouseNoticeModal(`Error: ${error.message}`, "Unable to Update House");
+            closeEditHouseConfirmModal();
+            await showHouseNoticeModal(error.message, "Unable to Update House");
+            editHouseModal?.classList.add("show");
         } finally {
             confirmEditHouseSave.disabled = false;
         }
@@ -1792,6 +1964,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    await fetchHouses();
-    startHouseSensorRefresh();
+    renderHouseLoadingState();
+    fetchHouses().then(startHouseSensorRefresh);
 });

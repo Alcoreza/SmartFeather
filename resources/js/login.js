@@ -74,7 +74,7 @@ function setLoginLoading(isLoading) {
 
 function showLoginError(message = 'Wrong username or password.', title = 'Login Failed') {
     if (!loginErrorModal || !loginErrorMessage) {
-        alert(message);
+        console.error(`${title}: ${message}`);
         return;
     }
 

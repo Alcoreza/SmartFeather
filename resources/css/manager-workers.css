@@ -130,9 +130,9 @@
 .workers-table thead th {
     padding: 11px 12px;
     text-align: center;
-    color: #4f5f55;
-    background: #f2faf3;
-    border-bottom: 1px solid rgba(87, 196, 81, 0.12);
+    color: #1f3f2b;
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
     font-size: 0.9rem;
     font-weight: 800;
     line-height: 1.1;
@@ -421,6 +421,14 @@
     color: #111;
     font: inherit;
     outline: none;
+}
+
+.worker-field p {
+    margin: 0;
+    color: #111;
+    font: inherit;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 /* Actions */

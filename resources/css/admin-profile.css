@@ -410,6 +410,28 @@ body.modal-open {
     border-color: rgba(10, 51, 27, 0.08);
 }
 
+.profile-edit-field.has-error label {
+    color: #b42318;
+}
+
+.profile-edit-field.has-error input {
+    border-color: #d92d20;
+    background: #fff4f2;
+    box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
+}
+
+.profile-edit-field-error {
+    display: none;
+    color: #b42318;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.profile-edit-field-error.show {
+    display: block;
+}
+
 .profile-edit-form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

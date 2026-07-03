@@ -1,88 +1,89 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const LOGGED_OUT_FLAG = "smartfeather:logged-out";
+const LOGGED_OUT_FLAG = "smartfeather:logged-out";
 
-    function isProtectedAppPage() {
-        return window.location.pathname.startsWith("/manager/")
-            || window.location.pathname.startsWith("/admin/");
+function isProtectedAppPage() {
+    return window.location.pathname.startsWith("/manager/")
+        || window.location.pathname.startsWith("/admin/");
+}
+
+function hideProtectedPage() {
+    if (isProtectedAppPage()) {
+        document.documentElement.style.visibility = "hidden";
     }
+}
 
-    function hideProtectedPage() {
-        if (isProtectedAppPage()) {
-            document.documentElement.style.visibility = "hidden";
-        }
-    }
+function showProtectedPage() {
+    document.documentElement.style.visibility = "";
+}
 
-    function showProtectedPage() {
-        document.documentElement.style.visibility = "";
-    }
+function lockBackNavigationOnProtectedPage() {
+    if (!isProtectedAppPage()) return;
+    if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
 
-    function lockBackNavigationOnProtectedPage() {
+    const currentUrl = window.location.href;
+    const state = { smartfeatherProtectedHistoryLock: true };
+
+    window.history.replaceState(state, "", currentUrl);
+    window.history.pushState(state, "", currentUrl);
+
+    window.addEventListener("popstate", () => {
         if (!isProtectedAppPage()) return;
         if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
 
-        const currentUrl = window.location.href;
-        const state = { smartfeatherProtectedHistoryLock: true };
+        window.history.pushState(state, "", window.location.href);
+    });
+}
 
-        window.history.replaceState(state, "", currentUrl);
-        window.history.pushState(state, "", currentUrl);
+async function redirectIfSessionExpired(options = {}) {
+    if (!isProtectedAppPage()) return;
 
-        window.addEventListener("popstate", () => {
-            if (!isProtectedAppPage()) return;
-            if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") return;
-
-            window.history.pushState(state, "", window.location.href);
-        });
+    if (options.hideWhileChecking) {
+        hideProtectedPage();
     }
 
-    async function redirectIfSessionExpired(options = {}) {
-        if (!isProtectedAppPage()) return;
+    if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") {
+        window.location.replace("/login");
+        return;
+    }
 
-        if (options.hideWhileChecking) {
-            hideProtectedPage();
-        }
+    try {
+        const response = await fetch("/api/user", {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            cache: "no-store",
+            credentials: "same-origin",
+        });
 
-        if (sessionStorage.getItem(LOGGED_OUT_FLAG) === "1") {
+        if (response.status === 401) {
+            sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
             window.location.replace("/login");
             return;
         }
 
-        try {
-            const response = await fetch("/api/user", {
-                headers: {
-                    Accept: "application/json",
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                cache: "no-store",
-                credentials: "same-origin",
-            });
-
-            if (response.status === 401) {
-                sessionStorage.setItem(LOGGED_OUT_FLAG, "1");
-                window.location.replace("/login");
-                return;
-            }
-
-            showProtectedPage();
-        } catch (error) {
-            console.error("Session check failed.", error);
-            window.location.replace("/login");
-        }
+        showProtectedPage();
+    } catch (error) {
+        console.error("Session check failed.", error);
+        window.location.replace("/login");
     }
+}
 
-    window.addEventListener("pagehide", () => {
-        hideProtectedPage();
-    });
+window.addEventListener("pagehide", () => {
+    hideProtectedPage();
+});
 
-    window.addEventListener("pageshow", (event) => {
-        const navigationEntry = performance.getEntriesByType("navigation")[0];
-        const restoredFromHistory = event.persisted || navigationEntry?.type === "back_forward";
+window.addEventListener("pageshow", (event) => {
+    const navigationEntry = performance.getEntriesByType("navigation")[0];
+    const restoredFromHistory = event.persisted || navigationEntry?.type === "back_forward";
 
-        if (restoredFromHistory) {
-            redirectIfSessionExpired({ hideWhileChecking: true });
-        }
-    });
+    if (restoredFromHistory) {
+        redirectIfSessionExpired({ hideWhileChecking: true });
+    }
+});
 
-    lockBackNavigationOnProtectedPage();
+lockBackNavigationOnProtectedPage();
+
+document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelectorAll(".sidebar-nav, .admin-sidebar-nav").forEach((nav) => {
         let scrollTimer = null;
@@ -251,7 +252,56 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, { passive: true });
 
+    const prefetchedSidebarLinks = new Set();
+
+    function isPrefetchableSidebarLink(link) {
+        if (!link || link.matches("[data-logout-trigger]")) {
+            return false;
+        }
+
+        const href = link.getAttribute("href");
+
+        if (!href || href.startsWith("#")) {
+            return false;
+        }
+
+        try {
+            const url = new URL(href, window.location.origin);
+
+            return url.origin === window.location.origin &&
+                url.pathname !== window.location.pathname;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function prefetchSidebarPage(link) {
+        if (!isPrefetchableSidebarLink(link)) {
+            return;
+        }
+
+        const url = new URL(link.getAttribute("href"), window.location.origin);
+        const cacheKey = url.pathname + url.search;
+
+        if (prefetchedSidebarLinks.has(cacheKey)) {
+            return;
+        }
+
+        prefetchedSidebarLinks.add(cacheKey);
+
+        const prefetchLink = document.createElement("link");
+        prefetchLink.rel = "prefetch";
+        prefetchLink.href = cacheKey;
+        prefetchLink.as = "document";
+
+        document.head.appendChild(prefetchLink);
+    }
+
     document.querySelectorAll(".sidebar-nav a, .admin-sidebar-nav a").forEach((link) => {
+        link.addEventListener("mouseenter", () => prefetchSidebarPage(link), { passive: true });
+        link.addEventListener("focus", () => prefetchSidebarPage(link), { passive: true });
+        link.addEventListener("touchstart", () => prefetchSidebarPage(link), { passive: true });
+
         link.addEventListener("click", () => {
             if (window.matchMedia("(max-width: 992px)").matches && !link.matches("[data-logout-trigger]")) {
                 closeResponsiveSidebars();
@@ -264,10 +314,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
     let pendingLogoutUrl = null;
 
+    function sameOriginLogoutUrl(url) {
+        try {
+            const parsedUrl = new URL(url || "/logout", window.location.origin);
+            return `${parsedUrl.pathname}${parsedUrl.search}`;
+        } catch (error) {
+            return "/logout";
+        }
+    }
+
     function submitLogout(url) {
         const form = document.createElement("form");
         form.method = "POST";
-        form.action = url;
+        form.action = sameOriginLogoutUrl(url);
         form.style.display = "none";
 
         const token = document.querySelector('meta[name="csrf-token"]')?.content;

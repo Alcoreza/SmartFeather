@@ -169,7 +169,7 @@
                     <select name="priority_level" class="task-select-placeholder task-priority-select"></select>
                 </div>
                 <div class="manager-task-form-field">
-                    <label>House Number*</label>
+                    <label>House*</label>
                     <select name="house_number" class="task-select-placeholder task-house-select"></select>
                 </div>
                 <div class="manager-task-form-field">
@@ -182,7 +182,7 @@
                 </div>
                 <div class="manager-task-form-field">
                     <label>Date to finish*</label>
-                    <input type="date" name="date_assigned" class="task-date-input">
+                    <input type="date" name="date_assigned" class="task-date-input" min="{{ now()->toDateString() }}">
                 </div>
             </div>
             <div class="manager-task-form-field full">

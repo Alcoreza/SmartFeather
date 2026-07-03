@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
@@ -21,6 +22,7 @@ Route::post('/api/login', [AuthController::class, 'login'])->middleware('throttl
 
 // API endpoint to get current user info
 Route::get('/api/user', [ProfileController::class, 'getCurrentUser'])->middleware('auth.session');
+Route::post('/api/profile/check-phone', [ProfileController::class, 'checkPhone'])->middleware('auth.session');
 
 /*
 |--------------------------------------------------------------------------
@@ -200,6 +202,7 @@ if (! function_exists('dashboardMonitoringGraphsData')) {
                     'datasets' => $buildDatasets('temperature'),
                     'borderColor' => '#17643a',
                     'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                    'maxValue' => 45,
                 ],
                 [
                     'label' => 'Ammonia',
@@ -208,14 +211,221 @@ if (! function_exists('dashboardMonitoringGraphsData')) {
                     'datasets' => $buildDatasets('ammonia'),
                     'borderColor' => '#b7791f',
                     'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                    'maxValue' => 30,
                 ],
             ],
         ];
     }
 }
 
+if (! function_exists('dashboardCachedData')) {
+    function dashboardCachedData(string $key, int $seconds, callable $callback): array
+    {
+        try {
+            return Cache::remember($key, now()->addSeconds($seconds), $callback);
+        } catch (\Throwable) {
+            return $callback();
+        }
+    }
+}
+
+if (! function_exists('dashboardFallbackEnvironmentByHouse')) {
+    function dashboardFallbackEnvironmentByHouse(): array
+    {
+        return [
+            'slides' => [
+                [
+                    'label' => 'Temperature',
+                    'unit' => 'deg',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [24, 23],
+                    'borderColor' => '#17643a',
+                    'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                    'maxValue' => 45,
+                ],
+                [
+                    'label' => 'Ammonia',
+                    'unit' => 'ppm',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [8, 10],
+                    'borderColor' => '#b7791f',
+                    'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                    'maxValue' => 30,
+                ],
+            ],
+        ];
+    }
+}
+
+if (! function_exists('dashboardFallbackResourcesByHouse')) {
+    function dashboardFallbackResourcesByHouse(): array
+    {
+        return [
+            'slides' => [
+                [
+                    'label' => 'Feed',
+                    'unit' => '%',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [60, 65],
+                    'borderColor' => '#c88a3d',
+                    'backgroundColor' => 'rgba(200, 138, 61, 0.72)',
+                    'maxValue' => 100,
+                ],
+                [
+                    'label' => 'Water',
+                    'unit' => '%',
+                    'labels' => ['House 1', 'House 2'],
+                    'values' => [45, 50],
+                    'borderColor' => '#6cdde5',
+                    'backgroundColor' => 'rgba(108, 221, 229, 0.72)',
+                    'maxValue' => 100,
+                ],
+            ],
+        ];
+    }
+}
+
+if (! function_exists('dashboardHouseSensorSummaryData')) {
+    function dashboardHouseSensorSummaryData(): array
+    {
+        try {
+            $houses = \App\Models\House::with([
+                'pens' => function ($query) {
+                    $query->whereNull('archived_at')
+                        ->whereNotNull('current_batch_id')
+                        ->whereHas('currentBatch', function ($batchQuery) {
+                            $batchQuery->where('status', 'Running');
+                        });
+                }
+            ])
+                ->whereNull('archived_at')
+                ->whereHas('pens', function ($query) {
+                    $query->whereNull('archived_at')
+                        ->whereNotNull('current_batch_id')
+                        ->whereHas('currentBatch', function ($batchQuery) {
+                            $batchQuery->where('status', 'Running');
+                        });
+                })
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $controller = new \App\Http\Controllers\HouseController();
+            $reflectionMethod = new \ReflectionMethod($controller, 'attachLatestSensorReadings');
+            $reflectionMethod->setAccessible(true);
+            $reflectionMethod->invoke($controller, $houses);
+
+            $temperatureByHouse = [];
+            $ammoniaByHouse = [];
+            $feedByHouse = [];
+            $waterByHouse = [];
+
+            foreach ($houses as $house) {
+                $temperatureReadings = [];
+                $ammoniaReadings = [];
+                $feedReadings = [];
+                $waterReadings = [];
+
+                foreach ($house->pens as $pen) {
+                    $sensorReadings = $pen->getAttribute('sensor_readings');
+
+                    if (! $sensorReadings) {
+                        continue;
+                    }
+
+                    if (! empty($sensorReadings['temperature'])) {
+                        $temperatureReadings[] = (float) $sensorReadings['temperature']['value'];
+                    }
+
+                    if (! empty($sensorReadings['ammonia'])) {
+                        $ammoniaReadings[] = (float) $sensorReadings['ammonia']['value'];
+                    }
+
+                    foreach (($sensorReadings['feeders'] ?? []) as $feeder) {
+                        if ($feeder && isset($feeder['value'])) {
+                            $feedReadings[] = (float) $feeder['value'];
+                        }
+                    }
+
+                    foreach (($sensorReadings['drinkers'] ?? []) as $drinker) {
+                        if ($drinker && isset($drinker['value'])) {
+                            $waterReadings[] = (float) $drinker['value'];
+                        }
+                    }
+                }
+
+                $temperatureByHouse[] = count($temperatureReadings) > 0 ? round(array_sum($temperatureReadings) / count($temperatureReadings), 1) : 0;
+                $ammoniaByHouse[] = count($ammoniaReadings) > 0 ? round(array_sum($ammoniaReadings) / count($ammoniaReadings), 1) : 0;
+                $feedByHouse[] = count($feedReadings) > 0 ? round(array_sum($feedReadings) / count($feedReadings), 1) : 0;
+                $waterByHouse[] = count($waterReadings) > 0 ? round(array_sum($waterReadings) / count($waterReadings), 1) : 0;
+            }
+
+            $houseLabels = $houses->pluck('house_number')->toArray();
+
+            return [
+                'environment' => [
+                    'slides' => [
+                        [
+                            'label' => 'Temperature',
+                            'unit' => 'deg',
+                            'labels' => $houseLabels,
+                            'values' => $temperatureByHouse,
+                            'borderColor' => '#17643a',
+                            'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
+                            'maxValue' => 45,
+                        ],
+                        [
+                            'label' => 'Ammonia',
+                            'unit' => 'ppm',
+                            'labels' => $houseLabels,
+                            'values' => $ammoniaByHouse,
+                            'borderColor' => '#b7791f',
+                            'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
+                            'maxValue' => 30,
+                        ],
+                    ],
+                ],
+                'resources' => [
+                    'slides' => [
+                        [
+                            'label' => 'Feed',
+                            'unit' => '%',
+                            'labels' => $houseLabels,
+                            'values' => $feedByHouse,
+                            'borderColor' => '#c88a3d',
+                            'backgroundColor' => 'rgba(200, 138, 61, 0.72)',
+                            'maxValue' => 100,
+                        ],
+                        [
+                            'label' => 'Water',
+                            'unit' => '%',
+                            'labels' => $houseLabels,
+                            'values' => $waterByHouse,
+                            'borderColor' => '#6cdde5',
+                            'backgroundColor' => 'rgba(108, 221, 229, 0.72)',
+                            'maxValue' => 100,
+                        ],
+                    ],
+                ],
+            ];
+        } catch (\Throwable $e) {
+            \Log::error('House sensor summary error: ' . $e->getMessage());
+
+            return [
+                'environment' => dashboardFallbackEnvironmentByHouse(),
+                'resources' => dashboardFallbackResourcesByHouse(),
+            ];
+        }
+    }
+}
+
 Route::get('/api/manager/dashboard/monitoring-graphs', function () {
-    return response()->json(dashboardMonitoringGraphsData());
+    $weekKey = now()->startOfWeek(\Carbon\CarbonInterface::SUNDAY)->toDateString();
+
+    return response()->json(dashboardCachedData(
+        "web_dashboard_monitoring_graphs:{$weekKey}",
+        120,
+        fn () => dashboardMonitoringGraphsData()
+    ));
 })->middleware(['auth.session', 'check.role:Manager']);
 
 Route::get('/api/manager/dashboard/realtime', function () {
@@ -231,8 +441,17 @@ Route::get('/api/manager/dashboard/realtime', function () {
     ]);
 })->middleware(['auth.session', 'check.role:Manager']);
 
+Route::get('/api/manager/dashboard/house-sensor-summary', function () {
+    return response()->json(dashboardCachedData(
+        'web_dashboard_house_sensor_summary',
+        30,
+        fn () => dashboardHouseSensorSummaryData()
+    ));
+})->middleware(['auth.session', 'check.role:Manager,Admin']);
+
 Route::get('/api/manager/dashboard/environment-by-house', function () {
-    try {
+    return response()->json(dashboardCachedData('web_dashboard_environment_by_house', 30, function () {
+        try {
         $houses = \App\Models\House::with([
             'pens' => function ($query) {
                 $query->whereNull('archived_at')
@@ -287,7 +506,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
 
         $houseLabels = $houses->pluck('house_number')->toArray();
 
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Temperature',
@@ -296,7 +515,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => $temperatureByHouse,
                     'borderColor' => '#17643a',
                     'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
-                    'maxValue' => 35,
+                    'maxValue' => 45,
                 ],
                 [
                     'label' => 'Ammonia',
@@ -305,13 +524,13 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => $ammoniaByHouse,
                     'borderColor' => '#b7791f',
                     'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
-                    'maxValue' => 25,
+                    'maxValue' => 30,
                 ],
             ],
-        ]);
+        ];
     } catch (\Exception $e) {
         \Log::error('Environment by house error: ' . $e->getMessage());
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Temperature',
@@ -320,7 +539,7 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => [24, 23],
                     'borderColor' => '#17643a',
                     'backgroundColor' => 'rgba(23, 100, 58, 0.72)',
-                    'maxValue' => 35,
+                    'maxValue' => 45,
                 ],
                 [
                     'label' => 'Ammonia',
@@ -329,15 +548,17 @@ Route::get('/api/manager/dashboard/environment-by-house', function () {
                     'values' => [8, 10],
                     'borderColor' => '#b7791f',
                     'backgroundColor' => 'rgba(183, 121, 31, 0.72)',
-                    'maxValue' => 25,
+                    'maxValue' => 30,
                 ],
             ],
-        ]);
+        ];
     }
+    }));
 })->middleware(['auth.session', 'check.role:Manager,Admin']);
 
 Route::get('/api/manager/dashboard/resources-by-house', function () {
-    try {
+    return response()->json(dashboardCachedData('web_dashboard_resources_by_house', 30, function () {
+        try {
         $houses = \App\Models\House::with([
             'pens' => function ($query) {
                 $query->whereNull('archived_at')
@@ -402,7 +623,7 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
 
         $houseLabels = $houses->pluck('house_number')->toArray();
 
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Feed',
@@ -423,10 +644,10 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
                     'maxValue' => 100,
                 ],
             ],
-        ]);
+        ];
     } catch (\Exception $e) {
         \Log::error('Resources by house error: ' . $e->getMessage());
-        return response()->json([
+        return [
             'slides' => [
                 [
                     'label' => 'Feed',
@@ -447,8 +668,9 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
                     'maxValue' => 100,
                 ],
             ],
-        ]);
+        ];
     }
+    }));
 })->middleware(['auth.session', 'check.role:Manager,Admin']);
 
 Route::get('/api/manager/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
@@ -568,7 +790,21 @@ Route::get('/api/admin/dashboard/realtime', function () {
 })->middleware(['auth.session', 'check.role:Admin']);
 
 Route::get('/api/admin/dashboard/monitoring-graphs', function () {
-    return response()->json(dashboardMonitoringGraphsData());
+    $weekKey = now()->startOfWeek(\Carbon\CarbonInterface::SUNDAY)->toDateString();
+
+    return response()->json(dashboardCachedData(
+        "web_dashboard_monitoring_graphs:{$weekKey}",
+        120,
+        fn () => dashboardMonitoringGraphsData()
+    ));
+})->middleware(['auth.session', 'check.role:Admin']);
+
+Route::get('/api/admin/dashboard/house-sensor-summary', function () {
+    return response()->json(dashboardCachedData(
+        'web_dashboard_house_sensor_summary',
+        30,
+        fn () => dashboardHouseSensorSummaryData()
+    ));
 })->middleware(['auth.session', 'check.role:Admin']);
 
 Route::get('/api/admin/dashboard/environment-by-house', function () {

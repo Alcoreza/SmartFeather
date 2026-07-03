@@ -251,7 +251,7 @@
 
 .manager-sensor-table {
     width: 100%;
-    min-width: 680px;
+    min-width: 760px;
     table-layout: fixed;
     border-collapse: collapse;
     border-spacing: 0;
@@ -262,10 +262,81 @@
     text-align: center;
     font-size: 0.88rem;
     font-weight: 800;
-    color: #4f5f55;
+    color: #1f3f2b;
     line-height: 1.1;
-    background: var(--sensor-section-tint, #f6f8f5);
-    border-bottom: 1px solid rgba(16, 32, 22, 0.08);
+    background: var(--sensor-section-tint, #d4ead7);
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
+    white-space: nowrap;
+}
+
+.manager-sensor-table th:first-child {
+    text-align: left;
+    padding-left: 16px;
+}
+
+.manager-sensor-table th:first-child,
+.manager-sensor-table td:first-child {
+    width: 30%;
+}
+
+.manager-sensor-table th:nth-child(2),
+.manager-sensor-table td:nth-child(2) {
+    width: 10%;
+}
+
+.manager-sensor-table th:nth-child(3),
+.manager-sensor-table td:nth-child(3) {
+    width: 10%;
+}
+
+.manager-sensor-table th:nth-last-child(3),
+.manager-sensor-table td:nth-last-child(3) {
+    width: 25%;
+}
+
+.manager-sensor-table th:nth-last-child(2),
+.manager-sensor-table td:nth-last-child(2) {
+    width: 15%;
+}
+
+.manager-sensor-table th:last-child,
+.manager-sensor-table td:last-child {
+    width: 10%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:first-child,
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:first-child {
+    width: 25%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:nth-child(2),
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:nth-child(2) {
+    width: 8%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:nth-child(3),
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:nth-child(3) {
+    width: 8%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:nth-child(4),
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:nth-child(4) {
+    width: 14%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:nth-last-child(3),
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:nth-last-child(3) {
+    width: 23%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:nth-last-child(2),
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:nth-last-child(2) {
+    width: 14%;
+}
+
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table th:last-child,
+.manager-sensor-section[data-column-count="7"] .manager-sensor-table td:last-child {
+    width: 10%;
 }
 
 .manager-sensor-table td {

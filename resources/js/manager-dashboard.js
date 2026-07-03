@@ -11,7 +11,7 @@ let resourceChart = null;
 let resourceSlides = [];
 let activeResourceSlideIndex = 0;
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     resetInitialRealtimeWidgets();
 
     const cards = document.querySelectorAll(".dashboard-card");
@@ -31,10 +31,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     });
 
-    await renderRealtimeMonitoring();
-    await renderMonitoringCarousel();
-    await renderEnvironmentCarousel();
-    await renderResourceCarousel();
+    renderRealtimeMonitoring();
+    renderMonitoringCarousel();
+    renderHouseSensorSummaryCarousels();
 });
 
 function resetInitialRealtimeWidgets() {
@@ -400,6 +399,7 @@ function createOrUpdateChart(canvas, slide) {
                 },
                 y: {
                     beginAtZero: true,
+                    ...(slide.maxValue ? { max: slide.maxValue } : {}),
                     border: {
                         display: false,
                     },
@@ -494,6 +494,86 @@ async function renderEnvironmentCarousel() {
     }
 }
 
+async function renderHouseSensorSummaryCarousels() {
+    try {
+        const response = await fetch("/api/manager/dashboard/house-sensor-summary");
+        const data = await response.json();
+
+        renderEnvironmentCarouselFromData(data.environment || {});
+        renderResourceCarouselFromData(data.resources || {});
+    } catch (error) {
+        console.error("Failed to load house sensor summary data.", error);
+    }
+}
+
+function renderEnvironmentCarouselFromData(data) {
+    const canvas = document.getElementById("environmentChart");
+    const caption = document.getElementById("envGraphCaption");
+    const dots = document.querySelectorAll(".env-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    environmentSlides = Array.isArray(data.slides) ? data.slides : [];
+
+    if (!environmentSlides.length) {
+        return;
+    }
+
+    createOrUpdateEnvironmentChart(canvas, environmentSlides[0]);
+    updateGraphCaption(caption, environmentSlides[0]);
+    updateDots(dots, 0);
+
+    dots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.slide);
+            if (Number.isNaN(index) || !environmentSlides[index]) {
+                return;
+            }
+
+            activeEnvironmentSlideIndex = index;
+            createOrUpdateEnvironmentChart(canvas, environmentSlides[index]);
+            updateGraphCaption(caption, environmentSlides[index]);
+            updateDots(dots, index);
+        });
+    });
+}
+
+function renderResourceCarouselFromData(data) {
+    const canvas = document.getElementById("resourceChart");
+    const caption = document.getElementById("resourceGraphCaption");
+    const dots = document.querySelectorAll(".resource-dot");
+
+    if (!canvas || typeof Chart === "undefined") {
+        return;
+    }
+
+    resourceSlides = Array.isArray(data.slides) ? data.slides : [];
+
+    if (!resourceSlides.length) {
+        return;
+    }
+
+    createOrUpdateResourceChart(canvas, resourceSlides[0]);
+    updateGraphCaption(caption, resourceSlides[0]);
+    updateDots(dots, 0);
+
+    dots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.slide);
+            if (Number.isNaN(index) || !resourceSlides[index]) {
+                return;
+            }
+
+            activeResourceSlideIndex = index;
+            createOrUpdateResourceChart(canvas, resourceSlides[index]);
+            updateGraphCaption(caption, resourceSlides[index]);
+            updateDots(dots, index);
+        });
+    });
+}
+
 function createOrUpdateEnvironmentChart(canvas, slide) {
     if (environmentChart) {
         environmentChart.destroy();
@@ -581,7 +661,7 @@ function createOrUpdateEnvironmentChart(canvas, slide) {
                 },
                 y: {
                     beginAtZero: true,
-                    max: slide.maxValue || 35,
+                    max: slide.maxValue || environmentalMaxForSlide(slide),
                     border: {
                         display: false,
                     },
@@ -596,6 +676,12 @@ function createOrUpdateEnvironmentChart(canvas, slide) {
             },
         },
     });
+}
+
+function environmentalMaxForSlide(slide) {
+    const label = String(slide?.label || "").toLowerCase();
+
+    return label.includes("ammonia") ? 30 : 45;
 }
 
 async function renderResourceCarousel() {

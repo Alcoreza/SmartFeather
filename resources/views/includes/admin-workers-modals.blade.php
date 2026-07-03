@@ -78,6 +78,7 @@
                 <div class="admin-worker-field">
                     <label>Confirm Password*</label>
                     <input type="password" id="AddConfirmPassword" autocomplete="new-password">
+                    <small id="addConfirmPasswordMessage" class="admin-worker-field-error" aria-live="polite"></small>
                 </div>
             </div>
 

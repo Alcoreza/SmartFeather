@@ -7,16 +7,59 @@ const employeesCache = new Map();
 let adminWorkersCurrentPage = 0;
 let adminWorkersLastPage = 0;
 let adminWorkersCurrentRole = 'All';
+let pendingWorkerSave = null;
+let isWorkerSaveSubmitting = false;
+let isWorkerPasswordSubmitting = false;
+let isWorkerDeleteSubmitting = false;
 
 // ================= MODAL HELPERS =================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+function ensureAdminWorkerNoticeModal() {
+    let modal = document.getElementById('adminWorkerNoticeModal');
+
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'adminWorkerNoticeModal';
+    modal.className = 'admin-worker-modal-backdrop confirm-modal-top';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+        <div class="admin-worker-modal-card admin-delete-worker-card">
+            <div class="admin-worker-modal-header">
+                <h2 id="adminWorkerNoticeTitle">Employee Updated</h2>
+                <div class="admin-worker-header-line"></div>
+            </div>
+            <div class="admin-worker-modal-body">
+                <p class="admin-delete-worker-text" id="adminWorkerNoticeMessage"></p>
+                <div class="admin-worker-modal-actions single">
+                    <button type="button" class="admin-worker-btn save" id="adminWorkerNoticeOk">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#adminWorkerNoticeOk')?.addEventListener('click', () => closeModal('adminWorkerNoticeModal'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal('adminWorkerNoticeModal');
+    });
+
+    return modal;
+}
+
+function showAdminWorkerNotice(message, title = 'Employee Updated') {
+    const modal = ensureAdminWorkerNoticeModal();
+    modal.querySelector('#adminWorkerNoticeTitle').textContent = title;
+    modal.querySelector('#adminWorkerNoticeMessage').textContent = message;
+    openModal('adminWorkerNoticeModal');
+}
+
 function generateUsername(firstName, lastName) {
     const initial = (firstName || '').trim().charAt(0);
     const surname = (lastName || '').trim();
 
-    return `${initial}${surname}`.toUpperCase();
+    return `${initial}${surname}`.toLowerCase();
 }
 
 function syncUsernamePreview() {
@@ -41,11 +84,13 @@ function syncUsernamePreview() {
 const passwordInput = document.getElementById('passwordModalPassword');
 const confirmPasswordInput = document.getElementById('passwordModalConfirm');
 const oldPasswordInput = document.getElementById('passwordModalOldPassword');
+const addPasswordInput = document.getElementById('AddPassword');
+const addConfirmPasswordInput = document.getElementById('AddConfirmPassword');
 const confirmPasswordMessage = document.getElementById('confirmPasswordMessage');
 const oldPasswordMessage = document.getElementById('oldPasswordMessage');
+const addConfirmPasswordMessage = document.getElementById('addConfirmPasswordMessage');
 const phoneInput = document.getElementById('PhoneNumber');
 const birthdayInput = document.getElementById('Birthday');
-let pendingPassword = null;
 
 const workerRequiredFields = [
     { id: 'FirstName', label: 'First Name' },
@@ -53,7 +98,9 @@ const workerRequiredFields = [
     { id: 'Role', label: 'Role' },
     { id: 'PhoneNumber', label: 'Phone Number' },
     { id: 'Birthday', label: 'Birthday' },
-    { id: 'Gender', label: 'Gender' }
+    { id: 'Gender', label: 'Gender' },
+    { id: 'AddPassword', label: 'Password' },
+    { id: 'AddConfirmPassword', label: 'Confirm Password' }
 ];
 
 let shouldTrackRequiredHighlights = false;
@@ -64,6 +111,10 @@ function clearConfirmPasswordMessage() {
 
 function clearOldPasswordMessage() {
     oldPasswordMessage.textContent = '';
+}
+
+function clearAddConfirmPasswordMessage() {
+    if (addConfirmPasswordMessage) addConfirmPasswordMessage.textContent = '';
 }
 
 function validateConfirmPassword() {
@@ -92,8 +143,20 @@ function resetConfirmPasswordState() {
     clearOldPasswordMessage();
 }
 
+function resetAddPasswordState() {
+    if (addPasswordInput) addPasswordInput.value = '';
+    if (addConfirmPasswordInput) addConfirmPasswordInput.value = '';
+    clearAddConfirmPasswordMessage();
+    clearRequiredFieldHighlight(addPasswordInput);
+    clearRequiredFieldHighlight(addConfirmPasswordInput);
+}
+
 function isAddMode() {
     return !document.getElementById('EmployeeId').value;
+}
+
+function onlyDigits(value) {
+    return (value || '').replace(/\D/g, '');
 }
 
 function setPasswordModalMode(mode) {
@@ -110,12 +173,19 @@ function setPasswordModalMode(mode) {
 
     if (editPasswordBtn) {
         editPasswordBtn.textContent = isEditMode ? 'Change Password' : 'Set Password';
+        editPasswordBtn.style.display = isEditMode ? '' : 'none';
     }
 }
 
 function setAddModeRequirements(isAddMode) {
+    const addPasswordFields = document.getElementById('addPasswordFields');
+
+    if (addPasswordFields) {
+        addPasswordFields.style.display = isAddMode ? '' : 'none';
+    }
+
     if (!isAddMode) {
-        resetConfirmPasswordState();
+        resetAddPasswordState();
     }
 }
 
@@ -203,11 +273,129 @@ function showRequiredFieldsError() {
     return true;
 }
 
+function showPhoneNumberError(message = 'Phone number already in use.') {
+    phoneInput?.closest('.admin-worker-field')?.classList.add('has-error');
+    showWorkerFormError(message);
+    setTimeout(() => phoneInput?.focus(), 350);
+}
+
+function validatePhoneNumberField() {
+    const phoneNumber = phoneInput?.value || '';
+
+    if (!phoneNumber) {
+        return true;
+    }
+
+    if (phoneNumber.length < 11) {
+        showPhoneNumberError('Invalid phone number.');
+        return false;
+    }
+
+    if (!/^09\d{9}$/.test(phoneNumber)) {
+        showPhoneNumberError('Invalid phone number.');
+        return false;
+    }
+
+    return true;
+}
+
+async function checkPhoneNumberAvailability(phoneNumber, employeeId) {
+    if (!phoneNumber) return true;
+
+    try {
+        const response = await fetch(`${BASE_URL}/check-phone`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                PhoneNumber: phoneNumber,
+                EmployeeId: employeeId || null
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.available === false) {
+            showPhoneNumberError('Phone number already in use.');
+            return false;
+        }
+
+        if (!response.ok && result.errors?.PhoneNumber) {
+            showPhoneNumberError(result.errors.PhoneNumber[0] || 'Phone number already in use.');
+            return false;
+        }
+
+        return response.ok;
+    } catch (error) {
+        console.error(error);
+        showWorkerFormError('Unable to verify phone number. Please try again.');
+        return false;
+    }
+}
+
+function validateAddPasswordFields() {
+    if (!isAddMode()) {
+        clearAddConfirmPasswordMessage();
+        return true;
+    }
+
+    const password = addPasswordInput?.value || '';
+    const confirmPassword = addConfirmPasswordInput?.value || '';
+
+    clearAddConfirmPasswordMessage();
+    clearRequiredFieldHighlight(addPasswordInput);
+    clearRequiredFieldHighlight(addConfirmPasswordInput);
+
+    if (!password || !confirmPassword) {
+        return true;
+    }
+
+    if (password.length < 8) {
+        addPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
+        if (addConfirmPasswordMessage) {
+            addConfirmPasswordMessage.textContent = 'Password must be at least 8 characters.';
+        }
+        return false;
+    }
+
+    if (password !== confirmPassword) {
+        addConfirmPasswordInput?.closest('.admin-worker-field')?.classList.add('has-error');
+        if (addConfirmPasswordMessage) {
+            addConfirmPasswordMessage.textContent = 'Passwords do not match.';
+        }
+        return false;
+    }
+
+    return true;
+}
+
 [passwordInput, confirmPasswordInput, oldPasswordInput].forEach(input => {
     input?.addEventListener('input', () => {
         validateConfirmPassword();
         clearOldPasswordMessage();
     });
+});
+
+[addPasswordInput, addConfirmPasswordInput].forEach(input => {
+    input?.addEventListener('input', () => {
+        validateAddPasswordFields();
+        clearWorkerFormError();
+    });
+});
+
+phoneInput?.addEventListener('input', () => {
+    phoneInput.value = onlyDigits(phoneInput.value).slice(0, 11);
+    clearRequiredFieldHighlight(phoneInput);
+
+    if (['Phone number already in use.', 'Invalid phone number.'].includes(document.getElementById('workerFormError')?.textContent)) {
+        clearWorkerFormError();
+    }
+});
+
+birthdayInput?.addEventListener('input', () => {
+    clearRequiredFieldHighlight(birthdayInput);
 });
 
 // ================= PROFILE MODAL =================
@@ -278,7 +466,7 @@ async function loadEmployees() {
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employees');
+        showAdminWorkerNotice('Failed to load employees.', 'Unable to Load Employees');
     }
 }
 
@@ -457,8 +645,8 @@ document.getElementById('openAddWorkerModal')?.addEventListener('click', () => {
     document.getElementById('workerModalTitle').innerText = 'Add Employee';
     document.getElementById('workerForm').reset();
     document.getElementById('EmployeeId').value = '';
-    pendingPassword = null;
     resetConfirmPasswordState();
+    resetAddPasswordState();
     clearRequiredFieldHighlights();
     clearWorkerFormError();
     setAddModeRequirements(true);
@@ -484,7 +672,10 @@ async function openEditModal(id) {
         const user = await res.json();
         populateEditModal(user);
         openModal('workerModal');
-    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Failed to fetch employee data.', 'Unable to Load Employee');
+    }
 }
 
 function populateEditModal(user) {
@@ -502,8 +693,8 @@ function populateEditModal(user) {
     document.getElementById('Birthday').value = user.Birthday ?? '';
     document.getElementById('Gender').value = user.Gender ?? '';
     document.getElementById('Address').value = user.Address ?? '';
-    pendingPassword = null;
     resetConfirmPasswordState();
+    resetAddPasswordState();
     clearRequiredFieldHighlights();
     clearWorkerFormError();
     setPasswordModalMode('edit');
@@ -524,8 +715,11 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (isAddMode() && !pendingPassword) {
-        showWorkerFormError('Please set a password for the new employee before saving.');
+    if (!validateAddPasswordFields()) {
+        return;
+    }
+
+    if (!validatePhoneNumberField()) {
         return;
     }
 
@@ -541,12 +735,25 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
         Birthday: document.getElementById('Birthday').value || null,
         Gender: document.getElementById('Gender').value || null,
         Address: document.getElementById('Address').value || null,
-        Password: pendingPassword || null
+        Password: isAddMode() ? addPasswordInput?.value || null : null
     };
 
     if (!data.Password) delete data.Password;
 
+    pendingWorkerSave = { id, data };
+    const confirmMessage = document.getElementById('saveWorkerConfirmMessage');
+    if (confirmMessage) {
+        confirmMessage.textContent = id ? 'Save changes to this employee?' : 'Save this new employee?';
+    }
+    openModal('saveWorkerConfirmModal');
+});
+
+async function saveEmployee({ id, data }) {
     try {
+        if (!await checkPhoneNumberAvailability(data.PhoneNumber, id)) {
+            return;
+        }
+
         const method = id ? 'PUT' : 'POST';
         const url = id ? `${BASE_URL}/${id}` : BASE_URL;
 
@@ -559,12 +766,42 @@ document.getElementById('workerForm')?.addEventListener('submit', async e => {
             body: JSON.stringify(data)
         });
 
-        if (!res.ok) { const err = await res.json(); alert('Error: ' + JSON.stringify(err.errors ?? err)); return; }
+        if (!res.ok) {
+            const err = await res.json();
+            if (err.errors?.PhoneNumber) {
+                showPhoneNumberError('Phone number already in use.');
+                return;
+            }
+
+            showWorkerFormError('Unable to save employee. Please check the details and try again.');
+            return;
+        }
 
         closeModal('workerModal');
-        pendingPassword = null;
         await loadEmployees();
-    } catch (err) { console.error(err); alert('Network error'); }
+        showAdminWorkerNotice(id ? 'Employee changes saved.' : 'Employee added successfully.');
+    } catch (err) {
+        console.error(err);
+        showWorkerFormError('Network error. Please try again.');
+    }
+}
+
+document.getElementById('confirmSaveWorkerBtn')?.addEventListener('click', async () => {
+    if (isWorkerSaveSubmitting || !pendingWorkerSave) return;
+
+    const savePayload = pendingWorkerSave;
+    pendingWorkerSave = null;
+    const button = document.getElementById('confirmSaveWorkerBtn');
+    isWorkerSaveSubmitting = true;
+    if (button) button.disabled = true;
+    closeModal('saveWorkerConfirmModal');
+
+    try {
+        await saveEmployee(savePayload);
+    } finally {
+        isWorkerSaveSubmitting = false;
+        if (button) button.disabled = false;
+    }
 });
 
 document.getElementById('editPasswordBtn')?.addEventListener('click', () => {
@@ -581,6 +818,10 @@ workerRequiredFields.forEach(field => {
 document.getElementById('passwordForm')?.addEventListener('submit', async e => {
     e.preventDefault();
 
+    if (isWorkerPasswordSubmitting) {
+        return;
+    }
+
     if (!validateConfirmPassword()) {
         return;
     }
@@ -594,17 +835,14 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
         return;
     }
 
-    if (!employeeId) {
-        pendingPassword = password;
-        clearWorkerFormError();
-        closeModal('passwordModal');
-        return;
-    }
-
     if (!oldPassword) {
         oldPasswordMessage.textContent = 'Please enter your current password.';
         return;
     }
+
+    isWorkerPasswordSubmitting = true;
+    const submitButton = e.submitter || document.querySelector('#passwordForm button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
 
     try {
         const res = await fetch(`${BASE_URL}/${employeeId}`, {
@@ -624,15 +862,19 @@ document.getElementById('passwordForm')?.addEventListener('submit', async e => {
                 return;
             }
 
-            alert('Error: ' + JSON.stringify(err.errors ?? err));
+            showAdminWorkerNotice('Unable to update password. Please try again.', 'Password Not Updated');
             return;
         }
 
         closeModal('passwordModal');
         await loadEmployees();
+        showAdminWorkerNotice('Password updated successfully.', 'Password Updated');
     } catch (err) {
         console.error(err);
-        alert('Network error');
+        showAdminWorkerNotice('Network error. Please try again.', 'Password Not Updated');
+    } finally {
+        isWorkerPasswordSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
     }
 });
 
@@ -646,17 +888,33 @@ function openDeleteModal(id) {
 }
 
 document.getElementById('confirmDeleteWorkerBtn')?.addEventListener('click', async () => {
+    if (isWorkerDeleteSubmitting || !deleteId) return;
+
+    const button = document.getElementById('confirmDeleteWorkerBtn');
+    isWorkerDeleteSubmitting = true;
+    if (button) button.disabled = true;
+
     try {
         const res = await fetch(`${BASE_URL}/${deleteId}`, {
             method: 'DELETE',
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
         });
 
-        if (!res.ok) { alert('Error deleting employee'); return; }
+        if (!res.ok) {
+            showAdminWorkerNotice('Error deactivating employee.', 'Unable to Deactivate Employee');
+            return;
+        }
 
         closeModal('deleteWorkerModal');
         await loadEmployees();
-    } catch (err) { console.error(err); alert('Network error'); }
+        showAdminWorkerNotice('Employee deactivated successfully.');
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Network error. Please try again.', 'Unable to Deactivate Employee');
+    } finally {
+        isWorkerDeleteSubmitting = false;
+        if (button) button.disabled = false;
+    }
 });
 
 // ================= VIEW EMPLOYEE =================
@@ -675,7 +933,10 @@ async function openViewModal(id) {
         employeesCache.set(String(user.EmployeeId), user);
         populateViewModal(user);
         openModal('viewModal');
-    } catch (err) { console.error(err); alert('Failed to fetch employee data'); }
+    } catch (err) {
+        console.error(err);
+        showAdminWorkerNotice('Failed to fetch employee data.', 'Unable to Load Employee');
+    }
 }
 
 function populateViewModal(user) {
@@ -712,7 +973,13 @@ document.addEventListener('click', e => {
 
 // ================= CLOSE MODALS =================
 document.querySelectorAll('[data-close-admin-modal]').forEach(btn => {
-    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-admin-modal')));
+    btn.addEventListener('click', () => {
+        const modalId = btn.getAttribute('data-close-admin-modal');
+        if (modalId === 'saveWorkerConfirmModal') {
+            pendingWorkerSave = null;
+        }
+        closeModal(modalId);
+    });
 });
 
 // ================= INITIAL LOAD =================
@@ -732,7 +999,7 @@ document.getElementById('roleFilter')?.addEventListener('change', e => {
 // =============== REMOVE NATIVE REQUIRED ATTRIBUTES ===============
 function removeNativeRequiredAttributes() {
     [
-        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'Password', 'ConfirmPassword'
+        'FirstName', 'LastName', 'Role', 'PhoneNumber', 'Birthday', 'AddPassword', 'AddConfirmPassword'
     ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.removeAttribute('required');

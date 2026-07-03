@@ -20,6 +20,46 @@ let bioIsMobilePagination = false;
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
 let shouldTrackAddBioRequiredHighlights = false;
+let isBioAddSubmitting = false;
+let isBioEditSubmitting = false;
+
+function ensureBioNoticeModal() {
+    let modal = document.getElementById('bioNoticeModal');
+
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'bioNoticeModal';
+    modal.className = 'bio-modal-overlay';
+    modal.innerHTML = `
+        <div class="bio-modal bio-confirm-modal">
+            <div class="bio-modal-header">
+                <h2 id="bioNoticeTitle">Biosecurity Notice</h2>
+                <div class="bio-modal-line"></div>
+            </div>
+            <div class="bio-confirm-body">
+                <p class="bio-form-confirm-text" id="bioNoticeMessage"></p>
+                <div class="bio-modal-actions">
+                    <button type="button" class="bio-btn bio-btn-save" id="bioNoticeOk">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#bioNoticeOk')?.addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.classList.remove('show');
+    });
+
+    return modal;
+}
+
+function showBioNotice(message, title = 'Biosecurity Notice') {
+    const modal = ensureBioNoticeModal();
+    modal.querySelector('#bioNoticeTitle').textContent = title;
+    modal.querySelector('#bioNoticeMessage').textContent = message;
+    modal.classList.add('show');
+}
 
 const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
     'Personnel Biosecurity Logs': [
@@ -39,6 +79,7 @@ const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
         { name: 'ppe', label: 'PPE' },
         { name: 'sanitation', label: 'Sanitation' },
         { name: 'monitored_by', label: 'Monitored By' },
+        { name: 'photo_data', label: 'Visitor Photo' },
     ],
 };
 
@@ -532,6 +573,8 @@ function closeVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (cameraModal) {
         cameraModal.classList.remove('show');
@@ -546,6 +589,16 @@ function closeVisitorCameraModal() {
     if (snapshot) {
         snapshot.style.display = 'none';
     }
+    if (video) {
+        video.style.display = 'block';
+    }
+    if (captureButton) {
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+    }
+    if (useButton) {
+        useButton.disabled = true;
+    }
 
     visitorPhotoDataUrl = null;
     visitorCameraStream = null;
@@ -555,12 +608,13 @@ async function openVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
     const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (!cameraModal || !video || !snapshot || !useButton) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera access is not available in this browser.');
+        showBioNotice('Camera access is not available in this browser.', 'Camera Unavailable');
         return;
     }
 
@@ -568,12 +622,17 @@ async function openVisitorCameraModal() {
         visitorCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = visitorCameraStream;
         video.play();
+        video.style.display = 'block';
         snapshot.style.display = 'none';
+        if (captureButton) {
+            captureButton.textContent = 'Capture';
+            captureButton.dataset.mode = 'capture';
+        }
         useButton.disabled = true;
         cameraModal.classList.add('show');
     } catch (error) {
         console.error('Camera error:', error);
-        alert('Could not access the camera. Please allow camera access or use a supported browser.');
+        showBioNotice('Could not access the camera. Please allow camera access or use a supported browser.', 'Camera Unavailable');
     }
 }
 
@@ -581,9 +640,21 @@ function captureVisitorPhoto() {
     const video = document.getElementById('visitorCameraVideo');
     const canvas = document.getElementById('visitorCameraCanvas');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
     const useButton = document.getElementById('useVisitorPhotoBtn');
 
-    if (!video || !canvas || !snapshot || !useButton) return;
+    if (!video || !canvas || !snapshot || !captureButton || !useButton) return;
+
+    if (captureButton.dataset.mode === 'recapture') {
+        visitorPhotoDataUrl = null;
+        snapshot.style.display = 'none';
+        video.style.display = 'block';
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+        useButton.disabled = true;
+        video.play();
+        return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -594,6 +665,9 @@ function captureVisitorPhoto() {
     visitorPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     snapshot.src = visitorPhotoDataUrl;
     snapshot.style.display = 'block';
+    video.style.display = 'none';
+    captureButton.textContent = 'Recapture';
+    captureButton.dataset.mode = 'recapture';
     useButton.disabled = false;
 }
 
@@ -603,7 +677,7 @@ async function uploadVisitorPhoto() {
     const openCameraButton = document.getElementById('add_open_camera_btn');
 
     if (!visitorPhotoDataUrl) {
-        alert('Please capture a photo first.');
+        showBioNotice('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -646,7 +720,7 @@ async function uploadVisitorPhoto() {
         closeVisitorCameraModal();
     } catch (error) {
         console.error('Error uploading visitor photo:', error);
-        alert('Failed to upload photo. Please try again.');
+        showBioNotice('Failed to upload photo. Please try again.', 'Upload Failed');
         if (status) {
             status.textContent = 'Upload failed. Try again.';
         }
@@ -667,7 +741,7 @@ function attachVisitorPhoto() {
     const status = document.getElementById('add_photo_status');
 
     if (!visitorPhotoDataUrl) {
-        alert('Please capture a photo first.');
+        showBioNotice('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -677,6 +751,12 @@ function attachVisitorPhoto() {
         preview.style.display = 'block';
     }
     if (status) status.textContent = '';
+    preview?.closest('.bio-field')?.classList.remove('has-error');
+
+    const form = document.getElementById('addBioForm');
+    if (!form?.querySelector('.bio-field.has-error')) {
+        clearAddBioFormError();
+    }
 
     // close camera modal but keep photo data for save
     closeVisitorCameraModal();
@@ -737,13 +817,21 @@ function setupEditModal() {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
+            if (isBioEditSubmitting) {
+                return;
+            }
+
             const formData = new FormData(form);
             const logId = logIdInput?.value;
 
             if (!logId) {
-                alert('Invalid log ID');
+                showBioNotice('Invalid log ID.', 'Unable to Update Log');
                 return;
             }
+
+            isBioEditSubmitting = true;
+            const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
             try {
                 const response = await fetch(`/api/manager/biosecurity-logs/${logId}`, {
@@ -768,9 +856,13 @@ function setupEditModal() {
 
                 // Reload logs to show the updated entry
                 loadBiosecurityLogs();
+                showBioNotice('Biosecurity log updated successfully.', 'Log Updated');
             } catch (error) {
                 console.error('Error updating log:', error);
-                alert('Failed to update log. Please try again.');
+                showBioNotice('Failed to update log. Please try again.', 'Unable to Update Log');
+            } finally {
+                isBioEditSubmitting = false;
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }
@@ -817,11 +909,15 @@ function setupAddModal() {
         clearAddBioFormError();
 
         const photoInput = document.getElementById('add_photo_url');
+        const photoDataInput = document.getElementById('add_photo_data');
         const photoPreview = document.getElementById('add_photo_preview');
         const photoStatus = document.getElementById('add_photo_status');
 
         if (photoInput) {
             photoInput.value = '';
+        }
+        if (photoDataInput) {
+            photoDataInput.value = '';
         }
         if (photoPreview) {
             photoPreview.style.display = 'none';
@@ -895,6 +991,10 @@ function setupAddModal() {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
+            if (isBioAddSubmitting) {
+                return;
+            }
+
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
             const missingFields = validateAddBioRequiredFields(form, payload);
@@ -903,6 +1003,10 @@ function setupAddModal() {
                 showAddBioFormError(formError, missingFields);
                 return;
             }
+
+            isBioAddSubmitting = true;
+            const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
             try {
                 const response = await fetch('/api/manager/biosecurity-logs', {
@@ -928,9 +1032,13 @@ function setupAddModal() {
 
                 // Reload logs to show the new entry
                 loadBiosecurityLogs();
+                showBioNotice('Biosecurity log saved successfully.', 'Log Saved');
             } catch (error) {
                 console.error('Error saving log:', error);
                 showAddBioFormError(formError, 'Failed to save log. Please try again.');
+            } finally {
+                isBioAddSubmitting = false;
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }
@@ -1059,6 +1167,22 @@ function markMissingAddBioRequiredFields(missingFields) {
     missingFields.forEach((field) => {
         getAddBioRequiredFieldWrapper(field)?.classList.add('has-error');
     });
+
+    const firstMissingField = missingFields[0];
+    if (firstMissingField?.name === 'photo_data') {
+        document.getElementById('add_open_camera_btn')?.focus();
+        return;
+    }
+
+    const form = document.getElementById('addBioForm');
+    form?.elements[firstMissingField?.name]?.focus();
+}
+
+function syncAddBioButtonVisibility() {
+    const openBtn = document.getElementById('openAddBioModal');
+    if (!openBtn) return;
+
+    openBtn.hidden = state.selectedCategory !== 'Visitors';
 }
 
 function bindEvents() {
@@ -1073,9 +1197,12 @@ function bindEvents() {
             categoryButtons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
+            syncAddBioButtonVisibility();
             renderCurrentTable();
         });
     });
+
+    syncAddBioButtonVisibility();
 
     // Add event listeners for search and date filters
     const nameSearchInput = document.getElementById('bioNameSearch');
@@ -1122,7 +1249,7 @@ function setupBioPaginationResize() {
 
 async function loadBiosecurityLogs() {
     try {
-        const response = await fetch('/api/manager/biosecurity-logs', {
+        const response = await fetch('/api/manager/biosecurity-logs?categories=Personnel%20Biosecurity%20Logs,Visitors', {
             headers: {
                 Accept: 'application/json',
             },

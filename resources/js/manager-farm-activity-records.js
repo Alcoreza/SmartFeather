@@ -632,7 +632,7 @@ async function loadChickPlacementRecords() {
 
 function formatHouseNumber(value) {
     if (!value) return '--';
-    return String(value).startsWith('House ') ? value : `House ${value}`;
+    return String(value);
 }
 
 function renderLoading() {

@@ -560,6 +560,12 @@
     margin-bottom: 3px;
 }
 
+.resource-value.no-current-reading {
+    color: #667069;
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
 .feed-text {
     color: #be8539;
 }
@@ -1464,6 +1470,12 @@
     font-weight: 800;
 }
 
+.resource-value.no-current-reading {
+    color: var(--admin-text-soft);
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
 @media (max-width: 1180px) {
     .houses-workspace,
     .resource-grid {
@@ -1598,6 +1610,12 @@
     line-height: 1;
 }
 
+.sensor-reading-value.no-current-reading {
+    color: var(--admin-text-soft);
+    font-size: 1.15rem;
+    line-height: 1.15;
+}
+
 .sensor-helper {
     color: var(--admin-text-soft);
     font-size: 0.86rem;
@@ -1610,6 +1628,13 @@
 
 .ammonia-stat .sensor-reading-value {
     color: #17643a;
+}
+
+.temperature-stat .sensor-reading-value.no-current-reading,
+.ammonia-stat .sensor-reading-value.no-current-reading {
+    color: var(--admin-text-soft);
+    font-size: 1.15rem;
+    line-height: 1.15;
 }
 
 .info-panel {

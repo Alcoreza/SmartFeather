@@ -20,7 +20,7 @@
 
             <div class="modal-row">
                 <div class="modal-group">
-                    <label for="editHouseName">House Number</label>
+                    <label for="editHouseName">House Name</label>
                     <input type="text" id="editHouseName">
                 </div>
 

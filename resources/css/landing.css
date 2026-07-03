@@ -197,7 +197,7 @@ body {
 .landing-hero h1 {
     max-width: 16ch;
     margin: 0;
-    font-size: clamp(3.4rem, 8.4vw, 10.4rem);
+    font-size: clamp(2.8rem, 6.4vw, 7.8rem);
     font-weight: 800;
     line-height: 0.9;
     letter-spacing: 0;
@@ -657,7 +657,7 @@ body {
 .landing-section-copy h2,
 .landing-services-copy h2 {
     margin: 0;
-    font-size: clamp(2.1rem, 4vw, 4.2rem);
+    font-size: clamp(1.9rem, 3.35vw, 3.5rem);
     font-weight: 800;
     line-height: 0.98;
     letter-spacing: 0;
@@ -773,7 +773,7 @@ body {
 
 .landing-specialties > .landing-section-copy h2 {
     max-width: 18ch;
-    font-size: clamp(2rem, 3.4vw, 3.5rem);
+    font-size: clamp(1.8rem, 2.9vw, 3rem);
     line-height: 1.02;
     overflow-wrap: normal;
     word-break: normal;
@@ -1785,7 +1785,7 @@ body {
 
     .landing-hero h1 {
         max-width: min(100%, 14ch);
-        font-size: clamp(2.45rem, 10.6vw, 3.55rem);
+        font-size: clamp(2.1rem, 8.6vw, 2.9rem);
         line-height: 1;
     }
 
@@ -2002,7 +2002,7 @@ body {
 
     .landing-hero h1 {
         max-width: min(100%, 14ch);
-        font-size: clamp(2rem, 9.8vw, 2.55rem);
+        font-size: clamp(1.72rem, 8vw, 2.15rem);
         line-height: 1.04;
     }
 
@@ -2048,7 +2048,7 @@ body {
     .landing-section-copy h2,
     .landing-services-copy h2,
     .landing-specialties > .landing-section-copy h2 {
-        font-size: clamp(1.55rem, 8.5vw, 2.15rem);
+        font-size: clamp(1.42rem, 7.5vw, 1.95rem);
         line-height: 1.08;
     }
 

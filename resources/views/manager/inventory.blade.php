@@ -47,6 +47,14 @@
                     <button
                         type="button"
                         class="inventory-rec-btn"
+                        id="openGenerateAnalysisModal"
+                    >
+                        Generate Analysis
+                    </button>
+
+                    <button
+                        type="button"
+                        class="inventory-rec-btn"
                         id="openArchiveInventoryModal"
                     >
                         Archive
@@ -216,6 +224,7 @@
 
 @include('includes.manager-edit-stock-modal')
 @include('includes.manager-archive-inventory-modal')
+@include('includes.manager-generate-analysis-modal')
 @include('includes.manager-create-inventory-modal')
 @include('includes.manager-profile-modal')
 

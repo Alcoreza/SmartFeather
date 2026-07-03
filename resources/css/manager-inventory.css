@@ -791,6 +791,27 @@
     color: #116b3f;
 }
 
+.inventory-analysis-result {
+    display: grid;
+    gap: 12px;
+}
+
+.inventory-analysis-result[hidden] {
+    display: none;
+}
+
+.inventory-analysis-insight {
+    padding: 12px 14px;
+    border: 1px solid rgba(23, 100, 58, 0.16);
+    border-radius: 14px;
+    background: #ffffff;
+    color: #1f2f26;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.45;
+    white-space: pre-line;
+}
+
 .inventory-modal-actions {
     display: flex;
     justify-content: flex-end;

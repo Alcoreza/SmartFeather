@@ -142,9 +142,134 @@ async function apiRequest(url, method, data = null) {
 document.addEventListener("DOMContentLoaded", () => {
     setupCreateInventoryTypeModal();
     setupInventoryModals();
+    setupGenerateAnalysisModal();
     setupProfileModal();
     setupInventoryStockSync();
 });
+
+function setupGenerateAnalysisModal() {
+    const modal = document.getElementById("generateAnalysisModal");
+    const openBtn = document.getElementById("openGenerateAnalysisModal");
+    const closeBtn = document.getElementById("closeGenerateAnalysisModal");
+    const form = document.getElementById("generateAnalysisForm");
+    const houseSelect = document.getElementById("analysisHouseSelect");
+    const message = document.getElementById("generateAnalysisMessage");
+    const result = document.getElementById("generateAnalysisResult");
+    const insight = document.getElementById("generateAnalysisInsight");
+    const submitBtn = document.getElementById("submitGenerateAnalysis");
+
+    if (!modal || !openBtn || openBtn.dataset.analysisModalReady === "true") {
+        return;
+    }
+
+    openBtn.dataset.analysisModalReady = "true";
+
+    function openModal() {
+        if (houseSelect) {
+            houseSelect.value = "";
+        }
+
+        clearResult();
+        modal?.classList.add("show");
+    }
+
+    function closeModal() {
+        modal?.classList.remove("show");
+    }
+
+    function clearResult() {
+        if (message) {
+            message.textContent = "";
+            message.className = "inventory-modal-message";
+        }
+
+        if (result) {
+            result.hidden = true;
+        }
+
+        if (insight) {
+            insight.textContent = "";
+        }
+    }
+
+    function setMessage(text, type = "error") {
+        if (!message) return;
+
+        message.textContent = text || "";
+        message.className = text ? `inventory-modal-message ${type}` : "inventory-modal-message";
+    }
+
+    openBtn?.addEventListener("click", openModal);
+    closeBtn?.addEventListener("click", closeModal);
+    houseSelect?.addEventListener("change", clearResult);
+
+    form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const houseId = houseSelect?.value || "";
+
+        if (!houseId) {
+            setMessage("Please select a house first.", "error");
+            return;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Generating...";
+        }
+
+        setMessage("Generating analysis...", "success");
+
+        try {
+            const response = await fetch("/api/manager/inventory/analysis", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+                },
+                body: JSON.stringify({ house_id: houseId }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                setMessage(data.message || "Unable to generate analysis.", "error");
+                return;
+            }
+
+            if (insight) {
+                insight.textContent = data.insight || "No insight generated.";
+            }
+
+            if (result) {
+                result.hidden = false;
+            }
+
+            setMessage(data.used_ai ? "AI insight generated." : "Analysis generated from system rules.", "success");
+        } catch (error) {
+            console.error(error);
+            setMessage("Something went wrong while generating analysis.", "error");
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Generate";
+            }
+        }
+    });
+
+    modal?.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal?.classList.contains("show")) {
+            closeModal();
+        }
+    });
+}
 
 function setupInventoryStockSync() {
     const entries = document.querySelectorAll(".inventory-entry[data-id]");

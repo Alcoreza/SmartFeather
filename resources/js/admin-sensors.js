@@ -1148,6 +1148,7 @@ function bindAdminThresholdButtons() {
                 await apiRequest("/api/admin/sensors/thresholds", "PUT", payload);
                 closeAdminSensorModal("adminSensorThresholdModal");
                 await renderAdminSensorSections();
+                await showAdminSensorNoticeModal("Sensor thresholds saved successfully.", "Thresholds Saved");
             } catch (error) {
                 console.error("Failed to save sensor thresholds.", error);
                 await showAdminSensorNoticeModal(`Failed to save sensor thresholds: ${error.message}`, "Unable to Save Thresholds");
@@ -1205,6 +1206,7 @@ function bindAdminDeleteConfirmButton() {
             closeAdminSensorModal("adminSensorDeleteModal");
             if (deleteIdInput) deleteIdInput.value = "";
             await renderAdminSensorSections();
+            await showAdminSensorNoticeModal("Sensor deleted successfully.", "Sensor Deleted");
         } catch (error) {
             showAdminSensorDeleteError(error.message || "Failed to delete sensor.");
             console.error("Failed to delete sensor.", error);
@@ -1295,6 +1297,7 @@ function setupAdminSensorAddModal() {
             clearAdminSensorAddFormError();
             setupAdminSensorSelectPlaceholderState();
             await renderAdminSensorSections();
+            await showAdminSensorNoticeModal("Sensor created successfully.", "Sensor Created");
         } catch (error) {
             closeAdminSensorModal("adminSensorAddConfirmModal");
             showAdminSensorAddFormError(error.message || "Failed to create sensor.");
@@ -1357,6 +1360,7 @@ function setupAdminSensorEditModal() {
             closeAdminSensorModal("adminSensorEditModal");
             clearAdminSensorEditFormError();
             await renderAdminSensorSections();
+            await showAdminSensorNoticeModal("Sensor changes saved successfully.", "Sensor Updated");
         } catch (error) {
             showAdminSensorEditFormError(error.message || "Failed to update sensor.");
             console.error("Failed to update sensor.", error);
@@ -1594,6 +1598,7 @@ function bindAdminStatusConfirmButton() {
 
             closeAdminSensorModal("adminSensorStatusModal");
             await renderAdminSensorSections();
+            await showAdminSensorNoticeModal("Sensor status updated successfully.", "Status Updated");
         } catch (error) {
             console.error("Failed to update sensor status.", error);
             await showAdminSensorNoticeModal(`Failed to update sensor status: ${error.message}`, "Unable to Update Status");

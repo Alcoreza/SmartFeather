@@ -3,24 +3,60 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pen;
+use App\Models\Employee;
 use App\Models\WeightSamplingLog;
 use App\Models\FeedRefillRecord;
 use App\Models\VitaminRefillRecord;
 use App\Models\CleaningLog;
 use App\Models\SensorInspectionLog;
 use App\Models\FlockBatch;
+use App\Models\House;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class FarmActivityController extends Controller
 {
+    public function filterOptions()
+    {
+        return response()->json(Cache::remember('farm_activity_filter_options', now()->addSeconds(30), function () {
+            $houses = House::query()
+                ->whereNull('archived_at')
+                ->orderBy('house_number', 'asc')
+                ->get()
+                ->map(function (House $house) {
+                    return [
+                        'id' => $house->id,
+                        'number' => $house->house_number,
+                    ];
+                });
+
+            $flockmen = Employee::where('Role', 'Flockman')
+                ->whereRaw('is_active is true')
+                ->orderBy('EmployeeId', 'asc')
+                ->get()
+                ->map(function (Employee $employee) {
+                    return [
+                        'id' => $employee->EmployeeId,
+                        'name' => $this->employeeName($employee),
+                    ];
+                });
+
+            return [
+                'houses' => $houses,
+                'flockmen' => $flockmen,
+            ];
+        }));
+    }
+
     /**
      * Get Hatch and Mortality Check records from PopulationRecord model
      */
-    public function pens()
+    public function pens(Request $request)
     {
-        return response()->json(Cache::remember('farm_activity:pens', now()->addSeconds(30), function () {
+        $filters = $this->getDateFilters($request);
+
+        return response()->json(Cache::remember($this->cacheKey('pens', $filters), now()->addSeconds(30), function () use ($filters) {
         $records = DB::table('population_record as pr')
             ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
             ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
@@ -38,8 +74,12 @@ class FarmActivityController extends Controller
                 'u.Suffix'
             )
             ->orderByDesc('pr.recorded_at')
-            ->orderByDesc('pr.id')
-            ->get();
+            ->orderByDesc('pr.id');
+
+        $this->applyDateRange($records, 'pr.recorded_at', $filters);
+        $this->applyHouseFilter($records, 'h.id', $filters);
+        $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
+        $records = $records->get();
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -68,9 +108,11 @@ class FarmActivityController extends Controller
     /**
      * Get Weight Monitoring records from WeightSamplingLog model
      */
-    public function weightSamplingLogs()
+    public function weightSamplingLogs(Request $request)
     {
-        return response()->json(Cache::remember('farm_activity:weight_sampling', now()->addSeconds(30), function () {
+        $filters = $this->getDateFilters($request);
+
+        return response()->json(Cache::remember($this->cacheKey('weight_sampling', $filters), now()->addSeconds(30), function () use ($filters) {
         $records = DB::table('weight_sampling_logs as w')
             ->leftJoin('tasks as t', 't.taskid', '=', 'w.task_id')
             ->leftJoin('user as u', 'u.EmployeeId', '=', 't.user_employeeid')
@@ -88,8 +130,12 @@ class FarmActivityController extends Controller
                 'u.Suffix'
             )
             ->orderByDesc('w.date')
-            ->orderByDesc('w.id')
-            ->get();
+            ->orderByDesc('w.id');
+
+        $this->applyDateRange($records, 'w.date', $filters);
+        $this->applyHouseFilter($records, 'w.house_id', $filters);
+        $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
+        $records = $records->get();
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -120,9 +166,11 @@ class FarmActivityController extends Controller
     /**
      * Get Feed Replenishment records from FeedRefillRecord model
      */
-    public function feedRefillRecords()
+    public function feedRefillRecords(Request $request)
     {
-        return response()->json(Cache::remember('farm_activity:feed_refill', now()->addSeconds(30), function () {
+        $filters = $this->getDateFilters($request);
+
+        return response()->json(Cache::remember($this->cacheKey('feed_refill', $filters), now()->addSeconds(30), function () use ($filters) {
         $records = DB::table('feed_refill_records as r')
             ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
             ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
@@ -141,8 +189,12 @@ class FarmActivityController extends Controller
                 'u.LastName',
                 'u.Suffix'
             )
-            ->orderByDesc('r.recorded_at')
-            ->get();
+            ->orderByDesc('r.recorded_at');
+
+        $this->applyDateRange($records, 'r.recorded_at', $filters);
+        $this->applyHouseFilter($records, 'r.house_id', $filters);
+        $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
+        $records = $records->get();
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -172,9 +224,11 @@ class FarmActivityController extends Controller
     /**
      * Get Vitamin Supplementation records from VitaminRefillRecord model
      */
-    public function vitaminRefillRecords()
+    public function vitaminRefillRecords(Request $request)
     {
-        return response()->json(Cache::remember('farm_activity:vitamin_refill', now()->addSeconds(30), function () {
+        $filters = $this->getDateFilters($request);
+
+        return response()->json(Cache::remember($this->cacheKey('vitamin_refill', $filters), now()->addSeconds(30), function () use ($filters) {
         $records = DB::table('vitamin_refill_records as r')
             ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
             ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
@@ -192,8 +246,12 @@ class FarmActivityController extends Controller
                 'u.LastName',
                 'u.Suffix'
             )
-            ->orderByDesc('r.recorded_at')
-            ->get();
+            ->orderByDesc('r.recorded_at');
+
+        $this->applyDateRange($records, 'r.recorded_at', $filters);
+        $this->applyHouseFilter($records, 'r.house_id', $filters);
+        $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
+        $records = $records->get();
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -222,10 +280,13 @@ class FarmActivityController extends Controller
     /**
      * Get Cleaning Logs (Pen Disinfection and Pen Cleaning)
      */
-    public function cleaningLogs()
+    public function cleaningLogs(Request $request)
     {
-        $records = Cache::remember('farm_activity:cleaning', now()->addSeconds(30), function () {
-            return DB::table('cleaning_logs as c')
+        $filters = $this->getDateFilters($request);
+
+        $records = Cache::remember($this->cacheKey('cleaning', $filters), now()->addSeconds(30), function () use ($filters) {
+            $query = DB::table('cleaning_logs as c')
+            ->leftJoin('tasks as t', 't.taskid', '=', 'c.task_id')
             ->whereIn('c.activity', ['Pen Disinfection', 'Pen Cleaning'])
             ->select(
                 'c.house',
@@ -237,8 +298,13 @@ class FarmActivityController extends Controller
                 'c.time'
             )
             ->orderByDesc('c.date')
-            ->orderByDesc('c.id')
-            ->get();
+            ->orderByDesc('c.id');
+
+            $this->applyDateRange($query, 'c.date', $filters);
+            $this->applyHouseFilter($query, 'c.house_id', $filters);
+            $this->applyCleaningFlockmanFilter($query, $filters);
+
+            return $query->get();
         });
 
         return response()->json(['records' => $records]);
@@ -247,10 +313,12 @@ class FarmActivityController extends Controller
     /**
      * Get Sensor Inspection logs - OPTIMIZED with proper joins
      */
-    public function sensorInspectionLogs()
+    public function sensorInspectionLogs(Request $request)
     {
+        $filters = $this->getDateFilters($request);
+
         try {
-            return response()->json(Cache::remember('farm_activity:sensor_inspection', now()->addSeconds(30), function () {
+            return response()->json(Cache::remember($this->cacheKey('sensor_inspection', $filters), now()->addSeconds(30), function () use ($filters) {
             $records = DB::table('sensor_inspection_logs as sil')
                 ->leftJoin('house as h', 'h.id', '=', 'sil.house_id')
                 ->leftJoin('pen as p', 'p.id', '=', 'sil.pen_id')
@@ -269,8 +337,12 @@ class FarmActivityController extends Controller
                     'sil.placement_secure',
                     'sil.recorded_at'
                 )
-                ->orderByDesc('sil.recorded_at')
-                ->get();
+                ->orderByDesc('sil.recorded_at');
+
+            $this->applyDateRange($records, 'sil.recorded_at', $filters);
+            $this->applyHouseFilter($records, 'sil.house_id', $filters);
+            $this->applyFlockmanFilter($records, 'sil.employee_id', $filters);
+            $records = $records->get();
 
             return ['records' => $records->map(function ($record) {
                 // Format employee name from FirstName, MiddleName, LastName, Suffix
@@ -309,9 +381,11 @@ class FarmActivityController extends Controller
     /**
      * Get Flock Batches (Chick Placement)
      */
-    public function flockBatches()
+    public function flockBatches(Request $request)
     {
-        return response()->json(Cache::remember('farm_activity:flock_batches', now()->addSeconds(30), function () {
+        $filters = $this->getDateFilters($request);
+
+        return response()->json(Cache::remember($this->cacheKey('flock_batches', $filters), now()->addSeconds(30), function () use ($filters) {
         $records = DB::table('flock_batches as b')
             ->leftJoin('house as h', 'h.id', '=', 'b.house_id')
             ->leftJoin('pen as p', 'p.id', '=', 'b.pen_id')
@@ -329,8 +403,12 @@ class FarmActivityController extends Controller
                 'u.LastName',
                 'u.Suffix'
             )
-            ->orderByDesc('b.started_at')
-            ->get();
+            ->orderByDesc('b.started_at');
+
+        $this->applyDateRange($records, 'b.started_at', $filters);
+        $this->applyHouseFilter($records, 'b.house_id', $filters);
+        $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
+        $records = $records->get();
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -355,5 +433,77 @@ class FarmActivityController extends Controller
             ];
         })];
         }));
+    }
+
+    private function getDateFilters(Request $request): array
+    {
+        return [
+            'from_date' => $request->query('from_date', ''),
+            'to_date' => $request->query('to_date', ''),
+            'house_id' => $request->query('house_id', ''),
+            'flockman_id' => $request->query('flockman_id', ''),
+        ];
+    }
+
+    private function cacheKey(string $recordType, array $filters): string
+    {
+        return 'farm_activity:' . $recordType . ':' . md5(json_encode($filters));
+    }
+
+    private function applyDateRange($query, string $column, array $filters): void
+    {
+        if (!empty($filters['from_date'])) {
+            $query->whereDate($column, '>=', $filters['from_date']);
+        }
+
+        if (!empty($filters['to_date'])) {
+            $query->whereDate($column, '<=', $filters['to_date']);
+        }
+    }
+
+    private function applyHouseFilter($query, string $column, array $filters): void
+    {
+        if (!empty($filters['house_id'])) {
+            $query->where($column, (int) $filters['house_id']);
+        }
+    }
+
+    private function applyFlockmanFilter($query, string $column, array $filters): void
+    {
+        if (!empty($filters['flockman_id'])) {
+            $query->where($column, (int) $filters['flockman_id']);
+        }
+    }
+
+    private function applyCleaningFlockmanFilter($query, array $filters): void
+    {
+        if (empty($filters['flockman_id'])) {
+            return;
+        }
+
+        $flockmanId = (int) $filters['flockman_id'];
+        $flockman = Employee::find($flockmanId);
+        $flockmanName = $flockman ? $this->employeeName($flockman) : '';
+
+        $query->where(function ($query) use ($flockmanId, $flockmanName) {
+            $query->where('t.user_employeeid', $flockmanId);
+
+            if ($flockmanName !== '') {
+                $query->orWhere('c.performed_by', $flockmanName);
+            }
+        });
+    }
+
+    private function employeeName(Employee $employee): string
+    {
+        $fullName = trim(sprintf(
+            '%s %s %s %s',
+            $employee->FirstName ?? '',
+            $employee->MiddleName ?? '',
+            $employee->LastName ?? '',
+            $employee->Suffix ?? '',
+        ));
+
+        return $fullName ?: 'Unknown';
     }
 }

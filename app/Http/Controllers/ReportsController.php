@@ -6,6 +6,7 @@ use App\Models\FeedRefillRecord;
 use App\Models\House;
 use App\Models\Pen;
 use App\Models\PopulationRecord;
+use App\Models\User;
 use App\Models\WeightSamplingLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -238,7 +239,34 @@ class ReportsController extends Controller
             'reportData' => $reportData,
             'periodLabel' => $periodLabel,
             'generatedAt' => now()->format('F d, Y h:i A'),
+            'exportedBy' => $this->getExporterDetails(),
         ]);
+    }
+
+    private function getExporterDetails(): array
+    {
+        $user = session('user_id')
+            ? User::find(session('user_id'))
+            : null;
+
+        if (!$user) {
+            return [
+                'name' => session('user_name', '--'),
+                'role' => session('role', '--'),
+            ];
+        }
+
+        $name = trim(collect([
+            $user->FirstName,
+            $user->MiddleName,
+            $user->LastName,
+            $user->Suffix,
+        ])->filter()->implode(' '));
+
+        return [
+            'name' => $name !== '' ? $name : ($user->Username ?? '--'),
+            'role' => $user->Role ?? session('role', '--'),
+        ];
     }
 
     private function getReportByType(string $type, ?string $startDate, ?string $endDate)

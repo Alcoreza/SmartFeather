@@ -960,6 +960,7 @@ Route::middleware(['web', 'auth.session', 'check.role:Manager', 'prevent.cache']
 Route::get('/api/manager/reports', [ReportsController::class, 'index'])->middleware(['auth.session', 'check.role:Manager']);
 
 Route::get('/api/manager/farm-activity/pens', [FarmActivityController::class, 'pens'])->middleware(['auth.session', 'check.role:Manager']);
+Route::get('/api/manager/farm-activity/filter-options', [FarmActivityController::class, 'filterOptions'])->middleware(['auth.session', 'check.role:Manager']);
 Route::get('/api/manager/farm-activity/weight-sampling-logs', [FarmActivityController::class, 'weightSamplingLogs'])->middleware(['auth.session', 'check.role:Manager']);
 Route::get('/api/manager/farm-activity/feed-refill-records', [FarmActivityController::class, 'feedRefillRecords'])->middleware(['auth.session', 'check.role:Manager']);
 Route::get('/api/manager/farm-activity/vitamin-refill-records', [FarmActivityController::class, 'vitaminRefillRecords'])->middleware(['auth.session', 'check.role:Manager']);

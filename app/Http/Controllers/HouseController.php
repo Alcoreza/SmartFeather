@@ -6,6 +6,7 @@ use App\Models\House;
 use App\Models\Pen;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -111,6 +112,7 @@ class HouseController extends Controller
 
             // Reload with relationships
             $house->load('pens');
+            $this->clearFarmActivityFilterOptions();
 
             return response()->json([
                 'success' => true,
@@ -209,6 +211,7 @@ class HouseController extends Controller
 
             $house->update($validated);
             $house->load('pens');
+            $this->clearFarmActivityFilterOptions();
 
             return response()->json([
                 'success' => true,
@@ -285,6 +288,7 @@ class HouseController extends Controller
                         'updated_at' => $archivedAt,
                     ]);
             });
+            $this->clearFarmActivityFilterOptions();
 
             return response()->json([
                 'success' => true,
@@ -327,6 +331,7 @@ class HouseController extends Controller
                 }
 
                 DB::commit();
+                $this->clearFarmActivityFilterOptions();
 
                 return response()->json([
                     'success' => true,
@@ -594,6 +599,11 @@ class HouseController extends Controller
                 'message' => 'Error updating pen: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function clearFarmActivityFilterOptions(): void
+    {
+        Cache::forget('farm_activity_filter_options');
     }
 
     private function attachLatestSensorReadings($houses): void

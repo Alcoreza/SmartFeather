@@ -46,6 +46,7 @@ const reportPagination = {};
 let currentReportData = {};
 let reportsLastPages = {};
 let reportsPaginationBound = false;
+let currentUserProfile = null;
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -54,6 +55,46 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function formatUserFullName(user) {
+    return [
+        user?.FirstName,
+        user?.MiddleName,
+        user?.LastName,
+        user?.Suffix,
+    ].map((part) => String(part || '').trim()).filter(Boolean).join(' ');
+}
+
+async function getCurrentUserProfile() {
+    if (currentUserProfile) {
+        return currentUserProfile;
+    }
+
+    const response = await fetch('/api/user');
+    if (!response.ok) {
+        throw new Error('Failed to fetch user info');
+    }
+
+    currentUserProfile = await response.json();
+    return currentUserProfile;
+}
+
+async function getExporterInfo() {
+    try {
+        const user = await getCurrentUserProfile();
+        const name = formatUserFullName(user) || user.Username || '--';
+
+        return {
+            name,
+            role: user.Role || '--',
+        };
+    } catch (error) {
+        return {
+            name: '--',
+            role: '--',
+        };
+    }
 }
 
 function renderReportTable(columns, rows) {
@@ -393,9 +434,7 @@ function reRenderReportCard(cardKey) {
 
 async function populateProfileModal() {
     try {
-        const response = await fetch('/api/user');
-        if (!response.ok) throw new Error('Failed to fetch user info');
-        const user = await response.json();
+        const user = await getCurrentUserProfile();
         document.getElementById('profileFirstName').value = user.FirstName || '';
         document.getElementById('profileMiddleName').value = user.MiddleName || '';
         document.getElementById('profileLastName').value = user.LastName || '';
@@ -492,13 +531,17 @@ function generateCsvExport() {
     link.click();
 }
 
-function generatePdfExport() {
+async function generatePdfExport() {
     const fromDate = document.getElementById('reportsFromDate')?.value || 'All Dates';
     const toDate = document.getElementById('reportsToDate')?.value || 'All Dates';
     const house = document.getElementById('reportsHouse')?.value || 'All Houses';
     const feedConsumed = document.getElementById('summaryFeedConsumed')?.textContent || '--';
     const mortalities = document.getElementById('summaryMortalities')?.textContent || '--';
     const weightStatus = document.getElementById('summaryWeightStatus')?.textContent || '--';
+    const printWindow = window.open('', '', 'width=900,height=700');
+    if (!printWindow) return;
+
+    const exporter = await getExporterInfo();
 
     let htmlContent = `
         <!DOCTYPE html>
@@ -534,8 +577,10 @@ function generatePdfExport() {
                 <h1>📊 Farm Status Report</h1>
                 <div class="header-info">
                     <div><strong>Generated:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
-                    <div><strong>Date Range:</strong> ${fromDate} to ${toDate}</div>
-                    <div><strong>House:</strong> ${house}</div>
+                    <div><strong>Exported By:</strong> ${escapeHtml(exporter.name)}</div>
+                    <div><strong>Role:</strong> ${escapeHtml(exporter.role)}</div>
+                    <div><strong>Date Range:</strong> ${escapeHtml(fromDate)} to ${escapeHtml(toDate)}</div>
+                    <div><strong>House:</strong> ${escapeHtml(house)}</div>
                     <div><strong>Report Type:</strong> Comprehensive</div>
                 </div>
             </div>
@@ -592,7 +637,6 @@ function generatePdfExport() {
         </html>
     `;
 
-    const printWindow = window.open('', '', 'width=900,height=700');
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     printWindow.print();
@@ -636,8 +680,8 @@ function setupExportModal() {
         pdfBtn.addEventListener('click', () => {
             setSelectedExportFormat(pdfBtn, [csvBtn]);
 
-            setTimeout(() => {
-                generatePdfExport();
+            setTimeout(async () => {
+                await generatePdfExport();
                 closeModal();
             }, 140);
         });

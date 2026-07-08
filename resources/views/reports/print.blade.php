@@ -60,6 +60,8 @@
 
     <div class="meta">
         <div><strong>Generated At:</strong> {{ $generatedAt }}</div>
+        <div><strong>Exported By:</strong> {{ $exportedBy['name'] ?? '--' }}</div>
+        <div><strong>Role:</strong> {{ $exportedBy['role'] ?? '--' }}</div>
         <div><strong>Reporting Period:</strong> {{ $periodLabel }}</div>
     </div>
 

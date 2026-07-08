@@ -149,6 +149,9 @@ const FARM_RECORD_CONFIG = {
 };
 
 const farmRecordFilterSelect = document.getElementById('farmRecordTypeFilter');
+const farmRecordHouseFilter = document.getElementById('farmRecordHouseFilter');
+const farmRecordFlockmanFilter = document.getElementById('farmRecordFlockmanFilter');
+const farmRecordsFilterForm = document.getElementById('farmRecordsFilterForm');
 const farmRecordContent = document.getElementById('farmRecordContent');
 
 function escapeHtml(value) {
@@ -523,8 +526,55 @@ async function fetchJson(url) {
     return response.json();
 }
 
+function populateFarmActivitySelect(selectElement, options, placeholder) {
+    if (!selectElement) return;
+
+    const currentValue = selectElement.value;
+    const optionHtml = (Array.isArray(options) ? options : []).map((option) => {
+        const value = option.id ?? '';
+        const label = option.name ?? option.number ?? value;
+
+        return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+    }).join('');
+
+    selectElement.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${optionHtml}`;
+
+    if ([...selectElement.options].some((option) => option.value === currentValue)) {
+        selectElement.value = currentValue;
+    }
+}
+
+async function loadFarmActivityFilterOptions() {
+    try {
+        const result = await fetchJson('/api/manager/farm-activity/filter-options');
+
+        populateFarmActivitySelect(farmRecordHouseFilter, result.houses, 'All Houses');
+        populateFarmActivitySelect(farmRecordFlockmanFilter, result.flockmen, 'All Flockmen');
+    } catch (error) {
+        console.error('Failed to load farm activity filter options:', error);
+    }
+}
+
+function buildFarmActivityUrl(path) {
+    const params = new URLSearchParams();
+
+    if (farmRecordsFilterForm) {
+        const fields = new FormData(farmRecordsFilterForm);
+
+        fields.forEach((value, key) => {
+            if (key === 'activity_type') return;
+
+            if (String(value || '').trim()) {
+                params.append(key, value);
+            }
+        });
+    }
+
+    return params.toString() ? `${path}?${params.toString()}` : path;
+}
+
 async function loadHatchMortalityRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/pens');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/pens'));
 
     return (Array.isArray(result.records) ? result.records : []).map((record) => ({
         ...record,
@@ -536,7 +586,7 @@ async function loadHatchMortalityRecords() {
 }
 
 async function loadWeightMonitoringRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/weight-sampling-logs');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/weight-sampling-logs'));
 
     return (Array.isArray(result.records) ? result.records : []).map((record) => ({
         ...record,
@@ -545,7 +595,7 @@ async function loadWeightMonitoringRecords() {
 }
 
 async function loadFeedReplenishmentRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/feed-refill-records');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/feed-refill-records'));
 
     return (Array.isArray(result.records) ? result.records : []).map((record) => ({
         ...record,
@@ -555,7 +605,7 @@ async function loadFeedReplenishmentRecords() {
 }
 
 async function loadVitaminSupplementationRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/vitamin-refill-records');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/vitamin-refill-records'));
 
     return (Array.isArray(result.records) ? result.records : []).map((record) => ({
         ...record,
@@ -565,7 +615,7 @@ async function loadVitaminSupplementationRecords() {
 }
 
 async function loadSensorMaintenanceRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/sensor-inspection-logs');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/sensor-inspection-logs'));
 
     return (Array.isArray(result.records) ? result.records : []).map((record) => ({
         ...record,
@@ -583,7 +633,7 @@ async function loadSensorMaintenanceRecords() {
 }
 
 async function loadBiosecurityRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/cleaning-logs');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/cleaning-logs'));
     return Array.isArray(result.records) ? result.records : [];
 }
 
@@ -620,7 +670,7 @@ async function loadPenCleaningRecords() {
 }
 
 async function loadChickPlacementRecords() {
-    const result = await fetchJson('/api/manager/farm-activity/flock-batches');
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/flock-batches'));
 
     return (Array.isArray(result.records) ? result.records : []).map((record) => ({
         ...record,
@@ -668,10 +718,15 @@ async function loadCurrentRecord() {
 }
 
 function bindFarmRecordEvents() {
-    if (!farmRecordFilterSelect) return;
-
-    farmRecordFilterSelect.addEventListener('change', (event) => {
+    farmRecordFilterSelect?.addEventListener('change', (event) => {
         farmRecordState.selectedRecord = event.target.value;
+        farmActivityPagination = {};
+        currentFarmActivityData = {};
+        loadCurrentRecord();
+    });
+
+    farmRecordsFilterForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
         farmActivityPagination = {};
         currentFarmActivityData = {};
         loadCurrentRecord();
@@ -681,5 +736,6 @@ function bindFarmRecordEvents() {
 document.addEventListener('DOMContentLoaded', () => {
     bindFarmRecordEvents();
     setupFarmActivityPagination();
+    loadFarmActivityFilterOptions();
     loadCurrentRecord();
 });

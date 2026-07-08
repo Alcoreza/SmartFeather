@@ -766,6 +766,7 @@ function setupManagerTaskModals() {
             if (saved) {
                 taskPendingEdit = null;
                 closeTaskModal("confirmEditTaskModal");
+                showTaskNoticeModal("Task changes saved successfully.", "Task Updated");
             }
         });
     }
@@ -909,6 +910,10 @@ async function savePendingTaskAdd(taskPayloads) {
         form?.reset();
         resetAddTaskRows();
         setupTaskSelectPlaceholderState();
+        showTaskNoticeModal(
+            taskPayloads.length > 1 ? "Tasks assigned successfully." : "Task assigned successfully.",
+            taskPayloads.length > 1 ? "Tasks Assigned" : "Task Assigned"
+        );
 
         return true;
     } catch (error) {

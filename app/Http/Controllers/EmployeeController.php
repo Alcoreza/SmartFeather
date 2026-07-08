@@ -151,6 +151,7 @@ class EmployeeController extends Controller
         Cache::forget('employees_active_index');
         Cache::forget('manager_tasks_form_options');
         Cache::forget('manager_tasks_all_workers');
+        Cache::forget('farm_activity_filter_options');
     }
 
     private function employeeRules(?int $employeeId, bool $isCreate): array

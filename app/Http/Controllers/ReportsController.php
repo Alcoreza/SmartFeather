@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FeedRefillRecord;
+use App\Models\Employee;
 use App\Models\House;
 use App\Models\Pen;
 use App\Models\PopulationRecord;
@@ -22,9 +23,10 @@ class ReportsController extends Controller
             'from_date' => $request->query('from_date', $request->query('start_date', '')),
             'to_date' => $request->query('to_date', $request->query('end_date', '')),
             'house' => $request->query('house', ''),
+            'flockman_id' => $request->query('flockman_id', ''),
         ];
 
-        $cacheKey = 'manager_reports_index:' . md5(json_encode($filters));
+        $cacheKey = 'manager_reports_index_v2:' . md5(json_encode($filters));
 
         return response()->json(Cache::remember($cacheKey, now()->addSeconds(30), function () use ($filters) {
             return [
@@ -52,6 +54,7 @@ class ReportsController extends Controller
             $query = FeedRefillRecord::query();
             $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
             $this->applyActiveHouseAndPenModelFilter($query);
+            $this->applyFlockmanTaskFilter($query, $filters);
 
             if (!empty($filters['house'])) {
                 $query->whereHas('house', function ($houseQuery) use ($filters) {
@@ -66,10 +69,12 @@ class ReportsController extends Controller
         if (Schema::hasTable('population_record')) {
             $query = DB::table('population_record as pr')
                 ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
-                ->leftJoin('house as h', 'h.id', '=', 'p.house_id');
+                ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
+                ->leftJoin('tasks as t', 't.taskid', '=', 'pr.task_id');
 
             $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
             $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
+            $this->applyFlockmanJoinFilter($query, 't.user_employeeid', $filters);
 
             if (!empty($filters['house'])) {
                 $houseNumbers = $this->getHouseFilterValues($filters['house']);
@@ -84,6 +89,7 @@ class ReportsController extends Controller
             $query = WeightSamplingLog::query();
             $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
             $this->applyActiveHouseStringFilter($query, 'house');
+            $this->applyFlockmanTaskFilter($query, $filters);
 
             if (!empty($filters['house'])) {
                 $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
@@ -125,25 +131,53 @@ class ReportsController extends Controller
             ])
             ->all();
 
+        $flockmen = Employee::where('Role', 'Flockman')
+            ->whereRaw('is_active is true')
+            ->orderBy('EmployeeId')
+            ->get()
+            ->map(fn (Employee $employee) => [
+                'value' => (string) $employee->EmployeeId,
+                'label' => $this->formatEmployeeName($employee),
+            ])
+            ->all();
+
         return [
             'houses' => $houses,
+            'flockmen' => $flockmen,
         ];
     }
 
     private function getFarmStatusReport(array $filters): array
     {
-        $query = WeightSamplingLog::query()
-            ->orderByDesc('date')
-            ->orderByDesc('id');
+        $query = DB::table('weight_sampling_logs as w')
+            ->leftJoin('tasks as t', 't.taskid', '=', 'w.task_id')
+            ->leftJoin('user as u', 'u.EmployeeId', '=', 't.user_employeeid')
+            ->select(
+                'w.house',
+                'w.pen',
+                'w.batch',
+                'w.average_weight',
+                'w.target',
+                'w.status',
+                'w.date',
+                'u.FirstName',
+                'u.MiddleName',
+                'u.LastName',
+                'u.Suffix'
+            )
+            ->orderByDesc('w.date')
+            ->orderByDesc('w.id');
 
-        $this->applyDateRange($query, 'date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
-        $this->applyActiveHouseStringFilter($query, 'house');
+        $this->applyDateRange($query, 'w.date', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseStringFilter($query, 'w.house');
+        $this->applyFlockmanJoinFilter($query, 't.user_employeeid', $filters);
 
         if (!empty($filters['house'])) {
-            $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
+            $query->whereIn('w.house', $this->getHouseFilterValues($filters['house']));
         }
 
         return $query->get()->map(fn($record) => [
+            'performed_by' => $this->formatUserName($record),
             'house' => $record->house ?? '--',
             'pen' => $record->pen ?? '--',
             'batch' => $record->batch ?? '--',
@@ -156,23 +190,39 @@ class ReportsController extends Controller
 
     private function getFeedConsumptionReport(array $filters): array
     {
-        $query = FeedRefillRecord::query()
-            ->with(['inventory', 'house', 'pen.runningBatch'])
-            ->orderByDesc('recorded_at');
+        $query = DB::table('feed_refill_records as r')
+            ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
+            ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
+            ->leftJoin('pen as p', 'p.id', '=', 'r.pen_id')
+            ->leftJoin('tasks as t', 't.taskid', '=', 'r.task_id')
+            ->leftJoin('user as u', 'u.EmployeeId', '=', 't.user_employeeid')
+            ->select(
+                'i.item_name as feed',
+                'h.house_number',
+                'p.pen_name',
+                'r.feeder_number',
+                'r.kilograms_used',
+                'r.recorded_at',
+                'u.FirstName',
+                'u.MiddleName',
+                'u.LastName',
+                'u.Suffix'
+            )
+            ->orderByDesc('r.recorded_at');
 
-        $this->applyDateRange($query, 'recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
-        $this->applyActiveHouseAndPenModelFilter($query);
+        $this->applyDateRange($query, 'r.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
+        $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
+        $this->applyFlockmanJoinFilter($query, 't.user_employeeid', $filters);
 
         if (!empty($filters['house'])) {
-            $query->whereHas('house', function ($houseQuery) use ($filters) {
-                $houseQuery->whereIn('house_number', $this->getHouseFilterValues($filters['house']));
-            });
+            $query->whereIn('h.house_number', $this->getHouseFilterValues($filters['house']));
         }
 
         return $query->get()->map(fn($record) => [
-            'feed' => $record->inventory?->item_name ?? '--',
-            'house_number' => $this->formatHouseNumber($record->house?->house_number),
-            'pen_name' => $record->pen?->pen_name ?? '--',
+            'performed_by' => $this->formatUserName($record),
+            'feed' => $record->feed ?? '--',
+            'house_number' => $this->formatHouseNumber($record->house_number),
+            'pen_name' => $record->pen_name ?? '--',
             'feeder_number' => $record->feeder_number ?? '--',
             'kilograms_used' => $this->formatNumber($record->kilograms_used),
             'recorded_at' => $this->formatDate($record->recorded_at),
@@ -184,17 +234,24 @@ class ReportsController extends Controller
         $query = DB::table('population_record as pr')
             ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
             ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
+            ->leftJoin('tasks as t', 't.taskid', '=', 'pr.task_id')
+            ->leftJoin('user as u', 'u.EmployeeId', '=', 't.user_employeeid')
             ->select(
                 'h.house_number',
                 'p.pen_name',
                 'pr.mortality',
-                'pr.recorded_at'
+                'pr.recorded_at',
+                'u.FirstName',
+                'u.MiddleName',
+                'u.LastName',
+                'u.Suffix'
             )
             ->orderBy('h.id')
             ->orderByDesc('pr.recorded_at');
 
         $this->applyDateRange($query, 'pr.recorded_at', $filters['from_date'] ?? null, $filters['to_date'] ?? null);
         $this->applyActiveHouseAndPenJoinFilter($query, 'h', 'p');
+        $this->applyFlockmanJoinFilter($query, 't.user_employeeid', $filters);
 
         if (!empty($filters['house'])) {
             $houseNumbers = $this->getHouseFilterValues($filters['house']);
@@ -202,6 +259,7 @@ class ReportsController extends Controller
         }
 
         return $query->get()->map(fn($record) => [
+            'performed_by' => $this->formatUserName($record),
             'house_number' => $this->formatHouseNumber($record->house_number),
             'pen_name' => $record->pen_name ?? '--',
             'mortality' => $record->mortality ?? 0,
@@ -703,6 +761,29 @@ class ReportsController extends Controller
         $query->whereIn($column, $activeHouses);
     }
 
+    private function applyFlockmanTaskFilter($query, array $filters): void
+    {
+        if (empty($filters['flockman_id'])) {
+            return;
+        }
+
+        $query->whereIn('task_id', function ($taskQuery) use ($filters) {
+            $taskQuery
+                ->select('taskid')
+                ->from('tasks')
+                ->where('user_employeeid', (int) $filters['flockman_id']);
+        });
+    }
+
+    private function applyFlockmanJoinFilter($query, string $column, array $filters): void
+    {
+        if (empty($filters['flockman_id'])) {
+            return;
+        }
+
+        $query->where($column, (int) $filters['flockman_id']);
+    }
+
     private function getActiveHouseFilterValues(): array
     {
         return House::query()
@@ -762,6 +843,30 @@ class ReportsController extends Controller
         }
 
         return (string) $value;
+    }
+
+    private function formatUserName($row): string
+    {
+        $name = trim(collect([
+            $row->FirstName ?? null,
+            $row->MiddleName ?? null,
+            $row->LastName ?? null,
+            $row->Suffix ?? null,
+        ])->filter()->implode(' '));
+
+        return $name !== '' ? $name : '--';
+    }
+
+    private function formatEmployeeName(Employee $employee): string
+    {
+        $name = trim(collect([
+            $employee->FirstName,
+            $employee->MiddleName,
+            $employee->LastName,
+            $employee->Suffix,
+        ])->filter()->implode(' '));
+
+        return $name !== '' ? $name : ($employee->Username ?? 'Unknown');
     }
 
     private function normalizeHouseNumber($value): string

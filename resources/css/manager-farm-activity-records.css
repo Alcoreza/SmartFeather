@@ -3,7 +3,7 @@
 }
 
 .farm-records-filter-card {
-    grid-template-columns: repeat(2, minmax(150px, 1fr)) minmax(220px, 1.2fr) repeat(2, minmax(170px, 1fr)) auto;
+    grid-template-columns: minmax(220px, 1.2fr) repeat(2, minmax(150px, 1fr)) repeat(2, minmax(170px, 1fr)) auto;
     align-items: end;
 }
 

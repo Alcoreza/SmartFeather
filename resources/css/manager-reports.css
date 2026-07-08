@@ -44,7 +44,7 @@ body {
 
 .reports-filter-card {
     display: grid;
-    grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(150px, 1fr) auto auto;
+    grid-template-columns: repeat(2, minmax(150px, 1fr)) repeat(2, minmax(170px, 1fr)) auto auto;
     align-items: end;
     gap: 12px;
     margin: 0 0 22px;

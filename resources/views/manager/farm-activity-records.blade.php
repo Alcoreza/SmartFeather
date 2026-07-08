@@ -29,16 +29,6 @@
 
             <form class="reports-filter-card farm-records-filter-card" id="farmRecordsFilterForm">
                 <div class="reports-filter-field">
-                    <label for="farmRecordsFromDate">From Date</label>
-                    <input type="date" id="farmRecordsFromDate" name="from_date">
-                </div>
-
-                <div class="reports-filter-field">
-                    <label for="farmRecordsToDate">To Date</label>
-                    <input type="date" id="farmRecordsToDate" name="to_date">
-                </div>
-
-                <div class="reports-filter-field">
                     <label for="farmRecordTypeFilter">Activity Type</label>
                     <select id="farmRecordTypeFilter" name="activity_type" class="reports-filter-select" aria-label="Activity Type">
                         <option value="Hatch and Mortality Check">Hatch and Mortality Check</option>
@@ -50,6 +40,16 @@
                         <option value="Sensor Inspection">Sensor Inspection</option>
                         <option value="Chick Placement">Chick Placement</option>
                     </select>
+                </div>
+
+                <div class="reports-filter-field">
+                    <label for="farmRecordsFromDate">From Date</label>
+                    <input type="date" id="farmRecordsFromDate" name="from_date">
+                </div>
+
+                <div class="reports-filter-field">
+                    <label for="farmRecordsToDate">To Date</label>
+                    <input type="date" id="farmRecordsToDate" name="to_date">
                 </div>
 
                 <div class="reports-filter-field">

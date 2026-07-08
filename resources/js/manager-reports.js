@@ -3,6 +3,7 @@ const reportCards = [
         key: 'farm_status',
         title: 'Farm Status',
         columns: [
+            { key: 'performed_by', label: 'Performed By' },
             { key: 'house', label: 'House' },
             { key: 'pen', label: 'Pen' },
             { key: 'batch', label: 'Batch' },
@@ -16,6 +17,7 @@ const reportCards = [
         key: 'feed_consumption',
         title: 'Feed Consumption',
         columns: [
+            { key: 'performed_by', label: 'Performed By' },
             { key: 'feed', label: 'Feed' },
             { key: 'house_number', label: 'House<br>Number' },
             { key: 'pen_name', label: 'Pen' },
@@ -28,6 +30,7 @@ const reportCards = [
         key: 'mortality',
         title: 'Mortality',
         columns: [
+            { key: 'performed_by', label: 'Performed By' },
             { key: 'house_number', label: 'House' },
             { key: 'pen_name', label: 'Pen' },
             { key: 'mortality', label: 'Mortality' },
@@ -39,6 +42,7 @@ const reportCards = [
 const reportContent = document.getElementById('reportContent');
 const reportsFilterForm = document.getElementById('reportsFilterForm');
 const reportsHouse = document.getElementById('reportsHouse');
+const reportsFlockman = document.getElementById('reportsFlockman');
 
 const REPORTS_ROWS_PER_PAGE = 5;
 const REPORTS_DOT_LIMIT = 5;
@@ -233,6 +237,7 @@ function applyFilterState(filters) {
     if (!filters) return;
 
     fillSelect(reportsHouse, filters.options?.houses || [], 'All Houses');
+    fillSelect(reportsFlockman, filters.options?.flockmen || [], 'All Flockmen');
 }
 
 async function loadReportsData() {
@@ -488,7 +493,8 @@ function setupProfileModal() {
 function generateCsvExport() {
     const fromDate = document.getElementById('reportsFromDate')?.value || 'All Dates';
     const toDate = document.getElementById('reportsToDate')?.value || 'All Dates';
-    const house = document.getElementById('reportsHouse')?.value || 'All Houses';
+    const house = document.getElementById('reportsHouse')?.selectedOptions?.[0]?.textContent || 'All Houses';
+    const flockman = document.getElementById('reportsFlockman')?.selectedOptions?.[0]?.textContent || 'All Flockmen';
     const feedConsumed = document.getElementById('summaryFeedConsumed')?.textContent || '--';
     const mortalities = document.getElementById('summaryMortalities')?.textContent || '--';
     const weightStatus = document.getElementById('summaryWeightStatus')?.textContent || '--';
@@ -497,7 +503,8 @@ function generateCsvExport() {
     csvContent += 'Farm Status Report\n';
     csvContent += `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
     csvContent += `Date Range: ${fromDate} to ${toDate}\n`;
-    csvContent += `House: ${house}\n\n`;
+    csvContent += `House: ${house}\n`;
+    csvContent += `Flockman: ${flockman}\n\n`;
 
     // Add summary statistics
     csvContent += 'SUMMARY STATISTICS\n';
@@ -534,7 +541,8 @@ function generateCsvExport() {
 async function generatePdfExport() {
     const fromDate = document.getElementById('reportsFromDate')?.value || 'All Dates';
     const toDate = document.getElementById('reportsToDate')?.value || 'All Dates';
-    const house = document.getElementById('reportsHouse')?.value || 'All Houses';
+    const house = document.getElementById('reportsHouse')?.selectedOptions?.[0]?.textContent || 'All Houses';
+    const flockman = document.getElementById('reportsFlockman')?.selectedOptions?.[0]?.textContent || 'All Flockmen';
     const feedConsumed = document.getElementById('summaryFeedConsumed')?.textContent || '--';
     const mortalities = document.getElementById('summaryMortalities')?.textContent || '--';
     const weightStatus = document.getElementById('summaryWeightStatus')?.textContent || '--';
@@ -581,6 +589,7 @@ async function generatePdfExport() {
                     <div><strong>Role:</strong> ${escapeHtml(exporter.role)}</div>
                     <div><strong>Date Range:</strong> ${escapeHtml(fromDate)} to ${escapeHtml(toDate)}</div>
                     <div><strong>House:</strong> ${escapeHtml(house)}</div>
+                    <div><strong>Flockman:</strong> ${escapeHtml(flockman)}</div>
                     <div><strong>Report Type:</strong> Comprehensive</div>
                 </div>
             </div>

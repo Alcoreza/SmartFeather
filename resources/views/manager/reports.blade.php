@@ -46,6 +46,13 @@
                     </select>
                 </div>
 
+                <div class="reports-filter-field">
+                    <label for="reportsFlockman">Flockman</label>
+                    <select id="reportsFlockman" name="flockman_id">
+                        <option value="">All Flockmen</option>
+                    </select>
+                </div>
+
                 <button type="submit" class="reports-filter-submit">Generate</button>
                 <button type="button" id="openExportModal" class="reports-export-btn" title="Export Report">Export</button>
             </form>

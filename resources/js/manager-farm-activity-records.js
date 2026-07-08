@@ -9,6 +9,7 @@ const farmRecordState = {
 let farmActivityPagination = {};
 let currentFarmActivityData = {};
 let farmActivityLastPages = {};
+let currentUserProfile = null;
 
 const FARM_RECORD_CONFIG = {
     'Hatch and Mortality Check': {
@@ -161,6 +162,46 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function formatUserFullName(user) {
+    return [
+        user?.FirstName,
+        user?.MiddleName,
+        user?.LastName,
+        user?.Suffix,
+    ].map((part) => String(part || '').trim()).filter(Boolean).join(' ');
+}
+
+async function getCurrentUserProfile() {
+    if (currentUserProfile) {
+        return currentUserProfile;
+    }
+
+    const response = await fetch('/api/user');
+    if (!response.ok) {
+        throw new Error('Failed to fetch user info');
+    }
+
+    currentUserProfile = await response.json();
+    return currentUserProfile;
+}
+
+async function getExporterInfo() {
+    try {
+        const user = await getCurrentUserProfile();
+        const name = formatUserFullName(user) || user.Username || '--';
+
+        return {
+            name,
+            role: user.Role || '--',
+        };
+    } catch (error) {
+        return {
+            name: '--',
+            role: '--',
+        };
+    }
 }
 
 function formatDate(value) {
@@ -717,6 +758,195 @@ async function loadCurrentRecord() {
     }
 }
 
+function getFarmActivityExportFilters() {
+    const recordType = farmRecordState.selectedRecord;
+    const fromDate = document.getElementById('farmRecordsFromDate')?.value || 'All Dates';
+    const toDate = document.getElementById('farmRecordsToDate')?.value || 'All Dates';
+    const house = document.getElementById('farmRecordHouseFilter')?.selectedOptions?.[0]?.textContent || 'All Houses';
+    const flockman = document.getElementById('farmRecordFlockmanFilter')?.selectedOptions?.[0]?.textContent || 'All Flockmen';
+
+    return {
+        recordType,
+        fromDate,
+        toDate,
+        house,
+        flockman,
+    };
+}
+
+function generateFarmActivityCsvExport() {
+    const recordType = farmRecordState.selectedRecord;
+    const rows = currentFarmActivityData['farm-activity-main'] || [];
+    const config = FARM_RECORD_CONFIG[recordType];
+    const columns = config?.sections?.[0]?.columns || [];
+    const filters = getFarmActivityExportFilters();
+
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += 'Farm Activity Records\n';
+    csvContent += `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    csvContent += `Activity Type: ${filters.recordType}\n`;
+    csvContent += `From Date: ${filters.fromDate}\n`;
+    csvContent += `To Date: ${filters.toDate}\n`;
+    csvContent += `House: ${filters.house}\n`;
+    csvContent += `Flockman: ${filters.flockman}\n\n`;
+
+    const headers = columns.map((column) => `"${String(column.label).replace(/<br>/g, ' ')}"`).join(',');
+    csvContent += headers + '\n';
+
+    rows.forEach((row) => {
+        const values = columns.map((column) => {
+            const value = row[column.key] ?? '';
+            const stringValue = String(value).replace(/"/g, '""');
+            return `"${stringValue}"`;
+        }).join(',');
+        csvContent += values + '\n';
+    });
+
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `farm-activity-${recordType.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${new Date().getTime()}.csv`);
+    link.click();
+}
+
+async function generateFarmActivityPdfExport() {
+    const recordType = farmRecordState.selectedRecord;
+    const rows = currentFarmActivityData['farm-activity-main'] || [];
+    const config = FARM_RECORD_CONFIG[recordType];
+    const columns = config?.sections?.[0]?.columns || [];
+    const filters = getFarmActivityExportFilters();
+    const exporter = await getExporterInfo();
+    const printWindow = window.open('', '', 'width=900,height=700');
+
+    if (!printWindow) return;
+
+    let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Farm Activity Records</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                .header { margin-bottom: 30px; border-bottom: 2px solid #2f7446; padding-bottom: 20px; }
+                .header h1 { font-size: 24px; color: #000; margin-bottom: 10px; }
+                .header-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: #666; }
+                .section { margin-bottom: 30px; page-break-inside: avoid; }
+                .section-title { font-size: 16px; font-weight: bold; color: #2f7446; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #ddd; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th { background: #f0f0f0; padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd; }
+                td { padding: 8px; border-bottom: 1px solid #eee; }
+                tr:nth-child(even) { background: #f9f9f9; }
+                .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>📋 Farm Activity Records</h1>
+                <div class="header-info">
+                    <div><strong>Generated:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+                    <div><strong>Exported By:</strong> ${escapeHtml(exporter.name)}</div>
+                    <div><strong>Role:</strong> ${escapeHtml(exporter.role)}</div>
+                    <div><strong>Activity Type:</strong> ${escapeHtml(filters.recordType)}</div>
+                    <div><strong>From Date:</strong> ${escapeHtml(filters.fromDate)}</div>
+                    <div><strong>To Date:</strong> ${escapeHtml(filters.toDate)}</div>
+                    <div><strong>House:</strong> ${escapeHtml(filters.house)}</div>
+                    <div><strong>Flockman:</strong> ${escapeHtml(filters.flockman)}</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">${escapeHtml(recordType)}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            ${columns.map((column) => `<th>${String(column.label).replace(/<br>/g, ' ')}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((row) => `
+                            <tr>
+                                ${columns.map((column) => `<td>${escapeHtml(row[column.key] ?? '')}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="footer">
+                <p>This export was automatically generated by the Farm Management System.</p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function setupFarmActivityExportModal() {
+    const modal = document.getElementById('exportModal');
+    const openBtn = document.getElementById('openExportModal');
+    const closeBtn = document.getElementById('closeExportModal');
+    const cancelBtn = document.getElementById('cancelExportModal');
+    const pdfBtn = document.getElementById('exportPdfBtn');
+    const csvBtn = document.getElementById('exportCsvBtn');
+
+    if (!modal || !openBtn) return;
+
+    function resetSelectedExportFormat() {
+        [pdfBtn, csvBtn].forEach((button) => button?.classList.remove('active'));
+    }
+
+    function closeModal() {
+        modal.classList.remove('show');
+        resetSelectedExportFormat();
+        document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', () => {
+        resetSelectedExportFormat();
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    });
+
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    pdfBtn?.addEventListener('click', () => {
+        pdfBtn.classList.add('active');
+        csvBtn?.classList.remove('active');
+
+        setTimeout(async () => {
+            await generateFarmActivityPdfExport();
+            closeModal();
+        }, 140);
+    });
+
+    csvBtn?.addEventListener('click', () => {
+        csvBtn.classList.add('active');
+        pdfBtn?.classList.remove('active');
+
+        setTimeout(() => {
+            generateFarmActivityCsvExport();
+            closeModal();
+        }, 140);
+    });
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('show')) {
+            closeModal();
+        }
+    });
+}
+
 function bindFarmRecordEvents() {
     farmRecordFilterSelect?.addEventListener('change', (event) => {
         farmRecordState.selectedRecord = event.target.value;
@@ -725,17 +955,19 @@ function bindFarmRecordEvents() {
         loadCurrentRecord();
     });
 
-    farmRecordsFilterForm?.addEventListener('submit', (event) => {
-        event.preventDefault();
-        farmActivityPagination = {};
-        currentFarmActivityData = {};
-        loadCurrentRecord();
+    farmRecordsFilterForm?.querySelectorAll('select, input').forEach((field) => {
+        field.addEventListener('change', () => {
+            farmActivityPagination = {};
+            currentFarmActivityData = {};
+            loadCurrentRecord();
+        });
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     bindFarmRecordEvents();
     setupFarmActivityPagination();
+    setupFarmActivityExportModal();
     loadFarmActivityFilterOptions();
     loadCurrentRecord();
 });

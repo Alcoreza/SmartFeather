@@ -17,6 +17,7 @@
 @section('content')
     <div class="manager-shell">
         @include('includes.manager-sidebar')
+        @include('includes.manager-export-modal')
 
         <main class="manager-main reports-page farm-records-page">
             <div class="reports-topbar">
@@ -66,7 +67,7 @@
                     </select>
                 </div>
 
-                <button type="submit" class="reports-filter-submit">Generate</button>
+                <button type="button" id="openExportModal" class="reports-export-btn" title="Export Farm Activity Records">Export</button>
             </form>
 
             <section class="reports-content-shell">

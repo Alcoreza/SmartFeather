@@ -279,7 +279,10 @@ class SensorController extends Controller
 
         $this->clearSensorCaches();
 
-        return response()->json($sensor, 201);
+        return response()->json([
+            'message' => 'Sensor created successfully.',
+            'sensor' => $sensor,
+        ], 201);
     }
 
     public function update(Request $request, $sensorId)
@@ -328,7 +331,10 @@ class SensorController extends Controller
 
         $this->clearSensorCaches();
 
-        return response()->json($sensor);
+        return response()->json([
+            'message' => 'Sensor updated successfully.',
+            'sensor' => $sensor,
+        ]);
     }
 
     public function destroy($sensorId)
@@ -344,7 +350,7 @@ class SensorController extends Controller
 
         $this->clearSensorCaches();
 
-        return response()->json(['message' => 'Sensor deleted']);
+        return response()->json(['message' => 'Sensor deleted successfully.']);
     }
 
     public function updateStatus(Request $request, $sensorId)
@@ -414,7 +420,10 @@ class SensorController extends Controller
 
         $this->clearSensorCaches();
 
-        return response()->json(['updated' => $sensors->count()]);
+        return response()->json([
+            'message' => 'Sensor thresholds updated successfully.',
+            'updated' => $sensors->count(),
+        ]);
     }
 
     public function managerMaintenanceRecords()

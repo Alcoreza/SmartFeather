@@ -17,7 +17,7 @@ class SensorController extends Controller
 {
     public function index()
     {
-        return response()->json(Cache::remember('sensors_index', now()->addSeconds(10), function () {
+        return response()->json(Cache::remember('sensors_index', now()->addMinutes(5), function () {
         $sensors = Sensor::with([
                 'house',
                 'pen',
@@ -478,19 +478,25 @@ class SensorController extends Controller
         return $this->determineStoredSensorStatus(
             $sensor->house_houseid,
             $sensor->pen_penid,
-            $sensor->status
+            $sensor->status,
+            $sensor->house  // ✅ Pass eager-loaded house to avoid N+1 query
         );
     }
 
-    private function determineStoredSensorStatus($houseId, $penId, $preferredStatus): string
+    private function determineStoredSensorStatus($houseId, $penId, $preferredStatus, $house = null): string
     {
         if (!$houseId && !$penId) {
             return 'Inactive';
         }
 
-        $houseIsArchived = House::where('id', $houseId)
-            ->whereNotNull('archived_at')
-            ->exists();
+        // ✅ Use passed house object if available (eager-loaded), otherwise query
+        if ($house !== null) {
+            $houseIsArchived = $house->archived_at !== null;
+        } else {
+            $houseIsArchived = House::where('id', $houseId)
+                ->whereNotNull('archived_at')
+                ->exists();
+        }
 
         if ($houseIsArchived) {
             return 'Inactive';
@@ -808,7 +814,7 @@ class SensorController extends Controller
      */
     public function sensorHealth()
     {
-        return response()->json(Cache::remember('sensors_health', now()->addSeconds(10), function () {
+        return response()->json(Cache::remember('sensors_health', now()->addMinutes(5), function () {
         $sensors = Sensor::with(['house', 'pen', 'configuration', 'latestReading', 'maintenances'])
             ->orderBy('sensortype')
             ->orderBy('sensorname')

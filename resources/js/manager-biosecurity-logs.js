@@ -12,90 +12,53 @@ const state = {
 };
 
 const BIO_ROWS_PER_PAGE = 5;
+const BIO_DOT_LIMIT = 5;
+
+let bioLastPage = 0;
+let bioIsMobilePagination = false;
 
 let visitorCameraStream = null;
 let visitorPhotoDataUrl = null;
 let shouldTrackAddBioRequiredHighlights = false;
+let isBioAddSubmitting = false;
+let isBioEditSubmitting = false;
 
-function showBioConfirmModal(message, title = 'Confirm Save', confirmText = 'Confirm') {
-    return new Promise((resolve) => {
-        document.getElementById('bioGenericConfirmModal')?.remove();
+function ensureBioNoticeModal() {
+    let modal = document.getElementById('bioNoticeModal');
 
-        const modal = document.createElement('div');
-        modal.className = 'bio-modal-overlay confirm-modal-top show';
-        modal.id = 'bioGenericConfirmModal';
-        modal.innerHTML = `
-            <div class="bio-modal bio-confirm-modal">
-                <div class="bio-modal-header">
-                    <h2></h2>
-                    <div class="bio-modal-line"></div>
-                </div>
-                <div class="bio-modal-form bio-confirm-body">
-                    <p class="bio-form-confirm-text"></p>
-                    <div class="bio-modal-actions">
-                        <button type="button" class="bio-btn bio-btn-cancel" data-confirm-cancel>Cancel</button>
-                        <button type="button" class="bio-btn bio-btn-save" data-confirm-ok></button>
-                    </div>
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'bioNoticeModal';
+    modal.className = 'bio-modal-overlay';
+    modal.innerHTML = `
+        <div class="bio-modal bio-confirm-modal">
+            <div class="bio-modal-header">
+                <h2 id="bioNoticeTitle">Biosecurity Notice</h2>
+                <div class="bio-modal-line"></div>
+            </div>
+            <div class="bio-confirm-body">
+                <p class="bio-form-confirm-text" id="bioNoticeMessage"></p>
+                <div class="bio-modal-actions">
+                    <button type="button" class="bio-btn bio-btn-save" id="bioNoticeOk">OK</button>
                 </div>
             </div>
-        `;
-
-        modal.querySelector('h2').textContent = title;
-        modal.querySelector('p').textContent = message;
-        modal.querySelector('[data-confirm-ok]').textContent = confirmText;
-
-        const close = (confirmed) => {
-            modal.remove();
-            resolve(confirmed);
-        };
-
-        modal.querySelector('[data-confirm-cancel]').addEventListener('click', () => close(false));
-        modal.querySelector('[data-confirm-ok]').addEventListener('click', () => close(true));
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close(false);
-        });
-
-        document.body.appendChild(modal);
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#bioNoticeOk')?.addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.classList.remove('show');
     });
+
+    return modal;
 }
 
-function showBioNoticeModal(message, title = 'Notice') {
-    return new Promise((resolve) => {
-        document.getElementById('bioGenericNoticeModal')?.remove();
-
-        const modal = document.createElement('div');
-        modal.className = 'bio-modal-overlay confirm-modal-top show';
-        modal.id = 'bioGenericNoticeModal';
-        modal.innerHTML = `
-            <div class="bio-modal bio-confirm-modal">
-                <div class="bio-modal-header">
-                    <h2></h2>
-                    <div class="bio-modal-line"></div>
-                </div>
-                <div class="bio-modal-form bio-confirm-body">
-                    <p class="bio-form-confirm-text"></p>
-                    <div class="bio-modal-actions">
-                        <button type="button" class="bio-btn bio-btn-save" data-notice-ok>OK</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        modal.querySelector('h2').textContent = title;
-        modal.querySelector('p').textContent = message;
-
-        const close = () => {
-            modal.remove();
-            resolve();
-        };
-
-        modal.querySelector('[data-notice-ok]').addEventListener('click', close);
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close();
-        });
-
-        document.body.appendChild(modal);
-    });
+function showBioNotice(message, title = 'Biosecurity Notice') {
+    const modal = ensureBioNoticeModal();
+    modal.querySelector('#bioNoticeTitle').textContent = title;
+    modal.querySelector('#bioNoticeMessage').textContent = message;
+    modal.classList.add('show');
 }
 
 const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
@@ -116,6 +79,7 @@ const ADD_BIO_REQUIRED_FIELDS_BY_TYPE = {
         { name: 'ppe', label: 'PPE' },
         { name: 'sanitation', label: 'Sanitation' },
         { name: 'monitored_by', label: 'Monitored By' },
+        { name: 'photo_data', label: 'Visitor Photo' },
     ],
 };
 
@@ -245,17 +209,6 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
-function getReadableBioError(error) {
-    if (!error) return 'Unable to save log. Please try again.';
-
-    if (error.errors) {
-        const messages = Object.values(error.errors).flat().filter(Boolean);
-        if (messages.length) return messages.join(' ');
-    }
-
-    return error.message || error.error || 'Unable to save log. Please try again.';
-}
-
 function formatDateForDisplay(isoDate) {
     if (!isoDate) return '';
     
@@ -364,7 +317,7 @@ function renderBioTable(type, filteredRows) {
     if (!config || !tableBody) return;
 
     const totalPages = Math.max(1, Math.ceil(filteredRows.length / BIO_ROWS_PER_PAGE));
-    state.currentPage = Math.min(state.currentPage, totalPages - 1);
+    state.currentPage = Math.min(Math.max(0, state.currentPage), totalPages - 1);
 
     if (!filteredRows.length) {
         tableBody.innerHTML = `
@@ -409,7 +362,7 @@ function renderTableRows(type, rows) {
         return;
     }
 
-    tableBody.innerHTML = rows.map((row) => {
+    tableBody.innerHTML = rows.map((row, index) => {
         const cells = config.columns.map((col) => {
             const columnClass = getBioColumnClass(type, col.key);
 
@@ -434,9 +387,9 @@ function renderTableRows(type, rows) {
 
         const encodedRow = encodeURIComponent(JSON.stringify(row));
 
-        const actionCell = row.can_edit === false
-            ? '<td></td>'
-            : `
+        return `
+            <tr style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
+                ${cells}
                 <td>
                     <button
                         type="button"
@@ -450,12 +403,6 @@ function renderTableRows(type, rows) {
                         </svg>
                     </button>
                 </td>
-            `;
-
-        return `
-            <tr>
-                ${cells}
-                ${actionCell}
             </tr>
         `;
     }).join('');
@@ -474,13 +421,6 @@ function renderCurrentTable(resetPage = true) {
     renderTableHead(type);
     renderBioTable(type, filteredRows);
     updateBioPagination(filteredRows.length);
-}
-
-function syncAddBioButtonVisibility() {
-    const openBtn = document.getElementById('openAddBioModal');
-    if (!openBtn) return;
-
-    openBtn.hidden = state.selectedCategory !== 'Visitors';
 }
 
 function normalizeFieldValueForInput(field, value = '') {
@@ -648,7 +588,6 @@ function closeVisitorCameraModal() {
 
     if (snapshot) {
         snapshot.style.display = 'none';
-        snapshot.src = '';
     }
     if (video) {
         video.style.display = 'block';
@@ -665,62 +604,17 @@ function closeVisitorCameraModal() {
     visitorCameraStream = null;
 }
 
-function showVisitorCameraLiveMode() {
-    const video = document.getElementById('visitorCameraVideo');
-    const snapshot = document.getElementById('visitorCameraSnapshot');
-    const captureButton = document.getElementById('captureVisitorPhotoBtn');
-    const useButton = document.getElementById('useVisitorPhotoBtn');
-
-    visitorPhotoDataUrl = null;
-
-    if (video) {
-        video.style.display = 'block';
-        video.play().catch(() => {});
-    }
-    if (snapshot) {
-        snapshot.style.display = 'none';
-        snapshot.src = '';
-    }
-    if (captureButton) {
-        captureButton.textContent = 'Capture';
-        captureButton.dataset.mode = 'capture';
-    }
-    if (useButton) {
-        useButton.disabled = true;
-    }
-}
-
-function showVisitorCameraCapturedMode() {
-    const video = document.getElementById('visitorCameraVideo');
-    const snapshot = document.getElementById('visitorCameraSnapshot');
-    const captureButton = document.getElementById('captureVisitorPhotoBtn');
-    const useButton = document.getElementById('useVisitorPhotoBtn');
-
-    if (video) {
-        video.style.display = 'none';
-    }
-    if (snapshot) {
-        snapshot.style.display = 'block';
-    }
-    if (captureButton) {
-        captureButton.textContent = 'Capture Again';
-        captureButton.dataset.mode = 'retake';
-    }
-    if (useButton) {
-        useButton.disabled = false;
-    }
-}
-
 async function openVisitorCameraModal() {
     const cameraModal = document.getElementById('visitorCameraModal');
     const video = document.getElementById('visitorCameraVideo');
     const snapshot = document.getElementById('visitorCameraSnapshot');
+    const captureButton = document.getElementById('captureVisitorPhotoBtn');
     const useButton = document.getElementById('useVisitorPhotoBtn');
 
     if (!cameraModal || !video || !snapshot || !useButton) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        await showBioNoticeModal('Camera access is not available in this browser.', 'Camera Unavailable');
+        showBioNotice('Camera access is not available in this browser.', 'Camera Unavailable');
         return;
     }
 
@@ -728,11 +622,17 @@ async function openVisitorCameraModal() {
         visitorCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = visitorCameraStream;
         video.play();
-        showVisitorCameraLiveMode();
+        video.style.display = 'block';
+        snapshot.style.display = 'none';
+        if (captureButton) {
+            captureButton.textContent = 'Capture';
+            captureButton.dataset.mode = 'capture';
+        }
+        useButton.disabled = true;
         cameraModal.classList.add('show');
     } catch (error) {
         console.error('Camera error:', error);
-        await showBioNoticeModal('Could not access the camera. Please allow camera access or use a supported browser.', 'Camera Error');
+        showBioNotice('Could not access the camera. Please allow camera access or use a supported browser.', 'Camera Unavailable');
     }
 }
 
@@ -740,13 +640,19 @@ function captureVisitorPhoto() {
     const video = document.getElementById('visitorCameraVideo');
     const canvas = document.getElementById('visitorCameraCanvas');
     const snapshot = document.getElementById('visitorCameraSnapshot');
-    const useButton = document.getElementById('useVisitorPhotoBtn');
     const captureButton = document.getElementById('captureVisitorPhotoBtn');
+    const useButton = document.getElementById('useVisitorPhotoBtn');
 
-    if (!video || !canvas || !snapshot || !useButton) return;
+    if (!video || !canvas || !snapshot || !captureButton || !useButton) return;
 
-    if (captureButton?.dataset.mode === 'retake') {
-        showVisitorCameraLiveMode();
+    if (captureButton.dataset.mode === 'recapture') {
+        visitorPhotoDataUrl = null;
+        snapshot.style.display = 'none';
+        video.style.display = 'block';
+        captureButton.textContent = 'Capture';
+        captureButton.dataset.mode = 'capture';
+        useButton.disabled = true;
+        video.play();
         return;
     }
 
@@ -758,7 +664,11 @@ function captureVisitorPhoto() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     visitorPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     snapshot.src = visitorPhotoDataUrl;
-    showVisitorCameraCapturedMode();
+    snapshot.style.display = 'block';
+    video.style.display = 'none';
+    captureButton.textContent = 'Recapture';
+    captureButton.dataset.mode = 'recapture';
+    useButton.disabled = false;
 }
 
 async function uploadVisitorPhoto() {
@@ -767,7 +677,7 @@ async function uploadVisitorPhoto() {
     const openCameraButton = document.getElementById('add_open_camera_btn');
 
     if (!visitorPhotoDataUrl) {
-        await showBioNoticeModal('Please capture a photo first.', 'Photo Required');
+        showBioNotice('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -810,7 +720,7 @@ async function uploadVisitorPhoto() {
         closeVisitorCameraModal();
     } catch (error) {
         console.error('Error uploading visitor photo:', error);
-        await showBioNoticeModal('Failed to upload photo. Please try again.', 'Upload Failed');
+        showBioNotice('Failed to upload photo. Please try again.', 'Upload Failed');
         if (status) {
             status.textContent = 'Upload failed. Try again.';
         }
@@ -831,7 +741,7 @@ function attachVisitorPhoto() {
     const status = document.getElementById('add_photo_status');
 
     if (!visitorPhotoDataUrl) {
-        showBioNoticeModal('Please capture a photo first.', 'Photo Required');
+        showBioNotice('Please capture a photo first.', 'Photo Required');
         return;
     }
 
@@ -841,6 +751,12 @@ function attachVisitorPhoto() {
         preview.style.display = 'block';
     }
     if (status) status.textContent = '';
+    preview?.closest('.bio-field')?.classList.remove('has-error');
+
+    const form = document.getElementById('addBioForm');
+    if (!form?.querySelector('.bio-field.has-error')) {
+        clearAddBioFormError();
+    }
 
     // close camera modal but keep photo data for save
     closeVisitorCameraModal();
@@ -901,22 +817,21 @@ function setupEditModal() {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
+            if (isBioEditSubmitting) {
+                return;
+            }
+
             const formData = new FormData(form);
             const logId = logIdInput?.value;
 
             if (!logId) {
-                await showBioNoticeModal('Invalid log ID.', 'Unable to Update Log');
+                showBioNotice('Invalid log ID.', 'Unable to Update Log');
                 return;
             }
 
-            const confirmed = await showBioConfirmModal(
-                'Save changes to this biosecurity log?',
-                'Confirm Biosecurity Log',
-            );
-
-            if (!confirmed) {
-                return;
-            }
+            isBioEditSubmitting = true;
+            const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
             try {
                 const response = await fetch(`/api/manager/biosecurity-logs/${logId}`, {
@@ -931,20 +846,23 @@ function setupEditModal() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Server error:', errorData);
-                    throw new Error(getReadableBioError(errorData));
+                    throw new Error(`Failed to update: ${response.status}`);
                 }
 
                 const result = await response.json();
                 console.log('Log updated:', result);
 
                 modal.classList.remove('show');
-                await showBioNoticeModal(result.message || 'Log updated successfully.', 'Biosecurity Log Updated');
 
                 // Reload logs to show the updated entry
                 loadBiosecurityLogs();
+                showBioNotice('Biosecurity log updated successfully.', 'Log Updated');
             } catch (error) {
                 console.error('Error updating log:', error);
-                await showBioNoticeModal(error.message || 'Failed to update log. Please try again.', 'Unable to Update Log');
+                showBioNotice('Failed to update log. Please try again.', 'Unable to Update Log');
+            } finally {
+                isBioEditSubmitting = false;
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }
@@ -974,10 +892,6 @@ function setupAddModal() {
     openBtn.addEventListener('click', async () => {
         const type = state.selectedCategory;
 
-        if (type !== 'Visitors') {
-            return;
-        }
-
         // Load form options for available categories
         if (type === 'Personnel Biosecurity Logs' || type === 'Visitors') {
             await loadBioFormOptions();
@@ -995,11 +909,15 @@ function setupAddModal() {
         clearAddBioFormError();
 
         const photoInput = document.getElementById('add_photo_url');
+        const photoDataInput = document.getElementById('add_photo_data');
         const photoPreview = document.getElementById('add_photo_preview');
         const photoStatus = document.getElementById('add_photo_status');
 
         if (photoInput) {
             photoInput.value = '';
+        }
+        if (photoDataInput) {
+            photoDataInput.value = '';
         }
         if (photoPreview) {
             photoPreview.style.display = 'none';
@@ -1073,6 +991,10 @@ function setupAddModal() {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
+            if (isBioAddSubmitting) {
+                return;
+            }
+
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
             const missingFields = validateAddBioRequiredFields(form, payload);
@@ -1082,14 +1004,9 @@ function setupAddModal() {
                 return;
             }
 
-            const confirmed = await showBioConfirmModal(
-                `Add this ${payload.type || 'biosecurity log'}?`,
-                'Confirm Biosecurity Log',
-            );
-
-            if (!confirmed) {
-                return;
-            }
+            isBioAddSubmitting = true;
+            const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
             try {
                 const response = await fetch('/api/manager/biosecurity-logs', {
@@ -1103,7 +1020,7 @@ function setupAddModal() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Server error:', errorData);
-                    throw new Error(getReadableBioError(errorData));
+                    throw new Error(`Failed to save: ${response.status}`);
                 }
 
                 const result = await response.json();
@@ -1115,9 +1032,13 @@ function setupAddModal() {
 
                 // Reload logs to show the new entry
                 loadBiosecurityLogs();
+                showBioNotice('Biosecurity log saved successfully.', 'Log Saved');
             } catch (error) {
                 console.error('Error saving log:', error);
-                showAddBioFormError(formError, error.message || 'Failed to save log. Please try again.');
+                showAddBioFormError(formError, 'Failed to save log. Please try again.');
+            } finally {
+                isBioAddSubmitting = false;
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }
@@ -1246,6 +1167,22 @@ function markMissingAddBioRequiredFields(missingFields) {
     missingFields.forEach((field) => {
         getAddBioRequiredFieldWrapper(field)?.classList.add('has-error');
     });
+
+    const firstMissingField = missingFields[0];
+    if (firstMissingField?.name === 'photo_data') {
+        document.getElementById('add_open_camera_btn')?.focus();
+        return;
+    }
+
+    const form = document.getElementById('addBioForm');
+    form?.elements[firstMissingField?.name]?.focus();
+}
+
+function syncAddBioButtonVisibility() {
+    const openBtn = document.getElementById('openAddBioModal');
+    if (!openBtn) return;
+
+    openBtn.hidden = state.selectedCategory !== 'Visitors';
 }
 
 function bindEvents() {
@@ -1295,11 +1232,24 @@ function bindEvents() {
 
     // Setup pagination
     setupBioPagination();
+    setupBioPaginationResize();
+}
+
+function setupBioPaginationResize() {
+    bioIsMobilePagination = window.matchMedia('(max-width: 640px)').matches;
+
+    window.addEventListener('resize', () => {
+        const nextIsMobile = window.matchMedia('(max-width: 640px)').matches;
+        if (nextIsMobile === bioIsMobilePagination) return;
+
+        bioIsMobilePagination = nextIsMobile;
+        renderCurrentTable(false);
+    });
 }
 
 async function loadBiosecurityLogs() {
     try {
-        const response = await fetch('/api/manager/biosecurity-logs', {
+        const response = await fetch('/api/manager/biosecurity-logs?categories=Personnel%20Biosecurity%20Logs,Visitors', {
             headers: {
                 Accept: 'application/json',
             },
@@ -1463,9 +1413,12 @@ function updateBioPagination(totalRows) {
     const nextButton = document.querySelector('[data-bio-next]');
     const dots = document.querySelector('[data-bio-dots]');
     const totalPages = Math.max(1, Math.ceil(totalRows / BIO_ROWS_PER_PAGE));
+    state.currentPage = Math.min(Math.max(0, state.currentPage), totalPages - 1);
+    const shouldShowPagination = totalRows > BIO_ROWS_PER_PAGE;
 
     if (pagination) {
-        pagination.classList.toggle('is-hidden', totalRows <= BIO_ROWS_PER_PAGE);
+        pagination.classList.toggle('is-hidden', !shouldShowPagination);
+        pagination.dataset.bioTotalPages = String(totalPages);
     }
 
     if (prevButton) {
@@ -1476,8 +1429,22 @@ function updateBioPagination(totalRows) {
         nextButton.disabled = state.currentPage >= totalPages - 1;
     }
 
-    if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+    if (dots && shouldShowPagination) {
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
+        const visiblePages = getVisibleBioPages(totalPages, state.currentPage);
+        const direction = state.currentPage > bioLastPage ? 'next' : state.currentPage < bioLastPage ? 'prev' : 'still';
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(state.currentPage));
+        const dotSize = isMobile ? 11 : 10;
+        const dotGap = isMobile ? 7 : 8;
+        const dotStep = dotSize + dotGap;
+        const dotTrackWidth = (visiblePages.length * dotSize) + (Math.max(0, visiblePages.length - 1) * dotGap);
+
+        dots.dataset.pageDirection = direction;
+        dots.style.setProperty('--active-dot-index', activeDotIndex);
+        dots.style.setProperty('--active-dot-offset', `${activeDotIndex * dotStep}px`);
+        dots.style.setProperty('--dot-track-width', `${dotTrackWidth}px`);
+        dots.style.setProperty('--dot-track-half', `${dotTrackWidth / 2}px`);
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="bio-page-dot ${index === state.currentPage ? 'active' : ''}"
@@ -1486,17 +1453,50 @@ function updateBioPagination(totalRows) {
                 aria-current="${index === state.currentPage ? 'page' : 'false'}"
             ></button>
         `).join('');
+        bioLastPage = state.currentPage;
+    } else if (dots) {
+        dots.innerHTML = '';
+        dots.style.setProperty('--active-dot-index', 0);
+        dots.style.setProperty('--active-dot-offset', '0px');
+        dots.style.setProperty('--dot-track-width', '0px');
+        dots.style.setProperty('--dot-track-half', '0px');
     }
 }
 
+function getVisibleBioPages(totalPages, currentPage) {
+    if (totalPages <= BIO_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(BIO_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + BIO_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - BIO_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
+}
+
 function setupBioPagination() {
-    document.querySelector('[data-bio-prev]')?.addEventListener('click', () => {
+    const pagination = document.querySelector('[data-bio-pagination]');
+    const prevButton = document.querySelector('[data-bio-prev]');
+    const nextButton = document.querySelector('[data-bio-next]');
+
+    prevButton?.addEventListener('click', () => {
+        if (prevButton.disabled) return;
+
         state.currentPage = Math.max(0, state.currentPage - 1);
         renderCurrentTable(false);
     });
 
-    document.querySelector('[data-bio-next]')?.addEventListener('click', () => {
-        state.currentPage += 1;
+    nextButton?.addEventListener('click', () => {
+        if (nextButton.disabled) return;
+
+        const totalPages = Number(pagination?.dataset.bioTotalPages || 1);
+        state.currentPage = Math.min(totalPages - 1, state.currentPage + 1);
         renderCurrentTable(false);
     });
 

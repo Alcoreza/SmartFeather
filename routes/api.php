@@ -24,6 +24,7 @@ Route::post('/mobile/login', [MobileAuthController::class, 'login']);
 
 Route::middleware(['throttle:170,1', 'mobile.auth'])->group(function () {
     Route::post('/mobile/tasks', [MobileTaskController::class, 'getFlockmanTasks']);
+    Route::post('/mobile/tasks/overview', [MobileTaskController::class, 'getFlockmanTasksOverview']);
     Route::post('/mobile/tasks/submit', [MobileTaskController::class, 'submitTaskForApproval']);
     Route::post('/mobile/tasks/photo-upload-url', [MobileTaskController::class, 'createTaskPhotoUploadUrl']);
     Route::post('/mobile/tasks/access-check', [MobileTaskController::class, 'checkTaskAccess']);
@@ -84,7 +85,7 @@ Route::middleware(['throttle:170,1', 'mobile.auth'])->group(function () {
 });
 
 Route::post('/notification-queue/process-one', [NotificationQueueController::class, 'processOne'])
-    ->middleware('throttle:30,1');
+    ->middleware('throttle:120,1');
 
 Route::post('/notification-queue/process-job', [NotificationQueueController::class, 'processJob'])
     ->middleware('throttle:120,1');

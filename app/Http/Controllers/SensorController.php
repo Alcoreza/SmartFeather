@@ -10,12 +10,14 @@ use App\Models\Pen;
 use App\Models\SensorConfiguration;
 use App\Models\SensorMaintenance;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class SensorController extends Controller
 {
     public function index()
     {
+        return response()->json(Cache::remember('sensors_index', now()->addSeconds(10), function () {
         $sensors = Sensor::with([
                 'house',
                 'pen',
@@ -81,12 +83,14 @@ class SensorController extends Controller
             })
             ->values();
 
-        return response()->json(['sections' => $sections]);
+        return ['sections' => $sections];
+        }));
     }
 
 
     public function formOptions()
     {
+        return response()->json(Cache::remember('sensors_form_options', now()->addSeconds(30), function () {
         $sensorTypes = [
             ['value' => 'Temperature Sensor', 'label' => 'Temperature Sensor'],
             ['value' => 'Ammonia Sensor', 'label' => 'Ammonia Sensor'],
@@ -108,15 +112,17 @@ class SensorController extends Controller
                 ];
             });
 
-        return response()->json([
+        return [
             'sensor_types' => $sensorTypes,
             'houses' => $houses,
-        ]);
+        ];
+        }));
     }
 
     public function getPensForHouse($houseId)
     {
-        $pens = Pen::where('house_id', $houseId)
+        $pens = Cache::remember("sensors_pens_for_house:{$houseId}", now()->addSeconds(30), function () use ($houseId) {
+            return Pen::where('house_id', $houseId)
             ->whereNull('archived_at')
             ->whereHas('runningBatch')
             ->orderBy('pen_name')
@@ -127,6 +133,7 @@ class SensorController extends Controller
                     'label' => $this->formatPenNumber($pen->pen_name),
                 ];
             });
+        });
 
         return response()->json(['pens' => $pens]);
     }
@@ -270,6 +277,8 @@ class SensorController extends Controller
             ]);
         }
 
+        $this->clearSensorCaches();
+
         return response()->json($sensor, 201);
     }
 
@@ -317,6 +326,8 @@ class SensorController extends Controller
             ),
         ]);
 
+        $this->clearSensorCaches();
+
         return response()->json($sensor);
     }
 
@@ -330,6 +341,8 @@ class SensorController extends Controller
             $sensor->readings()->delete();
             $sensor->delete();
         });
+
+        $this->clearSensorCaches();
 
         return response()->json(['message' => 'Sensor deleted']);
     }
@@ -371,6 +384,8 @@ class SensorController extends Controller
             $this->recordSensorMaintenanceStatus($sensor, $storedStatus);
         });
 
+        $this->clearSensorCaches();
+
         return response()->json([
             'message' => 'Sensor status updated successfully.',
             'sensor' => $sensor->fresh(),
@@ -396,6 +411,8 @@ class SensorController extends Controller
                 ]
             );
         }
+
+        $this->clearSensorCaches();
 
         return response()->json(['updated' => $sensors->count()]);
     }
@@ -677,11 +694,7 @@ class SensorController extends Controller
             return '';
         }
 
-        if (preg_match('/\d+$/', $houseNumber, $matches)) {
-            return $matches[0];
-        }
-
-        return $houseNumber;
+        return (string) $houseNumber;
     }
 
     private function formatPenNumber($penName)
@@ -711,22 +724,31 @@ class SensorController extends Controller
     {
         if ($value === null) return 'No Data';
 
+        $displayValue = number_format($this->truncateToFirstDecimal((float) $value), 1);
+
         switch ($type) {
             case 'Temperature Sensor':
-                return number_format($value, 1) . ' °C';
+                return $displayValue . ' °C';
 
             case 'Ammonia Sensor':
-                return $value . ' ppm';
+                return $displayValue . ' ppm';
 
             case 'Feed Sensor':
-                return $value . ' mm';
+                return $displayValue . ' mm';
 
             case 'Water Sensor':
-                return $value . ' level';
+                return $displayValue . ' level';
 
             default:
-                return $value;
+                return is_numeric($value) ? $displayValue : $value;
         }
+    }
+
+    private function truncateToFirstDecimal(float $value): float
+    {
+        $shifted = $value * 10;
+
+        return ($value < 0 ? ceil($shifted) : floor($shifted)) / 10;
     }
 
     /**
@@ -734,6 +756,7 @@ class SensorController extends Controller
      */
     public function sensorReadings()
     {
+        return response()->json(Cache::remember('sensors_readings', now()->addSeconds(10), function () {
         $sensors = Sensor::with([
                 'house',
                 'pen',
@@ -767,7 +790,8 @@ class SensorController extends Controller
             ];
         });
 
-        return response()->json(['readings' => $readings]);
+        return ['readings' => $readings];
+        }));
     }
 
     /**
@@ -775,6 +799,7 @@ class SensorController extends Controller
      */
     public function sensorHealth()
     {
+        return response()->json(Cache::remember('sensors_health', now()->addSeconds(10), function () {
         $sensors = Sensor::with(['house', 'pen', 'configuration', 'latestReading', 'maintenances'])
             ->orderBy('sensortype')
             ->orderBy('sensorname')
@@ -837,6 +862,15 @@ class SensorController extends Controller
             ];
         });
 
-        return response()->json(['health' => $health]);
+        return ['health' => $health];
+        }));
+    }
+
+    private function clearSensorCaches(): void
+    {
+        Cache::forget('sensors_index');
+        Cache::forget('sensors_form_options');
+        Cache::forget('sensors_readings');
+        Cache::forget('sensors_health');
     }
 }

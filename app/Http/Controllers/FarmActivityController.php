@@ -9,6 +9,7 @@ use App\Models\VitaminRefillRecord;
 use App\Models\CleaningLog;
 use App\Models\SensorInspectionLog;
 use App\Models\FlockBatch;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,7 @@ class FarmActivityController extends Controller
      */
     public function pens()
     {
+        return response()->json(Cache::remember('farm_activity:pens', now()->addSeconds(30), function () {
         $records = DB::table('population_record as pr')
             ->leftJoin('pen as p', 'p.id', '=', 'pr.pen_id')
             ->leftJoin('house as h', 'h.id', '=', 'p.house_id')
@@ -40,7 +42,7 @@ class FarmActivityController extends Controller
             ->get();
 
         // Map records to format performed_by
-        return response()->json(['records' => $records->map(function ($record) {
+        return ['records' => $records->map(function ($record) {
             $employeeName = '--';
             if ($record->FirstName) {
                 $name_parts = [];
@@ -59,7 +61,8 @@ class FarmActivityController extends Controller
                 'recorded_at' => $record->recorded_at,
                 'performed_by' => $employeeName,
             ];
-        })]);
+        })];
+        }));
     }
 
     /**
@@ -67,6 +70,7 @@ class FarmActivityController extends Controller
      */
     public function weightSamplingLogs()
     {
+        return response()->json(Cache::remember('farm_activity:weight_sampling', now()->addSeconds(30), function () {
         $records = DB::table('weight_sampling_logs as w')
             ->leftJoin('tasks as t', 't.taskid', '=', 'w.task_id')
             ->leftJoin('user as u', 'u.EmployeeId', '=', 't.user_employeeid')
@@ -88,7 +92,7 @@ class FarmActivityController extends Controller
             ->get();
 
         // Map records to format performed_by
-        return response()->json(['records' => $records->map(function ($record) {
+        return ['records' => $records->map(function ($record) {
             $employeeName = '--';
             if ($record->FirstName) {
                 $name_parts = [];
@@ -109,7 +113,8 @@ class FarmActivityController extends Controller
                 'date' => $record->date,
                 'performed_by' => $employeeName,
             ];
-        })]);
+        })];
+        }));
     }
 
     /**
@@ -117,6 +122,7 @@ class FarmActivityController extends Controller
      */
     public function feedRefillRecords()
     {
+        return response()->json(Cache::remember('farm_activity:feed_refill', now()->addSeconds(30), function () {
         $records = DB::table('feed_refill_records as r')
             ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
             ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
@@ -139,7 +145,7 @@ class FarmActivityController extends Controller
             ->get();
 
         // Map records to format performed_by
-        return response()->json(['records' => $records->map(function ($record) {
+        return ['records' => $records->map(function ($record) {
             $employeeName = '--';
             if ($record->FirstName) {
                 $name_parts = [];
@@ -159,7 +165,8 @@ class FarmActivityController extends Controller
                 'recorded_at' => $record->recorded_at,
                 'performed_by' => $employeeName,
             ];
-        })]);
+        })];
+        }));
     }
 
     /**
@@ -167,6 +174,7 @@ class FarmActivityController extends Controller
      */
     public function vitaminRefillRecords()
     {
+        return response()->json(Cache::remember('farm_activity:vitamin_refill', now()->addSeconds(30), function () {
         $records = DB::table('vitamin_refill_records as r')
             ->leftJoin('inventories as i', 'i.id', '=', 'r.inventory_id')
             ->leftJoin('house as h', 'h.id', '=', 'r.house_id')
@@ -188,7 +196,7 @@ class FarmActivityController extends Controller
             ->get();
 
         // Map records to format performed_by
-        return response()->json(['records' => $records->map(function ($record) {
+        return ['records' => $records->map(function ($record) {
             $employeeName = '--';
             if ($record->FirstName) {
                 $name_parts = [];
@@ -207,7 +215,8 @@ class FarmActivityController extends Controller
                 'recorded_at' => $record->recorded_at,
                 'performed_by' => $employeeName,
             ];
-        })]);
+        })];
+        }));
     }
 
     /**
@@ -215,7 +224,8 @@ class FarmActivityController extends Controller
      */
     public function cleaningLogs()
     {
-        $records = DB::table('cleaning_logs as c')
+        $records = Cache::remember('farm_activity:cleaning', now()->addSeconds(30), function () {
+            return DB::table('cleaning_logs as c')
             ->whereIn('c.activity', ['Pen Disinfection', 'Pen Cleaning'])
             ->select(
                 'c.house',
@@ -229,6 +239,7 @@ class FarmActivityController extends Controller
             ->orderByDesc('c.date')
             ->orderByDesc('c.id')
             ->get();
+        });
 
         return response()->json(['records' => $records]);
     }
@@ -239,6 +250,7 @@ class FarmActivityController extends Controller
     public function sensorInspectionLogs()
     {
         try {
+            return response()->json(Cache::remember('farm_activity:sensor_inspection', now()->addSeconds(30), function () {
             $records = DB::table('sensor_inspection_logs as sil')
                 ->leftJoin('house as h', 'h.id', '=', 'sil.house_id')
                 ->leftJoin('pen as p', 'p.id', '=', 'sil.pen_id')
@@ -260,7 +272,7 @@ class FarmActivityController extends Controller
                 ->orderByDesc('sil.recorded_at')
                 ->get();
 
-            return response()->json(['records' => $records->map(function ($record) {
+            return ['records' => $records->map(function ($record) {
                 // Format employee name from FirstName, MiddleName, LastName, Suffix
                 $employeeName = '--';
                 if ($record->FirstName || $record->LastName) {
@@ -287,7 +299,8 @@ class FarmActivityController extends Controller
                     'time' => $timestamp ? $timestamp->format('g:i A') : '--',
                     'performed_by' => $employeeName,
                 ];
-            })]);
+            })];
+            }));
         } catch (\Exception $e) {
             return response()->json(['records' => [], 'error' => $e->getMessage()], 500);
         }
@@ -298,6 +311,7 @@ class FarmActivityController extends Controller
      */
     public function flockBatches()
     {
+        return response()->json(Cache::remember('farm_activity:flock_batches', now()->addSeconds(30), function () {
         $records = DB::table('flock_batches as b')
             ->leftJoin('house as h', 'h.id', '=', 'b.house_id')
             ->leftJoin('pen as p', 'p.id', '=', 'b.pen_id')
@@ -319,7 +333,7 @@ class FarmActivityController extends Controller
             ->get();
 
         // Map records to format performed_by
-        return response()->json(['records' => $records->map(function ($record) {
+        return ['records' => $records->map(function ($record) {
             $employeeName = '--';
             if ($record->FirstName) {
                 $name_parts = [];
@@ -339,7 +353,7 @@ class FarmActivityController extends Controller
                 'status' => $record->status,
                 'performed_by' => $employeeName,
             ];
-        })]);
+        })];
+        }));
     }
 }
-

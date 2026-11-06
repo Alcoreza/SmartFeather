@@ -420,11 +420,11 @@ body {
     text-align: left;
     font-size: 0.86rem;
     font-weight: 800;
-    color: #4f5f55;
+    color: #1f3f2b;
     line-height: 1.05;
     white-space: nowrap;
-    background: #f2faf3;
-    border-bottom: 1px solid rgba(87, 196, 81, 0.16);
+    background: #d4ead7;
+    border-bottom: 1px solid rgba(23, 100, 58, 0.28);
 }
 
 .reports-table td {
@@ -611,43 +611,63 @@ body {
 }
 
 button.reports-page-btn {
-    min-width: 86px !important;
-    padding: 8px 14px !important;
-    border: 1px solid rgba(16, 92, 52, 0.16) !important;
-    border-radius: 8px !important;
-    background: #ffffff !important;
-    color: #17452e !important;
-    box-shadow: none !important;
-    font-weight: 750 !important;
+    min-width: 88px !important;
+    min-height: 40px;
+    padding: 7px 18px !important;
+    border: 1px solid rgba(87, 196, 81, 0.2) !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f5fbf6 100%) !important;
+    color: #0f4f32 !important;
+    box-shadow: 0 8px 18px rgba(11, 67, 38, 0.05) !important;
+    font-weight: 800 !important;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 button.reports-page-btn:hover:not(:disabled) {
-    background: #f4fbf5 !important;
-    border-color: rgba(16, 92, 52, 0.3) !important;
+    background: linear-gradient(180deg, #fafffb 0%, #ecf8ee 100%) !important;
+    color: #062c17 !important;
+    border-color: rgba(87, 196, 81, 0.34) !important;
+    box-shadow: 0 10px 20px rgba(11, 67, 38, 0.08) !important;
+    transform: translateY(-1px);
 }
 
 button.reports-page-btn:disabled {
-    opacity: 0.5 !important;
+    color: #788a80 !important;
+    opacity: 1 !important;
     cursor: not-allowed !important;
+    transform: none;
 }
 
 .reports-page-dots {
     display: flex;
+    align-items: center;
     gap: 8px;
+    min-height: 18px;
+    overflow: visible;
 }
 
 button.reports-page-dot {
     width: 10px;
     height: 10px;
+    flex: 0 0 auto;
     padding: 0;
-    border: 1px solid rgba(87, 196, 81, 0.3);
+    border: 1px solid rgba(87, 196, 81, 0.4);
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.9);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        transform 0.22s ease,
+        opacity 0.22s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 button.reports-page-dot:hover {
@@ -656,9 +676,56 @@ button.reports-page-dot:hover {
 }
 
 button.reports-page-dot.active {
-    background: #17643a;
+    background: linear-gradient(135deg, #63d15f, #57c451);
     border-color: rgba(87, 196, 81, 0.6);
-    box-shadow: 0 2px 6px rgba(23, 100, 58, 0.18);
+    box-shadow: 0 2px 6px rgba(87, 196, 81, 0.22);
+    transform: scale(1.08);
+}
+
+.reports-page-dots[data-page-direction="next"] .reports-page-dot:not(.active) {
+    animation: reportsDotCarouselNext 0.24s ease both;
+}
+
+.reports-page-dots[data-page-direction="prev"] .reports-page-dot:not(.active) {
+    animation: reportsDotCarouselPrev 0.24s ease both;
+}
+
+.reports-page-dots[data-page-direction="next"] .reports-page-dot.active,
+.reports-page-dots[data-page-direction="prev"] .reports-page-dot.active {
+    animation: reportsActiveDotIn 0.24s ease both;
+}
+
+@keyframes reportsDotCarouselNext {
+    from {
+        opacity: 0.45;
+        transform: translateX(8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes reportsDotCarouselPrev {
+    from {
+        opacity: 0.45;
+        transform: translateX(-8px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes reportsActiveDotIn {
+    from {
+        opacity: 0.65;
+        transform: scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.08);
+    }
 }
 
 /* Export Button */
@@ -942,6 +1009,13 @@ button.reports-export-btn::before {
 
     .reports-pagination {
         flex-wrap: wrap;
+    }
+
+    button.reports-page-btn {
+        min-width: 82px !important;
+        min-height: 38px;
+        padding: 7px 14px !important;
+        font-size: 0.82rem;
     }
 
     .export-format-options {

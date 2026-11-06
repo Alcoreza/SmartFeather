@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\DailyFarmOverviewService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class ManagerDashboardController extends Controller
@@ -26,8 +27,11 @@ class ManagerDashboardController extends Controller
     private function overviewCards(): array
     {
         try {
-            $dailyFarmOverviewService = new DailyFarmOverviewService();
-            $dailyOverview = $dailyFarmOverviewService->getDailyOverview();
+            $dailyOverview = Cache::remember('web_dashboard_daily_overview', now()->addSeconds(30), function () {
+                $dailyFarmOverviewService = new DailyFarmOverviewService();
+
+                return $dailyFarmOverviewService->getDailyOverview();
+            });
         } catch (\Exception $e) {
             \Log::error('Error in ManagerDashboardController: ' . $e->getMessage());
             $dailyOverview = [

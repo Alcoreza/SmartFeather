@@ -19,6 +19,32 @@ const adminSensorAddRequiredFields = [
 
 let shouldTrackAdminSensorRequiredHighlights = false;
 let pendingAdminSensorAddPayload = null;
+let isAdminSensorStatusUpdating = false;
+let isAdminSensorThresholdSaving = false;
+let isAdminSensorEditSaving = false;
+
+const adminSensorSectionDisplayOrder = {
+    "Ammonia Sensor": 1,
+    "Temperature Sensor": 2,
+    "Feed Sensor": 3,
+    "Water Sensor": 4,
+};
+
+function sortAdminSensorSections(sections) {
+    return sections
+        .map((section, index) => ({ section, index }))
+        .sort((left, right) => {
+            const leftType = left.section.sensor_type || left.section.title || "";
+            const rightType = right.section.sensor_type || right.section.title || "";
+            const leftOrder = adminSensorSectionDisplayOrder[leftType] ?? 999;
+            const rightOrder = adminSensorSectionDisplayOrder[rightType] ?? 999;
+
+            return leftOrder === rightOrder
+                ? left.index - right.index
+                : leftOrder - rightOrder;
+        })
+        .map(({ section }) => section);
+}
 
 function showAdminSensorConfirmModal(message, title = "Confirm Save", confirmText = "Confirm") {
     return new Promise((resolve) => {
@@ -109,7 +135,9 @@ async function renderAdminSensorSections() {
     try {
         const response = await fetch("/api/admin/sensors");
         const data = await response.json();
-        const sections = Array.isArray(data.sections) ? data.sections : [];
+        const sections = sortAdminSensorSections(
+            Array.isArray(data.sections) ? data.sections : [],
+        );
 
         mount.innerHTML = sections
             .map((section) => createAdminSectionMarkup(section))
@@ -185,7 +213,7 @@ function createAdminSectionMarkup(section) {
                     <thead>
                         <tr>
                             <th>Sensor Name</th>
-                            <th>House Number</th>
+                            <th>House</th>
                             <th>Pen Number</th>
                             ${showsResourceColumn ? "<th>Resource No.</th>" : ""}
                             <th>Value</th>
@@ -1071,7 +1099,13 @@ function bindAdminThresholdButtons() {
 
     const saveButton = document.getElementById("adminSensorThresholdSave");
     if (saveButton) {
+        if (saveButton.dataset.thresholdBound === "true") return;
+
+        saveButton.dataset.thresholdBound = "true";
+
         saveButton.addEventListener("click", async () => {
+            if (isAdminSensorThresholdSaving) return;
+
             const type = document.getElementById("adminSensorThresholdType");
             const low = document.getElementById("adminSensorThresholdLow");
             const high = document.getElementById("adminSensorThresholdHigh");
@@ -1101,6 +1135,9 @@ function bindAdminThresholdButtons() {
                 return;
             }
 
+            isAdminSensorThresholdSaving = true;
+            saveButton.disabled = true;
+
             try {
                 const payload = {
                     sensor_type: type.value,
@@ -1114,6 +1151,9 @@ function bindAdminThresholdButtons() {
             } catch (error) {
                 console.error("Failed to save sensor thresholds.", error);
                 await showAdminSensorNoticeModal(`Failed to save sensor thresholds: ${error.message}`, "Unable to Save Thresholds");
+            } finally {
+                isAdminSensorThresholdSaving = false;
+                saveButton.disabled = false;
             }
         });
     }
@@ -1287,6 +1327,8 @@ function setupAdminSensorEditModal() {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        if (isAdminSensorEditSaving) return;
+
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
         normalizeAdminSensorResourcePayload(payload);
@@ -1306,6 +1348,10 @@ function setupAdminSensorEditModal() {
             return;
         }
 
+        isAdminSensorEditSaving = true;
+        const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+
         try {
             await apiRequest(`/api/admin/sensors/${sensorId}`, "PUT", payload);
             closeAdminSensorModal("adminSensorEditModal");
@@ -1314,6 +1360,9 @@ function setupAdminSensorEditModal() {
         } catch (error) {
             showAdminSensorEditFormError(error.message || "Failed to update sensor.");
             console.error("Failed to update sensor.", error);
+        } finally {
+            isAdminSensorEditSaving = false;
+            if (submitButton) submitButton.disabled = false;
         }
     });
 }
@@ -1523,12 +1572,20 @@ function bindAdminToggleStatusButtons() {
 function bindAdminStatusConfirmButton() {
     const confirmButton = document.getElementById("adminSensorStatusConfirm");
     if (!confirmButton) return;
+    if (confirmButton.dataset.statusBound === "true") return;
+
+    confirmButton.dataset.statusBound = "true";
 
     confirmButton.addEventListener("click", async () => {
+        if (isAdminSensorStatusUpdating) return;
+
         const sensorId = document.getElementById("adminSensorStatusId")?.value;
         const nextStatus = document.getElementById("adminSensorStatusValue")?.value;
 
         if (!sensorId || !nextStatus) return;
+
+        isAdminSensorStatusUpdating = true;
+        confirmButton.disabled = true;
 
         try {
             await apiRequest(`/api/admin/sensors/${sensorId}/status`, "PATCH", {
@@ -1540,6 +1597,9 @@ function bindAdminStatusConfirmButton() {
         } catch (error) {
             console.error("Failed to update sensor status.", error);
             await showAdminSensorNoticeModal(`Failed to update sensor status: ${error.message}`, "Unable to Update Status");
+        } finally {
+            isAdminSensorStatusUpdating = false;
+            confirmButton.disabled = false;
         }
     });
 }

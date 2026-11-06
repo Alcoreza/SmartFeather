@@ -1,8 +1,32 @@
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     setupManagerProfileModal();
     setupSensorModals();
-    await renderManagerSensorSections();
+    renderManagerSensorLoading();
+    renderManagerSensorSections();
 });
+
+const managerSensorSectionDisplayOrder = {
+    "Ammonia Sensor": 1,
+    "Temperature Sensor": 2,
+    "Feed Sensor": 3,
+    "Water Sensor": 4,
+};
+
+function sortManagerSensorSections(sections) {
+    return sections
+        .map((section, index) => ({ section, index }))
+        .sort((left, right) => {
+            const leftType = left.section.sensor_type || left.section.title || "";
+            const rightType = right.section.sensor_type || right.section.title || "";
+            const leftOrder = managerSensorSectionDisplayOrder[leftType] ?? 999;
+            const rightOrder = managerSensorSectionDisplayOrder[rightType] ?? 999;
+
+            return leftOrder === rightOrder
+                ? left.index - right.index
+                : leftOrder - rightOrder;
+        })
+        .map(({ section }) => section);
+}
 
 async function renderManagerSensorSections() {
     const mount = document.getElementById("managerSensorSections");
@@ -12,7 +36,9 @@ async function renderManagerSensorSections() {
         const response = await fetch("/api/manager/sensors");
         const data = await response.json();
 
-        const sections = Array.isArray(data.sections) ? data.sections : [];
+        const sections = sortManagerSensorSections(
+            Array.isArray(data.sections) ? data.sections : [],
+        );
 
         mount.innerHTML = sections
             .map((section, index) => createSectionMarkup(section, index))
@@ -31,6 +57,40 @@ async function renderManagerSensorSections() {
             </div>
         `;
     }
+}
+
+function renderManagerSensorLoading() {
+    const mount = document.getElementById("managerSensorSections");
+    if (!mount) return;
+
+    mount.innerHTML = `
+        <section class="manager-sensor-section" style="opacity: 1; transform: none;">
+            <div class="manager-sensor-section-head">
+                <div class="manager-sensor-section-main">
+                    <h2 class="manager-sensor-section-title">Sensors</h2>
+                </div>
+            </div>
+            <div class="manager-sensor-table-wrap">
+                <table class="manager-sensor-table">
+                    <thead>
+                        <tr>
+                            <th>Sensor Name</th>
+                            <th>House</th>
+                            <th>Pen</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="manager-sensor-empty">Loading sensors...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
 }
 
 function createSectionMarkup(section, index) {

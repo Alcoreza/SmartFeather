@@ -218,22 +218,24 @@ class SensorAlertService
     private function comparisonValue(string $sensorType, $value): float
     {
         if ($sensorType === 'Feed Sensor' || $sensorType === 'Water Sensor') {
-            return $this->resourcePercentValue($value);
+            return $this->resourcePercentValue($value, $sensorType);
         }
 
         return (float) $value;
     }
 
-    private function resourcePercentValue($value): float
+    private function resourcePercentValue($value, string $sensorType): float
     {
-        $containerHeightInches = 8.5;
+        $containerHeightInches = $sensorType === 'Water Sensor' ? 7.5 : 8.5;
         $rawInches = (float) $value;
 
         if ($containerHeightInches <= 0) {
             return 0;
         }
 
-        return max(0, ($rawInches / $containerHeightInches) * 100);
+        $remainingInches = $containerHeightInches - $rawInches;
+
+        return max(0, min(100, ($remainingInches / $containerHeightInches) * 100));
     }
 
     private function buildAlert($reading, string $alertType, float $thresholdValue): array
@@ -335,17 +337,24 @@ class SensorAlertService
     private function formatValue(string $sensorType, $value): string
     {
         return match ($sensorType) {
-            'Temperature Sensor' => number_format((float) $value, 1) . ' C',
-            'Ammonia Sensor' => number_format((float) $value, 1) . ' ppm',
-            'Feed Sensor' => $this->formatResourcePercent($value),
-            'Water Sensor' => $this->formatResourcePercent($value),
+            'Temperature Sensor' => number_format($this->truncateToFirstDecimal((float) $value), 1) . ' C',
+            'Ammonia Sensor' => number_format($this->truncateToFirstDecimal((float) $value), 1) . ' ppm',
+            'Feed Sensor' => $this->formatResourcePercent($value, $sensorType),
+            'Water Sensor' => $this->formatResourcePercent($value, $sensorType),
             default => (string) $value,
         };
     }
 
-    private function formatResourcePercent($value): string
+    private function formatResourcePercent($value, string $sensorType): string
     {
-        return number_format($this->resourcePercentValue($value), 1) . '%';
+        return number_format($this->truncateToFirstDecimal($this->resourcePercentValue($value, $sensorType)), 1) . '%';
+    }
+
+    private function truncateToFirstDecimal(float $value): float
+    {
+        $shifted = $value * 10;
+
+        return ($value < 0 ? ceil($shifted) : floor($shifted)) / 10;
     }
 
     private function formatLocation(

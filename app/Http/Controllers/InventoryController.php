@@ -3,53 +3,55 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
     public function managerIndex()
     {
-        $items = DB::table('inventories')
+        $viewData = Cache::remember('manager_inventory_view_data', now()->addSeconds(30), function () {
+            $items = DB::table('inventories')
             ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get();
 
-        $feedItems = $items->where('type', 'feed')
-            ->map(fn ($item) => $this->formatItem($item));
+            $feedItems = $items->where('type', 'feed')
+                ->map(fn ($item) => $this->formatItem($item));
 
-        $vitaminItems = $items->where('type', 'vitamin')
-            ->map(fn ($item) => $this->formatItem($item));
+            $vitaminItems = $items->where('type', 'vitamin')
+                ->map(fn ($item) => $this->formatItem($item));
 
-        $feedTypeOptions = DB::table('inventories')
-            ->select('item_name as name')
-            ->where('type', 'feed')
-            ->whereNull('archived_at')
-            ->orderBy('item_name')
-            ->get();
+            $feedTypeOptions = DB::table('inventories')
+                ->select('item_name as name')
+                ->where('type', 'feed')
+                ->whereNull('archived_at')
+                ->orderBy('item_name')
+                ->get();
 
-        $vitaminTypeOptions = DB::table('inventories')
-            ->select('item_name as name')
-            ->where('type', 'vitamin')
-            ->whereNull('archived_at')
-            ->orderBy('item_name')
-            ->get();
+            $vitaminTypeOptions = DB::table('inventories')
+                ->select('item_name as name')
+                ->where('type', 'vitamin')
+                ->whereNull('archived_at')
+                ->orderBy('item_name')
+                ->get();
 
-        return view('manager.inventory', compact(
-            'feedItems',
-            'vitaminItems',
-            'feedTypeOptions',
-            'vitaminTypeOptions'
-        ));
+            return compact('feedItems', 'vitaminItems', 'feedTypeOptions', 'vitaminTypeOptions');
+        });
+
+        return view('manager.inventory', $viewData);
     }
 
     public function snapshot()
     {
-        $items = DB::table('inventories')
+        $items = Cache::remember('manager_inventory_snapshot', now()->addSeconds(30), function () {
+            return DB::table('inventories')
             ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get()
             ->map(fn ($item) => $this->formatItem($item))
             ->values();
+        });
 
         return response()->json([
             'items' => $items,
@@ -105,6 +107,8 @@ class InventoryController extends Controller
                 'recent_purchase_date' => $validated['purchase_date'],
                 'monitoring_date' => now(),
             ]);
+
+            $this->clearInventoryCaches();
 
             return response()->json([
                 'success' => true,
@@ -166,6 +170,8 @@ class InventoryController extends Controller
                 'monitoring_date' => now(),
             ]);
 
+            $this->clearInventoryCaches();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Stock reduced successfully.',
@@ -204,6 +210,8 @@ class InventoryController extends Controller
                 ]);
 
             DB::commit();
+
+            $this->clearInventoryCaches();
 
             return response()->json([
                 'success' => true,
@@ -252,6 +260,12 @@ class InventoryController extends Controller
         }
 
         return response()->json($query->get());
+    }
+
+    public function clearInventoryCaches(): void
+    {
+        Cache::forget('manager_inventory_view_data');
+        Cache::forget('manager_inventory_snapshot');
     }
 
     private function formatItem($item)

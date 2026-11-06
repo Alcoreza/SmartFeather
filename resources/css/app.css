@@ -126,6 +126,16 @@ a[class*="btn"][aria-disabled="true"] {
     box-shadow: none !important;
 }
 
+@media (max-width: 1180px) {
+    button.flock-batch-float-btn[data-flock-batch-toggle] {
+        position: fixed !important;
+        left: auto !important;
+        right: 18px !important;
+        bottom: 18px !important;
+        z-index: 1750 !important;
+    }
+}
+
 button[class*="cancel"],
 button[class*="close"],
 a[class*="back-btn"],

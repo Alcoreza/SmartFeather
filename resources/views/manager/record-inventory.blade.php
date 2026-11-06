@@ -63,10 +63,12 @@
             </div>
 
             <div class="record-table-card">
-                <table class="record-table">
-                    <thead id="recordTableHead"></thead>
-                    <tbody id="recordTableBody"></tbody>
-                </table>
+                <div class="record-table-scroll">
+                    <table class="record-table">
+                        <thead id="recordTableHead"></thead>
+                        <tbody id="recordTableBody"></tbody>
+                    </table>
+                </div>
 
                 <div class="record-pagination" data-record-pagination>
                     <button type="button" class="record-page-btn" data-record-prev>

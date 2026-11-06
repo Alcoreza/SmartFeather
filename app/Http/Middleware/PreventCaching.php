@@ -14,9 +14,9 @@ class PreventCaching
     {
         $response = $next($request);
 
-        // Prevent caching of protected pages
+        // Allow fast same-session navigation while still requiring revalidation.
         return $response
-            ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
+            ->header('Cache-Control', 'private, no-cache, max-age=0, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT')
             ->header('X-Frame-Options', 'DENY')

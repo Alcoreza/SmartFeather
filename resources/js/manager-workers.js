@@ -1,17 +1,50 @@
-const BASE_URL = '/api/admin/workers';
+const BASE_URL = '/api/manager/workers';
 const WORKERS_ROWS_PER_PAGE = 7;
+const WORKERS_DOT_LIMIT = 5;
 
 let workersCache = [];
 let workersCurrentPage = 0;
+let workersLastPage = 0;
 let workersCurrentRole = 'All';
 
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+function ensureWorkerNoticeModal() {
+    let modal = document.getElementById('workerNoticeModal');
+
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'workerNoticeModal';
+    modal.className = 'worker-modal-backdrop';
+    modal.innerHTML = `
+        <div class="worker-modal-card worker-view-card">
+            <div class="worker-view-header">
+                <h2 id="workerNoticeTitle">Employee Notice</h2>
+                <div class="worker-header-line"></div>
+            </div>
+            <div class="worker-view-body">
+                <div class="worker-field">
+                    <p id="workerNoticeMessage"></p>
+                </div>
+            </div>
+            <div class="worker-view-actions">
+                <button type="button" class="worker-close-pill" id="workerNoticeOk">OK</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#workerNoticeOk')?.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.classList.remove('active');
+    });
+
+    return modal;
+}
+
+function showWorkerNotice(message, title = 'Employee Notice') {
+    const modal = ensureWorkerNoticeModal();
+    modal.querySelector('#workerNoticeTitle').textContent = title;
+    modal.querySelector('#workerNoticeMessage').textContent = message;
+    modal.classList.add('active');
 }
 
 // ================= PROFILE MODAL =================
@@ -72,7 +105,7 @@ async function loadEmployees() {
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employees');
+        showWorkerNotice('Failed to load employees.', 'Unable to Load Employees');
     }
 }
 
@@ -111,15 +144,15 @@ function renderWorkersTable() {
     const pageWorkers = filteredWorkers.slice(start, start + WORKERS_ROWS_PER_PAGE);
     const placeholderRows = WORKERS_ROWS_PER_PAGE - pageWorkers.length;
 
-    table.innerHTML = pageWorkers.map(user => {
+    table.innerHTML = pageWorkers.map((user, index) => {
         const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
 
         return `
-            <tr data-id="${escapeHtml(user.EmployeeId)}">
-                <td>${escapeHtml(fullName)}</td>
-                <td>${escapeHtml(user.Role)}</td>
+            <tr data-id="${user.EmployeeId}" style="--row-delay: ${Math.min(index * 0.055, 0.55)}s;">
+                <td>${fullName}</td>
+                <td>${user.Role}</td>
                 <td class="text-center">
-                    <button class="view-worker-btn icon-btn" type="button" data-id="${escapeHtml(user.EmployeeId)}">
+                    <button class="view-worker-btn icon-btn" type="button" data-id="${user.EmployeeId}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
@@ -159,7 +192,16 @@ function updateWorkersPagination(totalRows) {
     }
 
     if (dots) {
-        dots.innerHTML = Array.from({ length: totalPages }, (_, index) => `
+        const visiblePages = getVisibleWorkerPages(totalPages, workersCurrentPage);
+        const activeDotIndex = Math.max(0, visiblePages.indexOf(workersCurrentPage));
+        const direction = workersCurrentPage > workersLastPage ? 'next' : workersCurrentPage < workersLastPage ? 'prev' : 'still';
+        dots.dataset.pageDirection = direction;
+        dots.style.setProperty('--active-dot-index', activeDotIndex);
+        dots.style.setProperty('--active-dot-offset', `${activeDotIndex * 18}px`);
+        const dotTrackWidth = (visiblePages.length * 10) + (Math.max(0, visiblePages.length - 1) * 8);
+        dots.style.setProperty('--dot-track-width', `${dotTrackWidth}px`);
+        dots.style.setProperty('--dot-track-half', `${dotTrackWidth / 2}px`);
+        dots.innerHTML = visiblePages.map((index) => `
             <button
                 type="button"
                 class="workers-page-dot ${index === workersCurrentPage ? 'active' : ''}"
@@ -168,7 +210,25 @@ function updateWorkersPagination(totalRows) {
                 aria-current="${index === workersCurrentPage ? 'page' : 'false'}"
             ></button>
         `).join('');
+        workersLastPage = workersCurrentPage;
     }
+}
+
+function getVisibleWorkerPages(totalPages, currentPage) {
+    if (totalPages <= WORKERS_DOT_LIMIT) {
+        return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const centerOffset = Math.floor(WORKERS_DOT_LIMIT / 2);
+    let start = Math.max(0, currentPage - centerOffset);
+    let end = start + WORKERS_DOT_LIMIT;
+
+    if (end > totalPages) {
+        end = totalPages;
+        start = Math.max(0, end - WORKERS_DOT_LIMIT);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
 }
 
 function setupWorkersPagination() {
@@ -197,25 +257,27 @@ async function openViewModal(id) {
         const res = await fetch(`${BASE_URL}/${id}`);
         const user = await res.json();
 
-        document.getElementById('workerFirstName').value = user.FirstName;
-        document.getElementById('workerMiddleName').value = user.MiddleName ?? '';
-        document.getElementById('workerLastName').value = user.LastName;
-        document.getElementById('workerSuffix').value = user.Suffix ?? '';
-        document.getElementById('workerUsername').value = user.Username ?? '';
-        document.getElementById('workerRole').value = user.Role;
-        document.getElementById('workerPhone').value = user.PhoneNumber ?? '';
-        document.getElementById('workerId').value = user.EmployeeId;
-        document.getElementById('workerBirthday').value = user.Birthday ?? '';
-        document.getElementById('workerGender').value = user.Gender ?? '';
-        document.getElementById('workerAddress').value = user.Address ?? '';
+        populateViewModal(user);
 
         // ✅ FIXED: use class instead of display
         document.getElementById('workerModal').classList.add('active');
 
     } catch (err) {
         console.error(err);
-        alert('Failed to load employee');
+        showWorkerNotice('Failed to load employee.', 'Unable to Load Employee');
     }
+}
+
+function populateViewModal(user) {
+    const fullName = `${user.FirstName} ${user.MiddleName ?? ''} ${user.LastName} ${user.Suffix ?? ''}`.trim();
+
+    document.getElementById('view_name').innerText = fullName;
+    document.getElementById('view_username').innerText = user.Username ?? '';
+    document.getElementById('view_role').innerText = user.Role;
+    document.getElementById('view_phone_number').innerText = user.PhoneNumber ?? '';
+    document.getElementById('view_birthday').innerText = user.Birthday ?? '';
+    document.getElementById('view_gender').innerText = user.Gender ?? '';
+    document.getElementById('view_address').innerText = user.Address ?? '';
 }
 
 // ================= EVENT LISTENER =================

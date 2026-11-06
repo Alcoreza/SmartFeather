@@ -9,6 +9,9 @@ const state = {
     dateFrom: '',
     dateTo: '',
     currentPage: 0,
+    pagination: {},
+    loadedCategories: new Set(),
+    categoryLoads: new Map(),
 };
 
 const BIO_ROWS_PER_PAGE = 5;
@@ -287,7 +290,7 @@ function filterBiosecurityLogs(type, logs) {
     if (state.nameSearch.trim()) {
         const searchTerm = state.nameSearch.trim().toLowerCase();
         filtered = filtered.filter((log) => {
-            const name = String(log.name || '').toLowerCase();
+            const name = String(log.name || log.performed_by || log.house || '').toLowerCase();
             return name.includes(searchTerm);
         });
     }
@@ -316,7 +319,7 @@ function renderBioTable(type, filteredRows) {
     const config = TABLE_CONFIG[type];
     if (!config || !tableBody) return;
 
-    const totalPages = Math.max(1, Math.ceil(filteredRows.length / BIO_ROWS_PER_PAGE));
+    const totalPages = Math.max(1, Number(state.pagination[type]?.last_page || 1));
     state.currentPage = Math.min(Math.max(0, state.currentPage), totalPages - 1);
 
     if (!filteredRows.length) {
@@ -330,8 +333,7 @@ function renderBioTable(type, filteredRows) {
         return;
     }
 
-    const start = state.currentPage * BIO_ROWS_PER_PAGE;
-    const pageRows = filteredRows.slice(start, start + BIO_ROWS_PER_PAGE);
+    const pageRows = filteredRows;
     const placeholderRows = BIO_ROWS_PER_PAGE - pageRows.length;
 
     renderTableRows(type, pageRows);
@@ -420,7 +422,7 @@ function renderCurrentTable(resetPage = true) {
 
     renderTableHead(type);
     renderBioTable(type, filteredRows);
-    updateBioPagination(filteredRows.length);
+    updateBioPagination(Number(state.pagination[type]?.total ?? filteredRows.length));
 }
 
 function normalizeFieldValueForInput(field, value = '') {
@@ -1192,13 +1194,15 @@ function bindEvents() {
         btn.addEventListener('click', () => {
             const category = btn.dataset.category;
             state.selectedCategory = category;
+            state.currentPage = 0;
 
             // Update active button state
             categoryButtons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
             syncAddBioButtonVisibility();
-            renderCurrentTable();
+            state.currentPage = 0;
+            loadBiosecurityCategory(category, false, true);
         });
     });
 
@@ -1212,21 +1216,25 @@ function bindEvents() {
     if (nameSearchInput) {
         nameSearchInput.addEventListener('input', (event) => {
             state.nameSearch = event.target.value;
-            renderCurrentTable();
+            state.currentPage = 0;
+            clearTimeout(nameSearchInput._bioSearchTimer);
+            nameSearchInput._bioSearchTimer = setTimeout(() => loadBiosecurityCategory(state.selectedCategory, false, true), 250);
         });
     }
 
     if (dateFromInput) {
         dateFromInput.addEventListener('change', (event) => {
             state.dateFrom = event.target.value;
-            renderCurrentTable();
+            state.currentPage = 0;
+            loadBiosecurityCategory(state.selectedCategory, false, true);
         });
     }
 
     if (dateToInput) {
         dateToInput.addEventListener('change', (event) => {
             state.dateTo = event.target.value;
-            renderCurrentTable();
+            state.currentPage = 0;
+            loadBiosecurityCategory(state.selectedCategory, false, true);
         });
     }
 
@@ -1248,8 +1256,32 @@ function setupBioPaginationResize() {
 }
 
 async function loadBiosecurityLogs() {
+    await loadBiosecurityCategory(state.selectedCategory, true);
+}
+
+async function loadBiosecurityCategory(category, updateOverview = false, forceReload = false) {
+    const params = new URLSearchParams({
+        categories: category,
+        page: String(state.currentPage + 1),
+        name: state.nameSearch,
+        date_from: state.dateFrom,
+        date_to: state.dateTo,
+    });
+    const requestKey = `${category}:${params.toString()}`;
+    if (!forceReload && state.loadedCategories.has(requestKey)) {
+        if (state.selectedCategory === category) renderCurrentTable(false);
+        return;
+    }
+
+    if (state.categoryLoads.has(requestKey)) {
+        await state.categoryLoads.get(requestKey);
+        if (state.selectedCategory === category) renderCurrentTable(false);
+        return;
+    }
+
+    const request = (async () => {
     try {
-        const response = await fetch('/api/manager/biosecurity-logs?categories=Personnel%20Biosecurity%20Logs,Visitors', {
+        const response = await fetch(`/api/manager/biosecurity-logs?${params.toString()}`, {
             headers: {
                 Accept: 'application/json',
             },
@@ -1261,14 +1293,16 @@ async function loadBiosecurityLogs() {
 
         const data = await response.json();
 
-        setOverview(data.overview || {});
-        state.logs = data.logs || {};
+        if (updateOverview) setOverview(data.overview || {});
+        state.logs[category] = data.logs?.[category] || [];
+        state.pagination[category] = data.pagination?.[category] || {};
+        state.loadedCategories.add(requestKey);
 
-        renderCurrentTable();
+        if (state.selectedCategory === category) renderCurrentTable(false);
     } catch (error) {
         console.error('Failed to load biosecurity logs:', error);
 
-        if (tableHead) {
+        if (state.selectedCategory === category && tableHead) {
             tableHead.innerHTML = `
                 <tr>
                     <th>Logs</th>
@@ -1276,7 +1310,7 @@ async function loadBiosecurityLogs() {
             `;
         }
 
-        if (tableBody) {
+        if (state.selectedCategory === category && tableBody) {
             tableBody.innerHTML = `
                 <tr>
                     <td class="bio-empty">Unable to load biosecurity logs.</td>
@@ -1284,6 +1318,11 @@ async function loadBiosecurityLogs() {
             `;
         }
     }
+    })();
+
+    state.categoryLoads.set(requestKey, request);
+    await request;
+    state.categoryLoads.delete(requestKey);
 }
 
 async function populateProfileModal() {
@@ -1412,7 +1451,7 @@ function updateBioPagination(totalRows) {
     const prevButton = document.querySelector('[data-bio-prev]');
     const nextButton = document.querySelector('[data-bio-next]');
     const dots = document.querySelector('[data-bio-dots]');
-    const totalPages = Math.max(1, Math.ceil(totalRows / BIO_ROWS_PER_PAGE));
+    const totalPages = Math.max(1, Number(state.pagination[state.selectedCategory]?.last_page || 1));
     state.currentPage = Math.min(Math.max(0, state.currentPage), totalPages - 1);
     const shouldShowPagination = totalRows > BIO_ROWS_PER_PAGE;
 
@@ -1489,7 +1528,7 @@ function setupBioPagination() {
         if (prevButton.disabled) return;
 
         state.currentPage = Math.max(0, state.currentPage - 1);
-        renderCurrentTable(false);
+        loadBiosecurityCategory(state.selectedCategory, false, true);
     });
 
     nextButton?.addEventListener('click', () => {
@@ -1497,7 +1536,7 @@ function setupBioPagination() {
 
         const totalPages = Number(pagination?.dataset.bioTotalPages || 1);
         state.currentPage = Math.min(totalPages - 1, state.currentPage + 1);
-        renderCurrentTable(false);
+        loadBiosecurityCategory(state.selectedCategory, false, true);
     });
 
     document.querySelector('[data-bio-dots]')?.addEventListener('click', event => {
@@ -1505,6 +1544,6 @@ function setupBioPagination() {
         if (!dot) return;
 
         state.currentPage = Number(dot.dataset.bioPage || 0);
-        renderCurrentTable(false);
+        loadBiosecurityCategory(state.selectedCategory, false, true);
     });
 }

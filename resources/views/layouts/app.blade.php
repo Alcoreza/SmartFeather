@@ -17,10 +17,12 @@
     @if (request()->routeIs('landing') || request()->routeIs('login'))
         <link rel="preload" as="image" href="{{ asset('images/backgrounds/poultry-login-bg.jpg') }}" fetchpriority="high">
     @elseif (request()->is('manager/*') || request()->is('admin/*'))
-        <link rel="preload" as="image" href="{{ asset('images/backgrounds/poultry-dashboard-bg.jpg') }}" fetchpriority="high">
+        <link rel="preload" as="image" href="{{ asset('images/backgrounds/poultry-dashboard-bg-optimized.jpg') }}" fetchpriority="high">
     @endif
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @unless (request()->routeIs('manager.profile', 'admin.profile'))
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @endunless
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @stack('styles')

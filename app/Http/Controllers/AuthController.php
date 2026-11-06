@@ -45,6 +45,9 @@ class AuthController extends Controller
             'role' => $user->Role,
             'email' => $user->Email ?? null,
             'logged_in_at' => now(),
+            // Login has just confirmed the account is active and its role is current.
+            // Let auth.session reuse that check instead of immediately querying again.
+            'auth_verified_at' => now()->timestamp,
         ]);
 
         return response()->json([

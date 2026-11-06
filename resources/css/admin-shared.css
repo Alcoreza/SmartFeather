@@ -50,7 +50,7 @@ body::before {
             rgba(6, 51, 32, 0.1),
             transparent 28%
         ),
-        url("/images/backgrounds/poultry-dashboard-bg.jpg"),
+        url("/images/backgrounds/poultry-dashboard-bg-optimized.jpg"),
         linear-gradient(180deg, #f8fbf7 0%, var(--admin-page-bg) 100%);
     background-position: center, center, top left, top left, top left, right top, center, center;
     background-size: auto, auto, 36px 36px, 36px 36px, auto, auto, cover, auto;

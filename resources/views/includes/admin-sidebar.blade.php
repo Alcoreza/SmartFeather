@@ -2,7 +2,7 @@
     <div class="admin-sidebar-top">
         <div class="admin-sidebar-brand">
             <div class="admin-sidebar-logo">
-                <img src="{{ asset('images/AppLogoSmartFeather.png') }}" alt="SmartFeather">
+                <img src="{{ asset('images/AppLogoSmartFeather-optimized.png') }}" alt="SmartFeather">
             </div>
 
             <button type="button" class="admin-sidebar-menu-toggle" data-sidebar-toggle aria-label="Open navigation" aria-expanded="false">

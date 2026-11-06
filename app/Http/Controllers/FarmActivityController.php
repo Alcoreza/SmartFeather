@@ -79,7 +79,8 @@ class FarmActivityController extends Controller
         $this->applyDateRange($records, 'pr.recorded_at', $filters);
         $this->applyHouseFilter($records, 'h.id', $filters);
         $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
-        $records = $records->get();
+        $paginator = $records->paginate(8, ['*'], 'page', $filters['page']);
+        $records = collect($paginator->items());
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -101,7 +102,7 @@ class FarmActivityController extends Controller
                 'recorded_at' => $record->recorded_at,
                 'performed_by' => $employeeName,
             ];
-        })];
+        }), 'pagination' => $this->paginationMeta($paginator)];
         }));
     }
 
@@ -135,7 +136,8 @@ class FarmActivityController extends Controller
         $this->applyDateRange($records, 'w.date', $filters);
         $this->applyHouseFilter($records, 'w.house_id', $filters);
         $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
-        $records = $records->get();
+        $paginator = $records->paginate(8, ['*'], 'page', $filters['page']);
+        $records = collect($paginator->items());
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -159,7 +161,7 @@ class FarmActivityController extends Controller
                 'date' => $record->date,
                 'performed_by' => $employeeName,
             ];
-        })];
+        }), 'pagination' => $this->paginationMeta($paginator)];
         }));
     }
 
@@ -194,7 +196,8 @@ class FarmActivityController extends Controller
         $this->applyDateRange($records, 'r.recorded_at', $filters);
         $this->applyHouseFilter($records, 'r.house_id', $filters);
         $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
-        $records = $records->get();
+        $paginator = $records->paginate(8, ['*'], 'page', $filters['page']);
+        $records = collect($paginator->items());
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -217,7 +220,7 @@ class FarmActivityController extends Controller
                 'recorded_at' => $record->recorded_at,
                 'performed_by' => $employeeName,
             ];
-        })];
+        }), 'pagination' => $this->paginationMeta($paginator)];
         }));
     }
 
@@ -251,7 +254,8 @@ class FarmActivityController extends Controller
         $this->applyDateRange($records, 'r.recorded_at', $filters);
         $this->applyHouseFilter($records, 'r.house_id', $filters);
         $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
-        $records = $records->get();
+        $paginator = $records->paginate(8, ['*'], 'page', $filters['page']);
+        $records = collect($paginator->items());
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -273,7 +277,7 @@ class FarmActivityController extends Controller
                 'recorded_at' => $record->recorded_at,
                 'performed_by' => $employeeName,
             ];
-        })];
+        }), 'pagination' => $this->paginationMeta($paginator)];
         }));
     }
 
@@ -300,14 +304,23 @@ class FarmActivityController extends Controller
             ->orderByDesc('c.date')
             ->orderByDesc('c.id');
 
+            if (in_array($filters['activity'], ['Pen Disinfection', 'Pen Cleaning'], true)) {
+                $query->where('c.activity', $filters['activity']);
+            }
+
             $this->applyDateRange($query, 'c.date', $filters);
             $this->applyHouseFilter($query, 'c.house_id', $filters);
             $this->applyCleaningFlockmanFilter($query, $filters);
 
-            return $query->get();
+            $paginator = $query->paginate(8, ['*'], 'page', $filters['page']);
+
+            return [
+                'records' => collect($paginator->items()),
+                'pagination' => $this->paginationMeta($paginator),
+            ];
         });
 
-        return response()->json(['records' => $records]);
+        return response()->json($records);
     }
 
     /**
@@ -342,7 +355,8 @@ class FarmActivityController extends Controller
             $this->applyDateRange($records, 'sil.recorded_at', $filters);
             $this->applyHouseFilter($records, 'sil.house_id', $filters);
             $this->applyFlockmanFilter($records, 'sil.employee_id', $filters);
-            $records = $records->get();
+            $paginator = $records->paginate(8, ['*'], 'page', $filters['page']);
+            $records = collect($paginator->items());
 
             return ['records' => $records->map(function ($record) {
                 // Format employee name from FirstName, MiddleName, LastName, Suffix
@@ -371,7 +385,7 @@ class FarmActivityController extends Controller
                     'time' => $timestamp ? $timestamp->format('g:i A') : '--',
                     'performed_by' => $employeeName,
                 ];
-            })];
+            }), 'pagination' => $this->paginationMeta($paginator)];
             }));
         } catch (\Exception $e) {
             return response()->json(['records' => [], 'error' => $e->getMessage()], 500);
@@ -408,7 +422,8 @@ class FarmActivityController extends Controller
         $this->applyDateRange($records, 'b.started_at', $filters);
         $this->applyHouseFilter($records, 'b.house_id', $filters);
         $this->applyFlockmanFilter($records, 't.user_employeeid', $filters);
-        $records = $records->get();
+        $paginator = $records->paginate(8, ['*'], 'page', $filters['page']);
+        $records = collect($paginator->items());
 
         // Map records to format performed_by
         return ['records' => $records->map(function ($record) {
@@ -431,7 +446,7 @@ class FarmActivityController extends Controller
                 'status' => $record->status,
                 'performed_by' => $employeeName,
             ];
-        })];
+        }), 'pagination' => $this->paginationMeta($paginator)];
         }));
     }
 
@@ -442,6 +457,18 @@ class FarmActivityController extends Controller
             'to_date' => $request->query('to_date', ''),
             'house_id' => $request->query('house_id', ''),
             'flockman_id' => $request->query('flockman_id', ''),
+            'page' => max(1, (int) $request->query('page', 1)),
+            'activity' => $request->query('activity', ''),
+        ];
+    }
+
+    private function paginationMeta($paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
         ];
     }
 

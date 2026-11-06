@@ -13,6 +13,7 @@ class InventoryController extends Controller
     {
         $viewData = Cache::remember('manager_inventory_view_data', now()->addSeconds(30), function () {
             $items = DB::table('inventories')
+            ->select('id', 'item_name', 'type', 'initial_stock', 'remaining_stock', 'critical', 'purchase_date', 'unit')
             ->whereNull('archived_at')
             ->orderBy('id', 'asc')
             ->get();
@@ -23,19 +24,15 @@ class InventoryController extends Controller
             $vitaminItems = $items->where('type', 'vitamin')
                 ->map(fn ($item) => $this->formatItem($item));
 
-            $feedTypeOptions = DB::table('inventories')
-                ->select('item_name as name')
-                ->where('type', 'feed')
-                ->whereNull('archived_at')
-                ->orderBy('item_name')
-                ->get();
+            $feedTypeOptions = $items->where('type', 'feed')
+                ->sortBy('item_name')
+                ->map(fn ($item) => (object) ['name' => $item->item_name])
+                ->values();
 
-            $vitaminTypeOptions = DB::table('inventories')
-                ->select('item_name as name')
-                ->where('type', 'vitamin')
-                ->whereNull('archived_at')
-                ->orderBy('item_name')
-                ->get();
+            $vitaminTypeOptions = $items->where('type', 'vitamin')
+                ->sortBy('item_name')
+                ->map(fn ($item) => (object) ['name' => $item->item_name])
+                ->values();
 
             $analysisHouseOptions = DB::table('house as h')
                 ->join('pen as p', 'p.house_id', '=', 'h.id')

@@ -40,6 +40,12 @@ class Sensor extends Model
         return $this->hasMany(SensorMaintenance::class, 'sensors_sensorid', 'sensorid');
     }
 
+    public function latestMaintenance()
+    {
+        return $this->hasOne(SensorMaintenance::class, 'sensors_sensorid', 'sensorid')
+            ->latestOfMany('startdate');
+    }
+
     public function readings()
     {
         return $this->hasMany(SensorReading::class, 'sensorid', 'sensorid');

@@ -95,16 +95,17 @@ class ReportsController extends Controller
                 $query->whereIn('house', $this->getHouseFilterValues($filters['house']));
             }
 
-            $statuses = $query->pluck('status')->toArray();
-            foreach ($statuses as $status) {
-                $status = strtolower(trim($status));
-                if ($status === 'overweight') {
-                    $weightStatus['overweight']++;
-                } elseif ($status === 'underweight') {
-                    $weightStatus['underweight']++;
-                } else {
-                    $weightStatus['normal']++;
-                }
+            $statusCounts = $query
+                ->selectRaw("LOWER(TRIM(COALESCE(status, ''))) as normalized_status, COUNT(*) as aggregate")
+                ->groupByRaw("LOWER(TRIM(COALESCE(status, '')))")
+                ->get();
+
+            foreach ($statusCounts as $statusCount) {
+                $status = $statusCount->normalized_status;
+                $bucket = $status === 'overweight'
+                    ? 'overweight'
+                    : ($status === 'underweight' ? 'underweight' : 'normal');
+                $weightStatus[$bucket] += (int) $statusCount->aggregate;
             }
         }
 

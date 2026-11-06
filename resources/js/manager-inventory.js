@@ -443,8 +443,9 @@ function setupInventoryStockSync() {
         return unit === "bottles" || unit === "bottle" ? "btls" : unit;
     }
 
-    syncInventoryStocks();
-    setInterval(syncInventoryStocks, 5000);
+    // The page is server-rendered with current stock values; avoid a duplicate
+    // snapshot request during initial load and refresh only after first paint.
+    setInterval(syncInventoryStocks, 15000);
     document.addEventListener("visibilitychange", syncInventoryStocks);
 }
 

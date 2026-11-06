@@ -16,8 +16,28 @@ class TaskController extends Controller
 {
     public function index()
     {
-        return response()->json(Cache::remember('manager_tasks_index', now()->addSeconds(15), function () {
-        $tasks = Task::with(['employee', 'house', 'pen'])
+        return response()->json(Cache::remember('manager_tasks_index', now()->addSeconds(30), function () {
+        $tasks = Task::query()
+            ->select([
+                'taskid',
+                'user_employeeid',
+                'house_houseid',
+                'pennumber',
+                'tasktype',
+                'detailedtask',
+                'timeassigned',
+                'finishby',
+                'status',
+                'notes',
+                'time_completed',
+                'prioritylevel',
+                'photourl',
+            ])
+            ->with([
+                'employee:EmployeeId,FirstName,MiddleName,LastName,Suffix',
+                'house:id,house_number',
+                'pen:id,pen_name',
+            ])
             ->orderBy('timeassigned', 'desc')
             ->get()
             ->map(function (Task $task) {

@@ -10,6 +10,7 @@ use App\Models\PersonnelEntryLog;
 use App\Models\WeightSamplingLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -23,39 +24,54 @@ class BiosecurityLogController extends Controller
     {
         try {
             $requestedCategories = $this->getRequestedLogCategories($request);
-            $cacheKey = 'biosecurity_logs_index:' . md5(implode('|', $requestedCategories));
+            $page = max(1, (int) $request->query('page', 1));
+            $perPage = 5;
+            $filters = [
+                'name' => trim((string) $request->query('name', '')),
+                'date_from' => $request->query('date_from', ''),
+                'date_to' => $request->query('date_to', ''),
+            ];
+            $cacheKey = 'biosecurity_logs_index:' . md5(json_encode([$requestedCategories, $page, $filters]));
 
-            return response()->json(Cache::remember($cacheKey, now()->addSeconds(15), function () use ($requestedCategories) {
+            return response()->json(Cache::remember($cacheKey, now()->addSeconds(15), function () use ($requestedCategories, $page, $perPage, $filters) {
             $groupedLogs = [];
+            $pagination = [];
 
             if (in_array('Personnel Biosecurity Logs', $requestedCategories, true)) {
-                $groupedLogs['Personnel Biosecurity Logs'] = $this->formatPersonnelBiosecurityLogs(
-                    PersonnelEntryLog::orderBy('date')->orderBy('time')->orderBy('id')->get(),
-                );
+                [$groupedLogs['Personnel Biosecurity Logs'], $pagination['Personnel Biosecurity Logs']] =
+                    $this->getPersonnelBiosecurityPage($filters, $page, $perPage);
             }
 
             if (in_array('Visitors', $requestedCategories, true)) {
-                $groupedLogs['Visitors'] = VisitorLog::orderBy('created_at', 'desc')
-                    ->get()
-                    ->map(fn($log) => $this->formatVisitorLog($log));
+                $query = VisitorLog::query();
+                $this->applyBioFilters($query, 'name', 'date', $filters);
+                $paginator = $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
+                $groupedLogs['Visitors'] = $paginator->getCollection()->map(fn($log) => $this->formatVisitorLog($log));
+                $pagination['Visitors'] = $this->paginationMeta($paginator->total(), $page, $perPage);
             }
 
             if (in_array('Cleaning', $requestedCategories, true)) {
-                $groupedLogs['Cleaning'] = CleaningLog::orderBy('created_at', 'desc')
-                    ->get()
-                    ->map(fn($log) => $this->formatCleaningLog($log));
+                $query = CleaningLog::query();
+                $this->applyBioFilters($query, 'performed_by', 'date', $filters);
+                $paginator = $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
+                $groupedLogs['Cleaning'] = $paginator->getCollection()->map(fn($log) => $this->formatCleaningLog($log));
+                $pagination['Cleaning'] = $this->paginationMeta($paginator->total(), $page, $perPage);
             }
 
             if (in_array('Personnel Entry Logs', $requestedCategories, true)) {
-                $groupedLogs['Personnel Entry Logs'] = PersonnelEntryLog::orderBy('created_at', 'desc')
-                    ->get()
-                    ->map(fn($log) => $this->formatPersonnelEntryLog($log));
+                $query = PersonnelEntryLog::query();
+                $this->applyBioFilters($query, 'name', 'date', $filters);
+                $paginator = $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
+                $groupedLogs['Personnel Entry Logs'] = $paginator->getCollection()->map(fn($log) => $this->formatPersonnelEntryLog($log));
+                $pagination['Personnel Entry Logs'] = $this->paginationMeta($paginator->total(), $page, $perPage);
             }
 
             if (in_array('Weight Sampling', $requestedCategories, true)) {
-                $groupedLogs['Weight Sampling'] = WeightSamplingLog::orderBy('created_at', 'desc')
-                    ->get()
-                    ->map(fn($log) => $this->formatWeightSamplingLog($log));
+                $query = WeightSamplingLog::query();
+                $this->applyBioFilters($query, 'house', 'date', $filters);
+                $paginator = $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
+                $groupedLogs['Weight Sampling'] = $paginator->getCollection()->map(fn($log) => $this->formatWeightSamplingLog($log));
+                $pagination['Weight Sampling'] = $this->paginationMeta($paginator->total(), $page, $perPage);
             }
 
             // Get overview stats
@@ -64,6 +80,7 @@ class BiosecurityLogController extends Controller
             return [
                 'overview' => $overview,
                 'logs' => $groupedLogs,
+                'pagination' => $pagination,
             ];
             }));
         } catch (\Exception $e) {
@@ -73,6 +90,102 @@ class BiosecurityLogController extends Controller
                 'logs' => [],
             ], 500);
         }
+    }
+
+    private function applyBioFilters($query, string $searchColumn, string $dateColumn, array $filters): void
+    {
+        if ($searchColumn !== '' && $filters['name'] !== '') {
+            $query->whereRaw('LOWER(' . $searchColumn . ') LIKE ?', ['%' . mb_strtolower($filters['name']) . '%']);
+        }
+        if ($filters['date_from'] !== '') $query->whereDate($dateColumn, '>=', $filters['date_from']);
+        if ($filters['date_to'] !== '') $query->whereDate($dateColumn, '<=', $filters['date_to']);
+    }
+
+    private function paginationMeta(int $total, int $page, int $perPage): array
+    {
+        return ['current_page' => $page, 'last_page' => max(1, (int) ceil($total / $perPage)), 'per_page' => $perPage, 'total' => $total];
+    }
+
+    private function getPersonnelBiosecurityPage(array $filters, int $page, int $perPage): array
+    {
+        $query = DB::table('personnel_entry_logs as entry')
+            ->whereRaw("UPPER(TRIM(COALESCE(entry.status, 'IN'))) <> 'OUT'");
+
+        if ($filters['date_from'] !== '') $query->whereDate('entry.date', '>=', $filters['date_from']);
+        if ($filters['date_to'] !== '') $query->whereDate('entry.date', '<=', $filters['date_to']);
+        if ($filters['name'] !== '') {
+            $needle = '%' . mb_strtolower($filters['name']) . '%';
+            $query->where(function ($subQuery) use ($needle) {
+                $subQuery->whereRaw('LOWER(COALESCE(entry.name, \'\')) LIKE ?', [$needle])
+                    ->orWhereExists(function ($employeeQuery) use ($needle) {
+                        $employeeQuery->selectRaw('1')->from('user as entry_employee')
+                            ->whereColumn('entry_employee.EmployeeId', 'entry.employee_id')
+                            ->whereRaw("LOWER(CONCAT_WS(' ', entry_employee.\"FirstName\", entry_employee.\"MiddleName\", entry_employee.\"LastName\", entry_employee.\"Suffix\")) LIKE ?", [$needle]);
+                    });
+            });
+        }
+
+        $checkoutSelect = function (string $column) {
+            return DB::table('personnel_entry_logs as checkout')->select($column)
+                ->whereRaw("UPPER(TRIM(COALESCE(checkout.status, 'IN'))) = 'OUT'")
+                ->where(function ($person) {
+                    $person->where(function ($employee) {
+                        $employee->whereNotNull('entry.employee_id')
+                            ->whereColumn('checkout.employee_id', 'entry.employee_id');
+                    })->orWhere(function ($name) {
+                        $name->whereNull('entry.employee_id')
+                            ->whereNull('checkout.employee_id')
+                            ->whereRaw("LOWER(COALESCE(checkout.name, '')) = LOWER(COALESCE(entry.name, ''))")
+                            ->whereRaw("LOWER(COALESCE(checkout.role, '')) = LOWER(COALESCE(entry.role, ''))");
+                    });
+                })
+                ->where(function ($later) {
+                    $later->whereColumn('checkout.date', '>', 'entry.date')
+                        ->orWhere(function ($sameDate) {
+                            $sameDate->whereColumn('checkout.date', '=', 'entry.date')
+                                ->where(function ($time) {
+                                    $time->whereColumn('checkout.time', '>', 'entry.time')
+                                        ->orWhere(function ($sameTime) {
+                                            $sameTime->whereColumn('checkout.time', '=', 'entry.time')
+                                                ->whereColumn('checkout.id', '>', 'entry.id');
+                                        });
+                                });
+                        });
+                })
+                ->orderBy('checkout.date')->orderBy('checkout.time')->orderBy('checkout.id')->limit(1);
+        };
+
+        $query->select('entry.*')
+            ->selectSub($checkoutSelect('checkout.id'), 'paired_out_id')
+            ->selectSub($checkoutSelect('checkout.time'), 'paired_out_time');
+
+        $paginator = $query->orderByDesc('entry.date')->orderByDesc('entry.time')->orderByDesc('entry.id')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $entryIds = $paginator->getCollection()->pluck('employee_id')->filter()->unique();
+        $employees = Employee::whereIn('EmployeeId', $entryIds)->get()->keyBy('EmployeeId');
+        $rows = $paginator->getCollection()->map(function ($entry) use ($employees) {
+            $employee = $entry->employee_id ? $employees->get($entry->employee_id) : null;
+            $inTime = $entry->time ? Carbon::parse($entry->time)->format('h:i A') : '';
+            $outTime = $entry->paired_out_time ? Carbon::parse($entry->paired_out_time)->format('h:i A') : '';
+
+            return [
+                'id' => $entry->id,
+                'out_entry_id' => $entry->paired_out_id,
+                'type' => 'Personnel Biosecurity Logs',
+                'name' => $this->getPersonnelEntryName($entry, $employee),
+                'role' => $this->getPersonnelEntryRole($entry, $employee),
+                'date' => $entry->date ? Carbon::parse($entry->date)->format('Y-m-d') : '',
+                'time' => $inTime,
+                'time_in' => $inTime,
+                'time_out' => $outTime,
+                'status' => 'IN',
+                'remarks' => $entry->paired_out_id ? '' : 'Pending Out',
+                'can_edit' => false,
+            ];
+        });
+
+        return [$rows, $this->paginationMeta($paginator->total(), $page, $perPage)];
     }
 
     private function getRequestedLogCategories(Request $request): array

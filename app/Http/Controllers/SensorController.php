@@ -22,7 +22,7 @@ class SensorController extends Controller
                 'house',
                 'pen',
                 'configuration',
-                'maintenances',
+                'latestMaintenance',
                 'latestReading' // ✅ NEW
             ])
             ->orderBy('sensortype')
@@ -41,9 +41,7 @@ class SensorController extends Controller
                         $status = $this->effectiveSensorStatus($sensor);
 
                         if (!$status || $status === 'Active') {
-                            $latestMaintenance = $sensor->maintenances
-                                ->sortByDesc('startdate')
-                                ->first();
+                            $latestMaintenance = $sensor->latestMaintenance;
 
                             if ($latestMaintenance?->status) {
                                 $status = $latestMaintenance->status;
@@ -815,7 +813,7 @@ class SensorController extends Controller
     public function sensorHealth()
     {
         return response()->json(Cache::remember('sensors_health', now()->addMinutes(5), function () {
-        $sensors = Sensor::with(['house', 'pen', 'configuration', 'latestReading', 'maintenances'])
+        $sensors = Sensor::with(['house', 'pen', 'configuration', 'latestReading', 'latestMaintenance'])
             ->orderBy('sensortype')
             ->orderBy('sensorname')
             ->get();
@@ -828,7 +826,7 @@ class SensorController extends Controller
             // Determine status
             $status = $this->effectiveSensorStatus($sensor);
             if ($status === 'Active') {
-                $latestMaintenance = $sensor->maintenances->sortByDesc('startdate')->first();
+                $latestMaintenance = $sensor->latestMaintenance;
                 if ($latestMaintenance?->status === 'Maintenance') {
                     $status = 'Under Maintenance';
                 }

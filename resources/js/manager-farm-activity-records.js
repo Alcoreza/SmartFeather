@@ -9,6 +9,7 @@ const farmRecordState = {
 let farmActivityPagination = {};
 let currentFarmActivityData = {};
 let farmActivityLastPages = {};
+let farmActivityTotal = 0;
 let currentUserProfile = null;
 
 const FARM_RECORD_CONFIG = {
@@ -362,20 +363,13 @@ function getVisibleFarmActivityPages(totalPages, currentPage) {
 }
 
 function updateFarmActivityCard(cardKey, rows) {
-    const totalRows = rows.length;
-    const totalPages = Math.max(1, Math.ceil(totalRows / FARM_ACTIVITY_ROWS_PER_PAGE));
-
     if (!farmActivityPagination[cardKey]) {
         farmActivityPagination[cardKey] = { currentPage: 0 };
     }
 
-    farmActivityPagination[cardKey].totalRows = totalRows;
+    farmActivityPagination[cardKey].totalRows = farmActivityTotal;
     currentFarmActivityData[cardKey] = rows;
-
-    const start = farmActivityPagination[cardKey].currentPage * FARM_ACTIVITY_ROWS_PER_PAGE;
-    const paginatedRows = rows.slice(start, start + FARM_ACTIVITY_ROWS_PER_PAGE);
-
-    return paginatedRows;
+    return rows;
 }
 
 function updateFarmActivityPagination(cardKey, totalRows) {
@@ -417,30 +411,6 @@ function updateFarmActivityPagination(cardKey, totalRows) {
     farmActivityLastPages[cardKey] = currentPage;
 }
 
-function reRenderFarmActivityCard(cardKey) {
-    const recordType = farmRecordState.selectedRecord;
-    const config = FARM_RECORD_CONFIG[recordType];
-    const section = config.sections[0];
-    const allRows = currentFarmActivityData[cardKey] || [];
-
-    const start = farmActivityPagination[cardKey].currentPage * FARM_ACTIVITY_ROWS_PER_PAGE;
-    const paginatedRows = allRows.slice(start, start + FARM_ACTIVITY_ROWS_PER_PAGE);
-
-    const tableHtml = renderRecordTable(section.columns, paginatedRows);
-    const paginationHtml = renderFarmActivityPaginationControls(cardKey, allRows.length);
-
-    farmRecordContent.innerHTML = renderFarmActivityCardShell(
-        recordType,
-        formatRecordCount(allRows.length),
-        `
-            ${tableHtml}
-            ${paginationHtml}
-        `
-    );
-
-    updateFarmActivityPagination(cardKey, allRows.length);
-}
-
 function setupFarmActivityPagination() {
     farmRecordContent.addEventListener('click', (event) => {
         const prevBtn = event.target.closest('[data-farm-activity-prev]');
@@ -449,10 +419,9 @@ function setupFarmActivityPagination() {
 
         if (prevBtn) {
             const cardKey = prevBtn.getAttribute('data-farm-activity-prev');
-            const totalPages = Math.max(1, Math.ceil((farmActivityPagination[cardKey]?.totalRows || 0) / FARM_ACTIVITY_ROWS_PER_PAGE));
             if (farmActivityPagination[cardKey].currentPage > 0) {
                 farmActivityPagination[cardKey].currentPage--;
-                reRenderFarmActivityCard(cardKey);
+                loadCurrentRecord();
             }
         }
 
@@ -461,7 +430,7 @@ function setupFarmActivityPagination() {
             const totalPages = Math.max(1, Math.ceil((farmActivityPagination[cardKey]?.totalRows || 0) / FARM_ACTIVITY_ROWS_PER_PAGE));
             if (farmActivityPagination[cardKey].currentPage < totalPages - 1) {
                 farmActivityPagination[cardKey].currentPage++;
-                reRenderFarmActivityCard(cardKey);
+                loadCurrentRecord();
             }
         }
 
@@ -469,7 +438,7 @@ function setupFarmActivityPagination() {
             const cardKey = dotBtn.getAttribute('data-card-key');
             const pageNum = parseInt(dotBtn.getAttribute('data-farm-activity-page'), 10);
             farmActivityPagination[cardKey].currentPage = pageNum;
-            reRenderFarmActivityCard(cardKey);
+            loadCurrentRecord();
         }
     });
 }
@@ -479,20 +448,20 @@ function renderSingleRecord(recordType, recordData) {
     const rows = Array.isArray(recordData) ? recordData : [];
     const cardKey = 'farm-activity-main';
 
-    const paginatedRows = updateFarmActivityCard(cardKey, rows);
-    const tableHtml = renderRecordTable(section.columns, paginatedRows);
-    const paginationHtml = renderFarmActivityPaginationControls(cardKey, rows.length);
+    const pageRows = updateFarmActivityCard(cardKey, rows);
+    const tableHtml = renderRecordTable(section.columns, pageRows);
+    const paginationHtml = renderFarmActivityPaginationControls(cardKey, farmActivityTotal);
 
     farmRecordContent.innerHTML = renderFarmActivityCardShell(
         recordType,
-        formatRecordCount(rows.length),
+        formatRecordCount(farmActivityTotal),
         `
             ${tableHtml}
             ${paginationHtml}
         `
     );
 
-    updateFarmActivityPagination(cardKey, rows.length);
+    updateFarmActivityPagination(cardKey, farmActivityTotal);
 }
 
 function renderFarmActivityCardShell(title, countText, contentHtml) {
@@ -596,7 +565,7 @@ async function loadFarmActivityFilterOptions() {
     }
 }
 
-function buildFarmActivityUrl(path) {
+function buildFarmActivityUrl(path, page = (farmActivityPagination['farm-activity-main']?.currentPage || 0) + 1, extraParams = {}) {
     const params = new URLSearchParams();
 
     if (farmRecordsFilterForm) {
@@ -611,13 +580,30 @@ function buildFarmActivityUrl(path) {
         });
     }
 
-    return params.toString() ? `${path}?${params.toString()}` : path;
+    params.set('page', String(page));
+    Object.entries(extraParams).forEach(([key, value]) => params.set(key, value));
+
+    return `${path}?${params.toString()}`;
 }
 
-async function loadHatchMortalityRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/pens'));
+function getFarmActivityPageRecords(result) {
+    const meta = result.pagination || {};
+    farmActivityTotal = Number(meta.total ?? result.records?.length ?? 0);
+    const cardKey = 'farm-activity-main';
+    farmActivityPagination[cardKey] = {
+        ...(farmActivityPagination[cardKey] || {}),
+        currentPage: Math.max(0, Number(meta.current_page || 1) - 1),
+        totalRows: farmActivityTotal,
+        lastPage: Math.max(1, Number(meta.last_page || 1)),
+    };
+    return Array.isArray(result.records) ? result.records : [];
+}
 
-    return (Array.isArray(result.records) ? result.records : []).map((record) => ({
+async function loadHatchMortalityRecords(page) {
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/pens', page));
+    const records = getFarmActivityPageRecords(result);
+
+    return records.map((record) => ({
         ...record,
         house_number: formatHouseNumber(record.house_number),
         eggs_hatched: record.eggs_hatched ?? 0,
@@ -626,39 +612,43 @@ async function loadHatchMortalityRecords() {
     }));
 }
 
-async function loadWeightMonitoringRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/weight-sampling-logs'));
+async function loadWeightMonitoringRecords(page) {
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/weight-sampling-logs', page));
+    const records = getFarmActivityPageRecords(result);
 
-    return (Array.isArray(result.records) ? result.records : []).map((record) => ({
+    return records.map((record) => ({
         ...record,
         date: formatDate(record.date),
     }));
 }
 
-async function loadFeedReplenishmentRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/feed-refill-records'));
+async function loadFeedReplenishmentRecords(page) {
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/feed-refill-records', page));
+    const records = getFarmActivityPageRecords(result);
 
-    return (Array.isArray(result.records) ? result.records : []).map((record) => ({
+    return records.map((record) => ({
         ...record,
         house_number: formatHouseNumber(record.house_number),
         recorded_at: formatDate(record.recorded_at),
     }));
 }
 
-async function loadVitaminSupplementationRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/vitamin-refill-records'));
+async function loadVitaminSupplementationRecords(page) {
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/vitamin-refill-records', page));
+    const records = getFarmActivityPageRecords(result);
 
-    return (Array.isArray(result.records) ? result.records : []).map((record) => ({
+    return records.map((record) => ({
         ...record,
         house_number: formatHouseNumber(record.house_number),
         recorded_at: formatDate(record.recorded_at),
     }));
 }
 
-async function loadSensorMaintenanceRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/sensor-inspection-logs'));
+async function loadSensorMaintenanceRecords(page) {
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/sensor-inspection-logs', page));
+    const records = getFarmActivityPageRecords(result);
 
-    return (Array.isArray(result.records) ? result.records : []).map((record) => ({
+    return records.map((record) => ({
         ...record,
         house_number: formatHouseNumber(record.house_number),
         pen_name: record.pen_name || '--',
@@ -673,13 +663,14 @@ async function loadSensorMaintenanceRecords() {
     }));
 }
 
-async function loadBiosecurityRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/cleaning-logs'));
-    return Array.isArray(result.records) ? result.records : [];
+async function loadBiosecurityRecords(page) {
+    const activity = farmRecordState.selectedRecord === 'Pen Cleaning' ? 'Pen Cleaning' : 'Pen Disinfection';
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/cleaning-logs', page, { activity }));
+    return getFarmActivityPageRecords(result);
 }
 
-async function loadPenDisinfectionRecords() {
-    const cleaningLogs = await loadBiosecurityRecords();
+async function loadPenDisinfectionRecords(page) {
+    const cleaningLogs = await loadBiosecurityRecords(page);
 
     return cleaningLogs.filter((record) => {
         const activity = String(record.activity || '').trim();
@@ -694,8 +685,8 @@ async function loadPenDisinfectionRecords() {
     }));
 }
 
-async function loadPenCleaningRecords() {
-    const cleaningLogs = await loadBiosecurityRecords();
+async function loadPenCleaningRecords(page) {
+    const cleaningLogs = await loadBiosecurityRecords(page);
 
     return cleaningLogs.filter((record) => {
         const activity = String(record.activity || '').trim();
@@ -710,10 +701,11 @@ async function loadPenCleaningRecords() {
     }));
 }
 
-async function loadChickPlacementRecords() {
-    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/flock-batches'));
+async function loadChickPlacementRecords(page) {
+    const result = await fetchJson(buildFarmActivityUrl('/api/manager/farm-activity/flock-batches', page));
+    const records = getFarmActivityPageRecords(result);
 
-    return (Array.isArray(result.records) ? result.records : []).map((record) => ({
+    return records.map((record) => ({
         ...record,
         house_number: formatHouseNumber(record.house_number),
         initial_population: formatNumber(record.initial_population),
@@ -745,7 +737,8 @@ async function loadCurrentRecord() {
     renderLoading();
 
     try {
-        farmRecordState.records[recordType] = await config.loader();
+        const page = (farmActivityPagination['farm-activity-main']?.currentPage || 0) + 1;
+        farmRecordState.records[recordType] = await config.loader(page);
         renderCurrentRecord();
     } catch (error) {
         console.error('Failed to load farm activity records:', error);
@@ -756,6 +749,27 @@ async function loadCurrentRecord() {
             </section>
         `;
     }
+}
+
+async function loadAllFarmActivityRecords() {
+    const recordType = farmRecordState.selectedRecord;
+    const loader = FARM_RECORD_CONFIG[recordType]?.loader;
+    if (!loader) return [];
+
+    const currentPage = farmActivityPagination['farm-activity-main']?.currentPage || 0;
+    const rows = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+        const pageRows = await loader(page);
+        rows.push(...(Array.isArray(pageRows) ? pageRows : []));
+        lastPage = Math.max(1, Number(farmActivityPagination['farm-activity-main']?.lastPage || 1));
+        page++;
+    } while (page <= lastPage);
+
+    farmActivityPagination['farm-activity-main'].currentPage = currentPage;
+    return rows;
 }
 
 function getFarmActivityExportFilters() {
@@ -774,9 +788,9 @@ function getFarmActivityExportFilters() {
     };
 }
 
-function generateFarmActivityCsvExport() {
+async function generateFarmActivityCsvExport() {
     const recordType = farmRecordState.selectedRecord;
-    const rows = currentFarmActivityData['farm-activity-main'] || [];
+    const rows = await loadAllFarmActivityRecords();
     const config = FARM_RECORD_CONFIG[recordType];
     const columns = config?.sections?.[0]?.columns || [];
     const filters = getFarmActivityExportFilters();
@@ -810,7 +824,7 @@ function generateFarmActivityCsvExport() {
 
 async function generateFarmActivityPdfExport() {
     const recordType = farmRecordState.selectedRecord;
-    const rows = currentFarmActivityData['farm-activity-main'] || [];
+    const rows = await loadAllFarmActivityRecords();
     const config = FARM_RECORD_CONFIG[recordType];
     const columns = config?.sections?.[0]?.columns || [];
     const filters = getFarmActivityExportFilters();
@@ -928,8 +942,8 @@ function setupFarmActivityExportModal() {
         csvBtn.classList.add('active');
         pdfBtn?.classList.remove('active');
 
-        setTimeout(() => {
-            generateFarmActivityCsvExport();
+        setTimeout(async () => {
+            await generateFarmActivityCsvExport();
             closeModal();
         }, 140);
     });

@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCurrentTaskTable();
     animateTaskSections();
     renderManagerTasks();
-    loadTaskFormOptions();
 });
 
 const ALL_HOUSES_OPTION = "All houses";

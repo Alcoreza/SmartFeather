@@ -675,7 +675,11 @@ Route::get('/api/manager/dashboard/resources-by-house', function () {
 
 Route::get('/api/manager/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
     $service = new \App\Services\DecisionSupportService();
-    $generated = $service->generateRecommendations(null, $request->boolean('refresh'));
+    // Keep dashboard page loads read-only and fast. Recommendation generation can
+    // gather data and call the AI provider, so only run it on explicit refresh.
+    $generated = $request->boolean('refresh')
+        ? $service->generateRecommendations(null, true)
+        : false;
     $recommendations = $service->getAllActiveRecommendations();
     
     return response()->json([
@@ -721,7 +725,11 @@ Route::get('/api/manager/dashboard/decision-support/critical-check', function ()
 
 Route::get('/api/admin/dashboard/decision-support', function (\Illuminate\Http\Request $request) {
     $service = new \App\Services\DecisionSupportService();
-    $generated = $service->generateRecommendations(null, $request->boolean('refresh'));
+    // Keep dashboard page loads read-only and fast. Recommendation generation can
+    // gather data and call the AI provider, so only run it on explicit refresh.
+    $generated = $request->boolean('refresh')
+        ? $service->generateRecommendations(null, true)
+        : false;
     $recommendations = $service->getAllActiveRecommendations();
 
     return response()->json([

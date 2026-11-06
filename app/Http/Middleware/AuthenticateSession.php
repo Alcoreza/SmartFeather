@@ -35,6 +35,7 @@ class AuthenticateSession
             return $this->unauthenticated($request);
         }
 
+        $request->attributes->set('authenticated_user', $user);
         $request->session()->put('auth_verified_at', now()->timestamp);
 
         return $next($request);

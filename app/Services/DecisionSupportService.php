@@ -152,6 +152,11 @@ class DecisionSupportService
                         $existingRec = null;
                     }
 
+                    // Reuse a current recommendation before gathering live farm data.
+                    if ($existingRec && $existingRec->expires_at > now()) {
+                        continue;
+                    }
+
                     // Gather current data for this pen.
                     $dataSnapshot = $this->gatherHouseData($house, $pen);
 
@@ -168,7 +173,6 @@ class DecisionSupportService
                     if ($existingRec && $existingRec->expires_at > now()) {
                         continue;
                     }
-
                     // Apply predefined rules before AI summarization.
                     $dataSnapshot['rule_decisions'] = $this->evaluateRules($dataSnapshot);
 

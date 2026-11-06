@@ -10,6 +10,12 @@ class ProfileController extends Controller
 {
     protected function currentUser()
     {
+        $authenticatedUser = request()->attributes->get('authenticated_user');
+
+        if ($authenticatedUser instanceof User) {
+            return $authenticatedUser;
+        }
+
         $userId = session('user_id');
 
         if (!$userId) {
